@@ -51,6 +51,22 @@ Evidence is mounted **read-only** at `/evidence/case`. The signed run and
 `audit.jsonl` persist to `./out/` on your host (find_evil_auto.py writes
 `tmp/auto-runs/<case>/`, mounted from `./out`).
 
+## Headless mode (no Claude token)
+
+`investigate` above runs interactive Claude Code — an LLM session that needs a
+credential. For a **token-free, fully deterministic** run, use `--headless`: it
+runs the engine (`find_evil_auto.py`) directly — the per-evidence playbook over
+the typed MCP tools, with findings synthesized by rule, no LLM in the loop.
+
+```bash
+bash scripts/verdict-docker tmp/evidence/base-dc-memory.img --headless
+```
+
+No credentials required. Results land under `./out/` (the run dir
+`auto-runs/<case>/` plus `verdict-headless-summary.json`). Because there is no
+model to vary, this path is byte-reproducible — environment *and* output. (The
+engine runs through the in-image `agent_mcp` uv env, which carries its deps.)
+
 ## Build / run by hand
 
 ```bash

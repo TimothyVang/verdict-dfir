@@ -102,13 +102,27 @@ RUN groupadd --gid "${RUN_GID}" verdict \
 WORKDIR /workspace
 COPY . /workspace
 COPY --from=rust-build /build/target/release/findevil-mcp /usr/local/bin/findevil-mcp
-# scripts/run-mcp-rust.sh prefers $FINDEVIL_MCP_BIN → no `cargo run` recompile
-# on a cold MCP spawn.
+# The deterministic engine (find_evil_auto.py, used by `verdict-docker --headless`)
+# execs LOCAL_RUST_BIN = REPO_ROOT/target/release/findevil-mcp directly (hardcoded,
+# not via $FINDEVIL_MCP_BIN) and preflight-checks that exact path — so place the
+# same binary there too.
+COPY --from=rust-build /build/target/release/findevil-mcp /workspace/target/release/findevil-mcp
+# scripts/run-mcp-rust.sh (interactive path) prefers $FINDEVIL_MCP_BIN → no
+# `cargo run` recompile on a cold MCP spawn.
 ENV FINDEVIL_MCP_BIN=/usr/local/bin/findevil-mcp
 
-# Pre-sync the Python MCP env so `uv run` is instant at spawn (not resolved
-# cold on first tool call), then hand the tree to the runtime user.
+# Pre-sync the Python MCP env so `uv run` is instant at spawn (not resolved cold
+# on first tool call). Add matplotlib — the report renderer imports it and it is
+# not a lockfile dep. Make Volatility's symbol cache writable by the non-root
+# user: vol downloads kernel PDB symbols on first use and writes them UNDER its
+# package dir, which is root-owned by default (otherwise every vol plugin exits 1
+# with "Cannot write downloaded symbols" -> zero memory findings). Then hand the
+# tree to the runtime user.
 RUN cd services/agent_mcp && uv sync --extra dev --frozen \
+ && uv pip install --python /workspace/services/agent_mcp/.venv/bin/python 'matplotlib>=3.8,<4.0' \
+ && VOL_PKG="$(python3 -c 'import os, volatility3; print(os.path.dirname(volatility3.__file__))')" \
+ && mkdir -p "${VOL_PKG}/symbols" "${VOL_PKG}/framework/symbols" \
+ && chown -R verdict:verdict "${VOL_PKG}/symbols" "${VOL_PKG}/framework/symbols" \
  && chown -R verdict:verdict /workspace
 
 USER verdict
