@@ -131,6 +131,12 @@ fi
 # ---------------------------------------------------------------------------
 echo
 echo "${c_blu}Required toolchain${c_off}"
+require "python3" "install Python 3.11+ from https://www.python.org/downloads/ or via your OS package manager" \
+        python3 --version
+require "git"     "install git from https://git-scm.com/downloads" \
+        git --version
+require "unzip"   "install unzip: apt install unzip / brew install unzip / choco install unzip" \
+        unzip -v
 require "claude"  "npm install -g @anthropic-ai/claude-code  (https://docs.anthropic.com/en/docs/claude-code/install)" \
         claude --version
 require "cargo"   "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh" \
