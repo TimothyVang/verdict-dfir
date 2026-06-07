@@ -918,9 +918,9 @@ once the first `v0.x` is cut on the `v-submit` tag.
   `msadvapi2_32.e` and `msadvapi2_64.e` on 8 hosts each
   (name-spoofing the legitimate `advapi32.dll`).
 
-## [v-submit] - 2026-06-06
+## [v-submit] - 2026-06-07
 
-Snapshot of the current shipped state before final submission.
+Snapshot of the current shipped state before final submission (updated 2026-06-07 with Phase 1–3 integration work).
 
 ### Summary
 
@@ -935,6 +935,20 @@ The current `master` HEAD (commit 8fc18a2 onwards) ships a **31-tool MCP surface
 - **`findevil-mcp` (Rust):** 19 typed DFIR tools — `case_open`, `disk_mount`, `disk_extract_artifacts`, `disk_unmount`, `evtx_query`, `mft_timeline`, `hayabusa_scan`, `vol_pslist`, `vol_psscan`, `vol_psxview`, `vol_malfind`, `yara_scan`, `usnjrnl_query`, `registry_query`, `prefetch_parse`, `vel_collect`, `sysmon_network_query`, `zeek_summary`, `pcap_triage`.
 - **`findevil-agent-mcp` (Python):** 12 typed crypto/ACH/memory/ACP/expert-feedback tools — `audit_append`, `audit_verify`, `manifest_finalize`, `manifest_verify`, `verify_finding`, `detect_contradictions`, `judge_findings`, `correlate_findings`, `memory_remember`, `memory_recall`, `pool_handoff`, `expert_miss_capture`.
 - **Total:** 31 tools across two MCP servers. **NO `execute_shell` or broad shell-backed surface.** Cryptographic chain-of-custody locked to 3-tier model (audit prev_hash → rs_merkle → sigstore).
+
+### Phase 1–3 Integration Work (2026-06-07, branch fix/dfir-claim-corrections)
+
+- **playbook.py** — `services/agent/findevil_agent/playbook.py` added as single-source-of-truth for DFIR detection rules, tool sequences, and JUDGE_SELFSCORE_CRITERIA (6 rubric entries matching JUDGING.md verbatim). `find_evil_auto.py` delegates to it.
+- **config.py** — `resolve_memory_store_path()` added; Hermes memory SQLite path contract formalized.
+- **sprite-state.ts** — dashboard role-state machine handles `judge_selfscore`, `contradiction_resolved`, `manifest_finalize` events.
+- **CLAUDE_CODE_FORK_SUBAGENT** corrected — product docs updated to "native Task mechanism"; divergence-smoke check #9 enforces the boundary.
+- **Cross-platform render** — `scripts/render_report.py` resolves pandoc/chrome via `$PANDOC_BIN`/`$CHROME_BIN` → `shutil.which`; degrades to `(html, None)` gracefully.
+- **SIFT config** — `.mcp.json.sift` uses portable defaults (`~/.ssh/sift_key`, `127.0.0.1`); `find-evil-sift` adds libvirt IP discovery.
+- **Starter data** — `goldens/sans-starter/expected-findings.json` stub; `scripts/starter-data-smoke.py` verifies the `SANS_STARTER_URL` contract.
+- **find-evil-run** — new one-command operator entry chaining doctor → build → fixtures → find-evil-auto.
+- **doctor.sh / install.sh** — python3, git, unzip added to pre-flight; `source ~/.cargo/env` added to install.
+- **divergence-smoke #10** — `.mcp.json` surface locked to exactly two typed servers, no gateway/shell tokens.
+- **Protocol SIFT coexistence** — positioned in `docs/codex-compatibility.md` and `docs/architecture.md`.
 
 ### Note on Tool-Count Documentation
 
