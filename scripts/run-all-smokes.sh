@@ -143,6 +143,19 @@ run_smoke \
     "autonomous-loop-smoke (8h dry-run + tiny empty-queue timing)" \
     "python3 scripts/autonomous-loop-smoke.py"
 
+# 11. Phase 2 cross-platform smokes (render, sift config, starter data, find-evil-run).
+run_smoke \
+    "render-binary-smoke (pandoc/chrome resolve via PATH, graceful degrade)" \
+    "python3 scripts/render-binary-smoke.py"
+
+run_smoke \
+    "starter-data-smoke (SANS_STARTER_URL contract + goldens stub)" \
+    "python3 scripts/starter-data-smoke.py"
+
+run_smoke \
+    "find-evil-run-smoke (one-command operator entry, --dry-run)" \
+    "python3 scripts/find-evil-run-smoke.py"
+
 # Lint / format gates. L0 GHA workflow runs these too; mirror them locally
 # so a contributor running this script before commit catches a missing
 # `ruff format` or unformatted Rust before the push. Each gate uses
