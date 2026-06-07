@@ -232,6 +232,16 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # anchor part is not a file system component.  These are allowed so
     # that cross-file anchor links don't trip the smoke.
     re.compile(r"^docs/[a-z][a-zA-Z0-9_/-]*\.md#"),
+    # MIME / content types (e.g. `text/html`, `application/json`) quoted in
+    # docs/onboarding.md + runbooks — HTTP media types, not file paths.
+    re.compile(r"^(?:text|application|image|audio|video|multipart|font)/[A-Za-z0-9.+-]+$"),
+    # SANS SIFT OVA download host quoted in docs/onboarding.md
+    # (`sansorg.egnyte.com/dl/<token>`) — an external Egnyte share URL written
+    # without a scheme, not a repo path. See the SIFT setup notes.
+    re.compile(r"^sansorg\.egnyte\.com/"),
+    # Disk-image file-extension examples written as a pair (e.g. `.dd/.E01`) in
+    # docs/DATASET.md — extension shorthand, not a filesystem path.
+    re.compile(r"^\.[A-Za-z0-9]+/\.[A-Za-z0-9]+$"),
 )
 
 # Compile once.  PATH_RE matches any backtick-quoted token that

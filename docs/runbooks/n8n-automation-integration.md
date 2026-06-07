@@ -237,8 +237,8 @@ writes an `ioc_enrichment` block (per-IOC `sources[]`, one record per provider) 
 `grounding.json` (`ioc_grounding[]`), surfaced in the dashboard GroundingPanel.
 
 **Multi-source corroboration + conflict resolution.** Agreeing sources strengthen `malicious`;
-when sources conflict (e.g. VirusTotal `0/91` clean on a major domain vs a single ThreatFox
-`botnet_cc` hit on `google.com`), the judge resolves by **breadth of consensus** — the domain is
+when sources conflict (e.g. VirusTotal 0/91 clean on a major domain vs a single ThreatFox
+botnet_cc hit on google.com), the judge resolves by **breadth of consensus** — the domain is
 benign infrastructure abused by malware, judged `clean` with the conflict noted, both sources
 quoted (`agent-config/GROUNDING.md`).
 
