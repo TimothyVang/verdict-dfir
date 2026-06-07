@@ -1,5 +1,8 @@
 # Find Evil!
 
+> **Judges: verify all 10 required submission components in one place →
+> [`SUBMISSION_COMPLIANCE.md`](SUBMISSION_COMPLIANCE.md)**
+
 **SANS Find Evil! 2026 hackathon submission.**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
