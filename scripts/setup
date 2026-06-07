@@ -134,9 +134,10 @@ missing_required = [
     if c.get("status") == "err"
 ]
 
-# Tools scripts/install-dfir-tools.sh curls/pip-installs (re-runnable, non-blocking).
+# Non-blocking DFIR/reporting tools. Use doctor's own per-tool remedy (accurate
+# per tool: most reinstall via install-dfir-tools.sh, but e.g. tshark needs apt).
 missing_curl = [
-    {"label": c.get("label", ""), "remedy": "re-run: bash scripts/install-dfir-tools.sh"}
+    {"label": c.get("label", ""), "remedy": remedy_for(c.get("label", ""))}
     for c in checks
     if c.get("status") == "warn"
     and (c.get("group") == "DFIR tools" or c.get("label") == "pandoc")
@@ -207,8 +208,11 @@ elif not ready:
 elif missing_curl:
     print("%sREADY (core)%s — investigations run; some DFIR tools are still missing:" % (YEL, OFF))
     for m in missing_curl:
-        print("  - %s" % m["label"])
-    print("  retry: %sbash scripts/install-dfir-tools.sh%s" % (DIM, OFF))
+        line = "  - %s" % m["label"]
+        if m["remedy"]:
+            line += ": %s%s%s" % (DIM, m["remedy"], OFF)
+        print(line)
+    print("  most DFIR binaries reinstall with: %sbash scripts/install-dfir-tools.sh%s" % (DIM, OFF))
 else:
     print("%sREADY%s — all required tools present." % (GRN, OFF))
 
