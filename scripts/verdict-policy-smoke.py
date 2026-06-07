@@ -216,6 +216,64 @@ def main() -> int:
             print(f"         actual  : {actual!r}")
             failures += 1
 
+    # ----- resolve_evidence_path default-directory policy -------------
+    # `find-evil-auto` with no positional path falls back to
+    # $FINDEVIL_EVIDENCE_ROOT, else the repo's evidence/ dir. An explicit
+    # path is returned verbatim (it may live inside the SIFT VM and must
+    # NOT be validated against the host filesystem); a directory fallback
+    # must exist and hold a real evidence entry, not just placeholders.
+    resolve_evidence_path = fea.resolve_evidence_path
+    with tempfile.TemporaryDirectory() as ev_tmp:
+        ev_root = Path(ev_tmp)
+        empty_root = ev_root / "empty"
+        empty_root.mkdir()
+        (empty_root / "README.md").write_text("placeholder", encoding="utf-8")
+        (empty_root / ".gitkeep").write_text("", encoding="utf-8")
+        filled_root = ev_root / "filled"
+        filled_root.mkdir()
+        (filled_root / "Security.evtx").write_bytes(b"evtx")
+        missing_root = ev_root / "missing"
+
+        def _evidence_raises(path: str | None, env: dict[str, str]) -> bool:
+            try:
+                resolve_evidence_path(path, env=env)
+            except ValueError:
+                return True
+            return False
+
+        evidence_root_cases = [
+            (
+                "explicit path returned verbatim (not host-validated)",
+                resolve_evidence_path("/mnt/hgfs/evidence/x.img", env={}),
+                "/mnt/hgfs/evidence/x.img",
+            ),
+            (
+                "FINDEVIL_EVIDENCE_ROOT with evidence resolves to it",
+                resolve_evidence_path(
+                    None, env={"FINDEVIL_EVIDENCE_ROOT": str(filled_root)}
+                ),
+                str(filled_root),
+            ),
+            (
+                "empty default dir (placeholders only) raises",
+                _evidence_raises(None, {"FINDEVIL_EVIDENCE_ROOT": str(empty_root)}),
+                True,
+            ),
+            (
+                "missing default dir raises",
+                _evidence_raises(None, {"FINDEVIL_EVIDENCE_ROOT": str(missing_root)}),
+                True,
+            ),
+        ]
+    for label, actual, expected in evidence_root_cases:
+        ok = actual == expected
+        marker = "OK  " if ok else "FAIL"
+        print(f"  [{marker}] evidence-root: {label}")
+        if not ok:
+            print(f"         expected: {expected!r}")
+            print(f"         actual  : {actual!r}")
+            failures += 1
+
     inventory_checks = 0
     artifact_cases = [
         ("classify $MFT", "/case/C/$MFT", "mft"),

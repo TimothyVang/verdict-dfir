@@ -19,6 +19,26 @@ The combination is the architectural claim: Claude Code's agent loop never touch
 
 ---
 
+## Relationship to Protocol SIFT
+
+Find Evil! runs on the same SANS-blessed SIFT VM (`sift-2026.03.24.ova`) that Protocol SIFT operates on — they are not in conflict.
+
+**Deliberate divergence in the MCP surface:**
+
+| Aspect | Find Evil! | Protocol SIFT gateway |
+|---|---|---|
+| MCP servers | 2 typed servers (findevil-mcp, findevil-agent-mcp) | 1 gateway (200+ shell-backed tools) |
+| Tool count | 31 (19 Rust DFIR + 12 Python crypto/ACH/memory/ACP) | 200+ (dynamic, shell coverage) |
+| Shell surface | None — NO `execute_shell` | Broad — gateway is a shell pass-through |
+| Use case | Repeatable DFIR mechanics for SANS investigation | General-purpose bot connectivity |
+| Installation | No conflicts — separate MCP registrations | `protocol-sift install` installs the gateway independently |
+
+After `protocol-sift install` on a SIFT VM, both Find Evil!'s narrow typed surface and Protocol SIFT's broad shell-backed gateway coexist. Judges or operators choose which agent interface to use per investigation; neither requires nor conflicts with the other.
+
+The narrow surface is intentional: it reduces the attack surface from "full shell access" to "19 named DFIR operations" and "12 cryptographic/ACH/memory operations," enabling an architectural argument that the agent loop never touches shell primitives directly — all actions flow through typed JSON-RPC schema validation.
+
+---
+
 ## Runtime architecture (the Product that judges run)
 
 ```mermaid

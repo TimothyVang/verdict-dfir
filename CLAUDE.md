@@ -294,4 +294,4 @@ User-level auto-memory lives at `C:/Users/newbi/.claude/projects/C--Users-newbi-
 
 ### External reference clones (never ship, never edit, never import)
 
-Local-only research clones (`openclaw/`, `hermes-agent/`, `Linear-Coding-Agent-Harness/`, `.playwright-mcp/`, `git-hub-references/`) are `.gitignore`'d; never ship, never edit, never import. See `git-hub-references/CLAUDE.md` if you need the per-clone index. The Devpost zip is produced by `scripts/package-devpost.sh`.
+Local-only research clones (`openclaw/`, `hermes-agent/`, `Linear-Coding-Agent-Harness/`, `.playwright-mcp/`, `obsidian-mind/`, `n8n-references/`, `git-hub-references/`) are `.gitignore`'d; never ship, never edit, never import. See `git-hub-references/CLAUDE.md` if you need the per-clone index. The Devpost zip is produced by `scripts/package-devpost.sh`.

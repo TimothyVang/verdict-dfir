@@ -114,8 +114,10 @@ The original five implementation plans shipped. Each carries a RETIRED banner na
 |---|---|---|
 | `ci-smoke-checklist.md` | **ACTIVE** | End-to-end pipeline verification before submission. |
 | `dockerfile-a2-decision.md` | **RESEARCH** (decision archive) | Cut the in-container `find-evil` wrapper + `.deb` packaging (PR #4, 2026-04-27, "Option B"). Body retained as decision record. |
+| `engram-memory-integration.md` | **ACTIVE** | Optional: wire Engram (standalone Apache-2.0 knowledge/memory MCP server) as a third, locally-run MCP server. Not bundled, not in the investigation flow, not in the audit chain. |
 | `github-remote-bootstrap.md` | **ACTIVE** | Pre-submission ops doc for setting up the public GitHub repo URL Devpost requires. |
 | `local-smoke-gate.md` | **ACTIVE** | Prerequisites, per-smoke coverage map, and common failure → fix pairs for `bash scripts/run-all-smokes.sh`. |
+| `n8n-automation-integration.md` | **ACTIVE** | Optional: wire n8n as an operator-local harness *around* the product — repeatable runs + post-verdict finding-to-action (via `n8n-mcp`, user-scope). Not bundled, not the orchestrator, not in the audit chain. |
 | `practical-sans-dfir-completion-prompt.md` | **ACTIVE** | Strict copy/paste coding-agent prompt for finishing practical SANS DFIR investigation outputs without new crypto work. |
 | `readiness-packet-windows.md` | **ACTIVE** | Three invocation modes for `scripts/readiness-gate.ps1`, readiness-state meanings, and `READINESS_BLOCKED` unblocking guide. |
 | `researched-dfir-automation-improvement-prompt.md` | **RESEARCH** | Research-backed prompt for future DFIR automation improvement work. |

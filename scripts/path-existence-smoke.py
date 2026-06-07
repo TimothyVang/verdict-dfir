@@ -113,8 +113,10 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # describing where the cross-case memory SQLite resolves at runtime).
     re.compile(r"^\$[A-Z_]+/"),
     # Install / system paths in decision runbooks + protocol-sift
-    # appendix examples.
-    re.compile(r"^/(usr|etc|var|opt|dev|proc|sys|home)/"),
+    # appendix examples.  /mnt covers the SIFT VM shared-folder evidence
+    # mount (`/mnt/hgfs/evidence/...`) referenced in README/QUICKSTART —
+    # a guest-side runtime path, not a repo file.
+    re.compile(r"^/(usr|etc|var|opt|dev|proc|sys|home|mnt)/"),
     # MCP wire-format identifiers (tools/list, tools/call) -
     # JSON-RPC method names, not file paths.
     re.compile(r"^tools/(list|call)$"),
@@ -201,6 +203,13 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # clones" + Amendment A3 §1.3).  /git-hub-references/ is gitignored
     # so it never enters the submission tree.
     re.compile(r"^git-hub-references(/|$)"),
+    # Engram — the operator's standalone Apache-2.0 knowledge/memory MCP
+    # server, wired in optionally per docs/runbooks/engram-memory-
+    # integration.md.  /engram-vang/ is gitignored (its own repo + release
+    # lifecycle; never bundled in the submission), so its paths exist on a
+    # developer's disk but not in the CI checkout.  Same shape as the
+    # git-hub-references/ external-clone allowance above.
+    re.compile(r"^(?:\.\./)*engram-vang(/|$)"),
     # User-level Claude Code auto-memory dir.  CLAUDE.md references
     # `memory/project_autonomous_queue.md` which actually lives at
     # `~/.claude/projects/<project>/memory/...`, not at repo root.

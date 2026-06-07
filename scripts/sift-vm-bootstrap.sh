@@ -74,7 +74,11 @@ to_winpath() {
 # ---------------------------------------------------------------------
 # Phase 0: Prereqs
 # ---------------------------------------------------------------------
-[[ -f "$OVA_PATH" ]] || fail "OVA not found at: $OVA_PATH"
+[[ -f "$OVA_PATH" ]] || fail "OVA not found at: $OVA_PATH
+  The SANS SIFT Workstation OVA is not shipped in this repo (SANS-licensed,
+  ~9.3 GB, gitignored). Download it from:
+    https://www.sans.org/tools/sift-workstation/
+  Save it as ${REPO_ROOT}/sift-2026.03.24.ova (or set OVA_PATH=/path/to/your.ova)."
 [[ -f "$VMRUN" ]]    || fail "vmrun.exe not found at $VMRUN (install VMware Workstation)"
 [[ -f "$OVFTOOL" ]]  || fail "ovftool not found at $OVFTOOL (ships with VMware Workstation)"
 command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1 || fail "python required for paramiko key install"

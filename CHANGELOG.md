@@ -11,6 +11,8 @@ once the first `v0.x` is cut on the `v-submit` tag.
 
 ## [Unreleased]
 
+> **Note:** The entries below describe the Amendment A5 removal work (OpenTimestamps/Bitcoin tier) and document the tool-count evolution during that period. The current shipped state (post-A5) is **31 tools: 19 Rust DFIR + 12 Python crypto/ACH/memory/ACP/expert-feedback.** See `[v-submit]` section below for the current release.
+
 ### Removed — Amendment A5 (2026-04-30 → 2026-05-01)
 
 - **OpenTimestamps + Bitcoin tier of the cryptographic chain-of-custody.**
@@ -915,6 +917,28 @@ once the first `v0.x` is cut on the `v-submit` tag.
   on 12 (Ruby for Windows is not standard enterprise tooling),
   `msadvapi2_32.e` and `msadvapi2_64.e` on 8 hosts each
   (name-spoofing the legitimate `advapi32.dll`).
+
+## [v-submit] - 2026-06-06
+
+Snapshot of the current shipped state before final submission.
+
+### Summary
+
+The current `master` HEAD (commit 8fc18a2 onwards) ships a **31-tool MCP surface** for the SANS Find Evil! 2026 hackathon. The tool count evolved as follows:
+
+- **Pre-A5 (pre-2026-04-30):** 5 tiers cryptographic chain (sha256 → audit → merkle → sigstore → OpenTimestamps/Bitcoin); 13 Rust DFIR + 13 Python crypto/ACH/memory (26 total) plus OTS pair (28 total).
+- **Amendment A5 (2026-04-30 removal):** OpenTimestamps/Bitcoin tier and both `ots_stamp`/`ots_verify` tools removed. Chain collapses to 3 tiers. Nominal shipped count pre-2026-05-20: 13 Rust DFIR + 11 Python (24 total).
+- **Post-2026-05-20 discovery:** Additional Rust tools beyond documentation. Current audit reveals 19 Rust DFIR + 12 Python crypto/ACH/memory/ACP/expert-feedback tools present in the shipped codebase, confirmed in CLAUDE.md §4 tool-surface table and README.md line 20.
+
+### Shipped MCP Surface (Confirmed 2026-06-06)
+
+- **`findevil-mcp` (Rust):** 19 typed DFIR tools — `case_open`, `disk_mount`, `disk_extract_artifacts`, `disk_unmount`, `evtx_query`, `mft_timeline`, `hayabusa_scan`, `vol_pslist`, `vol_psscan`, `vol_psxview`, `vol_malfind`, `yara_scan`, `usnjrnl_query`, `registry_query`, `prefetch_parse`, `vel_collect`, `sysmon_network_query`, `zeek_summary`, `pcap_triage`.
+- **`findevil-agent-mcp` (Python):** 12 typed crypto/ACH/memory/ACP/expert-feedback tools — `audit_append`, `audit_verify`, `manifest_finalize`, `manifest_verify`, `verify_finding`, `detect_contradictions`, `judge_findings`, `correlate_findings`, `memory_remember`, `memory_recall`, `pool_handoff`, `expert_miss_capture`.
+- **Total:** 31 tools across two MCP servers. **NO `execute_shell` or broad shell-backed surface.** Cryptographic chain-of-custody locked to 3-tier model (audit prev_hash → rs_merkle → sigstore).
+
+### Note on Tool-Count Documentation
+
+The [Unreleased] section above preserves the historical A5 removal narrative, which documents the pre/post OTS-removal evolution (25→23 count). That entry reflects the tool-count understanding at the time of A5 (April 30, 2026). The current shipped count (31) reflects the additional Rust tools discovered during pre-submission documentation audit (June 6, 2026). This v-submit snapshot confirms the 31-tool reality; no code change occurred between the A5 counts and now — the discovery was documentation-only.
 
 ---
 

@@ -60,6 +60,9 @@ GUEST_USER = os.environ.get("FIND_EVIL_GUEST_USER", "sansforensics")
 SSH_KEY = os.environ.get("FIND_EVIL_SSH_KEY", str(Path.home() / ".ssh" / "sift_key"))
 GUEST_REPO = os.environ.get("FIND_EVIL_GUEST_REPO", "/home/sansforensics/find-evil")
 REPO_ROOT = Path(__file__).resolve().parent.parent
+# Default evidence drop directory. `find-evil-auto` with no positional path
+# falls back to $FINDEVIL_EVIDENCE_ROOT, else this repo-local `evidence/` dir.
+DEFAULT_EVIDENCE_DIR = REPO_ROOT / "evidence"
 RUST_BIN = f"{GUEST_REPO}/target/release/findevil-mcp"
 RUST_BIN_Q = shlex.quote(RUST_BIN)
 AGENT_MCP_DIR_Q = shlex.quote(f"{GUEST_REPO}/services/agent_mcp")
@@ -6470,6 +6473,45 @@ def write_run_summary(path: str, summary: dict[str, Any]) -> None:
     tmp.replace(target)
 
 
+def resolve_evidence_path(
+    cli_path: str | None,
+    *,
+    env: dict[str, str] | None = None,
+    default_dir: Path = DEFAULT_EVIDENCE_DIR,
+) -> str:
+    """Resolve the evidence path for a run.
+
+    Precedence: explicit CLI path > ``$FINDEVIL_EVIDENCE_ROOT`` > the repo's
+    default ``evidence/`` directory. An explicit CLI path is returned
+    verbatim and NOT host-validated — in SIFT-VM mode it lives inside the
+    guest (e.g. ``/mnt/hgfs/evidence/...``); ``case_open`` validates it.
+    When falling back to a directory, the directory must exist and hold at
+    least one evidence entry (anything other than the tracked ``README.md``
+    / ``.gitkeep`` placeholders), else raise ``ValueError`` with guidance.
+    """
+    if cli_path:
+        return cli_path
+    env_src = dict(os.environ if env is None else env)
+    override = env_src.get("FINDEVIL_EVIDENCE_ROOT", "").strip()
+    root = Path(override) if override else default_dir
+    label = "FINDEVIL_EVIDENCE_ROOT" if override else "the default evidence/ directory"
+    if not root.exists():
+        raise ValueError(
+            f"no evidence path given and {label} does not exist: {root}\n"
+            f"Drop evidence there (or set FINDEVIL_EVIDENCE_ROOT), or pass an "
+            f"explicit path: find-evil-auto <evidence-path>"
+        )
+    placeholders = {"README.md", ".gitkeep"}
+    contents = [child for child in root.iterdir() if child.name not in placeholders]
+    if not contents:
+        raise ValueError(
+            f"no evidence path given and {label} is empty: {root}\n"
+            f"Drop a memory image / EVTX / disk image / case folder there, or "
+            f"pass an explicit path: find-evil-auto <evidence-path>"
+        )
+    return str(root)
+
+
 def main() -> int:
     p = argparse.ArgumentParser(
         prog="find-evil-auto",
@@ -6477,8 +6519,12 @@ def main() -> int:
     )
     p.add_argument(
         "evidence_path",
-        help="Path INSIDE the SIFT VM to the evidence file "
-        "(e.g., /mnt/hgfs/evidence/extracted/.../base-dc-memory.img)",
+        nargs="?",
+        default=None,
+        help="Path to the evidence file/case dir (INSIDE the SIFT VM in "
+        "SIFT mode, e.g. /mnt/hgfs/evidence/.../base-dc-memory.img). If "
+        "omitted, falls back to $FINDEVIL_EVIDENCE_ROOT, else the repo's "
+        "evidence/ directory.",
     )
     p.add_argument(
         "--unattended",
@@ -6516,11 +6562,17 @@ def main() -> int:
     )
     args = p.parse_args()
 
+    try:
+        evidence_path = resolve_evidence_path(args.evidence_path)
+    except ValueError as exc:
+        print(f"find-evil-auto: {exc}", file=sys.stderr)
+        return 2
+
     # Make sibling scripts importable (render_report.py)
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
     inv = Investigation(
-        args.evidence_path,
+        evidence_path,
         unattended=args.unattended,
         with_report=not args.no_report,
         signer=args.signer,
