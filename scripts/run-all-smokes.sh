@@ -155,6 +155,14 @@ run_smoke \
     "make-demo-video-smoke (TTS+ffmpeg video builder, --dry-run)" \
     "python3 scripts/make-demo-video-smoke.py"
 
+# 11. Post-verdict grounding contract. Offline checks (claim extraction, bundle
+#     merge, never-evidence boundary) always run; the live anti-hallucination
+#     checks self-skip cleanly when the n8n webhook is down.
+run_smoke \
+    "grounding-smoke (claim extraction + boundary + anti-hallucination contract)" \
+    "python3 scripts/grounding-smoke.py" \
+    "[ -f scripts/ground_verdict.py ]"
+
 # Lint / format gates. L0 GHA workflow runs these too; mirror them locally
 # so a contributor running this script before commit catches a missing
 # `ruff format` or unformatted Rust before the push. Each gate uses
