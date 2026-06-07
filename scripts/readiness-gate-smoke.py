@@ -41,7 +41,6 @@ def make_run(
     run = root / "case-ready"
     run.mkdir(parents=True)
     audit = AuditLog(run / "audit.jsonl")
-    audit.append("judge_selfscore", {"criterion": 1})
     audit.append("report_qa", {"status": "PASS"})
     audit.append("customer_release_gate", {"customer_releasable": False})
     audit.append("verdict_artifact", {"path": "verdict.json", "sha256": "a" * 64})

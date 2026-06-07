@@ -790,33 +790,6 @@ def write_markdown(
     sig = manifest["signature"]["payload_sha256"]
     cf = manifest["signature"]["cert_fingerprint"]
 
-    selfscore_section = ""
-    if audit:
-        selfscores = sorted(
-            (r for r in audit if r.get("kind") == "judge_selfscore"),
-            key=lambda r: r.get("payload", {}).get("criterion", 99),
-        )
-        if selfscores:
-            rows = ["| # | Criterion | Score |", "|---:|---|---|"]
-            for r in selfscores:
-                p = r.get("payload", {})
-                rows.append(
-                    f"| {p.get('criterion', '?')} | "
-                    f"{p.get('question', '')} | "
-                    f"`{p.get('answer', '')}` |"
-                )
-            selfscore_section = (
-                "\n## Judge self-score (agent's own assessment)\n\n"
-                "*Per `agent-config/JUDGING.md` §End-of-investigation, "
-                "the agent emits one `kind=judge_selfscore` audit record "
-                "per SANS Find Evil! 2026 rubric criterion BEFORE "
-                "`manifest_finalize` — so the score below is itself part "
-                "of the cryptographic attestation. The agent doesn't get "
-                "to revise it after seeing the score it actually got.*\n\n"
-                + "\n".join(rows)
-                + "\n\n---\n"
-            )
-
     attack_story_section = ""
     if attack_story:
         fig_block = (
@@ -1352,7 +1325,6 @@ def write_markdown(
 ![Cryptographic chain of custody](figures/chain_of_custody.png)
 {psscan_fig_block}
 ---
-{selfscore_section}
 
 ## Verification
 

@@ -1,6 +1,6 @@
 # Spec #4 — Orchestration Glue: CI Pipeline
 
-> **Status: SHIPPED.** Nine GHA workflows live in `.github/workflows/`. Branch protection, release pipeline (`release.yml` on `v*` tags), Devpost submission zip (`devpost-submit.yml` on `v-submit`), competitor watch, and the budget-guard (no-op under A1 unless `ANTHROPIC_API_KEY` is set) all wired. `scripts/build-deb.sh` and the `.deb` artifact were cut by A2 (PR #4 / `docs/runbooks/dockerfile-a2-decision.md`); current release artifacts are Docker image, `report.html`, and the Devpost zip.
+> **Status: SHIPPED, partially superseded by A6.** GHA workflows live in `.github/workflows/`. Branch protection, release pipeline (`release.yml` on `v*` tags), Devpost submission zip (`devpost-submit.yml` on `v-submit`), and competitor watch all wired. **Amendment A6 (2026-06-07) removed the build swarm and its `budget-guard.yml` workflow + `SWARM_HALT` machinery** — treat all budget-guard / `SWARM_HALT` / LiteLLM-`/spend` content below as historical. `scripts/build-deb.sh` and the `.deb` artifact were cut by A2 (PR #4 / `docs/runbooks/dockerfile-a2-decision.md`); current release artifacts are Docker image, `report.html`, and the Devpost zip.
 
 **Date:** 2026-04-26
 **Status:** Shipped — current workflow YAML wins where older design details below conflict

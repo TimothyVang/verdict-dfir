@@ -1126,7 +1126,7 @@ def main() -> int:
             print(f"         actual  : {actual!r}")
             failures += 1
 
-    # ----- Judge self-score uses final findings, not discarded pool candidates --
+    # ----- Shared audit client used by the report-QA / release-gate checks --
 
     class FakeAuditClient:
         def __init__(self) -> None:
@@ -1137,68 +1137,6 @@ def main() -> int:
                 raise AssertionError(f"unexpected tool call: {name}")
             self.records.append(args)
             return {"ok": True}
-
-    final_findings = [
-        {
-            "confidence": "HYPOTHESIS",
-            "finding_id": "f-final-1",
-            "tool_call_id": "tc-004",
-        },
-        {
-            "confidence": "HYPOTHESIS",
-            "finding_id": "f-final-2",
-            "tool_call_id": "tc-005",
-        },
-    ]
-    raw_extra = {
-        "confidence": "INFERRED",
-        "finding_id": "f-discarded",
-        "tool_call_id": "tc-006",
-    }
-    score_inv = fea.Investigation("memory.img", unattended=True, with_report=False)
-    score_inv.findings_pool_a = [final_findings[0], raw_extra]
-    score_inv.findings_pool_b = [final_findings[1]]
-    score_inv.tool_calls = [
-        {"tool": "vol_psscan", "output_hash": "a" * 64},
-        {"tool": "vol_psxview", "output_hash": "b" * 64},
-    ]
-    audit_client = FakeAuditClient()
-    score_inv._emit_judge_selfscore(  # noqa: SLF001 - smoke covers audit output
-        audit_client,
-        final_findings,
-        contras=0,
-        kept=2,
-        downgraded=0,
-    )
-    answers = {
-        r["payload"]["criterion"]: r["payload"]["answer"] for r in audit_client.records
-    }
-    selfscore_cases = [
-        (
-            "self-score confidence distribution uses final findings",
-            answers[2],
-            "C=0% I=0% H=100% (n=2)",
-        ),
-        (
-            "self-score citation rate uses final findings",
-            answers[5],
-            "cited=2/2",
-        ),
-        (
-            "self-score does not claim cross-class corroboration for memory-only runs",
-            answers[3],
-            "classes=['memory'] crossed=0",
-        ),
-    ]
-    for label, actual, expected in selfscore_cases:
-        process_checks += 1
-        ok = actual == expected
-        marker = "OK  " if ok else "FAIL"
-        print(f"  [{marker}] selfscore: {label}")
-        if not ok:
-            print(f"         expected: {expected!r}")
-            print(f"         actual  : {actual!r}")
-            failures += 1
 
     # ----- Process-view divergence triggers psxview policy -----------
     process_divergence_cases = [

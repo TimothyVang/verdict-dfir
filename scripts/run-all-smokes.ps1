@@ -115,7 +115,6 @@ Invoke-Smoke -Label "launcher-smoke (bash -n + claude binary + no positional .)"
 Invoke-Smoke -Label "divergence-smoke (active divergences downstream-clean)" -Command { & $python scripts/divergence-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "path-existence-smoke (backtick-quoted paths resolve)" -Command { & $python scripts/path-existence-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "smoke-regex-tests (audit-smoke regex/helper policies)" -Command { & $python scripts/smoke-regex-tests.py } -Prereq { $python }
-Invoke-Smoke -Label "autonomous-loop-smoke (8h dry-run + empty-queue timing)" -Command { & $python scripts/autonomous-loop-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "render-binary-smoke (pandoc/chrome resolve via PATH, graceful degrade)" -Command { & $python scripts/render-binary-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "starter-data-smoke (SANS_STARTER_URL contract + goldens stub)" -Command { & $python scripts/starter-data-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "find-evil-run-smoke (one-command operator entry, --dry-run)" -Command { & $python scripts/find-evil-run-smoke.py } -Prereq { $python }

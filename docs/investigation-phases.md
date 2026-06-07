@@ -22,8 +22,6 @@ case_open
                                        │
                                correlate_findings (≥2 artifact-class enforcement)
                                        │
-                               6 × judge_selfscore records
-                                       │
                                manifest_finalize (terminal)
 ```
 
@@ -127,26 +125,7 @@ case_open
 
 ---
 
-## Phase 7 — Self-score
-
-**What it does:** before the manifest closes, the supervisor emits six `kind=judge_selfscore` audit records — one per SANS rubric criterion. These land in the audit chain before the Merkle tree closes, so they are part of the cryptographic attestation.
-
-**The six records and what to read in each:**
-
-| Record | Key fields | What it means |
-|---|---|---|
-| Autonomous execution quality | `failures=N corrections=N` | Tool failures the agent hit and self-corrected; N corrections = the agent adapted |
-| IR accuracy | `C=X% I=Y% H=Z%` | Distribution of CONFIRMED / INFERRED / HYPOTHESIS findings. A healthy run has C > I > H. |
-| Breadth & depth | `classes=[…] crossed=[…]` | Artifact classes examined; which findings crossed the ≥2 class threshold |
-| Constraint implementation | `rejected=N reasons=[…]` | Tool calls the typed surface rejected (e.g., attempted execute_shell) — should be 0 |
-| Audit trail | `cited=N/N` | Fraction of findings that have a `tool_call_id`; should be 100% after verifier |
-| Reproducibility | `reproducible=yes/no` | Whether re-running the same tool calls produces the same SHA-256 outputs |
-
-**Analyst use:** grep `"kind":"judge_selfscore"` in audit.jsonl to see the agent's own assessment before you review the verdict.
-
----
-
-## Phase 8 — Finalize
+## Phase 7 — Finalize
 
 **Tool:** `manifest_finalize`
 

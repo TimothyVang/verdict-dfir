@@ -1,103 +1,162 @@
 import React from "react";
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { C, GROTESK, MARGIN, MONO, SERIF } from "./shared/editorial";
+import { Kicker, KineticHeadline, RuleLine, Stamp } from "./shared/editorial-ui";
+import { Scene } from "./shared/Scene";
 
-const MONO = "'JetBrains Mono', 'Courier New', monospace";
+// Beat 9 (colophon) — "Case closed." The closing page set as a magazine
+// colophon: a Case Closed stamp hit over the disposition, the VERDICT logotype
+// small in Fraunces, and the credits run as a left-aligned grotesque/mono
+// colophon block under a RuleLine. No centered metadata stack, no tech-grid.
+
+// Real credit lines preserved from the prior scene — set as label/value pairs
+// so they read as a printed colophon, not a list of links.
+interface Credit { label: string; value: string; mono?: boolean; tone?: string }
+const CREDITS: Credit[] = [
+  { label: "Source", value: "github.com/TimothyVang/sans-hackathon", mono: true },
+  { label: "License", value: "Apache-2.0" },
+  { label: "Continuous integration", value: "L0 · L1 · L2 · L3 — all green", tone: C.confirmed },
+  { label: "Tool surface", value: "19 Rust · 12 Python", mono: true },
+];
 
 export function OutroScene() {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { durationInFrames } = useVideoConfig();
+  const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
-  const fadeOut = interpolate(frame, [durationInFrames - 15, durationInFrames], [1, 0], {
-    extrapolateLeft: "clamp", extrapolateRight: "clamp",
-  });
-
-  // Logo mark scale-in
-  const logoS = spring({ frame: frame - 5, fps, config: { damping: 11, stiffness: 80 } });
-  const logoOp = interpolate(frame - 5, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // Wordmark
-  const wordOp = interpolate(frame - 20, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const wordY = interpolate(frame - 20, [0, 16], [20, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // Detail lines
-  const details = [
-    { text: "github.com/TimothyVang/sans-hackathon",  color: "#3498db", delay: 36 },
-    { text: "License: Apache-2.0",                     color: "#8b949e", delay: 44 },
-    { text: "CI: L0 · L1 · L2 · L3  ✓ green",         color: "#2ecc71", delay: 52 },
-    { text: "MCP: 19 Rust tools · 12 Python tools",    color: "#9b59b6", delay: 58 },
-    { text: "SANS Find Evil! 2026",                     color: "#8b949e", delay: 66 },
-  ];
+  const fadeOut = interpolate(frame, [durationInFrames - 18, durationInFrames], [1, 0], clampOpts);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
-      {/* Radial glow */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "radial-gradient(ellipse at 50% 45%, rgba(155,89,182,0.14) 0%, transparent 65%)",
-      }} />
+    <div style={{ opacity: fadeOut, width: "100%", height: "100%" }}>
+      <Scene page={10} caption="Colophon">
+        {/* Left column — the imprint: stamp + logotype + creed */}
+        <div style={{ position: "absolute", left: MARGIN, top: 232, width: 760 }}>
+          <Kicker frame={frame} delay={6} color={C.accent}>End of File</Kicker>
 
-      {/* Grid */}
-      <div style={{
-        position: "absolute", inset: 0, opacity: 0.04,
-        backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-        backgroundSize: "60px 60px",
-      }} />
+          <div style={{ marginTop: 24, marginBottom: 30 }}>
+            <Stamp label="Case Closed" frame={frame} delay={14} color={C.alert} rotate={-6} size={34} />
+          </div>
 
-      <div style={{
-        position: "absolute", inset: 0,
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0,
-      }}>
-        {/* Logo mark */}
-        <div style={{ opacity: logoOp, transform: `scale(${logoS})`, marginBottom: 28 }}>
-          <svg width="96" height="96" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="40" cy="40" r="38" fill="#161b22" stroke="#9b59b6" strokeWidth="2"/>
-            <rect x="14" y="18" width="38" height="17" rx="4" fill="#9b59b6"/>
-            <rect x="22" y="18" width="38" height="6" rx="3" fill="#b17fd4" opacity="0.4"/>
-            <rect x="31" y="29" width="5" height="30" rx="2.5" fill="#30363d" transform="rotate(-30 33 44)"/>
-            <ellipse cx="20" cy="58" rx="8" ry="5" fill="none" stroke="#8b949e" strokeWidth="2.5"/>
-            <ellipse cx="36" cy="58" rx="8" ry="5" fill="none" stroke="#8b949e" strokeWidth="2.5"/>
-            <circle cx="56" cy="58" r="8" fill="#2ecc71" opacity="0.9"/>
-            <polyline points="52,58 55,61 61,54" fill="none" stroke="#0d1117" strokeWidth="2"
-              strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          {/* The VERDICT logotype — Fraunces, small, with its creed beneath. */}
+          <div style={{ marginTop: 8 }}>
+            <KineticHeadline text="Verdict" frame={frame} delay={26} size={108} weight={900} />
+          </div>
+          <div
+            style={{
+              marginTop: 14,
+              opacity: interpolate(frame - 48, [0, 16], [0, 1], clampOpts),
+              fontFamily: SERIF,
+              fontStyle: "italic",
+              fontSize: 32,
+              fontWeight: 400,
+              color: C.inkMuted,
+              letterSpacing: -0.3,
+            }}
+          >
+            DFIR at machine speed.
+          </div>
+
+          {/* The creed, set as small caps grotesque furniture. */}
+          <div style={{ marginTop: 40, display: "flex", alignItems: "center", gap: 18 }}>
+            <RuleLine frame={frame} delay={58} width={48} color={C.accent} thickness={2} />
+            <span
+              style={{
+                opacity: interpolate(frame - 64, [0, 14], [0, 1], clampOpts),
+                fontFamily: GROTESK,
+                fontSize: 19,
+                fontWeight: 600,
+                letterSpacing: 6,
+                textTransform: "uppercase",
+                color: C.ink,
+              }}
+            >
+              Investigate · Verify · Prove
+            </span>
+          </div>
         </div>
 
-        {/* VERDICT wordmark */}
-        <div style={{
-          opacity: wordOp,
-          transform: `translateY(${wordY}px)`,
-          fontFamily: MONO, fontSize: 88, fontWeight: 800,
-          color: "#e6edf3", letterSpacing: 10,
-          marginBottom: 8,
-        }}>
-          VERDICT
-        </div>
+        {/* Right column — the colophon block, left-aligned label/value pairs. */}
+        <div style={{ position: "absolute", right: MARGIN, top: 252, width: 660 }}>
+          <div
+            style={{
+              fontFamily: MONO,
+              fontSize: 14,
+              letterSpacing: 3,
+              textTransform: "uppercase",
+              color: C.inkMuted,
+              marginBottom: 16,
+              opacity: interpolate(frame - 40, [0, 12], [0, 1], clampOpts),
+            }}
+          >
+            Colophon
+          </div>
+          <RuleLine frame={frame} delay={46} color={C.hairline} />
 
-        {/* Tagline */}
-        <div style={{
-          opacity: wordOp,
-          fontFamily: MONO, fontSize: 22, fontWeight: 400,
-          color: "#8b949e", letterSpacing: 4,
-          marginBottom: 44,
-        }}>
-          DFIR at machine speed.
-        </div>
+          <div style={{ marginTop: 8 }}>
+            {CREDITS.map((c, i) => {
+              const d = 60 + i * 14;
+              const op = interpolate(frame - d, [0, 14], [0, 1], clampOpts);
+              const tx = interpolate(frame - d, [0, 16], [12, 0], clampOpts);
+              return (
+                <div key={c.label} style={{ opacity: op, transform: `translateX(${tx}px)` }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "210px 1fr",
+                      alignItems: "baseline",
+                      gap: 24,
+                      padding: "20px 0",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: GROTESK,
+                        fontSize: 15,
+                        fontWeight: 600,
+                        letterSpacing: 3,
+                        textTransform: "uppercase",
+                        color: C.inkFaint,
+                      }}
+                    >
+                      {c.label}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: c.mono ? MONO : SERIF,
+                        fontSize: c.mono ? 21 : 28,
+                        fontWeight: c.mono ? 400 : 600,
+                        color: c.tone ?? C.ink,
+                        letterSpacing: c.mono ? 0 : -0.4,
+                      }}
+                    >
+                      {c.value}
+                    </span>
+                  </div>
+                  {i < CREDITS.length - 1 && <div style={{ height: 1, background: C.hairline, opacity: 0.5 }} />}
+                </div>
+              );
+            })}
+          </div>
 
-        {/* Detail lines */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-          {details.map(({ text, color, delay }) => {
-            const op = interpolate(frame - delay, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-            return (
-              <div key={text} style={{ opacity: op, fontFamily: MONO, fontSize: 18, color, letterSpacing: 1 }}>
-                {text}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+          <RuleLine frame={frame} delay={132} color={C.hairline} />
 
-      {/* Bottom accent */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 4, background: "#9b59b6", opacity: 0.8 }} />
-    </AbsoluteFill>
+          {/* Printer's mark — the signed merkle root, the last line of the file. */}
+          <div
+            style={{
+              marginTop: 22,
+              opacity: interpolate(frame - 150, [0, 16], [0, 1], clampOpts),
+              fontFamily: MONO,
+              fontSize: 14,
+              color: C.inkMuted,
+              lineHeight: 1.8,
+            }}
+          >
+            Signed · sigstore · merkle d1e4bc7a906f2c38
+            <br />
+            <span style={{ color: C.confirmed }}>chain OK</span> — verifiable offline, years from now
+          </div>
+        </div>
+      </Scene>
+    </div>
   );
 }

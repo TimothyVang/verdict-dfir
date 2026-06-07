@@ -58,34 +58,37 @@ In the session, prompt:
 
 > investigate `<path-to-evidence>`
 
-The agent reads `agent-config/SOUL.md` → `AGENTS.md` → `PLAYBOOK.md` → `TOOLS.md` → `MEMORY.md` → `HEARTBEAT.md` → `JUDGING.md` at session start, then drives the playbook tool sequence for that evidence type.
+The agent reads `agent-config/SOUL.md` → `AGENTS.md` → `PLAYBOOK.md` → `TOOLS.md` → `MEMORY.md` → `HEARTBEAT.md` at session start, then drives the playbook tool sequence for that evidence type.
 
-### Option 2B — `find-evil-auto` (Tesla mode, single command, no human input)
+### Option 2B — `verdict` (the one command, no human input)
 
 ```bash
-bash scripts/find-evil-auto <evidence-path-inside-VM> [--unattended] [--no-report]
+scripts/verdict <evidence> [--sift] [--no-dashboard] [--unattended]
 ```
+
+`verdict` runs the whole workflow: preflight → investigate → open the live dashboard at the case →
+signed verdict + report. Add `--sift` to run the DFIR tools inside the SANS SIFT VM.
 
 Examples:
 
 ```bash
 # Memory image:
-bash scripts/find-evil-auto /mnt/hgfs/evidence/extracted/base-dc/base-dc-memory.img --unattended
+scripts/verdict --sift /mnt/hgfs/evidence/extracted/base-dc/base-dc-memory.img --unattended
 
 # Single EVTX:
-bash scripts/find-evil-auto /home/sansforensics/find-evil/fixtures/single-evtx/Security.evtx --unattended
+scripts/verdict --sift /home/sansforensics/find-evil/fixtures/single-evtx/Security.evtx --unattended
 
 # Disk image (read-only mount/extract where SIFT supports it; otherwise custody-only):
-bash scripts/find-evil-auto /mnt/hgfs/evidence/disk-images/base-dc-cdrive.E01 --unattended
+scripts/verdict --sift /mnt/hgfs/evidence/disk-images/base-dc-cdrive.E01 --unattended
 
 # Mixed case directory (memory, EVTX, disk artifacts, network logs, Velociraptor zips):
-bash scripts/find-evil-auto /mnt/hgfs/evidence/cases/base-dc/ --unattended
+scripts/verdict --sift /mnt/hgfs/evidence/cases/base-dc/ --unattended
 
 # Same run, plus a machine-readable automation summary:
-bash scripts/find-evil-auto /mnt/hgfs/evidence/cases/base-dc/ --unattended --run-summary tmp/run-summary.json
+scripts/verdict --sift /mnt/hgfs/evidence/cases/base-dc/ --unattended --run-summary tmp/run-summary.json
 
 # Velociraptor collection zip:
-bash scripts/find-evil-auto /mnt/hgfs/evidence/velociraptor/base-dc.zip --unattended
+scripts/verdict --sift /mnt/hgfs/evidence/velociraptor/base-dc.zip --unattended
 ```
 
 What it does in one command (no interactive prompts):

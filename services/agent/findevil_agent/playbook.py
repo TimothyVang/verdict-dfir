@@ -4,7 +4,7 @@ This module is the single source of truth for:
 - evidence-type detection (``detect_evidence_type``)
 - artifact-class classification (``classify_artifact_path``)
 - per-evidence-type tool sequences (``TOOL_SEQUENCES``)
-- SANS rubric self-score criteria (``JUDGE_SELFSCORE_CRITERIA``)
+- pre-submission self-assessment criteria (``JUDGE_SELFSCORE_CRITERIA``)
 
 Both the interactive (Claude Code) path and the headless
 (``scripts/find_evil_auto.py``) path import from here.  The in-VM
@@ -184,7 +184,8 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
 
 
 # ---------------------------------------------------------------------------
-# JUDGE_SELFSCORE_CRITERIA — SANS Find Evil! 2026 rubric (verbatim from JUDGING.md)
+# JUDGE_SELFSCORE_CRITERIA — self-assessment criteria used by
+# scripts/self-score.py (pre-submission grading)
 # ---------------------------------------------------------------------------
 
 JUDGE_SELFSCORE_CRITERIA: list[dict[str, str]] = [

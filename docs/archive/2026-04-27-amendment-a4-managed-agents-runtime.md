@@ -1,6 +1,8 @@
 # Amendment A4 — Managed Agents production runtime
 
-> **Status: RESEARCH (deferred).** Implementation deferred until post-submission adoption. PURELY ADDITIVE — A1/A2/A3 are unchanged. The SANS submission ships against the local Claude Code path (A2). A future contributor wanting hosted durability for an organization implements `services/mcp_http/` + `services/managed_agent/` + `scripts/find-evil-managed` per §4.5.
+> **Status: RESEARCH (deferred, archived).** Implementation deferred until post-submission adoption. PURELY ADDITIVE — A1/A2/A3 are unchanged. The SANS submission ships against the local Claude Code path (A2). A future contributor wanting hosted durability for an organization implements `services/mcp_http/` + `services/managed_agent/` + `scripts/find-evil-managed` per §4.5.
+>
+> **Archive note (non-authoritative).** Two design-era references below are stale relative to shipped code: (1) the live one-command entry point is now `scripts/verdict <evidence>` (the headless `scripts/find-evil-auto` engine is internal); (2) `judge_selfscore` is no longer pipeline-emitted — the SANS-rubric self-assessment is a standalone pre-submission grader, `scripts/self-score.py`, that does not touch the sealed audit chain. The Pool A/B `judge_findings` MERGE agent is unrelated. CLAUDE.md and the executable registries are authoritative.
 
 **Status:** spec, future deployment work (not blocking the SANS submission). Origin: user redirect 2026-04-27 — *"Managed Agents is a fit for the SANS Find Evil! agent itself running in production. … that's a real future use case for the product."*
 

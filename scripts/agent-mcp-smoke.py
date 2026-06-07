@@ -236,15 +236,7 @@ def real_evidence_flow(client: StdioClient, case_dir: Path) -> int:
     av = client.call_tool("audit_verify", {"path": str(audit_path)})
     if not av["ok"]:
         fatal(f"recorded audit chain did NOT verify: {av}")
-    selfscore_count = sum(
-        1
-        for line in audit_path.read_text(encoding="utf-8").splitlines()
-        if line.strip() and '"kind":"judge_selfscore"' in line.replace(" ", "")
-    )
-    log(
-        f"  -> chain verifies, {av['record_count']} records "
-        f"(of which {selfscore_count} kind=judge_selfscore)"
-    )
+    log(f"  -> chain verifies, {av['record_count']} records")
 
     # ---- 2. manifest_verify on the recorded manifest ------------------
     # The manifest's `audit_log_path` is the path AS SEEN by the agent

@@ -216,59 +216,8 @@ def load_verdicts(fleet_dir: Path) -> list[dict[str, Any]]:
                 v["_psscan"] = []
         else:
             v["_psscan"] = []
-        # Pick up judge_selfscore audit records if present (added 2026-04-26
-        # commit 94c08dd; older runs simply won't have any).
-        audit_file = case_path / "audit.jsonl"
-        v["_selfscores"] = []
-        if audit_file.is_file():
-            for line in audit_file.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if rec.get("kind") == "judge_selfscore":
-                    v["_selfscores"].append(rec.get("payload", {}))
         out.append(v)
     return out
-
-
-def selfscore_aggregate(verdicts: list[dict[str, Any]]) -> dict[str, Any]:
-    """Roll up the per-host kind=judge_selfscore audit records into a
-    fleet-level summary. Each criterion's `answer` is a short string
-    (e.g. "C=0% I=100% H=0% (n=2)" for criterion 2); we group by
-    criterion number and report the modal answer plus per-host
-    breakdown for analyst inspection."""
-    by_criterion: dict[int, list[tuple[str, str]]] = defaultdict(list)
-    hosts_with_selfscore = 0
-    for v in verdicts:
-        scores = v.get("_selfscores") or []
-        if scores:
-            hosts_with_selfscore += 1
-        host = v.get("_host", "?")
-        for p in scores:
-            crit = p.get("criterion")
-            answer = p.get("answer", "")
-            if isinstance(crit, int):
-                by_criterion[crit].append((host, answer))
-    summary: dict[str, Any] = {
-        "hosts_total": len(verdicts),
-        "hosts_with_selfscore": hosts_with_selfscore,
-        "by_criterion": {},
-    }
-    for crit in sorted(by_criterion):
-        entries = by_criterion[crit]
-        ans_counts = Counter(a for _, a in entries)
-        modal_ans, modal_n = ans_counts.most_common(1)[0]
-        summary["by_criterion"][str(crit)] = {
-            "host_count": len(entries),
-            "modal_answer": modal_ans,
-            "modal_share": modal_n,
-            "distinct_answers": len(ans_counts),
-        }
-    return summary
 
 
 def cross_host_processes(verdicts: list[dict[str, Any]]) -> dict[str, list[dict]]:
@@ -407,7 +356,6 @@ def write_outputs(
             "total_merkle_roots": unique_roots[1],
             "all_unique": unique_roots[0] == unique_roots[1],
         },
-        "selfscore_aggregate": selfscore_aggregate(verdicts),
         "cross_host_processes": cross_procs,
         "temporal_clusters": clusters,
     }
@@ -520,38 +468,6 @@ def write_outputs(
         "4. Cross-reference any T1014 (Rootkit) hosts against the disk "
         "image's `\\Windows\\System32\\drivers\\` for unsigned drivers."
     )
-    md.append("")
-    md.append("---")
-    md.append("")
-    md.append("## Judge self-score (fleet aggregate)")
-    md.append("")
-    sa = selfscore_aggregate(verdicts)
-    if sa["hosts_with_selfscore"] == 0:
-        md.append(
-            "*No host emitted `kind=judge_selfscore` audit records. This "
-            "fleet predates commit 94c08dd which wired the selfscore step "
-            "into find-evil-auto. Re-run any host with the current "
-            "orchestrator and the records will appear in audit.jsonl + "
-            "the per-case REPORT.pdf.*"
-        )
-    else:
-        md.append(
-            f"{sa['hosts_with_selfscore']} of {sa['hosts_total']} hosts "
-            f"emitted self-score records (per-criterion modal answer "
-            f"shown below; full per-host breakdown is in the audit.jsonl "
-            f"of each case dir). The score on each host is part of that "
-            f"host's cryptographic attestation."
-        )
-        md.append("")
-        md.append("| # | Modal answer | Host count | Distinct answers |")
-        md.append("|---:|---|---:|---:|")
-        for crit in sorted(sa["by_criterion"]):
-            entry = sa["by_criterion"][crit]
-            md.append(
-                f"| {crit} | `{entry['modal_answer']}` | "
-                f"{entry['modal_share']}/{entry['host_count']} | "
-                f"{entry['distinct_answers']} |"
-            )
     md.append("")
     md.append("---")
     md.append("")

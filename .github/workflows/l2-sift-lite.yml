@@ -2,7 +2,7 @@ name: L2 SIFT-lite (Advisory)
 
 # Spec #3 §4.3 — runs DFIR-tool smoke tests in a Sysbox-runtime
 # container. NON-BLOCKING per Spec #3 — DFIR tool flakiness must
-# not stall the swarm's PR pipeline. Think of this as a "CI canary"
+# not stall the PR pipeline. Think of this as a "CI canary"
 # that posts results but never red-lights a merge.
 #
 # Sysbox is not installed on GitHub-hosted runners today. This job

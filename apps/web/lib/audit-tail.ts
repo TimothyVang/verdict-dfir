@@ -48,9 +48,19 @@ const DEFAULT_ALLOWED_ROOTS = [
  * The path itself is allowed when it is exactly equal to a root
  * (operators sometimes point the dashboard at the root directory
  * itself for a smoke check).
+ *
+ * Relative default roots resolve against the repo root. `pnpm --filter
+ * @findevil/web dev` can run with cwd=apps/web, so the launcher exports
+ * `FINDEVIL_REPO_ROOT`; absent that we fall back to process.cwd() (which the
+ * unit tests pin).
  */
+function repoRoot(): string {
+  return process.env.FINDEVIL_REPO_ROOT ?? process.cwd();
+}
+
 export function isAllowedCasePath(absPath: string): boolean {
   const resolved = path.resolve(absPath);
+  const base = repoRoot();
   const extraRaw = process.env.FINDEVIL_DASHBOARD_EXTRA_ROOTS ?? "";
   const extras = extraRaw
     .split(path.delimiter)
@@ -58,7 +68,7 @@ export function isAllowedCasePath(absPath: string): boolean {
     .filter((s) => s.length > 0);
   const allRoots = [...DEFAULT_ALLOWED_ROOTS, ...extras];
   for (const root of allRoots) {
-    const rootAbs = path.resolve(root);
+    const rootAbs = path.isAbsolute(root) ? root : path.resolve(base, root);
     if (resolved === rootAbs) return true;
     if (resolved.startsWith(rootAbs + path.sep)) return true;
   }
@@ -68,16 +78,16 @@ export function isAllowedCasePath(absPath: string): boolean {
 /**
  * One yielded record. We surface the raw parsed JSON object plus a
  * `kind` tag because audit.jsonl carries lines OUTSIDE the
- * AgentEvent union too — `audit_append`, `acp_handoff`,
- * `judge_selfscore`, etc. The `event` field is the typed AgentEvent
- * subset; everything else falls into `raw`.
+ * AgentEvent union too — `audit_append`, `acp_handoff`, etc. The
+ * `event` field is the typed AgentEvent subset; everything else
+ * falls into `raw`.
  */
 export interface AuditLine {
   /** Sequence number from the audit chain (added by the agent's
    *  AuditLog.append; present on every well-formed line). */
   seq: number;
   /** Audit-log "kind" field — distinguishes AgentEvent variants from
-   *  the bookkeeping records (acp_handoff, judge_selfscore, …). */
+   *  the bookkeeping records (acp_handoff, …). */
   kind: string;
   /** ISO-8601Z timestamp from the line. */
   ts: string;

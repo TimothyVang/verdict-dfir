@@ -2,25 +2,23 @@ const DASHBOARD_LINKS = [
   { href: "/", label: "Audit" },
   { href: "/codex", label: "Codex" },
   { href: "/debug", label: "Debug" },
+  { href: "/setup", label: "Setup" },
 ];
 
 interface DashboardNavProps {
-  active: "audit" | "codex" | "debug";
+  active: "audit" | "codex" | "debug" | "setup";
   variant?: "light" | "dark";
 }
 
 export function DashboardNav({ active, variant = "light" }: DashboardNavProps) {
-  const dark = variant === "dark";
+  // Both variants render the single editorial style; prop kept for caller compatibility.
+  void variant;
   return (
     <nav
       aria-label="Dashboard views"
-      className={`mx-auto mb-6 flex max-w-7xl flex-wrap items-center gap-3 rounded-2xl border p-3 text-sm ${
-        dark
-          ? "border-slate-700 bg-slate-950/80 text-slate-200"
-          : "border-slate-300 bg-white text-slate-900"
-      }`}
+      className="mx-auto mb-6 flex max-w-7xl flex-wrap items-center gap-3 rounded-xl border border-hairline bg-surface p-3 text-sm text-ink-muted"
     >
-      <span className={dark ? "font-bold text-cyan-200" : "font-bold"}>
+      <span className="font-grotesk uppercase tracking-wide text-ink-muted">
         Dashboards
       </span>
       <div className="flex flex-wrap gap-2">
@@ -31,14 +29,10 @@ export function DashboardNav({ active, variant = "light" }: DashboardNavProps) {
               key={link.href}
               href={link.href}
               aria-current={isActive ? "page" : undefined}
-              className={`rounded-xl px-3 py-2 font-bold transition ${
+              className={`rounded-lg px-3 py-2 font-grotesk uppercase tracking-wide transition ${
                 isActive
-                  ? dark
-                    ? "bg-cyan-300 text-slate-950"
-                    : "bg-slate-900 text-white"
-                  : dark
-                    ? "border border-slate-700 text-slate-200 hover:border-cyan-300"
-                    : "border border-slate-300 text-slate-900 hover:border-slate-900"
+                  ? "bg-accent text-paper"
+                  : "border border-hairline text-ink-muted hover:border-accent/30 hover:text-ink"
               }`}
             >
               {link.label}

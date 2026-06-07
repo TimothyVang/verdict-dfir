@@ -59,33 +59,24 @@ claims require at least two artifact classes. Evidence is opened read-only.
 ```bash
 git clone https://github.com/TimothyVang/sans-hackathon.git verdict
 cd verdict
-
-# Pre-flight + build (Rust MCP server + Python env). Detects your Claude credential mode.
-bash scripts/install.sh
+bash scripts/install.sh     # preflight + build (Rust MCP server + Python env)
 ```
 
-**Investigate interactively** — open Claude Code in the repo; `.mcp.json` auto-spawns both MCP
-servers:
+**One command, one workflow.** `verdict` runs the whole thing — preflight → investigate → opens the
+live dashboard at the case → signed verdict + report:
 
 ```bash
-claude          # or: bash scripts/find-evil
-# then prompt:  investigate <path-to-evidence>
+scripts/verdict <path-to-evidence>
+#   --sift          run the DFIR tools inside the SANS SIFT VM (default: local host)
+#   --no-dashboard  don't auto-open the browser
 ```
 
-**Investigate headless** — one shot, no interaction:
+Point it at a single image or a mixed case directory (memory + EVTX + disk + network +
+Velociraptor). Output lands in `tmp/auto-runs/<case-id>/`, and the dashboard
+(`http://localhost:3000`) streams the run live as it happens.
 
-```bash
-bash scripts/find-evil-auto <path-to-evidence> --unattended
-# point it at a single image or a mixed case directory (memory + EVTX + disk + network + Velociraptor)
-```
-
-**Watch it live in the dashboard** — a polished web view that tails the hash-chained audit log:
-
-```bash
-pnpm install --frozen-lockfile
-pnpm --filter @findevil/web dev      # http://localhost:3000
-# open  /?case=<absolute-case-dir>  to stream a run as it happens
-```
+**Prefer to drive it yourself?** Open Claude Code in the repo (`claude`) and prompt
+`investigate <path>` — same tools, interactive.
 
 Per-environment setup (local DFIR binaries vs. the SANS SIFT VM) and evidence placement live in
 [QUICKSTART.md](QUICKSTART.md). Trust-boundary diagrams are in [docs/architecture.md](docs/architecture.md).

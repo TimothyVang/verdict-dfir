@@ -1,148 +1,232 @@
 import React from "react";
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { Watermark } from "./shared/Watermark";
+import { interpolate, useCurrentFrame } from "remotion";
+import { C, MARGIN, MONO, SERIF } from "./shared/editorial";
+import { Scene } from "./shared/Scene";
+import { EvidenceTag, Kicker, KineticHeadline, PullQuote, RuleLine } from "./shared/editorial-ui";
 
-const MONO = "'JetBrains Mono', 'Courier New', monospace";
+// Beat 7 — "The pattern." Cross-host correlation rendered as an editorial
+// timeline exhibit: a horizontal T+0…T+60s axis with one row per artifact,
+// host-event dots, and serif-italic margin annotations. The key finding —
+// six hosts running Autoruns in the same second — carries the pull-quote.
 
-const ROWS = [
-  { label: "Autoruns (Run key)", color: "#e74c3c", dots: [2, 2, 2, 2, 2, 2] },   // 6 hosts same second
-  { label: "rubyw.exe",          color: "#f39c12", dots: [1, 5, 9, 14] },          // 4 scattered
-  { label: "svchost32.exe",      color: "#9b59b6", dots: [3, 3, 3, 11] },
-  { label: "cmd.exe (elevated)", color: "#8b949e", dots: [1, 6, 12, 17, 20] },
+const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+
+interface ArtifactRow {
+  label: string;
+  events: number[]; // seconds on the T+0…T+60 axis
+  alert?: boolean; // the cluster that reads as evil
+  note?: string; // serif-italic margin annotation
+}
+
+// Real timing preserved from the prior scene: Autoruns fires on 6 hosts in the
+// same second (T+0); rubyw is scattered; svchost32 clusters then trails; the
+// elevated cmd.exe walks across the whole window.
+const ROWS: ArtifactRow[] = [
+  { label: "Autoruns · Run key", events: [0, 0, 0, 0, 0, 0], alert: true, note: "six hosts, one second" },
+  { label: "rubyw.exe", events: [1, 5, 9, 14], note: "not in baseline" },
+  { label: "svchost32.exe", events: [3, 3, 3, 11], note: "masquerade" },
+  { label: "cmd.exe · elevated", events: [1, 6, 12, 17, 20] },
 ];
 
-const TIME_LABELS = ["T+0s", "T+5s", "T+10s", "T+15s", "T+20s", "T+30s", "T+60s"];
-const GRID_W = 1200;
-const COL_W = GRID_W / (TIME_LABELS.length - 1);
-const ROW_H = 90;
+// Time axis — uneven stops compress the late window editorially.
+const STOPS = [0, 5, 10, 15, 20, 30, 60];
+const AXIS_W = 700; // px of plotting width inside the exhibit column
+const SECONDS_MAX = 60;
 
-function timeToX(t: number): number {
-  return (t / 30) * GRID_W;
+// Map a second onto the (piecewise) axis so the dense early window gets room.
+function secondToX(sec: number): number {
+  for (let i = 0; i < STOPS.length - 1; i++) {
+    const a = STOPS[i];
+    const b = STOPS[i + 1];
+    if (sec <= b) {
+      const segFrac = (sec - a) / (b - a);
+      return ((i + segFrac) / (STOPS.length - 1)) * AXIS_W;
+    }
+  }
+  return AXIS_W;
 }
 
 export function ClusterScene() {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
-  const fadeOut = interpolate(frame, [durationInFrames - 15, durationInFrames], [1, 0], {
-    extrapolateLeft: "clamp", extrapolateRight: "clamp",
-  });
 
-  const titleOp = interpolate(frame, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // Annotation: Autoruns cluster at frame 50
-  const annotOp = interpolate(frame - 50, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const annotS = spring({ frame: frame - 50, fps, config: { damping: 12, stiffness: 100 } });
+  const rowTop = 250; // top of the first artifact row inside the exhibit
+  const rowGap = 92;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
-      <div style={{
-        position: "absolute", inset: 0, opacity: 0.04,
-        backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-        backgroundSize: "60px 60px",
-      }} />
-
-      {/* Title */}
-      <div style={{ position: "absolute", top: 52, left: 140, right: 140, opacity: titleOp }}>
-        <div style={{ fontFamily: MONO, fontSize: 52, fontWeight: 800, color: "#e6edf3" }}>
-          Cross-Host APT Signal
+    <Scene page={7} caption="Cross-host correlation">
+      {/* Left column — the story */}
+      <div style={{ position: "absolute", left: MARGIN, top: 200, width: 660 }}>
+        <Kicker frame={frame} delay={10} color={C.accent}>Exhibit G · 22 Hosts</Kicker>
+        <div style={{ marginTop: 16 }}>
+          <KineticHeadline text="The pattern." frame={frame} delay={20} size={108} />
         </div>
-        <div style={{ fontFamily: MONO, fontSize: 20, color: "#8b949e", marginTop: 6 }}>
-          Temporal clustering — 22 hosts × artifact timeline
+        <div style={{ marginTop: 30, marginBottom: 30 }}>
+          <RuleLine frame={frame} delay={44} width={120} color={C.alert} thickness={2} />
+        </div>
+
+        <PullQuote frame={frame} delay={60} size={48} color={C.ink} style={{ maxWidth: 620 }}>
+          Six hosts ran Autoruns in the&nbsp;
+          <span style={{ color: C.alert }}>same second.</span>
+        </PullQuote>
+
+        <PullQuote frame={frame} delay={120} size={26} color={C.inkMuted} style={{ marginTop: 28, maxWidth: 600, fontWeight: 500 }}>
+          No human types that fast on six boxes at once. A single push fanned the
+          payload across the fleet — and rubyw.exe was never in the baseline.
+        </PullQuote>
+
+        <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 18, alignItems: "flex-start" }}>
+          <EvidenceTag label="T1569.002 Service Execution" tier="HYPOTHESIS" frame={frame} delay={560} />
+          <EvidenceTag label="T1059.007 JavaScript / Ruby" tier="HYPOTHESIS" frame={frame} delay={600} />
         </div>
       </div>
 
-      {/* Timeline grid */}
-      <div style={{ position: "absolute", top: 185, left: 100, right: 100 }}>
-        <svg width="1720" height={ROWS.length * ROW_H + 60}>
-          {/* Time axis */}
-          {TIME_LABELS.map((label, i) => (
-            <g key={label}>
-              <line x1={160 + i * COL_W} y1={0} x2={160 + i * COL_W} y2={ROWS.length * ROW_H + 10}
-                stroke="#30363d" strokeWidth="1" strokeDasharray="4 4"/>
-              <text x={160 + i * COL_W} y={ROWS.length * ROW_H + 30}
-                textAnchor="middle" fontFamily={MONO} fontSize="13" fill="#8b949e">
-                {label}
-              </text>
-            </g>
-          ))}
+      {/* Right column — the timeline exhibit */}
+      <div style={{ position: "absolute", right: MARGIN, top: 210, width: 880 }}>
+        <div style={{ fontFamily: MONO, fontSize: 14, letterSpacing: 3, textTransform: "uppercase", color: C.inkMuted, marginBottom: 14 }}>
+          Exhibit G-1 — Temporal Clustering
+        </div>
+        <RuleLine frame={frame} delay={70} color={C.hairline} />
 
-          {/* Rows */}
-          {ROWS.map((row, ri) => {
-            const y = ri * ROW_H + ROW_H / 2;
-            const rowDelay = 15 + ri * 10;
-            const rowOp = interpolate(frame - rowDelay, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        {/* The plot. Axis lives at x = AXIS_X; labels hang to its left. */}
+        <svg width={880} height={rowTop + ROWS.length * rowGap - 20} style={{ display: "block", marginTop: 4 }}>
+          {(() => {
+            const AXIS_X = 175; // left edge of the plotting area
+            const axisBottom = rowTop + (ROWS.length - 1) * rowGap + 24;
             return (
-              <g key={row.label} opacity={rowOp}>
-                {/* Row label */}
-                <text x={150} y={y + 5} textAnchor="end"
-                  fontFamily={MONO} fontSize="14" fontWeight="700" fill={row.color}>
-                  {row.label}
-                </text>
-                {/* Row baseline */}
-                <line x1={160} y1={y} x2={1640} y2={y} stroke={`${row.color}22`} strokeWidth="1"/>
-                {/* Dots */}
-                {row.dots.map((t, di) => {
-                  const dotDelay = rowDelay + di * 5;
-                  const dotS = spring({ frame: frame - dotDelay, fps, config: { damping: 12, stiffness: 150 } });
-                  const dotOp = interpolate(frame - dotDelay, [0, 8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-                  const cx = 160 + timeToX(t);
-                  const hostLabel = `H-${String((ri * 3 + di + 1)).padStart(3, "0")}`;
+              <>
+                {/* Vertical time gridlines + axis labels */}
+                {STOPS.map((s, i) => {
+                  const x = AXIS_X + (i / (STOPS.length - 1)) * AXIS_W;
+                  const op = interpolate(frame - (80 + i * 4), [0, 12], [0, 1], clampOpts);
                   return (
-                    <g key={di} opacity={dotOp}>
-                      <circle cx={cx} cy={y} r={dotS * 8} fill={row.color} opacity="0.85"/>
-                      <text x={cx + 11} y={y - 10} fontFamily={MONO} fontSize="9" fill={row.color} opacity="0.7">
-                        {hostLabel}
+                    <g key={s} opacity={op}>
+                      <line
+                        x1={x}
+                        y1={rowTop - 36}
+                        x2={x}
+                        y2={axisBottom}
+                        stroke={C.hairline}
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={x}
+                        y={axisBottom + 26}
+                        textAnchor="middle"
+                        fontFamily={MONO}
+                        fontSize={15}
+                        fill={C.inkMuted}
+                        letterSpacing={1}
+                      >
+                        T+{s}s
                       </text>
                     </g>
                   );
                 })}
-              </g>
+
+                {/* Cluster band behind the Autoruns burst (the "evil" column) */}
+                {(() => {
+                  const op = interpolate(frame - 300, [0, 18], [0, 0.1], clampOpts);
+                  const x = AXIS_X + secondToX(0);
+                  return (
+                    <rect
+                      x={x - 16}
+                      y={rowTop - 36}
+                      width={32}
+                      height={axisBottom - (rowTop - 36)}
+                      fill={C.alert}
+                      opacity={op}
+                    />
+                  );
+                })()}
+
+                {/* Rows */}
+                {ROWS.map((row, ri) => {
+                  const y = rowTop + ri * rowGap;
+                  const rowDelay = 110 + ri * 22;
+                  const rowOp = interpolate(frame - rowDelay, [0, 14], [0, 1], clampOpts);
+                  const baseTone = row.alert ? C.alert : C.ink;
+                  return (
+                    <g key={row.label} opacity={rowOp}>
+                      {/* Row label — grotesque, hangs left of the axis */}
+                      <text
+                        x={AXIS_X - 22}
+                        y={y + 5}
+                        textAnchor="end"
+                        fontFamily={MONO}
+                        fontSize={16}
+                        fontWeight={600}
+                        fill={row.alert ? C.alert : C.ink}
+                        letterSpacing={0.5}
+                      >
+                        {row.label}
+                      </text>
+
+                      {/* Row baseline */}
+                      <line
+                        x1={AXIS_X}
+                        y1={y}
+                        x2={AXIS_X + AXIS_W}
+                        y2={y}
+                        stroke={row.alert ? `${C.alert}55` : C.hairline}
+                        strokeWidth={1}
+                      />
+
+                      {/* Event dots */}
+                      {row.events.map((sec, di) => {
+                        const dotDelay = rowDelay + 8 + di * 5;
+                        const grow = interpolate(frame - dotDelay, [0, 10], [0, 1], { ...clampOpts });
+                        const cx = AXIS_X + secondToX(Math.min(sec, SECONDS_MAX));
+                        const r = (row.alert ? 7 : 5.5) * grow;
+                        return (
+                          <circle
+                            key={di}
+                            cx={cx}
+                            cy={y}
+                            r={r}
+                            fill={baseTone}
+                            opacity={0.92}
+                          />
+                        );
+                      })}
+
+                      {/* Serif-italic margin annotation, far right */}
+                      {row.note && (
+                        <text
+                          x={AXIS_X + AXIS_W + 22}
+                          y={y + 6}
+                          fontFamily={SERIF}
+                          fontStyle="italic"
+                          fontSize={19}
+                          fill={row.alert ? C.alert : C.inkMuted}
+                          opacity={interpolate(frame - (rowDelay + 30), [0, 14], [0, 1], clampOpts)}
+                        >
+                          {row.note}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+              </>
             );
-          })}
+          })()}
         </svg>
-      </div>
 
-      {/* Autoruns cluster annotation */}
-      <div style={{
-        position: "absolute", top: 220, left: 240,
-        opacity: annotOp,
-        transform: `scale(${0.7 + annotS * 0.3})`,
-      }}>
-        <div style={{
-          background: "rgba(231,76,60,0.12)",
-          border: "1.5px solid #e74c3c",
-          borderRadius: 8,
-          padding: "12px 18px",
-          fontFamily: MONO, fontSize: 14, color: "#e74c3c",
-        }}>
-          6 hosts, same second (T+0s)<br/>
-          <span style={{ color: "#8b949e", fontSize: 12 }}>→ PsExec sweep or SCCM push</span><br/>
-          <span style={{ color: "#f39c12", fontSize: 12, fontWeight: 700 }}>HYPOTHESIS: T1569.002</span>
+        <RuleLine frame={frame} delay={300} color={C.hairline} style={{ marginTop: 8 }} />
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 16,
+            color: C.inkMuted,
+            marginTop: 16,
+            letterSpacing: 1,
+            opacity: interpolate(frame - 320, [0, 14], [0, 1], clampOpts),
+          }}
+        >
+          fleet <span style={{ color: C.ink }}>22</span> &nbsp;·&nbsp; clustered{" "}
+          <span style={{ color: C.alert }}>6</span> &nbsp;·&nbsp; window{" "}
+          <span style={{ color: C.ink }}>≤ 1.0s</span>
         </div>
       </div>
-
-      {/* rubyw annotation */}
-      {frame > 60 && (
-        <div style={{
-          position: "absolute", top: 330, left: 480,
-          opacity: interpolate(frame - 60, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-          transform: `scale(${0.7 + spring({ frame: frame - 60, fps, config: { damping: 12, stiffness: 100 } }) * 0.3})`,
-        }}>
-          <div style={{
-            background: "rgba(243,156,18,0.12)",
-            border: "1.5px solid #f39c12",
-            borderRadius: 8,
-            padding: "12px 18px",
-            fontFamily: MONO, fontSize: 14, color: "#f39c12",
-          }}>
-            4 hosts, rubyw.exe scattered<br/>
-            <span style={{ color: "#8b949e", fontSize: 12 }}>→ Ruby not in enterprise baseline</span><br/>
-            <span style={{ color: "#3498db", fontSize: 12, fontWeight: 700 }}>HYPOTHESIS: T1059.007</span>
-          </div>
-        </div>
-      )}
-
-      <Watermark />
-    </AbsoluteFill>
+    </Scene>
   );
 }

@@ -251,24 +251,6 @@ manifest is rejected" step.
 
 ---
 
-## Where the judge_selfscore fits
-
-Per `agent-config/JUDGING.md`, the supervisor emits 6
-`kind=judge_selfscore` audit records before `manifest_finalize`,
-one per SANS rubric criterion. Because the records land in the
-audit chain BEFORE the Merkle tree closes, **the agent's own
-self-score is itself part of the cryptographic attestation**.
-
-What this means in practice: a judge `grep`ing
-`'"kind":"judge_selfscore"' audit.jsonl` sees the agent's
-assessment of how it did against the same rubric the judge is
-using. The agent could not have edited the score after seeing
-the result — the chain → Merkle → signature triangle would
-break. This is the tiebreaker move in the Devpost demo
-(Beat 8 of `docs/demo-script-a2.md`).
-
----
-
 ## What this attestation does NOT prove
 
 Honest disclosure (per `docs/false-positives.md` and SOUL.md):
@@ -301,7 +283,8 @@ Honest disclosure (per `docs/false-positives.md` and SOUL.md):
   every Finding cites a `tool_call_id`)
 - `agent-config/SOUL.md` (epistemic hierarchy: CONFIRMED >
   INFERRED > HYPOTHESIS)
-- `agent-config/JUDGING.md` (rubric + judge_selfscore wiring)
+- `agent-config/JUDGING.md` (pre-submission self-assessment rubric;
+  graded out-of-band by `scripts/self-score.py`, not part of the chain)
 - `docs/reports/2026-04-26-srl2018-dc-investigation.md` (real-
   evidence end-to-end run, including §7 tamper detection live demo)
 - `scripts/agent-mcp-smoke.py` (the negative test runs in CI on

@@ -75,7 +75,7 @@ The 11 variants:
 
 Every event is Pydantic-frozen, `extra="forbid"`. `event_id` auto-fills as UUID4; `ts` auto-fills as UTC ISO-8601 with trailing `Z`. TypeScript types for `apps/web/lib/events.ts` are generated with `pnpm --filter @findevil/web codegen:events`.
 
-## For swarm workers
+## For contributors
 
 - New Pydantic model → add to `findevil_agent/events.py`, extend the `AgentEvent` discriminated union, add roundtrip test in `tests/test_events.py`.
 - New config constant → put it in `findevil_agent/config.py`; export via `__all__`.
@@ -89,7 +89,7 @@ See `pyproject.toml`. Do not upgrade without a spec amendment.
 
 Key pins:
 - `langgraph >=1.0,<2.0`
-- `langgraph-checkpoint-sqlite >=2.0,<3.0`  *(Product uses Sqlite; Swarm uses Postgres)*
+- `langgraph-checkpoint-sqlite >=2.0,<3.0`  *(Product uses Sqlite)*
 - `anthropic >=0.45,<1.0`
 - `sigstore ==3.*`
 - `fastapi >=0.115,<1.0`

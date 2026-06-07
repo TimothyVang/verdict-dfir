@@ -10,13 +10,14 @@ import {
 } from "remotion";
 import { type Beat } from "./beats-data";
 import { LogoIntro } from "../components/LogoIntro";
-import { ArchDiagram } from "../components/ArchDiagram";
-import { TerminalScene } from "../components/TerminalScene";
+import { ClaudeCodeScene } from "../components/ClaudeCodeScene";
+import { CaseProgression } from "../components/CaseProgression";
+import { ToolGrid } from "../components/ToolGrid";
 import { ContradictionScene } from "../components/ContradictionScene";
+import { DashboardUI } from "../components/DashboardUI";
 import { HashChainScene } from "../components/HashChainScene";
+import { AutomationUI } from "../components/AutomationUI";
 import { FleetScene } from "../components/FleetScene";
-import { ClusterScene } from "../components/ClusterScene";
-import { SelfScoreScene } from "../components/SelfScoreScene";
 import { OutroScene } from "../components/OutroScene";
 
 const CHAR_DELAY = 1.5; // frames per character for typewriter fallback
@@ -136,7 +137,7 @@ function TitleCard({ beat, totalBeats }: { beat: Beat; totalBeats: number }) {
         </div>
       </div>
       <div style={{ position: "absolute", bottom: 24, left: 140, right: 140, display: "flex", justifyContent: "space-between", alignItems: "center", color: "#30363d", fontSize: 22 }}>
-        <span>VERDICT — SANS Hackathon 2026</span>
+        <span>VERDICT</span>
         <span style={{ color: beat.accentColor }}>{beat.startS}s – {beat.endS}s</span>
       </div>
       <ProgressBar beat={beat.number} totalBeats={totalBeats} accentColor={beat.accentColor} />
@@ -154,14 +155,15 @@ interface BeatProps {
 function BeatContent({ beat, totalBeats }: { beat: Beat; totalBeats: number }) {
   switch (beat.number) {
     case 1: return <LogoIntro />;
-    case 2: return <ArchDiagram />;
-    case 3: return <TerminalScene title={beat.title} subtitle={beat.rubric} accentColor={beat.accentColor} />;
-    case 4: return <ContradictionScene />;
-    case 5: return <HashChainScene />;
-    case 6: return <FleetScene />;
-    case 7: return <ClusterScene />;
-    case 8: return <SelfScoreScene />;
-    case 9: return <OutroScene />;
+    case 2: return <ClaudeCodeScene />;
+    case 3: return <CaseProgression />;
+    case 4: return <ToolGrid />;
+    case 5: return <ContradictionScene />;
+    case 6: return <DashboardUI />;
+    case 7: return <HashChainScene />;
+    case 8: return <AutomationUI />;
+    case 9: return <FleetScene />;
+    case 10: return <OutroScene />;
     default: return <TitleCard beat={beat} totalBeats={totalBeats} />;
   }
 }

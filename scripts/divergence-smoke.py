@@ -27,7 +27,6 @@ The divergences (matching CLAUDE.md "Spec/code divergences"):
   §3  findevil_agent.cli dropped (A2)  bad: python -m findevil_agent.cli
   §4  Rust MCP tool count is 13        bad: "11 typed Rust" / "12 typed Rust"
   §5  rmcp not a runtime dep           bad: live `rmcp = "=...` (uncommented)
-  §6  swarm pkg = findevil_swarm       bad: python -m services.swarm.main
   §7  A3 MemoryStore phrase-quote      doc-only; no shipped wrong-pattern
   §8  A3 audit push: SSE not WebSocket bad: "ws": "..." dep in apps/web pkg
 """
@@ -129,13 +128,11 @@ ALLOWED_FILES = {
     "docs/specs/2026-04-23-find-evil-automation-master-design.md",
     "docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md",
     "docs/specs/2026-04-23-layered-test-sandbox-design.md",
-    "docs/specs/2026-04-24-autonomous-build-swarm-design.md",
     "docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md",
     "docs/specs/2026-04-25-the-product-design.md",
     "docs/specs/2026-04-26-amendment-a3-agent-army-and-dashboard.md",
     "docs/specs/2026-04-26-orchestration-glue-design.md",
     "docs/archive/2026-04-27-amendment-a4-managed-agents-runtime.md",
-    "docs/plans/2026-04-23-build-swarm-plan.md",
     "docs/plans/2026-04-23-orchestration-glue-plan.md",
     "docs/plans/2026-04-23-product-plan.md",
     "docs/plans/2026-04-23-sandbox-plan.md",
@@ -225,24 +222,6 @@ DIVERGENCES = [
         ),
     },
     {
-        "id": "#6",
-        "label": "Swarm package is findevil_swarm, not services.swarm",
-        "regex": re.compile(
-            r"python3?\s+-m\s+services\.swarm\.(?:main|workers|"
-            r"plan_parser|state|critic|pr_gate|supervisor|"
-            r"watchdog|night_report|session_guard)\b"
-        ),
-        "allowed_in_path": (),
-        "remediation": (
-            "Shipped as findevil_swarm.* (matches findevil_agent / "
-            "findevil_agent_mcp / findevil-mcp naming convention). "
-            "Use 'cd services/swarm && uv run python -m "
-            "findevil_swarm.main run' (matches "
-            "scripts/swarm-start.sh:105). See CLAUDE.md "
-            "'Spec/code divergences' §6."
-        ),
-    },
-    {
         "id": "#8",
         "label": "A3 audit-log push uses SSE, not WebSocket",
         # Match a `"ws"` dep in any active package.json — the most
@@ -271,8 +250,6 @@ DIVERGENCES = [
         "label": "Product forks Pool A/B via native Task, not CLAUDE_CODE_FORK_SUBAGENT",
         "regex": re.compile(r"CLAUDE_CODE_FORK_SUBAGENT"),
         "allowed_in_path": (
-            # The env var IS real in the build swarm's critic.py.
-            "services/swarm",
             # The divergence check itself must name the pattern.
             "scripts/divergence-smoke.py",
             # Docs that EXPLAIN the divergence necessarily quote the env var.
@@ -285,12 +262,12 @@ DIVERGENCES = [
             "docs/braindumps",
         ),
         "remediation": (
-            "CLAUDE_CODE_FORK_SUBAGENT=1 is a build-swarm internal "
-            "(services/swarm/findevil_swarm/critic.py). In the product "
-            "(what judges run), Claude Code forks Pool A/B via its "
-            "native Task mechanism — no env var is set. Docs that "
-            "claim the product uses this env var mislead judges. "
-            "Use 'native Task mechanism' instead."
+            "CLAUDE_CODE_FORK_SUBAGENT=1 is a build-time internal and "
+            "is not used in the product. In the product (what judges "
+            "run), Claude Code forks Pool A/B via its native Task "
+            "mechanism — no env var is set. Docs that claim the product "
+            "uses this env var mislead judges. Use 'native Task "
+            "mechanism' instead."
         ),
     },
 ]

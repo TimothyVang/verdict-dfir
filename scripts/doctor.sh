@@ -36,12 +36,30 @@ c_blu=$'\033[0;34m'
 c_dim=$'\033[2m'
 c_off=$'\033[0m'
 
+# --json emits a machine-readable report (consumed by /api/doctor + /setup) and
+# suppresses the human output. Without it, behaviour is unchanged.
+JSON_MODE=""
+for _arg in "$@"; do [ "${_arg}" = "--json" ] && JSON_MODE=1; done
+declare -a JSON_ROWS=()
+GROUP="general"
+
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  printf '%s' "${s}"
+}
+
 missing_required=0
 declare -a REMEDIES=()
 
 # row STATUS LABEL DETAIL — print one aligned status line.
 row() {
   local status="$1" label="$2" detail="${3:-}"
+  if [ -n "${JSON_MODE}" ]; then
+    JSON_ROWS+=("{\"group\":\"$(json_escape "${GROUP}")\",\"label\":\"$(json_escape "${label}")\",\"status\":\"${status}\",\"detail\":\"$(json_escape "${detail}")\"}")
+    return
+  fi
   local tag
   case "${status}" in
     ok)   tag="${c_grn}[ ok ]${c_off}" ;;
@@ -105,15 +123,17 @@ optional() {
   fi
 }
 
-echo "=========================================="
-echo "Find Evil! — environment doctor"
-echo "=========================================="
+if [ -z "${JSON_MODE}" ]; then
+  echo "=========================================="
+  echo "Find Evil! — environment doctor"
+  echo "=========================================="
+fi
 
 # ---------------------------------------------------------------------------
 # Claude credential mode (mirrors scripts/install.sh §1).
 # ---------------------------------------------------------------------------
-echo
-echo "${c_blu}Claude credential${c_off}"
+GROUP="Claude credential"
+[ -z "${JSON_MODE}" ] && { echo; echo "${c_blu}Claude credential${c_off}"; }
 if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && command -v claude >/dev/null 2>&1; then
   row ok "credential" "mode 1: CLAUDE_CODE_OAUTH_TOKEN + claude CLI"
 elif command -v claude >/dev/null 2>&1 && [ -d "${HOME}/.claude" ]; then
@@ -129,8 +149,8 @@ fi
 # ---------------------------------------------------------------------------
 # Required toolchain.
 # ---------------------------------------------------------------------------
-echo
-echo "${c_blu}Required toolchain${c_off}"
+GROUP="Required toolchain"
+[ -z "${JSON_MODE}" ] && { echo; echo "${c_blu}Required toolchain${c_off}"; }
 require "python3" "install Python 3.11+ from https://www.python.org/downloads/ or via your OS package manager" \
         python3 --version
 require "git"     "install git from https://git-scm.com/downloads" \
@@ -144,19 +164,64 @@ require "cargo"   "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | s
 require "uv"      "curl -LsSf https://astral.sh/uv/install.sh | sh" \
         uv --version
 
-# Is the Rust MCP server already built? (a run needs the binary, not cargo per se)
+# ---------------------------------------------------------------------------
+# MCP servers — the typed tool surface Claude Code auto-spawns from .mcp.json.
+# These ARE the app: no servers, no investigation. Built by scripts/install.sh.
+# ---------------------------------------------------------------------------
+GROUP="MCP servers"
+[ -z "${JSON_MODE}" ] && { echo; echo "${c_blu}MCP servers${c_off} ${c_dim}(auto-spawned by Claude Code from .mcp.json)${c_off}"; }
+
+# findevil-mcp — Rust, 19 typed DFIR tools. Needs the release binary
+# (scripts/run-mcp-rust.sh falls back to a slow `cargo run` without it).
 if [ -x "target/release/findevil-mcp" ] || [ -x "target/release/findevil-mcp.exe" ]; then
-  row ok "findevil-mcp" "target/release/findevil-mcp (built)"
+  row ok "findevil-mcp" "Rust · 19 DFIR tools · target/release/findevil-mcp"
 else
-  row warn "findevil-mcp" "not built — run: bash scripts/install.sh  (or cargo build --release -p findevil-mcp)"
-  REMEDIES+=("findevil-mcp: bash scripts/install.sh   # builds the Rust MCP server")
+  row err "findevil-mcp" "not built — run: bash scripts/install.sh"
+  REMEDIES+=("findevil-mcp: bash scripts/install.sh   # cargo build --release -p findevil-mcp")
+  missing_required=$((missing_required + 1))
+fi
+
+# findevil-agent-mcp — Python, 12 crypto/ACH/memory/ACP tools. Needs the uv
+# venv synced + the package present (run-mcp-python.sh does `uv run … -m`).
+if [ -d "services/agent_mcp/.venv" ] && [ -d "services/agent_mcp/findevil_agent_mcp" ]; then
+  row ok "findevil-agent-mcp" "Python · 12 tools · services/agent_mcp/.venv"
+else
+  row err "findevil-agent-mcp" "venv not synced — run: bash scripts/install.sh"
+  REMEDIES+=("findevil-agent-mcp: bash scripts/install.sh   # uv sync --directory services/agent_mcp")
+  missing_required=$((missing_required + 1))
+fi
+
+# .mcp.json must register both so Claude Code spawns them on session start.
+if [ -f ".mcp.json" ] && grep -q '"findevil-mcp"' .mcp.json && grep -q '"findevil-agent-mcp"' .mcp.json; then
+  row ok ".mcp.json" "registers both servers"
+else
+  row err ".mcp.json" "missing or does not register both MCP servers"
+  REMEDIES+=(".mcp.json: restore the committed .mcp.json (registers both MCP servers)")
+  missing_required=$((missing_required + 1))
+fi
+
+# stdio launch wrappers the .mcp.json entries exec.
+if [ -f "scripts/run-mcp-rust.sh" ] && [ -f "scripts/run-mcp-python.sh" ]; then
+  row ok "mcp launchers" "run-mcp-rust.sh + run-mcp-python.sh"
+else
+  row err "mcp launchers" "missing run-mcp-rust.sh / run-mcp-python.sh"
+  REMEDIES+=("mcp launchers: restore scripts/run-mcp-rust.sh and scripts/run-mcp-python.sh")
+  missing_required=$((missing_required + 1))
+fi
+
+# n8n-mcp — OPTIONAL post-verdict automation MCP (user-scope; needs Node/npx).
+if command -v npx >/dev/null 2>&1; then
+  row ok "n8n-mcp (opt)" "npx present — optional automation MCP runs on demand"
+else
+  row warn "n8n-mcp (opt)" "optional — needs Node/npx; see docs/runbooks/n8n-automation-integration.md"
+  REMEDIES+=("n8n-mcp (opt): install Node 20+ (npx); then python3 scripts/setup-n8n.py")
 fi
 
 # ---------------------------------------------------------------------------
 # DFIR external binaries (warn-only; the in-process tools work without them).
 # ---------------------------------------------------------------------------
-echo
-echo "${c_blu}DFIR tools${c_off} ${c_dim}(external subprocess binaries; in-process EVTX/MFT/prefetch run without them)${c_off}"
+GROUP="DFIR tools"
+[ -z "${JSON_MODE}" ] && { echo; echo "${c_blu}DFIR tools${c_off} ${c_dim}(external subprocess binaries; in-process EVTX/MFT/prefetch run without them)${c_off}"; }
 dfir "volatility3"  VOLATILITY_BIN  "pipx install volatility3   (or: uv tool install volatility3)" \
      -- vol vol.py volatility3 volatility
 dfir "hayabusa"     HAYABUSA_BIN    "download a release from https://github.com/Yamato-Security/hayabusa/releases onto PATH (or set \$HAYABUSA_BIN)" \
@@ -169,8 +234,8 @@ dfir "tshark/zeek"  TSHARK_BIN      "sudo apt-get install -y tshark   (pcap_tria
 # ---------------------------------------------------------------------------
 # Reporting + demo-recording helpers (warn-only).
 # ---------------------------------------------------------------------------
-echo
-echo "${c_blu}Reporting${c_off}"
+GROUP="Reporting"
+[ -z "${JSON_MODE}" ] && { echo; echo "${c_blu}Reporting${c_off}"; }
 optional "pandoc"  "sudo apt-get install -y pandoc" pandoc --version
 if found_chrome="$(resolve_bin CHROME_BIN google-chrome google-chrome-stable chromium chromium-browser)"; then
   row ok "chrome" "${found_chrome}"
@@ -179,8 +244,8 @@ else
   REMEDIES+=("chrome: sudo apt-get install -y chromium-browser   (or install Google Chrome)")
 fi
 
-echo
-echo "${c_blu}Demo recording${c_off} ${c_dim}(for scripts/record-demo.sh)${c_off}"
+GROUP="Demo recording"
+[ -z "${JSON_MODE}" ] && { echo; echo "${c_blu}Demo recording${c_off} ${c_dim}(for scripts/record-demo.sh)${c_off}"; }
 optional "ffmpeg"  "sudo apt-get install -y ffmpeg" ffmpeg -version
 if (cd apps/web 2>/dev/null && npx --no-install playwright --version >/dev/null 2>&1); then
   row ok "playwright" "$(cd apps/web && npx --no-install playwright --version 2>/dev/null)"
@@ -192,6 +257,25 @@ fi
 # ---------------------------------------------------------------------------
 # Verdict.
 # ---------------------------------------------------------------------------
+if [ -n "${JSON_MODE}" ]; then
+  ready=true
+  [ "${missing_required}" -ne 0 ] && ready=false
+  saved_ifs="${IFS}"
+  IFS=,
+  rows_joined="${JSON_ROWS[*]:-}"
+  IFS="${saved_ifs}"
+  rem_json=""
+  if [ "${#REMEDIES[@]}" -gt 0 ]; then
+    for r in "${REMEDIES[@]}"; do
+      [ -n "${rem_json}" ] && rem_json+=","
+      rem_json+="\"$(json_escape "${r}")\""
+    done
+  fi
+  printf '{"ready":%s,"missing_required":%d,"checks":[%s],"remedies":[%s]}\n' \
+    "${ready}" "${missing_required}" "${rows_joined}" "${rem_json}"
+  exit 0
+fi
+
 echo
 echo "=========================================="
 if [ "${#REMEDIES[@]}" -gt 0 ]; then

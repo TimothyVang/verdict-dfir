@@ -127,13 +127,6 @@ describe("deriveRoleStates", () => {
     });
   });
 
-  it("derives judge stage from judge_selfscore", () => {
-    const states = deriveRoleStates([
-      line(0, "judge_selfscore", { criterion: 1, question: "Did any tool call fail?" }),
-    ]);
-    expect(states.judge).toBe("working");
-  });
-
   it("flips verifier on contradiction_resolved", () => {
     const states = deriveRoleStates([
       line(0, "contradiction_resolved", {

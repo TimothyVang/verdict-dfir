@@ -1,167 +1,250 @@
 import React from "react";
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { AuditLine } from "./shared/AuditLine";
-import { spread } from "./shared/pacing";
-import { Watermark } from "./shared/Watermark";
+import { interpolate, useCurrentFrame } from "remotion";
+import { C, MARGIN, MONO, SERIF } from "./shared/editorial";
+import { Scene } from "./shared/Scene";
+import { EvidenceTag, Kicker, KineticHeadline, PullQuote, RuleLine, Stamp } from "./shared/editorial-ui";
 
-const MONO = "'JetBrains Mono', 'Courier New', monospace";
+// Beat 5 — "Admissible." The hash chain rendered as a provenance LEDGER of
+// record: each audit record is a ledger row (kind in Fraunces, prev→hash in
+// mono, a tier tag) separated by hairline rules. To the side, the rs_merkle
+// root, the sigstore seal, the FRE 902(14) line as a legal-exhibit pull-quote,
+// and a small mono manifest_verify exhibit. Real hashes preserved from prior.
 
-const AUDIT_RECORDS = [
-  { kind: "case_open",        hash: "9b57a2f3c841e609", prevHash: "0000000000000000", confidence: undefined },
-  { kind: "tool_call",        hash: "e3b0c44298fc1c14", prevHash: "9b57a2f3c841e609", confidence: undefined },
-  { kind: "finding",          hash: "4a7d1e9c03b2f581", prevHash: "e3b0c44298fc1c14", confidence: "INFERRED"  },
-  { kind: "verify_finding",   hash: "8c3f0bde7a214e90", prevHash: "4a7d1e9c03b2f581", confidence: "CONFIRMED" },
-  { kind: "judge_selfscore",  hash: "2f6a8d01c943b7e5", prevHash: "8c3f0bde7a214e90", confidence: undefined  },
-  { kind: "manifest_finalize",hash: "d1e4bc7a906f2c38", prevHash: "2f6a8d01c943b7e5", confidence: undefined  },
+interface Record {
+  kind: string;
+  hash: string;
+  prevHash: string;
+  tier?: string;
+}
+
+const LEDGER: Record[] = [
+  { kind: "case_open", hash: "9b57a2f3c841e609", prevHash: "00000000" },
+  { kind: "tool_call", hash: "e3b0c44298fc1c14", prevHash: "9b57a2f3" },
+  { kind: "finding", hash: "4a7d1e9c03b2f581", prevHash: "e3b0c442", tier: "INFERRED" },
+  { kind: "verify_finding", hash: "8c3f0bde7a214e90", prevHash: "4a7d1e9c", tier: "CONFIRMED" },
+  { kind: "correlate", hash: "2f6a8d01c943b7e5", prevHash: "8c3f0bde" },
+  { kind: "manifest_finalize", hash: "d1e4bc7a906f2c38", prevHash: "2f6a8d01" },
 ];
+
+const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
 export function HashChainScene() {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
-  const fadeOut = interpolate(frame, [durationInFrames - 15, durationInFrames], [1, 0], {
-    extrapolateLeft: "clamp", extrapolateRight: "clamp",
-  });
-
-  const titleOp = interpolate(frame, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // Spread the chain build across the whole beat: records type down the left
-  // while the merkle/sigstore/FRE panels resolve on the right, ending just
-  // before the cross-fade instead of all completing in the first ~4s.
-  const sd = (d: number) => spread(d, 15, 110, durationInFrames, 24, 210);
-  const merkleD = sd(65);
-  const sigD = sd(90);
-  const freD = sd(110);
-
-  // Merkle root
-  const merkleOp = interpolate(frame - merkleD, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const merkleS = spring({ frame: frame - merkleD, fps, config: { damping: 12, stiffness: 100 } });
-
-  // Sigstore badge
-  const sigOp = interpolate(frame - sigD, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const sigS = spring({ frame: frame - sigD, fps, config: { damping: 12, stiffness: 90 } });
-
-  // FRE label + CLI block
-  const freOp = interpolate(frame - freD, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
-      <div style={{
-        position: "absolute", inset: 0, opacity: 0.04,
-        backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-        backgroundSize: "60px 60px",
-      }} />
-
-      {/* Title */}
-      <div style={{ position: "absolute", top: 52, left: 140, right: 140, opacity: titleOp }}>
-        <div style={{ fontFamily: MONO, fontSize: 52, fontWeight: 800, color: "#e6edf3" }}>
-          Cryptographic Chain-of-Custody
+    <Scene page={7} caption="Chain of custody">
+      {/* Left column — the ledger of record */}
+      <div style={{ position: "absolute", left: MARGIN, top: 150, width: 940 }}>
+        <Kicker frame={frame} delay={10} color={C.accent}>
+          Exhibit E · Ledger of Record
+        </Kicker>
+        <div style={{ marginTop: 14 }}>
+          <KineticHeadline text="Admissible." frame={frame} delay={20} size={104} italic />
         </div>
-        <div style={{ fontFamily: MONO, fontSize: 20, color: "#8b949e", marginTop: 6 }}>
-          3 tiers: audit prev_hash → rs_merkle → sigstore Rekor
+        <div style={{ marginTop: 22, marginBottom: 28 }}>
+          <RuleLine frame={frame} delay={42} width={120} color={C.accent} thickness={2} />
         </div>
-      </div>
 
-      {/* Audit records column */}
-      <div style={{ position: "absolute", top: 180, left: 140, width: 820, display: "flex", flexDirection: "column", gap: 10 }}>
-        {AUDIT_RECORDS.map((rec, i) => {
-          const delay = sd(15 + i * 12);
-          const op = interpolate(frame - delay, [0, 10], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        {/* Ledger header */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 280px 150px",
+            fontFamily: MONO,
+            fontSize: 13,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+            color: C.inkFaint,
+            paddingBottom: 12,
+            opacity: interpolate(frame - 58, [0, 12], [0, 1], clampOpts),
+          }}
+        >
+          <span>Record</span>
+          <span>prev → hash</span>
+          <span style={{ textAlign: "right" }}>Tier</span>
+        </div>
+        <RuleLine frame={frame} delay={62} color={C.hairline} />
+
+        {LEDGER.map((r, i) => {
+          const d = 80 + i * 24;
+          const op = interpolate(frame - d, [0, 12], [0, 1], clampOpts);
+          const ty = interpolate(frame - d, [0, 14], [10, 0], clampOpts);
+          const isFinal = r.kind === "manifest_finalize";
           return (
-            <div key={i} style={{ opacity: op }}>
-              <AuditLine
-                kind={rec.kind}
-                hash={rec.hash}
-                prevHash={rec.prevHash}
-                confidence={rec.confidence}
-                highlight={rec.kind === "manifest_finalize"}
-              />
-              {i < AUDIT_RECORDS.length - 1 && frame > delay + 8 && (
-                <div style={{ marginLeft: 24, color: "#6e7681", fontSize: 14, fontFamily: MONO }}>↓ links to next</div>
+            <div key={r.kind} style={{ opacity: op, transform: `translateY(${ty}px)` }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 280px 150px",
+                  alignItems: "center",
+                  padding: "18px 0",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: SERIF,
+                    fontWeight: isFinal ? 900 : 600,
+                    fontSize: 32,
+                    letterSpacing: -0.5,
+                    color: isFinal ? C.ink : C.ink,
+                  }}
+                >
+                  {r.kind}
+                </span>
+                <span style={{ fontFamily: MONO, fontSize: 16, color: C.inkMuted }}>
+                  <span style={{ color: C.inkFaint }}>{r.prevHash}</span>
+                  <span style={{ color: C.inkFaint, margin: "0 8px" }}>→</span>
+                  <span style={{ color: isFinal ? C.accent : C.ink }}>{r.hash}</span>
+                </span>
+                <span style={{ justifySelf: "end" }}>
+                  {r.tier ? (
+                    <EvidenceTag label={r.tier} tier={r.tier} frame={frame} delay={d + 6} />
+                  ) : (
+                    <span style={{ fontFamily: MONO, fontSize: 14, color: C.inkFaint, letterSpacing: 2 }}>
+                      ledger
+                    </span>
+                  )}
+                </span>
+              </div>
+              {i < LEDGER.length - 1 && (
+                <div style={{ height: 1, background: C.hairline, opacity: 0.55 }} />
               )}
             </div>
           );
         })}
-      </div>
-
-      {/* Right column: Merkle + Sigstore */}
-      <div style={{ position: "absolute", top: 180, right: 100, width: 640, display: "flex", flexDirection: "column", gap: 24 }}>
-        {/* Merkle root box */}
-        <div style={{
-          opacity: merkleOp,
-          transform: `scale(${0.7 + merkleS * 0.3})`,
-          background: "rgba(155,89,182,0.12)",
-          border: "1.5px solid #9b59b6",
-          borderRadius: 12,
-          padding: "24px 28px",
-        }}>
-          <div style={{ fontFamily: MONO, fontSize: 16, fontWeight: 700, color: "#9b59b6", marginBottom: 10 }}>
-            rs_merkle root
-          </div>
-          <div style={{ fontFamily: MONO, fontSize: 13, color: "#8b949e", lineHeight: 1.8 }}>
-            <div>root: <span style={{ color: "#e6edf3" }}>f7a3c9e2b1d04...</span></div>
-            <div>leaves: <span style={{ color: "#e6edf3" }}>6 audit records</span></div>
-            <div>algorithm: <span style={{ color: "#e6edf3" }}>SHA-256</span></div>
-          </div>
-        </div>
-
-        {/* Sigstore badge */}
-        <div style={{
-          opacity: sigOp,
-          transform: `scale(${0.7 + sigS * 0.3})`,
-          background: "rgba(46,204,113,0.10)",
-          border: "1.5px solid #2ecc71",
-          borderRadius: 12,
-          padding: "24px 28px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-            <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2ecc71", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: "#0d1117", fontSize: 12, fontWeight: 800 }}>✓</span>
-            </div>
-            <div style={{ fontFamily: MONO, fontSize: 16, fontWeight: 700, color: "#2ecc71" }}>
-              Signed via sigstore Rekor
-            </div>
-          </div>
-          <div style={{ fontFamily: MONO, fontSize: 13, color: "#8b949e", lineHeight: 1.8 }}>
-            <div>log_id: <span style={{ color: "#e6edf3" }}>rekor.sigstore.dev</span></div>
-            <div>entry_id: <span style={{ color: "#e6edf3" }}>24922385...</span></div>
-            <div>verifiable: <span style={{ color: "#2ecc71" }}>offline, forever</span></div>
-          </div>
-        </div>
-
-        {/* FRE 902(14) note */}
-        <div style={{
-          opacity: freOp,
-          background: "rgba(52,152,219,0.08)",
-          border: "1px solid #3498db44",
-          borderRadius: 8,
-          padding: "16px 20px",
-          fontFamily: MONO, fontSize: 14, color: "#3498db", lineHeight: 1.7,
-        }}>
-          FRE 902(14) — self-authenticating electronic evidence.<br/>
-          A court can verify this manifest from the sigstore Rekor<br/>
-          transparency log — no expert witness required.
-        </div>
-
-        {/* manifest_verify CLI block */}
-        <div style={{
-          opacity: freOp,
-          background: "#0d1117",
-          border: "1px solid #30363d",
-          borderRadius: 8,
-          padding: "12px 18px",
-          fontFamily: MONO, fontSize: 12, lineHeight: 1.9,
-        }}>
-          <div style={{ color: "#e6edf3" }}>
-            $ uv run python -m findevil_agent_mcp.server manifest_verify
-          </div>
-          <div style={{ color: "#2ecc71" }}>chain:        OK</div>
-          <div style={{ color: "#2ecc71" }}>merkle_root:  d1e4bc7a906f2c38</div>
-          <div style={{ color: "#2ecc71" }}>sigstore:     VERIFIED (rekor.sigstore.dev/24922385)</div>
-          <div style={{ color: "#8b949e" }}>records:      6  ·  findings: 2  ·  CONFIRMED: 1</div>
+        <RuleLine frame={frame} delay={236} color={C.hairline} thickness={2} />
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 15,
+            color: C.inkMuted,
+            marginTop: 16,
+            letterSpacing: 1,
+            opacity: interpolate(frame - 250, [0, 16], [0, 1], clampOpts),
+          }}
+        >
+          6 records · append-only · each <span style={{ color: C.ink }}>prev_hash</span> links the line before
+          it
         </div>
       </div>
 
-      <Watermark />
-    </AbsoluteFill>
+      {/* Right column — the attestation: merkle, seal, FRE exhibit */}
+      <div style={{ position: "absolute", right: MARGIN, top: 156, width: 540 }}>
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 13,
+            letterSpacing: 3,
+            textTransform: "uppercase",
+            color: C.inkMuted,
+            marginBottom: 12,
+            opacity: interpolate(frame - 300, [0, 14], [0, 1], clampOpts),
+          }}
+        >
+          Three Tiers of Custody
+        </div>
+        <RuleLine frame={frame} delay={310} color={C.hairline} />
+
+        {/* Tier ledger: prev_hash → merkle → sigstore */}
+        <div style={{ paddingTop: 18 }}>
+          {[
+            { n: "I", name: "audit prev_hash", note: "append-only hash chain" },
+            { n: "II", name: "rs_merkle root", note: "f7a3c9e2b1d04… · 6 leaves · SHA-256" },
+            { n: "III", name: "sigstore Rekor", note: "rekor.sigstore.dev / 24922385" },
+          ].map((t, i) => {
+            const d = 330 + i * 26;
+            const op = interpolate(frame - d, [0, 14], [0, 1], clampOpts);
+            return (
+              <div
+                key={t.n}
+                style={{ opacity: op, display: "flex", alignItems: "baseline", gap: 18, padding: "14px 0" }}
+              >
+                <span style={{ fontFamily: SERIF, fontStyle: "italic", fontSize: 26, color: C.accent, width: 44 }}>
+                  {t.n}
+                </span>
+                <div>
+                  <div style={{ fontFamily: MONO, fontSize: 18, color: C.ink }}>{t.name}</div>
+                  <div style={{ fontFamily: MONO, fontSize: 13, color: C.inkMuted, marginTop: 4 }}>{t.note}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <RuleLine frame={frame} delay={420} color={C.hairline} />
+
+        {/* The seal */}
+        <div style={{ marginTop: 30, display: "flex", alignItems: "center", gap: 24 }}>
+          <Stamp label="Signed · sigstore" frame={frame} delay={460} color={C.confirmed} rotate={-6} size={24} />
+          <div
+            style={{
+              fontFamily: MONO,
+              fontSize: 13,
+              color: C.inkMuted,
+              lineHeight: 1.7,
+              opacity: interpolate(frame - 478, [0, 14], [0, 1], clampOpts),
+            }}
+          >
+            merkle d1e4bc7a906f2c38
+            <br />
+            verifiable offline, years from now
+          </div>
+        </div>
+
+        {/* FRE 902(14) — treated as a legal-exhibit pull-quote */}
+        <div style={{ marginTop: 34 }}>
+          <RuleLine frame={frame} delay={520} width={80} color={C.accent} thickness={2} />
+          <PullQuote frame={frame} delay={540} size={27} color={C.ink} style={{ marginTop: 16, maxWidth: 520 }}>
+            Self-authenticating under <span style={{ fontStyle: "italic" }}>FRE&nbsp;902(14)</span> — a court
+            verifies this manifest from the transparency log, no expert witness required.
+          </PullQuote>
+        </div>
+      </div>
+
+      {/* manifest_verify exhibit — bottom mono band spanning the lower gutter */}
+      <div
+        style={{
+          position: "absolute",
+          left: MARGIN,
+          bottom: 96,
+          width: 940,
+          opacity: interpolate(frame - 600, [0, 16], [0, 1], clampOpts),
+        }}
+      >
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 13,
+            letterSpacing: 3,
+            textTransform: "uppercase",
+            color: C.inkMuted,
+            marginBottom: 12,
+          }}
+        >
+          Exhibit E-1 — manifest_verify (offline)
+        </div>
+        <RuleLine frame={frame} delay={612} color={C.hairline} />
+        <div style={{ fontFamily: MONO, fontSize: 15, lineHeight: 1.95, paddingTop: 14 }}>
+          <div style={{ color: C.inkMuted }}>
+            $ <span style={{ color: C.ink }}>uv run python -m findevil_agent_mcp.server manifest_verify</span>
+          </div>
+          {[
+            { k: "chain", v: "OK" },
+            { k: "merkle_root", v: "d1e4bc7a906f2c38" },
+            { k: "sigstore", v: "VERIFIED (rekor.sigstore.dev/24922385)" },
+          ].map((line, i) => {
+            const op = interpolate(frame - (640 + i * 18), [0, 12], [0, 1], clampOpts);
+            return (
+              <div key={line.k} style={{ opacity: op, color: C.confirmed }}>
+                {line.k.padEnd(13, " ")}
+                {line.v}
+              </div>
+            );
+          })}
+          <div style={{ color: C.inkMuted, opacity: interpolate(frame - 700, [0, 12], [0, 1], clampOpts) }}>
+            records 6 · findings 2 · <span style={{ color: C.confirmed }}>CONFIRMED 1</span>
+          </div>
+        </div>
+      </div>
+    </Scene>
   );
 }

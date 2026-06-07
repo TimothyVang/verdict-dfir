@@ -1,0 +1,245 @@
+#!/usr/bin/env bash
+# verdict — the one VERDICT command. Point at evidence, get a signed verdict.
+#
+# This is the single entry point. It replaces the old per-mode launchers
+# (find-evil-auto / find-evil-run / find-evil-live / find-evil-sift): there is
+# one workflow, not five. "Where the tools run" (local host vs. the SANS SIFT
+# VM) is the --sift flag, not a separate command.
+#
+# Usage:
+#   scripts/verdict <evidence> [options]
+#
+# Pipeline (no human input required after launch):
+#   preflight (doctor) → build the MCP server if needed → investigate via the
+#   typed MCP pipeline → open the live dashboard at the case → signed verdict
+#   + report.
+#
+# Options:
+#   --sift            run the DFIR tools inside the SANS SIFT VM over SSH
+#                     (default: tools on the local host). Requires the VM to be
+#                     bootstrapped once: bash scripts/sift-vm-bootstrap.sh
+#   --watch           no path? wait for a file dropped into evidence/, then go
+#                     (debounced until the copy finishes). Omitting both a path
+#                     and --watch uses the newest file already in evidence/.
+#   --no-dashboard    don't auto-open the web dashboard
+#   --skip-build      assume target/release/findevil-mcp is already built
+#   --dry-run         print each stage without running anything
+#   --unattended      no interactive prompts (forwarded to the engine)
+#   --run-summary F   also write a machine-readable JSON pointer to F
+#   -- <args...>      forward any remaining args to the engine
+#
+# Output: tmp/auto-runs/<case-id>/  (audit.jsonl, run.manifest.json,
+#         verdict.json, REPORT.{md,html,pdf})
+
+set -euo pipefail
+export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${REPO_ROOT}"
+
+DASH="http://localhost:3000"
+EVIDENCE_DIR="${REPO_ROOT}/evidence"
+SIFT=0
+NO_DASHBOARD=0
+SKIP_BUILD=0
+DRY=0
+WATCH=0
+EVIDENCE=""
+RUN_SUMMARY=""
+PASSTHROUGH=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --sift)          SIFT=1; shift ;;
+    --no-dashboard)  NO_DASHBOARD=1; shift ;;
+    --skip-build)    SKIP_BUILD=1; shift ;;
+    --dry-run)       DRY=1; shift ;;
+    --watch)         WATCH=1; shift ;;
+    --run-summary)   RUN_SUMMARY="$2"; shift 2 ;;
+    --)              shift; PASSTHROUGH+=("$@"); break ;;
+    -*)              PASSTHROUGH+=("$1"); shift ;;   # forward unknown flags (e.g. --unattended)
+    *)               if [[ -z "${EVIDENCE}" ]]; then EVIDENCE="$1"; else PASSTHROUGH+=("$1"); fi; shift ;;
+  esac
+done
+
+log()  { printf '\033[36m[verdict]\033[0m %s\n' "$*" >&2; }
+ok()   { printf '   \033[32m✓\033[0m %s\n' "$*" >&2; }
+warn() { printf '   \033[33m!\033[0m %s\n' "$*" >&2; }
+fail() { printf '\033[31m[verdict] FAIL:\033[0m %s\n' "$*" >&2; exit 1; }
+url_up() { [[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$1" 2>/dev/null)" != "000" ]]; }
+
+# open_dashboard <abs-case-dir> — start the dashboard if down (with the repo
+# root + an absolute allow-listed root so /api/audit accepts the case path
+# regardless of the dev server's cwd) and open it deep-linked to the case.
+open_dashboard() {
+  local case_dir="$1"
+  [[ "${NO_DASHBOARD}" == "1" || -z "${case_dir}" ]] && return 0
+  if ! url_up "${DASH}"; then
+    log "starting the dashboard (pnpm dev, ~10s)…"
+    ( FINDEVIL_REPO_ROOT="${REPO_ROOT}" \
+      FINDEVIL_DASHBOARD_EXTRA_ROOTS="${REPO_ROOT}/tmp/auto-runs" \
+      pnpm --filter @findevil/web dev >/tmp/verdict-dashboard.log 2>&1 & ) \
+      || warn "could not start dashboard (is pnpm installed?)"
+    for _ in $(seq 1 40); do url_up "${DASH}" && break; sleep 1; done
+  fi
+  if url_up "${DASH}"; then
+    local target
+    target="${DASH}/?case=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "${case_dir}")"
+    command -v xdg-open >/dev/null 2>&1 && xdg-open "${target}" >/dev/null 2>&1 || true
+    ok "dashboard: ${target}"
+  else
+    warn "dashboard slow to start — open ${DASH}/?case=${case_dir} manually"
+  fi
+}
+
+# Bytes of a file, or recursive bytes of a directory (a mixed case folder),
+# 0 if missing. Used to debounce a drop until the copy finishes.
+_evidence_size() {
+  local p="$1"
+  if [[ -d "${p}" ]]; then du -sb "${p}" 2>/dev/null | cut -f1
+  elif [[ -f "${p}" ]]; then stat -c%s "${p}" 2>/dev/null
+  else echo 0; fi
+}
+
+# newest non-placeholder entry (file OR case folder) in a dir; empty if none.
+# -d keeps a dropped directory as the entry itself rather than expanding it.
+newest_evidence() {
+  ls -dt "$1"/* 2>/dev/null | grep -vE '/(README\.md|\.gitkeep)$' | head -1 || true
+}
+
+# wait_for_evidence <dir> — block until a file OR a case folder is dropped,
+# debounced until its (recursive) size stops growing (copy finished). Echoes the
+# path on stdout (logs to stderr).
+wait_for_evidence() {
+  local dir="$1" f s1 s2
+  mkdir -p "${dir}"
+  log "waiting — drop a file OR a case folder into ${dir}/ (pcap / memory / disk / .evtx / mixed folder) …"
+  while true; do
+    f="$(newest_evidence "${dir}")"
+    if [[ -n "${f}" && -e "${f}" ]]; then
+      s1="$(_evidence_size "${f}")"; sleep 1
+      s2="$(_evidence_size "${f}")"
+      if [[ "${s1}" == "${s2}" && "${s1:-0}" -gt 0 ]]; then echo "${f}"; return 0; fi
+    fi
+    sleep 1
+  done
+}
+
+# Resolve evidence: explicit arg > newest in evidence/ > wait for a drop.
+# --watch always blocks for a fresh drop. (dry-run resolves but never blocks.)
+if [[ -z "${EVIDENCE}" ]]; then
+  if [[ "${WATCH}" == "1" && "${DRY}" != "1" ]]; then
+    EVIDENCE="$(wait_for_evidence "${EVIDENCE_DIR}")"
+  else
+    EVIDENCE="$(newest_evidence "${EVIDENCE_DIR}")"
+    [[ -n "${EVIDENCE}" ]] && ok "using evidence: ${EVIDENCE}"
+    if [[ -z "${EVIDENCE}" && "${DRY}" != "1" ]]; then
+      EVIDENCE="$(wait_for_evidence "${EVIDENCE_DIR}")"
+    fi
+  fi
+fi
+[[ -n "${EVIDENCE}" || "${DRY}" == "1" ]] || fail "no evidence. Usage: scripts/verdict <evidence> | --watch (drop into evidence/)"
+
+# 1. preflight ---------------------------------------------------------------
+log "1/4 preflight"
+if [[ "${DRY}" == "1" ]]; then
+  ok "DRY-RUN: bash scripts/doctor.sh"
+elif [[ -f scripts/doctor.sh ]]; then
+  bash scripts/doctor.sh || fail "doctor reported missing dependencies — fix them, then re-run"
+else
+  warn "scripts/doctor.sh not found; skipping preflight"
+fi
+
+# 2. build the Rust MCP server if needed -------------------------------------
+log "2/4 build"
+if [[ "${DRY}" == "1" ]]; then
+  ok "DRY-RUN: cargo build --workspace --release --locked"
+elif [[ "${SIFT}" == "1" ]]; then
+  ok "--sift: the MCP server is built inside the VM by sift-vm-bootstrap; skipping host build"
+elif [[ "${SKIP_BUILD}" == "1" || -f target/release/findevil-mcp ]]; then
+  ok "findevil-mcp present (or --skip-build); skipping build"
+else
+  log "building findevil-mcp (cargo build --release)…"
+  cargo build --workspace --release --locked
+fi
+
+# 3. SIFT-VM toggle (where the tools run) ------------------------------------
+RESTORE_MCP=0
+if [[ "${SIFT}" == "1" ]]; then
+  [[ -f .mcp.json.sift ]] || fail "--sift needs .mcp.json.sift (run: bash scripts/sift-vm-bootstrap.sh)"
+  cp -f .mcp.json .mcp.json.local.bak
+  cp -f .mcp.json.sift .mcp.json
+  RESTORE_MCP=1
+  trap '[[ "${RESTORE_MCP}" == "1" ]] && mv -f .mcp.json.local.bak .mcp.json' EXIT
+  ok "--sift: MCP routed to the SANS SIFT VM over SSH"
+fi
+
+# 4. investigate -------------------------------------------------------------
+log "3/4 investigate — ${EVIDENCE}"
+SUMMARY="${RUN_SUMMARY:-tmp/verdict-last-run.json}"
+mkdir -p "$(dirname "${SUMMARY}")"
+ENGINE=(python3 scripts/find_evil_auto.py "${EVIDENCE}" --run-summary "${SUMMARY}")
+CASE_DIR=""
+if [[ "${SIFT}" == "0" ]]; then
+  # Default = local host. Pin the case id so the dashboard can open LIVE —
+  # before the run — and tail the audit chain as each stage lands. The engine
+  # writes straight to this host dir (no SCP), so the stream is real-time.
+  CASE_ID="auto-$(python3 -c 'import uuid;print(uuid.uuid4())')"
+  CASE_DIR="${REPO_ROOT}/tmp/auto-runs/${CASE_ID}"
+  mkdir -p "${CASE_DIR}"
+  export FIND_EVIL_LOCAL=1
+  export PYTHONPATH="${REPO_ROOT}/services/agent${PYTHONPATH:+:${PYTHONPATH}}"
+  ENGINE+=(--local --case-id "${CASE_ID}")
+fi
+[[ ${#PASSTHROUGH[@]} -gt 0 ]] && ENGINE+=("${PASSTHROUGH[@]}")
+if [[ "${DRY}" == "1" ]]; then
+  ok "DRY-RUN: ${ENGINE[*]}"
+  log "4/4 dashboard"
+  ok "DRY-RUN: open the live dashboard at the case"
+  echo; log "done (dry-run)"
+  exit 0
+fi
+
+# Local mode: open the dashboard LIVE before the engine runs.
+if [[ "${SIFT}" == "0" ]]; then
+  log "4/4 dashboard (live)"
+  open_dashboard "${CASE_DIR}"
+fi
+
+"${ENGINE[@]}"
+
+# Optional automation — fire the verdict at the n8n finding-to-action workflow.
+# Writes <case>/automation.json (operator harness; NOT the signed audit chain);
+# the dashboard's automation panel polls it. Non-fatal if n8n is down.
+if [[ "${SIFT}" == "0" && -n "${CASE_DIR:-}" && -f scripts/n8n_post.py ]]; then
+  python3 scripts/n8n_post.py "${CASE_DIR}" >/dev/null 2>&1 || true
+fi
+
+# 5. SIFT mode: the case dir is resolved + opened after the post-run sync ------
+if [[ "${SIFT}" == "1" || -z "${CASE_DIR:-}" ]]; then
+  log "4/4 dashboard"
+  CASE_DIR="$(python3 - "${SUMMARY}" <<'PY' 2>/dev/null || true
+import json, sys
+from pathlib import Path
+try:
+    s = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+cid = s.get("case_id")
+for cand in (s.get("local_run_dir"), s.get("run_dir"), s.get("case_dir"),
+             f"tmp/auto-runs/{cid}" if cid else None):
+    if cand and Path(cand).is_dir():
+        print(str(Path(cand).resolve())); break
+PY
+)"
+  # Fallback: newest dir under tmp/auto-runs that has an audit.jsonl.
+  if [[ -z "${CASE_DIR:-}" ]]; then
+    CASE_DIR="$(ls -dt tmp/auto-runs/*/ 2>/dev/null | while read -r d; do [[ -f "${d}audit.jsonl" ]] && { cd "$d" && pwd; break; }; done)"
+  fi
+  open_dashboard "${CASE_DIR}"
+fi
+
+echo
+log "done"
+[[ -n "${CASE_DIR:-}" ]] && printf '   case   : %s\n' "${CASE_DIR}" >&2
+printf '   verdict: %s/verdict.json\n' "${CASE_DIR:-<case dir>}" >&2

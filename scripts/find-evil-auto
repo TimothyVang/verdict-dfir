@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# find-evil-auto — Tesla-mode investigation orchestrator (single-command).
+# find-evil-auto — internal headless engine wrapper.
+#
+# Prefer scripts/verdict (the one command: preflight → investigate →
+# dashboard → signed verdict). This thin wrapper remains for CI/goldens that
+# invoke the engine directly with VM-side paths.
 #
 # Pre-flight: SIFT VM running + scripts/sift-vm-bootstrap.sh has been run.
 #
@@ -21,13 +25,9 @@
 #       Velociraptor zip: safe extract + per-artifact dispatch)
 #   3. Synthesize Pool A/B Findings deterministically from tool outputs
 #   4. detect_contradictions → judge_findings → correlate_findings
-#   5. Emit 6 kind=judge_selfscore audit records (per agent-config/JUDGING.md)
-#      BEFORE manifest_finalize so the score is part of the cryptographic
-#      attestation
-#   6. manifest_finalize (Merkle + sigstore)
-#   7. Write verdict.json
-#   8. Generate PDF report (matplotlib + pandoc + Chrome headless;
-#      surfaces the selfscore table in the per-case REPORT.pdf)
+#   5. manifest_finalize (Merkle + sigstore)
+#   6. Write verdict.json
+#   7. Generate PDF report (matplotlib + pandoc + Chrome headless)
 #
 # Output (inside VM):
 #   /home/sansforensics/find-evil/tmp/auto-<uuid>/

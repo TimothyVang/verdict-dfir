@@ -16,8 +16,6 @@ Settled facts. Each entry was once an active divergence between a spec and the s
 
 - **`rmcp` is intentionally NOT a runtime dependency.** Spec #2 §4.1 lists `rmcp 0.16.x`; we ship a hand-rolled stdio JSON-RPC 2.0 (MCP 2024-11-05) in `services/mcp/src/server.rs` for wire-format stability and Python-server dispatch parity. `Cargo.toml:27` keeps the `rmcp` line commented as a deliberate marker. See `services/mcp/README.md`.
 
-- **Swarm package is `findevil_swarm`, not `services.swarm`.** Spec #1 / `docs/plans/2026-04-23-build-swarm-plan.md` use `services.swarm.*`; code ships under `findevil_swarm.*` (matching `findevil_agent`/`findevil_agent_mcp`/`findevil-mcp`). Canonical invocation: `scripts/swarm-start.sh:105`.
-
 - **A3 MemoryStore: FTS5 phrase-quoting + Python-side sort.** Plan Task 1.1/spec §2.4 specified raw `params=[query]` MATCH + `ORDER BY score`. Shipped `services/agent/findevil_agent/memory/store.py` phrase-quotes (`fts_query = '"' + query.replace('"','""') + '"'`) — required so queries like `evil.com` or `T1059.001` don't trip `fts5: syntax error near "."` — and re-sorts by combined `confidence` so decay breaks BM25 ties. Plan + spec updated; multi-word recall is conservative phrase-match.
 
 - **A3 audit-log push: SSE, not WebSocket.** Plan Task 4.2 specified WebSocket; PR #7 (`281d26f`) shipped SSE. Flow is strictly server→client, App Router doesn't natively support WS upgrade. Live handler: `apps/web/app/api/audit/route.ts` (Node runtime, SSE MIME, 15s keepalive comment frame). Iterator: `apps/web/lib/audit-tail.ts`. Consumers: `new EventSource("/api/audit?case=…")` + `addEventListener("audit_line", …)`. Don't "upgrade" back to WS without a spec amendment naming a concrete client→server message.

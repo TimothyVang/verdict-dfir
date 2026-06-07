@@ -722,7 +722,7 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
 
     if (Test-Path -LiteralPath $auditPath -PathType Leaf) {
         $auditKinds = Read-AuditKinds -AuditPath $auditPath
-        foreach ($kind in @("judge_selfscore", "report_qa", "customer_release_gate", "verdict_artifact", "expert_signoff_packet")) {
+        foreach ($kind in @("report_qa", "customer_release_gate", "verdict_artifact", "expert_signoff_packet")) {
             if (-not (Test-AuditKind -AuditKinds $auditKinds -Kind $kind)) {
                 Add-ReadinessBlocker "audit log lacks required $kind record: $auditPath"
             }

@@ -108,7 +108,7 @@ claude                                  # opens an interactive Claude Code sessi
 
 The agent will load its identity prompts, open the case, run DFIR tools, emit Findings citing tool call IDs, judge them, and produce a structured report.
 
-If you got the team's repo in Step 6, you also have the bridged + Tesla-mode entry points — ask PUG which one to use for your first run.
+If you got the team's repo in Step 6, you also have the one command — `scripts/verdict <evidence>` (preflight → investigate → open the live dashboard → signed verdict + report). Use that for headless runs; the interactive `investigate <case>` above is the same workflow driven by hand.
 
 ---
 

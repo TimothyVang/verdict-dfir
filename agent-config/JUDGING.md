@@ -1,10 +1,20 @@
-# JUDGING.md — Rubric the agent self-scores against
+# JUDGING.md — Pre-submission self-assessment rubric
 
-The SANS Find Evil! 2026 judging criteria, verbatim. Read at session
-start (CLAUDE.md "Agent investigation prompt" §0). Every investigation
-must produce evidence each judge can point at — not just satisfy the
-criteria internally. The mapping below names *which artifact in the
-audit trail* answers each criterion.
+The six quality criteria used by `scripts/self-score.py`, the
+maintainer's pre-submission grading tool. This rubric is **not** part
+of the investigation pipeline: the live agent/supervisor does not emit
+self-score records mid-investigation, and the product, dashboard, and
+demo video never reference it. Grading is a separate, after-the-fact
+step a maintainer runs by hand against a completed case directory
+before submission.
+
+`scripts/self-score.py` reads a finished case's `audit.jsonl` (and
+`verdict.json` if present), reconstructs the signals each criterion
+asks about, and writes `<case>/self-score.json`. It does **not** append
+to the audit chain — that chain is sealed at `manifest_finalize`.
+
+Each criterion below names *which artifact in the completed audit trail*
+the grader points at to answer it.
 
 ## 1. Autonomous Execution Quality (tiebreaker)
 > Does the agent reason about next steps, handle failures, and
@@ -89,10 +99,10 @@ add a new MCP tool by following the pattern in `services/mcp/src/
 tools/prefetch_parse.rs` (reference implementation) without reading
 external docs.
 
-## End-of-investigation self-check
+## Pre-submission self-check
 
-Before closing the case (before `manifest_finalize`), the supervisor
-runs through this checklist and emits one record per criterion:
+After a case completes, `scripts/self-score.py` reconstructs the run
+from the sealed `audit.jsonl` and answers one row per criterion:
 
 | # | Question | Answer style |
 |---|----------|--------------|
@@ -103,6 +113,7 @@ runs through this checklist and emits one record per criterion:
 | 5 | Does every Finding cite a tool_call_id? (must be 100%; verifier vetoes otherwise) | `cited=N/N` |
 | 6 | Is the run reproducible from the manifest alone (no external state)? | `reproducible=yes/no` |
 
-The six lines append to the audit JSONL with `kind="judge_selfscore"`
-just before `manifest_finalize`. Judges can grep `kind=judge_selfscore`
-to find the agent's own assessment alongside their own scoring.
+The grader prints these rows and writes them to `<case>/self-score.json`.
+This output lives **outside** the sealed audit chain — it is an
+after-the-fact maintainer assessment, not something the investigation
+agent emits or signs.

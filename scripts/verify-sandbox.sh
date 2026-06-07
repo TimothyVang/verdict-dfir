@@ -110,15 +110,6 @@ else
   result=1
 fi
 
-# ---------- Swarm ----------
-hr "Swarm package"
-if python3 -c "import sys; sys.path.insert(0, 'services/swarm'); from findevil_swarm import PRSpec, SwarmState" 2>/dev/null; then
-  rows+=("Swarm|$(green 'PASS')|package importable; schema types exported")
-else
-  rows+=("Swarm|$(red 'FAIL')|swarm package not importable")
-  result=1
-fi
-
 # ---------- Print summary table ----------
 hr "Verification summary"
 printf '%-12s  %-6s  %s\n' "LAYER" "STATUS" "DETAIL"

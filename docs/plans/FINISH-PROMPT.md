@@ -1,12 +1,25 @@
 # FINISH-PROMPT — Drive SANS Find Evil to a Re-cuttable `v-submit`
 
 > Reusable finishing prompt. Paste the block below into a fresh `claude` session
-> from the repo root, or queue it into `scripts/autonomous-loop.py` via
-> `memory/project_autonomous_queue.md`.
+> from the repo root.
 
 **Last updated: 2026-06-07.** Phases 0–3 and Finish F1–F2 are **SHIPPED** (see
 `CHANGELOG.md [v-submit]`). This prompt now starts at the remaining open work: F3
 (smoke gate), F5 (demo video render + upload), and the human-only F6–F7 (Devpost).
+
+> **Two later consolidations apply to everything below:**
+> - **One operator command is `scripts/verdict <evidence>`** (preflight →
+>   investigate → live dashboard → signed verdict + report). `find-evil-run` and
+>   `find-evil-live` are now deprecated shims forwarding to `verdict`;
+>   `find-evil-auto` is the internal headless engine `verdict` calls;
+>   `find-evil-sift` is the SIFT-VM helper. Read any `find-evil-run` reference
+>   below as `scripts/verdict`.
+> - **`judge_selfscore` is removed from the investigation pipeline** and now lives
+>   only as the standalone maintainer tool `scripts/self-score.py` (run by hand
+>   before submission; writes `<case>/self-score.json`; does not touch the sealed
+>   audit chain). The "self-score criteria" in the Phase 1.3 commit row refer to
+>   that grader's rubric (`agent-config/JUDGING.md`), not pipeline output. The
+>   `judge_findings` Pool A/B merge agent (core ACH) is unchanged.
 
 ---
 
@@ -151,9 +164,9 @@ If any cannot be met, STOP and report exactly which and why — do not fake comp
 
 ---
 
-## Headless execution note (autonomous-loop)
+## Headless execution note
 
-When run via `scripts/autonomous-loop.py` (`claude -p --permission-mode acceptEdits`),
+When run headlessly (`claude -p --permission-mode acceptEdits`),
 F3 smoke gate and F5a video generation are automatable. F5b (upload), F6 (tag re-cut),
 and F7 (Devpost form) require human action — list them in the handoff instead of failing.
 The `docker` L1 gate and `gh pr create` may also require interactive prompts; defer to

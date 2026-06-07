@@ -1,126 +1,89 @@
 import React from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import { ChipBadge } from "./shared/ChipBadge";
-import { spread } from "./shared/pacing";
-import { Watermark } from "./shared/Watermark";
+import { interpolate, useCurrentFrame } from "remotion";
+import { C, MARGIN, MONO, SERIF } from "./shared/editorial";
+import { Scene } from "./shared/Scene";
+import { EvidenceTag, Kicker, KineticHeadline, PullQuote, RuleLine } from "./shared/editorial-ui";
 
-const MONO = "'JetBrains Mono', 'Courier New', monospace";
+// Beat 3 (marquee) — "The host that lied." The pslist/psscan divergence is
+// presented as a marked-up forensic EXHIBIT, not a generic terminal: an
+// editorial headline + pull-quote on the left, a process-reconciliation
+// exhibit table on the right with the unlinked rows flagged in the margin.
 
-const TERMINAL_LINES = [
-  { text: "$ bash scripts/find-evil-auto evidence/nist-hacking-case.E01", color: "#e6edf3", delay: 5 },
-  { text: "[case_open] SHA-256: 3a4f9c8b2d1e07f6a3c091be48d25f4e verified", color: "#2ecc71", delay: 20 },
-  { text: "[vol_pslist]  scanning active process list...", color: "#8b949e", delay: 34 },
-  { text: "[vol_pslist]  32 processes found", color: "#8b949e", delay: 44 },
-  { text: "[vol_psscan]  signature-scanning EPROCESS pool...", color: "#8b949e", delay: 54 },
-  { text: "[vol_psscan]  35 processes found — 3 DIVERGE from pslist !", color: "#e74c3c", delay: 66 },
-  { text: "[vol_psxview] cross-referencing 6 process views...", color: "#8b949e", delay: 76 },
-  { text: "", color: "#8b949e", delay: 84 },
-  { text: "  PID    NAME              PPID   OFFSET       STATUS", color: "#6e7681", delay: 86 },
-  { text: "  ----   ----------------  ----   ----------   ----------------------", color: "#6e7681", delay: 88 },
-  { text: "  1492   svchost.exe        604   0x8212a020   pslist ONLY", color: "#f39c12", delay: 92 },
-  { text: "  1492   svchost.exe        604   0x83f4e060   psscan ONLY  ← DKOM", color: "#e74c3c", delay: 98 },
-  { text: "  3044   explorer.exe      1232   0x81f8d040   psscan ONLY  ← hidden", color: "#e74c3c", delay: 104 },
-  { text: "", color: "#8b949e", delay: 110 },
-  { text: "  FINDING: DKOM — PID 1492 + 3044 hidden from active list", color: "#f39c12", delay: 114 },
-  { text: "  confidence: INFERRED   mitre: T1014 Rootkit", color: "#f39c12", delay: 120 },
-  { text: "  tool_call_id: tci_psscan_00a7f3c841e609", color: "#3498db", delay: 126 },
-  { text: "[verify_finding] replaying tci_psscan_00a7f3c841e609...", color: "#8b949e", delay: 132 },
-  { text: "[verify_finding] hash match ✓  INFERRED → CONFIRMED", color: "#2ecc71", delay: 142 },
-  { text: "[audit_append]   e3b0c44298fc1c14 → prev: 9b57a2f3c841e609", color: "#6e7681", delay: 150 },
+interface Row { pid: string; image: string; view: string; flag?: string; alert?: boolean }
+const ROWS: Row[] = [
+  { pid: "0604", image: "services.exe", view: "pslist + psscan" },
+  { pid: "1492", image: "svchost.exe", view: "pslist + psscan" },
+  { pid: "1492", image: "svchost.exe", view: "psscan only", flag: "unlinked", alert: true },
+  { pid: "3044", image: "explorer.exe", view: "psscan only", flag: "hidden", alert: true },
 ];
 
-interface TerminalSceneProps {
-  title: string;
-  subtitle: string;
-  accentColor: string;
-}
-
-export function TerminalScene({ title, subtitle, accentColor }: TerminalSceneProps) {
+export function TerminalScene(_props?: { title?: string; subtitle?: string; accentColor?: string }) {
   const frame = useCurrentFrame();
-  const { durationInFrames } = useVideoConfig();
-
-  const fadeOut = interpolate(frame, [durationInFrames - 15, durationInFrames], [1, 0], {
-    extrapolateLeft: "clamp", extrapolateRight: "clamp",
-  });
-  const titleOp = interpolate(frame, [0, 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // Spread the line reveals across the whole beat so the terminal types out
-  // in step with the narration instead of finishing in the first ~5s.
-  const sd = (d: number) => spread(d, 5, 150, durationInFrames, 24, 230);
-
-  // Cursor blink
-  const cursorVisible = Math.floor(frame / 15) % 2 === 0;
-
-  // Keep the cursor on the last typed line until the final hold begins.
-  const isTyping = frame < durationInFrames - 60;
+  const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
-      <div style={{
-        position: "absolute", inset: 0, opacity: 0.04,
-        backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-        backgroundSize: "60px 60px",
-      }} />
-
-      {/* Header */}
-      <div style={{
-        position: "absolute", top: 60, left: 140, right: 140, opacity: titleOp,
-        display: "flex", justifyContent: "space-between", alignItems: "flex-end",
-      }}>
-        <div>
-          <div style={{ fontFamily: MONO, fontSize: 52, fontWeight: 800, color: "#e6edf3", letterSpacing: 2 }}>
-            {title}
-          </div>
-          <div style={{ fontFamily: MONO, fontSize: 20, color: "#8b949e", marginTop: 4 }}>
-            {subtitle}
-          </div>
+    <Scene page={3} caption="Single-host · memory">
+      {/* Left column — the story */}
+      <div style={{ position: "absolute", left: MARGIN, top: 210, width: 760 }}>
+        <Kicker frame={frame} delay={10} color={C.accent}>Exhibit A · Memory Image</Kicker>
+        <div style={{ marginTop: 16 }}>
+          <KineticHeadline text="The host" frame={frame} delay={20} size={104} />
+          <KineticHeadline text="that lied." frame={frame} delay={32} size={104} italic />
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <ChipBadge label="INFERRED" variant="INFERRED" fontSize={16} />
-          <ChipBadge label="T1014 Rootkit" variant="MITRE" fontSize={16} />
+        <div style={{ marginTop: 30, marginBottom: 26 }}>
+          <RuleLine frame={frame} delay={44} width={120} color={C.alert} thickness={2} />
+        </div>
+        <PullQuote frame={frame} delay={300} size={36} color={C.ink} style={{ maxWidth: 700 }}>
+          Two processes the active list swears aren&rsquo;t there — recovered intact from pool
+          memory. That divergence is the textbook&nbsp;DKOM signature.
+        </PullQuote>
+        <div style={{ marginTop: 34, display: "flex", alignItems: "center", gap: 18 }}>
+          <EvidenceTag label="T1014 Rootkit" tier="CONFIRMED" frame={frame} delay={620} />
+          <span style={{ fontFamily: MONO, fontSize: 14, color: C.inkFaint }}>tci_psscan_00a7f3</span>
         </div>
       </div>
 
-      {/* Terminal window */}
-      <div style={{
-        position: "absolute", top: 180, left: 140, right: 140, bottom: 80,
-        background: "#0d1117",
-        border: "1px solid #30363d",
-        borderRadius: 12,
-        overflow: "hidden",
-      }}>
-        {/* Chrome bar */}
-        <div style={{
-          padding: "12px 18px",
-          background: "#161b22",
-          borderBottom: "1px solid #30363d",
-          display: "flex", alignItems: "center", gap: 8,
-        }}>
-          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#e74c3c" }} />
-          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#f39c12" }} />
-          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#2ecc71" }} />
-          <span style={{ marginLeft: 12, fontFamily: MONO, fontSize: 13, color: "#8b949e" }}>
-            find-evil-auto — bash
-          </span>
+      {/* Right column — the exhibit table */}
+      <div style={{ position: "absolute", right: MARGIN, top: 220, width: 740 }}>
+        <div style={{ fontFamily: MONO, fontSize: 14, letterSpacing: 3, textTransform: "uppercase", color: C.inkMuted, marginBottom: 14 }}>
+          Exhibit A-1 — Process Reconciliation
         </div>
-        {/* Content */}
-        <div style={{ padding: "20px 24px", fontFamily: MONO, fontSize: 16, lineHeight: 1.7 }}>
-          {TERMINAL_LINES.map((line, i) => {
-            if (frame < sd(line.delay)) return null;
-            const isLast = i === TERMINAL_LINES.length - 1 || frame < sd(TERMINAL_LINES[i + 1].delay);
-            return (
-              <div key={i} style={{ color: line.color, minHeight: line.text ? "auto" : 8 }}>
-                {line.text}
-                {isLast && isTyping && (
-                  <span style={{ opacity: cursorVisible ? 1 : 0, color: accentColor }}>█</span>
-                )}
+        <RuleLine frame={frame} delay={70} color={C.hairline} />
+        {/* header */}
+        <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 220px", fontFamily: MONO, fontSize: 15, color: C.inkFaint, padding: "12px 0", letterSpacing: 1 }}>
+          <span>PID</span><span>IMAGE</span><span>RECOVERED VIEW</span>
+        </div>
+        <RuleLine frame={frame} delay={78} color={C.hairline} />
+        {ROWS.map((r, i) => {
+          const d = 92 + i * 26;
+          const op = interpolate(frame - d, [0, 12], [0, 1], clampOpts);
+          const tone = r.alert ? C.alert : C.ink;
+          return (
+            <div key={i} style={{ opacity: op }}>
+              <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 220px", alignItems: "center", fontFamily: MONO, fontSize: 19, color: tone, padding: "16px 0" }}>
+                <span>{r.pid}</span>
+                <span>{r.image}</span>
+                <span style={{ position: "relative" }}>
+                  {r.view}
+                  {r.flag && (
+                    <span style={{ position: "absolute", left: 200, whiteSpace: "nowrap", fontFamily: SERIF, fontStyle: "italic", fontSize: 18, color: C.alert }}>
+                      ← {r.flag}
+                    </span>
+                  )}
+                </span>
               </div>
-            );
-          })}
+              {i < ROWS.length - 1 && <div style={{ height: 1, background: C.hairline, opacity: 0.5 }} />}
+            </div>
+          );
+        })}
+        <RuleLine frame={frame} delay={200} color={C.hairline} />
+        <div style={{ fontFamily: MONO, fontSize: 17, color: C.inkMuted, marginTop: 16, letterSpacing: 1, opacity: interpolate(frame - 210, [0, 14], [0, 1], clampOpts) }}>
+          pslist <span style={{ color: C.ink }}>32</span> &nbsp;·&nbsp; psscan <span style={{ color: C.ink }}>35</span> &nbsp;·&nbsp; divergence <span style={{ color: C.alert }}>3</span>
+        </div>
+        <div style={{ fontFamily: MONO, fontSize: 15, color: C.confirmed, marginTop: 18, opacity: interpolate(frame - 540, [0, 14], [0, 1], clampOpts) }}>
+          verify_finding ✓ &nbsp;hash match &nbsp;— promoted to CONFIRMED
         </div>
       </div>
-
-      <Watermark />
-    </AbsoluteFill>
+    </Scene>
   );
 }

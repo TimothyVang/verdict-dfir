@@ -382,38 +382,6 @@ def write_markdown(fleet_dir: Path, corr: dict, has_temporal: bool) -> Path:
             )
     out.append("")
 
-    out.append("## Judge self-score (fleet aggregate)")
-    out.append("")
-    sa = corr.get("selfscore_aggregate", {})
-    sa_hosts = sa.get("hosts_with_selfscore", 0)
-    sa_total = sa.get("hosts_total", h)
-    if sa_hosts == 0:
-        out.append(
-            "*No host emitted `kind=judge_selfscore` audit records. This "
-            "fleet predates the selfscore wiring (`find-evil-auto` commit "
-            "94c08dd / `render_report.py` commit 7729cfc). Re-run any "
-            "host with the current orchestrator and the records will "
-            "appear in `audit.jsonl` and the per-case `REPORT.pdf`.*"
-        )
-    else:
-        out.append(
-            f"{sa_hosts} of {sa_total} hosts emitted self-score records. "
-            f"Modal answer per criterion shown below; the score on each "
-            f"host is part of that host's cryptographic attestation, so "
-            f"verifying the manifest verifies the score."
-        )
-        out.append("")
-        out.append("| # | Modal answer | Hosts agreeing | Distinct answers |")
-        out.append("|---:|---|---:|---:|")
-        for crit in sorted(sa.get("by_criterion", {}), key=int):
-            entry = sa["by_criterion"][crit]
-            out.append(
-                f"| {crit} | `{entry['modal_answer']}` | "
-                f"{entry['modal_share']}/{entry['host_count']} | "
-                f"{entry['distinct_answers']} |"
-            )
-    out.append("")
-
     out.append("## Recommended analyst priorities")
     out.append("")
     out.append(

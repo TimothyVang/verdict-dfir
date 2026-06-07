@@ -8,101 +8,116 @@ export interface Beat {
   accentColor: string;
 }
 
-// 9 beats from docs/demo-script-a2.md — 300s total
+// 10 beats — newcomer-first product walkthrough.
+// Narration is the canonical voiceover source (read by make-demo-video-tts.py).
+// startS/endS are re-timed to each beat's measured audio + a short breath
+// (hybrid pacing — no dead air). Durations below are in sync with the generated
+// public/audio/beat_NN.mp3 files (measured 2026-06-07).
 export const BEATS: Beat[] = [
   {
     number: 1,
-    title: "Cold open + problem framing",
+    title: "What VERDICT is",
     startS: 0,
-    endS: 25,
-    rubric: "Stakes",
-    accentColor: "#e74c3c",
+    endS: 27,
+    rubric: "Cold open",
+    accentColor: "#9b59b6",
     narration:
-      "Modern attackers move at machine speed — the median ransomware dwell time is now measured in hours, not days. The SANS Find Evil hackathon asks: can an agent reproduce a forensic investigator's work fast enough to keep up — and prove what it did. Our submission says yes, and gives the analyst a sigstore-backed signature on every finding, verifiable offline.",
+      "Every security team has the same nightmare: someone breaks into a computer, and now you have to figure out exactly what they did, fast. That work is called digital forensics, and by hand it can take days. VERDICT does it in minutes. It's an AI agent that takes the evidence from a compromised machine, investigates it for you, and signs its conclusions, so you don't just get answers, you get answers you can prove.",
   },
   {
     number: 2,
-    title: "Architecture",
-    startS: 25,
-    endS: 50,
-    rubric: "Criterion 4 — Constraints",
-    accentColor: "#3498db",
+    title: "It starts in Claude Code",
+    startS: 27,
+    endS: 49,
+    rubric: "How to run it",
+    accentColor: "#6f93b8",
     narration:
-      "Five trust boundaries. Evidence vault — read-only. SIFT tools as subprocesses, never linked, so we stay license-clean for AGPL code. Two MCP servers — Rust for forensic tools, Python for the crypto chain. Claude Code as the orchestrator. Every Finding cites a tool-call ID; every tool call hashes its output. There is no execute_shell tool — by design.",
+      "And it's surprisingly simple to run. VERDICT lives inside Claude Code, the A.I. assistant in your terminal. You open Claude Code and type one line: investigate, followed by the evidence, a hard-drive image, or a snapshot of a computer's memory. That's the whole command. From there the agent takes over and does the rest while you watch.",
   },
   {
     number: 3,
-    title: "Single-host investigation",
-    startS: 50,
-    endS: 95,
-    rubric: "Criteria 1, 2, 5",
-    accentColor: "#2ecc71",
+    title: "How the case progresses",
+    startS: 49,
+    endS: 80,
+    rubric: "How it works",
+    accentColor: "#7fae6e",
     narration:
-      "One command. Tesla-mode. The agent opens the case, hashes the image, walks the active process list with Volatility pslist, then signature-scans EPROCESS pool memory with psscan — and the two disagree. That divergence is the textbook DKOM rootkit signature. The agent labels the finding INFERRED because two tool outputs corroborate it. It will not label this CONFIRMED until the verifier re-runs both calls and matches the original hashes. That distinction is non-negotiable.",
+      "So what's it actually doing? First it makes a locked, read-only copy of the evidence, so the original is never touched, which matters if this ends up in court. Then it splits into two separate teams of agents that investigate from opposite angles. Each runs real forensic tools and writes up what it finds. Wherever the two disagree, that conflict is flagged out loud, not swept away. Finally, every finding is double-checked against the raw tool output before it makes the report.",
   },
   {
     number: 4,
-    title: "Live ACH disagreement",
-    startS: 95,
-    endS: 155,
-    rubric: "Criteria 1, 2",
-    accentColor: "#f39c12",
+    title: "The toolbox",
+    startS: 80,
+    endS: 105,
+    rubric: "The tools",
+    accentColor: "#c79a4a",
     narration:
-      "Heuer's Analysis of Competing Hypotheses, applied at agent architecture. Two pools investigate the same evidence with opposing priors. They will disagree — and that disagreement is not a bug. We surface it before reconciliation, named, in the audit trail. The judge merges with credibility weighting. The analyst sees both arguments and the reconciliation. No consensus-seeking single agent can give them that.",
+      "The agent isn't guessing. It runs thirty-one real forensic tools, the same kind professionals use. And by design, not one of them can run arbitrary commands on your system, so it can't be tricked into going rogue. Each tool answers one plain question: What programs ran on this machine? What did the system quietly log? What left over the network? And, can we prove it?",
   },
   {
     number: 5,
-    title: "Crypto chain-of-custody",
-    startS: 155,
-    endS: 190,
-    rubric: "Criteria 4, 5",
-    accentColor: "#9b59b6",
+    title: "Two investigators",
+    startS: 105,
+    endS: 132,
+    rubric: "Competing hypotheses",
+    accentColor: "#d6452f",
     narration:
-      "Every audit record, every tool output, every Finding — all hash-chained. At investigation end, we Merkle-tree the chain and sign the root with sigstore, whose Rekor transparency log records the signature as an independent third party. This supports a Federal Rule of Evidence 902-14 self-authenticating-evidence claim. A judge in a literal court can verify this submission's integrity from the manifest alone, three years from now, without trusting us.",
+      "Those two teams are the clever part. One assumes the attacker broke in to stay and dig in. The other assumes they came to steal data and leave. Same evidence, opposite theories. A single analyst tends to lock onto their first guess. VERDICT forces both sides to argue on the record, shows you where they disagree, and only then decides. You see the reasoning, not just a conclusion handed down.",
   },
   {
     number: 6,
-    title: "22-host fleet investigation",
-    startS: 190,
-    endS: 240,
-    rubric: "Criterion 3 — Breadth/Depth",
-    accentColor: "#1abc9c",
+    title: "Watch it live",
+    startS: 132,
+    endS: 158,
+    rubric: "The dashboard",
+    accentColor: "#9b59b6",
     narration:
-      "Single-host is the demo; fleet investigation is the use case. Twenty-two memory images, eighty-four gigabytes total, investigated end-to-end with one command. The orchestrator persists progress after every host so a crash doesn't cost you the run. Every host gets its own signed manifest; the fleet rollup adds cross-host correlation on top.",
+      "And while it runs, you're not staring at a blank screen. This is the live dashboard. Each finding appears the moment it's proven, tagged confirmed, inferred, or hypothesis, so you always know how sure the agent is. A timeline builds itself, the pipeline lights up stage by stage, and every finding links straight back to the exact tool call behind it. Nothing hidden, nothing hand-waved.",
   },
   {
     number: 7,
-    title: "Cross-host APT signal",
-    startS: 240,
-    endS: 270,
-    rubric: "Criteria 3, 6",
-    accentColor: "#e67e22",
+    title: "Proof you can take to court",
+    startS: 158,
+    endS: 184,
+    rubric: "Chain of custody",
+    accentColor: "#6f93b8",
     narration:
-      "This is what makes fleet correlation worth the cost. Six hosts ran Autoruns at the exact same second — that is not natural system behavior, that is a PsExec sweep or an SCCM push. Four different hosts ran rubyw — Ruby for Windows isn't enterprise tooling. These are correlations no single-host investigation would surface. The agent surfaces them as HYPOTHESIS and names the threshold. The analyst confirms.",
+      "Here's what really sets it apart. Every action is locked into a tamper-proof chain. Change one link, and the whole thing breaks. At the end, that chain is sealed with a cryptographic signature, logged publicly. So years later anyone, a colleague, an auditor, a court, can verify the entire investigation offline, without ever trusting us. It's evidence that proves its own honesty.",
   },
   {
     number: 8,
-    title: "Tiebreaker — self-score chip",
-    startS: 270,
-    endS: 290,
-    rubric: "Criteria 1, 5",
-    accentColor: "#e74c3c",
+    title: "Then it acts",
+    startS: 184,
+    endS: 206,
+    rubric: "Automation",
+    accentColor: "#7fae6e",
     narration:
-      "The agent self-scores against the SANS rubric and writes that grade into the audit chain — before manifest_finalize. So the score itself is signed by the same sigstore signature and rooted in the same Merkle tree as every other finding. Judges grep one line, see the agent's own assessment of how it did, and know we couldn't have revised it after the fact.",
+      "And the second the verdict is signed, VERDICT acts. This is the automation layer, built on a tool called n8n. Wire it to do whatever your team needs: fire a Slack alert, open a ticket automatically, push a dangerous indicator out to your other defenses. The investigation finishes, and the response kicks off on its own.",
   },
   {
     number: 9,
-    title: "Outro — repo URL + license",
-    startS: 290,
-    endS: 300,
-    rubric: "",
-    accentColor: "#2c3e50",
+    title: "From one host to the fleet",
+    startS: 206,
+    endS: 225,
+    rubric: "Scale",
+    accentColor: "#c79a4a",
     narration:
-      "Source is open. License is Apache-2.0. Build is green. Cut evidence in. Get a signed verdict out. Thank you.",
+      "One computer is just the demo. A real breach touches dozens of machines. VERDICT scales right up. It investigates twenty-two hosts from a single command, saves its place as it goes so a crash costs nothing, and spots patterns across machines that no single look could catch.",
+  },
+  {
+    number: 10,
+    title: "Get the receipts",
+    startS: 225,
+    endS: 239,
+    rubric: "Signed verdict",
+    accentColor: "#9b59b6",
+    narration:
+      "And at the end you get the one thing that matters: a signed verdict you can stand behind. VERDICT is open source, free, and ready today. Point it at your evidence, and get the truth, with the receipts.",
   },
 ];
 
 export const FPS = 30;
 export const WIDTH = 1920;
 export const HEIGHT = 1080;
-export const TOTAL_FRAMES = 300 * FPS; // 9000
+// Total runtime is the last beat's end — keeps Root.tsx in sync after re-timing.
+export const TOTAL_FRAMES = BEATS[BEATS.length - 1].endS * FPS;

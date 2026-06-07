@@ -8,9 +8,10 @@
     "studio": "npx remotion studio src/Video.tsx"
   },
   "dependencies": {
-    "remotion": "4.0.237",
     "@remotion/cli": "4.0.237",
-    "@remotion/transitions": "4.0.237"
+    "@remotion/google-fonts": "4.0.237",
+    "@remotion/transitions": "4.0.237",
+    "remotion": "4.0.237"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

@@ -45,12 +45,14 @@ open source license file.
 >
 > **One-command entry point after setup:**
 > ```bash
-> bash scripts/find-evil-run --evidence <path-to-evidence>
+> scripts/verdict <path-to-evidence>
 > ```
-> `QUICKSTART.md` covers three environments:
-> - Local mode (SIFT tools on host)
-> - SIFT VM mode (`scripts/find-evil-sift`)
-> - Headless/automated mode (`scripts/find-evil-auto`)
+> `scripts/verdict` runs the full one-command workflow: preflight → investigate →
+> open the live dashboard → signed verdict + report. `QUICKSTART.md` covers three
+> environments:
+> - Local (SIFT tools on host) — the default
+> - SANS SIFT VM (`scripts/verdict --evidence <path> --sift`)
+> - Headless / automated (`scripts/verdict --evidence <path> --no-dashboard`)
 
 ---
 
@@ -71,11 +73,11 @@ open source license file.
 > bash scripts/doctor.sh
 >
 > # 3. Investigate evidence
-> bash scripts/find-evil-run --evidence /path/to/evidence
+> scripts/verdict /path/to/evidence
 > # or open Claude Code and type: investigate /path/to/evidence
 > ```
 >
-> Full mode walkthroughs (local / SIFT VM / headless) are in `QUICKSTART.md`.
+> Full walkthroughs (local / SIFT VM / headless) are in `QUICKSTART.md`.
 
 ---
 
@@ -98,7 +100,9 @@ of your Project.
 > 12 Python crypto/ACH/memory) — no `execute_shell`. Two competing-hypothesis agent pools
 > (persistence-biased Pool A + exfil-biased Pool B) investigate in parallel; disagreements
 > are surfaced as first-class `kind=contradiction` audit records before the judge merges.
-> The agent self-scores against the SANS rubric inside the signed manifest.
+> A standalone maintainer tool (`scripts/self-score.py`) grades a completed run against the
+> SANS rubric *before* submission, writing `<case>/self-score.json` without touching the
+> sealed audit chain — it is not part of the investigation pipeline.
 
 ---
 
@@ -111,15 +115,16 @@ of your Project.
 > **Video file in repo:** [`docs/find-evil-demo.mp4`](docs/find-evil-demo.mp4)
 >
 > **Video script / beat map:** [`docs/demo-script-a2.md`](docs/demo-script-a2.md)
-> (5-minute structured walkthrough — 6 beats, each timed)
+> (5-minute structured walkthrough — beats are timed; `docs/demo-script-a2.md` is authoritative)
 >
-> The video shows:
-> - Beat 1: `scripts/find-evil` launched, `.mcp.json` auto-spawns both MCP servers
+> The video shows (authoritative beat map: `docs/demo-script-a2.md`):
+> - Beat 1: `scripts/verdict <evidence>` launched, `.mcp.json` auto-spawns both MCP servers
 > - Beat 2: `case_open` + SHA-256 verification, Pool A/B forked in parallel
 > - Beat 3: Memory image investigation — `vol_pslist` vs `vol_psscan` DKOM divergence
 > - Beat 4: Contradiction surface + resolution, `verify_finding` replay
 > - Beat 5: `manifest_finalize` — 3-tier chain signed, `manifest_verify` run offline
 > - Beat 6: Fleet rollup (22-host SRL-2018 dataset), leaderboard diff
+> - Beat 8: Signed verdict — signed `verdict.json` + `manifest_verify` confirms the chain
 >
 > If the mp4 is not yet in the repo (pending recording), the Devpost submission URL
 > field will contain the hosted video link. The demo script at `docs/demo-script-a2.md`

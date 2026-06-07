@@ -2,7 +2,7 @@
 
 **Devpost Required Component #3** — architecture diagram with trust boundaries, distinguishing prompt-based guardrails from architectural guardrails.
 
-This document is the single-page visual summary judges reach first. Full detail lives in `docs/specs/2026-04-25-the-product-design.md` (seven-layer product), `docs/specs/2026-04-24-autonomous-build-swarm-design.md` (build swarm), `docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md` (Amendment A1, three credential modes), and `docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md` (**Amendment A2, active**, Claude Code as primary interface).
+This document is the single-page visual summary judges reach first. Full detail lives in `docs/specs/2026-04-25-the-product-design.md` (seven-layer product), `docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md` (Amendment A1, three credential modes), and `docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md` (**Amendment A2, active**, Claude Code as primary interface).
 
 ---
 
@@ -10,7 +10,7 @@ This document is the single-page visual summary judges reach first. Full detail 
 
 Per SANS Find Evil! rules, submissions declare which of four supported patterns they implement. Our submission combines **two** patterns:
 
-1. **Direct Agent Extension** (rules §1) — Claude Code IS the agent. The judge runs `scripts/find-evil` (or `claude`) at the repo root; `.mcp.json` auto-spawns both MCP servers; Claude Code drives the investigation as supervisor + Pool A/B subagents (native Task mechanism — not `CLAUDE_CODE_FORK_SUBAGENT`, which is a build-swarm internal). The SANS rules call this "the fastest path to a working submission."
+1. **Direct Agent Extension** (rules §1) — Claude Code IS the agent. The judge runs `scripts/find-evil` (or `claude`) at the repo root; `.mcp.json` auto-spawns both MCP servers; Claude Code drives the investigation as supervisor + Pool A/B subagents (native Task mechanism — not `CLAUDE_CODE_FORK_SUBAGENT`, which is a build-time internal and is not used in this product). The SANS rules call this "the fastest path to a working submission."
 2. **Custom MCP Server** (rules §2) — two purpose-built MCP servers expose the typed tool surface:
    - `findevil-mcp` (Rust) — 19 DFIR primitives (case_open, disk_mount/extract/unmount, evtx_query, mft_timeline, hayabusa_scan, vol_pslist, vol_psscan, vol_psxview, vol_malfind, yara_scan, usnjrnl_query, registry_query, prefetch_parse, vel_collect, sysmon_network_query, zeek_summary, pcap_triage). Read-only on evidence; SHA-256 every output. **NO `execute_shell`.**
    - `findevil-agent-mcp` (Python) — 12 crypto + ACH + memory + ACP + expert-feedback tools (audit_append/verify, manifest_finalize/verify, verify_finding, detect_contradictions, judge_findings, correlate_findings, memory_remember/recall, pool_handoff, expert_miss_capture). The pre-A5 `ots_stamp`/`ots_verify` pair was removed.
@@ -158,70 +158,6 @@ These are **testable for bypass** in L3 golden runs — prompt-injection fixture
 
 ---
 
-## Build-time architecture (Autonomous Build Swarm — INVISIBLE to judges)
-
-```mermaid
-flowchart LR
-    subgraph Local["Developer laptop (Option B)"]
-        Cron[jshchnz/claude-code-scheduler<br/>cron: 0 23 * * *]
-        Supervisor[LangGraph Supervisor<br/>services/swarm/supervisor.py]
-        Postgres[(PostgresSaver<br/>docker postgres:16-alpine<br/>DAG checkpoints)]
-        SessionGuard[session_guard.py<br/>detects 429 / rate-limit<br/>halts cleanly, no retry]
-    end
-
-    subgraph Workers["Per-PR git worktrees + Claude CLI subagents"]
-        direction TB
-        Rust[Rust Worker<br/>.wt/wt-rust-id<br/>claude CLI subprocess]
-        Python[Python Worker<br/>.wt/wt-py-id<br/>claude CLI subprocess]
-        TS[TypeScript Worker<br/>.wt/wt-ts-id<br/>claude CLI subprocess]
-    end
-
-    subgraph Gate["Critic + L1 sandbox gate"]
-        Critic[Critic subagent<br/>Sonnet<br/>structured CriticVerdict]
-        L1[L1 sandbox<br/>cargo test / pytest / pnpm test]
-    end
-
-    subgraph GitHub["GitHub"]
-        DraftPR[gh pr create --draft<br/>label: swarm-generated]
-        Human((Human reviewer<br/>morning triage))
-        Main[master branch<br/>merge after human review]
-    end
-
-    Cron --> Supervisor
-    Supervisor <--> Postgres
-    Supervisor --> SessionGuard
-    SessionGuard -.->|CLAUDE_CODE_OAUTH_TOKEN<br/>or interactive session| Rust
-    SessionGuard -.-> Python
-    SessionGuard -.-> TS
-    Supervisor --> Rust
-    Supervisor --> Python
-    Supervisor --> TS
-    Rust --> Critic
-    Python --> Critic
-    TS --> Critic
-    Rust --> L1
-    Python --> L1
-    TS --> L1
-    Critic -->|APPROVE| DraftPR
-    L1 -->|green| DraftPR
-    DraftPR --> Human
-    Human -->|merge| Main
-
-    style Local fill:#e8eaf6,stroke:#3949ab,stroke-width:2px
-    style Workers fill:#e0f7fa,stroke:#00838f,stroke-width:2px
-    style Gate fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    style GitHub fill:#f1f8e9,stroke:#558b2f,stroke-width:2px
-```
-
-**Budget control (Option B, Amendment A1):**
-- NO LiteLLM proxy, NO Anthropic API key required for the swarm
-- Workers use the developer's Claude Code subscription via the local `claude` CLI
-- `session_guard.py` detects rate-limit signals (HTTP 429, stderr patterns) and halts the supervisor cleanly
-- Postgres checkpoint preserves state across halts — the next night's run resumes without re-dispatching already-completed PRs
-- Per-subagent `--max-turns 40` and no-progress detector (3 zero-diff tool calls → kill) prevent individual workers from burning budget in loops
-
----
-
 ## Credential modes (Amendment A1)
 
 The Product (what judges run) detects three credentials in priority order via `scripts/install.sh` and `services/agent/config.py resolve_credentials()`:
@@ -267,10 +203,9 @@ All three modes are **judge-valid**. Judges pick whichever they already have —
 7. Supervisor calls `verify_finding` (Python MCP) for each candidate Finding — the wrapper spawns its own short-lived `findevil-mcp` subprocess and re-runs the cited tool call. Drift downgrades the Finding by one tier.
 8. Supervisor calls `judge_findings` (Python MCP) — credibility-weighted merge per Estornell ICML 2025.
 9. Supervisor calls `correlate_findings` (Python MCP) — SOUL.md cross-artifact rule downgrades execution claims that lack ≥2 artifact-class corroboration; Amcache-only execution gets the hard-coded downgrade.
-10. Supervisor emits 6 `kind="judge_selfscore"` audit records, one per SANS rubric criterion, so the self-assessment lands inside the signed chain.
-11. Supervisor calls `manifest_finalize` (Python MCP) — builds Merkle root, signs the canonicalized body via sigstore (or StubSigner for offline demo), writes `run.manifest.json`, and finalizes the audit chain. This is the terminal custody step under A5.
-12. Supervisor renders the `RunVerdict` to the terminal with paths to the manifest and report.
-13. Offline replay: `manifest_verify` reproduces the proof end-to-end, citing FRE 902(14) with the post-A5 Rekor timestamp trade-off.
+10. Supervisor calls `manifest_finalize` (Python MCP) — builds Merkle root, signs the canonicalized body via sigstore (or StubSigner for offline demo), writes `run.manifest.json`, and finalizes the audit chain. This is the terminal custody step under A5.
+11. Supervisor renders the `RunVerdict` to the terminal with paths to the manifest and report.
+12. Offline replay: `manifest_verify` reproduces the proof end-to-end, citing FRE 902(14) with the post-A5 Rekor timestamp trade-off.
 
 ---
 
@@ -295,6 +230,5 @@ We match Valhuntir's architectural discipline and exceed it on three dimensions 
 
 - `docs/specs/2026-04-23-find-evil-automation-master-design.md` — master design
 - `docs/specs/2026-04-25-the-product-design.md` — product spec (detailed 7-layer architecture)
-- `docs/specs/2026-04-24-autonomous-build-swarm-design.md` — swarm spec
 - `docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md` — credential modes
 - `agent-config/SOUL.md` + `AGENTS.md` + `TOOLS.md` + `MEMORY.md` + `HEARTBEAT.md` — runtime agent identity

@@ -1,122 +1,189 @@
 import React from "react";
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { C, MARGIN, MONO, SERIF } from "./shared/editorial";
+import { Scene } from "./shared/Scene";
+import { Kicker, KineticHeadline, PullQuote, RuleLine } from "./shared/editorial-ui";
 import { spread } from "./shared/pacing";
-import { Watermark } from "./shared/Watermark";
 
-const MONO = "'JetBrains Mono', 'Courier New', monospace";
+// Beat 2 — "The chain of trust." The architecture as an editorial numbered
+// flow rather than boxes-and-arrows: the five trust boundaries run 01–05 down
+// an asymmetric column, each a Fraunces label with a mono sub-line, hairlines
+// between, and two margin annotations. The data (the five layers + their
+// sublabels) is preserved verbatim from the old box diagram.
 
-const LAYERS = [
-  { label: "Evidence Vault",         sub: "read-only · SHA-256 at case_open",  color: "#8b949e", x: 960, y: 170 },
-  { label: "SIFT Tools (subprocess)",sub: "Volatility · Hayabusa · Chainsaw · YARA",  color: "#f39c12", x: 960, y: 290 },
-  { label: "19 Rust DFIR Tools",     sub: "findevil-mcp · typed IO · hash every output", color: "#3498db", x: 640, y: 420 },
-  { label: "12 Python Crypto Tools", sub: "findevil-agent-mcp · ACH · sigstore · memory", color: "#9b59b6", x: 1280, y: 420 },
-  { label: "VERDICT Orchestrator",   sub: "Claude Code · Pool A + Pool B · judge · correlate", color: "#e74c3c", x: 960, y: 570 },
+interface Boundary {
+  no: string;
+  label: string;
+  sub: string;
+  note?: string;
+}
+
+const BOUNDARIES: Boundary[] = [
+  { no: "01", label: "Evidence Vault", sub: "read-only · SHA-256 at case_open", note: "nothing is trusted before it is hashed" },
+  { no: "02", label: "SIFT Tools, subprocess", sub: "Volatility · Hayabusa · Chainsaw · YARA" },
+  { no: "03", label: "19 Rust DFIR Tools", sub: "findevil-mcp · typed IO · hash every output", note: "no execute_shell — the surface stays narrow" },
+  { no: "04", label: "12 Python Crypto Tools", sub: "findevil-agent-mcp · ACH · sigstore · memory" },
+  { no: "05", label: "VERDICT Orchestrator", sub: "Claude Code · Pool A + Pool B · judge · correlate" },
 ];
 
 export function ArchDiagram() {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
-  const fadeOut = interpolate(frame, [durationInFrames - 15, durationInFrames], [1, 0], {
-    extrapolateLeft: "clamp", extrapolateRight: "clamp",
-  });
+  const { durationInFrames } = useVideoConfig();
+  const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
-  // Title
-  const titleOp = interpolate(frame, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // Spread the box + arrow build across the beat instead of finishing in ~2s.
-  const sd = (d: number) => spread(d, 10, 66, durationInFrames, 24, 200);
-  // Each box's reveal frame; arrows fire just AFTER their target box lands so a
-  // connector never points into empty space mid-build.
-  const boxDelay = (i: number) => sd(10 + i * 14);
+  // Spread the entry reveals across the whole beat so the column builds across
+  // the narration rather than freezing at ~25%.
+  const sd = (raw: number) => spread(raw, 0, 100, durationInFrames, 24, 200);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
-      <div style={{
-        position: "absolute", inset: 0, opacity: 0.04,
-        backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-        backgroundSize: "60px 60px",
-      }} />
-
-      {/* Title */}
-      <div style={{
-        position: "absolute", top: 60, left: 0, right: 0, textAlign: "center",
-        opacity: titleOp,
-      }}>
-        <div style={{ fontFamily: MONO, fontSize: 48, fontWeight: 800, color: "#e6edf3", letterSpacing: 4 }}>
-          Architecture
+    <Scene page={2} caption="Architecture">
+      {/* Masthead — kicker + headline, left gutter, with intentional space */}
+      <div style={{ position: "absolute", left: MARGIN, top: 168, width: 980 }}>
+        <Kicker frame={frame} delay={sd(2)} color={C.accent}>
+          System · five boundaries
+        </Kicker>
+        <div style={{ marginTop: 16 }}>
+          <KineticHeadline text="The chain" frame={frame} delay={sd(6)} size={108} />
+          <KineticHeadline text="of trust." frame={frame} delay={sd(12)} size={108} italic />
         </div>
-        <div style={{ fontFamily: MONO, fontSize: 20, color: "#8b949e", marginTop: 8 }}>
-          Five trust boundaries — every output hashed
+        <div style={{ marginTop: 30 }}>
+          <RuleLine frame={frame} delay={sd(20)} width={150} color={C.accent} thickness={2} />
         </div>
       </div>
 
-      {/* SVG diagram */}
-      <svg style={{ position: "absolute", inset: 0 }} width="1920" height="1080">
-        {/* Arrows between layers. y1 sits at each source box's BOTTOM edge
-            (boxes span [y, y+90]) so the dashed line never crosses the box's
-            own subtitle text. */}
-        {/* Vault (bottom 260) → SIFT (top 290) — fires after SIFT (box 1) */}
-        <Arrow x1={960} y1={262} x2={960} y2={286} frame={frame} fps={fps} delay={boxDelay(1) + 8} color="#8b949e"/>
-        {/* SIFT (bottom 380) → Rust MCP (top 420) — after Rust (box 2) */}
-        <Arrow x1={900} y1={384} x2={720} y2={414} frame={frame} fps={fps} delay={boxDelay(2) + 8} color="#f39c12"/>
-        {/* SIFT (bottom 380) → Python MCP (top 420) — after Python (box 3) */}
-        <Arrow x1={1020} y1={384} x2={1200} y2={414} frame={frame} fps={fps} delay={boxDelay(3) + 8} color="#f39c12"/>
-        {/* Rust (bottom 510) → Orchestrator (top 570) — after Orchestrator (box 4) */}
-        <Arrow x1={700} y1={514} x2={880} y2={566} frame={frame} fps={fps} delay={boxDelay(4) + 8} color="#3498db"/>
-        {/* Python (bottom 510) → Orchestrator (top 570) — after Orchestrator (box 4) */}
-        <Arrow x1={1220} y1={514} x2={1040} y2={566} frame={frame} fps={fps} delay={boxDelay(4) + 12} color="#9b59b6"/>
+      {/* Right-rail pull-quote — the thesis, set against the numbered list */}
+      <div style={{ position: "absolute", right: MARGIN, top: 196, width: 500 }}>
+        <PullQuote frame={frame} delay={sd(28)} size={33} color={C.inkMuted} style={{ lineHeight: 1.22 }}>
+          Five boundaries, read top&nbsp;to&nbsp;bottom. Evidence crosses each one
+          only by passing through a typed tool that hashes its own&nbsp;output.
+        </PullQuote>
+        <div style={{ marginTop: 26 }}>
+          <RuleLine frame={frame} delay={sd(40)} width={120} color={C.hairline} />
+        </div>
+        <div
+          style={{
+            marginTop: 16,
+            fontFamily: MONO,
+            fontSize: 14,
+            letterSpacing: 1,
+            color: C.inkFaint,
+            opacity: interpolate(frame - sd(44), [0, 14], [0, 1], clampOpts),
+          }}
+        >
+          chain verifiable offline · 31 typed tools
+        </div>
+      </div>
 
-        {/* Layer boxes */}
-        {LAYERS.map((layer, i) => {
-          const delay = boxDelay(i);
-          const s = spring({ frame: frame - delay, fps, config: { damping: 13, stiffness: 90 } });
-          const op = interpolate(frame - delay, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-          const W = i === 4 ? 540 : 380;
-          const H = 90;
+      {/* The numbered flow — asymmetric column down the left two-thirds */}
+      <div style={{ position: "absolute", left: MARGIN, top: 472, width: 1120 }}>
+        {BOUNDARIES.map((b, i) => {
+          const d = sd(46 + i * 8);
+          const op = interpolate(frame - d, [0, 14], [0, 1], clampOpts);
+          const tx = interpolate(frame - d, [0, 18], [22, 0], clampOpts);
+          const isLast = i === BOUNDARIES.length - 1;
+          const labelColor = isLast ? C.accent : C.ink;
           return (
-            <g key={layer.label} style={{ opacity: op, transform: `scale(${0.6 + s * 0.4})`, transformOrigin: `${layer.x}px ${layer.y + H / 2}px` }}>
-              <rect x={layer.x - W / 2} y={layer.y} width={W} height={H} rx={10}
-                fill={`${layer.color}18`} stroke={layer.color} strokeWidth="1.5"/>
-              <text x={layer.x} y={layer.y + 32} textAnchor="middle"
-                fontFamily={MONO} fontSize="18" fontWeight="700" fill={layer.color}>
-                {layer.label}
-              </text>
-              <text x={layer.x} y={layer.y + 60} textAnchor="middle"
-                fontFamily={MONO} fontSize="13" fill="#8b949e">
-                {layer.sub}
-              </text>
-            </g>
+            <div key={b.no} style={{ opacity: op, transform: `translateX(${tx}px)` }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "118px 1fr 320px",
+                  alignItems: "baseline",
+                  columnGap: 30,
+                  padding: "20px 0",
+                }}
+              >
+                {/* The ordinal — large, faint, mono */}
+                <span
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 38,
+                    fontWeight: 700,
+                    color: C.inkFaint,
+                    letterSpacing: 1,
+                  }}
+                >
+                  {b.no}
+                </span>
+
+                {/* The boundary name — Fraunces, the editorial voice */}
+                <span
+                  style={{
+                    fontFamily: SERIF,
+                    fontSize: 42,
+                    fontWeight: 600,
+                    lineHeight: 1.04,
+                    letterSpacing: -0.5,
+                    color: labelColor,
+                  }}
+                >
+                  {b.label}
+                </span>
+
+                {/* The mechanism — mono sub-line, right-aligned data column */}
+                <span
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 16,
+                    lineHeight: 1.5,
+                    color: C.inkMuted,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {b.sub}
+                </span>
+              </div>
+
+              {/* Hairline between entries (draws in just after the row lands) */}
+              {!isLast && (
+                <RuleLine frame={frame} delay={d + 6} color={C.hairline} />
+              )}
+
+              {/* Margin annotation in the negative space to the far right */}
+              {b.note && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 1160,
+                    marginTop: -64,
+                    width: 300,
+                    fontFamily: SERIF,
+                    fontStyle: "italic",
+                    fontSize: 19,
+                    lineHeight: 1.3,
+                    color: C.inkMuted,
+                    opacity: interpolate(frame - (d + 16), [0, 16], [0, 1], clampOpts),
+                  }}
+                >
+                  <span style={{ color: C.accent }}>— </span>
+                  {b.note}
+                </div>
+              )}
+            </div>
           );
         })}
-      </svg>
 
-      <Watermark />
-    </AbsoluteFill>
-  );
-}
-
-function Arrow({ x1, y1, x2, y2, frame, fps, delay, color }: {
-  x1: number; y1: number; x2: number; y2: number;
-  frame: number; fps: number; delay: number; color: string;
-}) {
-  const op = interpolate(frame - delay, [0, 10], [0, 0.7], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const len = Math.sqrt(dx * dx + dy * dy);
-  const progress = interpolate(frame - delay, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const ex = x1 + dx * progress;
-  const ey = y1 + dy * progress;
-  void len;
-  return (
-    <g opacity={op}>
-      <line x1={x1} y1={y1} x2={ex} y2={ey} stroke={color} strokeWidth="1.5" strokeDasharray="6 4"/>
-      {progress > 0.85 && (
-        <polygon
-          points={`${x2},${y2} ${x2 - 6},${y2 - 12} ${x2 + 6},${y2 - 12}`}
-          fill={color}
-          transform={`rotate(${Math.atan2(dy, dx) * 180 / Math.PI - 90}, ${x2}, ${y2})`}
-        />
-      )}
-    </g>
+        {/* Closing rule + read-direction note under the column */}
+        <div style={{ marginTop: 6 }}>
+          <RuleLine frame={frame} delay={sd(92)} color={C.hairline} thickness={2} />
+        </div>
+        <div
+          style={{
+            marginTop: 18,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            opacity: interpolate(frame - sd(96), [0, 16], [0, 1], clampOpts),
+          }}
+        >
+          <span style={{ fontFamily: MONO, fontSize: 15, letterSpacing: 3, textTransform: "uppercase", color: C.inkMuted }}>
+            Evidence in
+          </span>
+          <span style={{ fontFamily: MONO, fontSize: 15, letterSpacing: 3, textTransform: "uppercase", color: C.confirmed }}>
+            Signed verdict out
+          </span>
+        </div>
+      </div>
+    </Scene>
   );
 }

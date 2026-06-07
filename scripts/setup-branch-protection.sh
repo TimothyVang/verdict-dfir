@@ -45,7 +45,6 @@ gh api \
   --field 'required_status_checks[contexts][]=l0-static / rust-lint' \
   --field 'required_status_checks[contexts][]=l0-static / typescript-lint' \
   --field 'required_status_checks[contexts][]=l0-static / docs-consistency' \
-  --field 'required_status_checks[contexts][]=l0-static / amendment-option-b-guard' \
   --field 'required_status_checks[contexts][]=l1-unit / unit-build' \
   --field 'enforce_admins=true' \
   --field 'required_pull_request_reviews[required_approving_review_count]=1' \

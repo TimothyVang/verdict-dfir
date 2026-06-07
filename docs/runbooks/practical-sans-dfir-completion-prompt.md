@@ -18,7 +18,7 @@ C:\Users\newbi\Desktop\PUG Projects\SANS-Hackathon
 
 Context:
 
-Find Evil! is a Claude Code driven DFIR agent for Windows evidence. The product surface is the investigation workflow judges run: interactive Claude Code via scripts/find-evil, SIFT mode via scripts/find-evil-sift, and headless Tesla mode via scripts/find-evil-auto.
+Find Evil! is a Claude Code driven DFIR agent for Windows evidence. The product surface is the investigation workflow judges run: the one command scripts/verdict (preflight, investigate, live dashboard, signed verdict and report), interactive Claude Code via scripts/find-evil, and SIFT-VM tools via the --sift flag (scripts/find-evil-sift helper). scripts/find-evil-auto is the internal headless engine that verdict calls.
 
 Current architecture constraints:
 

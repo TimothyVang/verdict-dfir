@@ -49,17 +49,17 @@ done
 echo "[make-demo-video] SANS Find Evil! demo video builder"
 echo "[make-demo-video] Output: ${OUT}"
 
-# --- Stage 1: TTS prep ---
+# --- Stage 1: TTS prep (Piper — local, human voice; see make-demo-video-tts.py) ---
 if $DRY_RUN; then
-  python3 "${REPO}/scripts/make-demo-video-prep.py" --dry-run --voice "${VOICE}"
+  echo "[make-demo-video] DRY-RUN: python3 scripts/make-demo-video-tts.py (Piper amy)"
   echo "[make-demo-video] --dry-run complete"
   exit 0
 fi
 
 if ! $SKIP_TTS; then
   echo ""
-  echo "[make-demo-video] Stage 1: TTS audio generation"
-  python3 "${REPO}/scripts/make-demo-video-prep.py" --voice "${VOICE}"
+  echo "[make-demo-video] Stage 1: TTS audio generation (Piper)"
+  python3 "${REPO}/scripts/make-demo-video-tts.py"
 else
   echo "[make-demo-video] Stage 1: --skip-tts, using existing MP3s"
 fi

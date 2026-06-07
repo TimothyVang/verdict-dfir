@@ -3,7 +3,7 @@
 Under Amendment A2 the agent runtime is Claude Code itself; the
 roles below are spawned as subagents via Claude Code's native Task
 mechanism from a single supervisor session. (`CLAUDE_CODE_FORK_SUBAGENT=1`
-is used only in the build swarm's `critic.py` — not in this product.) They are conceptual roles, not
+is a build-time internal and is not used in this product.) They are conceptual roles, not
 separate processes — each one runs the same Claude with a
 narrowly-scoped system prompt.
 
@@ -13,8 +13,7 @@ the per-evidence-type tool sequence, decomposes goals into sub-tasks
 across Pool A and Pool B, dispatches the pools in parallel, then
 calls verifier → judge → correlator → manifest_finalize (terminal
 step under Amendment A5). Never touches evidence directly; only
-dispatches and merges. Emits the six `kind=judge_selfscore` audit
-records before `manifest_finalize` per `agent-config/JUDGING.md`.
+dispatches and merges.
 
 **Memory-store path resolution (do this once at session start, before
 forking subagents):** the cross-case memory SQLite file lives at

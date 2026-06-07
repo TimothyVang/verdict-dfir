@@ -153,3 +153,6 @@ coverage/
 # during subagent-driven development. Each subdir is a sibling
 # checkout of the same repo on its own feature branch — never ship.
 /.worktrees/
+
+# Piper TTS model + intermediate wavs (demo video) — regenerated, not committed
+scripts/make-demo-video/.tts-cache/

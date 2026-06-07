@@ -11,7 +11,62 @@ once the first `v0.x` is cut on the `v-submit` tag.
 
 ## [Unreleased]
 
+### Removed — Amendment A6: build swarm subsystem deleted
+
+- **Removed the build swarm (Spec #1) entirely.** The overnight
+  draft-PR generator was dev-time automation, invisible to judges, and
+  not part of the submission. Deleted: `services/swarm/`,
+  `scripts/swarm-start.sh`, `scripts/swarm-status.sh`,
+  `docker/swarm-postgres.yml`, the `autonomous-loop.*` scripts
+  (`autonomous-loop.py`/`.sh`/`-smoke.py`/`-stop.sh`), the
+  `budget-guard.yml` workflow, and the swarm spec/plan/runbook docs
+  (`docs/specs/2026-04-24-autonomous-build-swarm-design.md`,
+  `docs/plans/2026-04-23-build-swarm-plan.md`,
+  `docs/runbooks/swarm-operations.md`).
+- **CI/smoke guards updated** so the tree stays green without the swarm:
+  removed the L0 `amendment-option-b-guard` job and the swarm
+  required-file checks from `l0-static.yml`; dropped the
+  `amendment-option-b-guard` required status check from
+  `scripts/setup-branch-protection.sh`; removed swarm rules from
+  `scripts/divergence-smoke.py`, `scripts/path-existence-smoke.py`,
+  `scripts/smoke-regex-tests.py`, `scripts/verify-sandbox.sh`, and the
+  `autonomous-loop` smoke from the smoke runners.
+- **Subsystems collapse from 4 to 3** (Sandbox → Product →
+  Orchestration Glue). Historical specs/amendments retain their bodies
+  with a "superseded by A6" banner; the Product, its MCP tool surface,
+  and the investigation pipeline are untouched.
+
 > **Note:** The entries below describe the Amendment A5 removal work (OpenTimestamps/Bitcoin tier) and document the tool-count evolution during that period. The current shipped state (post-A5) is **31 tools: 19 Rust DFIR + 12 Python crypto/ACH/memory/ACP/expert-feedback.** See `[v-submit]` section below for the current release.
+
+### Changed — one `verdict` command + self-score moved out of the pipeline
+
+- **One command: `scripts/verdict <evidence>`.** The per-mode launchers
+  are consolidated behind a single entry point that runs preflight →
+  investigate → live dashboard → signed verdict + report. `find-evil-run`
+  and `find-evil-live` are now deprecated shims that forward to `verdict`;
+  `find-evil-auto` is the internal headless engine `verdict` calls; and
+  `find-evil-sift` remains the SIFT-VM helper (`scripts/verdict --sift`).
+  The retired "Tesla-mode" codename is dropped in favor of plain language
+  ("the `verdict` command" / "headless").
+- **`judge_selfscore` is removed from the product** and now lives only as
+  the standalone maintainer tool `scripts/self-score.py`, run by hand
+  before submission (writes `<case>/self-score.json`; does not touch the
+  sealed audit chain). See the detailed entry below. The `judge_findings`
+  Pool A/B merge agent (core ACH) is unaffected.
+
+### Changed — self-score moved out of the pipeline
+
+- **`judge_selfscore` is no longer emitted during an investigation.**
+  The six-criterion self-assessment moved out of the live pipeline
+  (`find-evil-auto` no longer appends `kind=judge_selfscore` records to
+  the sealed audit chain) into a standalone maintainer tool,
+  `scripts/self-score.py`, run by hand before submission. It reads a
+  completed case's `audit.jsonl`, reconstructs the criterion signals,
+  and writes `<case>/self-score.json` without touching the audit chain.
+  `agent-config/JUDGING.md` is reframed accordingly as the
+  pre-submission self-assessment rubric the grader uses; the product,
+  dashboard, and demo video do not reference it. The `judge_findings`
+  Pool A/B merge agent is unaffected.
 
 ### Removed — Amendment A5 (2026-04-30 → 2026-05-01)
 
@@ -103,7 +158,7 @@ once the first `v0.x` is cut on the `v-submit` tag.
   `next_actions` queue to `verdict.json`, writes analyst-friendly
   `timeline.csv` beside `timeline.json`, and renders the coverage and
   next-action tables into `REPORT.md` / PDF.
-- **`scripts/find-evil-auto`** Tesla-mode single-command orchestrator
+- **`scripts/find-evil-auto`** headless single-command orchestrator
   (commit `4b38d27`). Detects evidence type, spawns both MCP servers
   inside the SIFT VM via SSH stdio, runs the per-type playbook,
   synthesizes Pool A/B Findings, runs the full ACH stack
@@ -799,7 +854,7 @@ once the first `v0.x` is cut on the `v-submit` tag.
   `amendment-a2-guard` job fails CI if it reappears). The .deb
   package would error at first invocation. Two architectural paths
   forward: (a) rewrite the wrapper to invoke
-  `scripts/find-evil-auto` in Tesla mode against the SIFT VM, or
+  `scripts/find-evil-auto` headless against the SIFT VM, or
   (b) cut the `find-evil` wrapper entirely since A2's "Claude
   Code IS the orchestrator" makes the in-container CLI redundant
   (the .deb becomes documentation + CI artifacts only).

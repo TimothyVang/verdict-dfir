@@ -41,14 +41,13 @@ import { useEffect, useMemo, useRef } from "react";
 import {
   ConfidenceChip,
   ErrorChip,
-  GridOverlay,
+  GROTESK,
   MitreChip,
   MONO,
   PanelTitle,
   RADIUS,
   Surface,
   VERDICT,
-  Watermark,
   type Confidence,
 } from "@/lib/verdict-ui";
 
@@ -257,7 +256,7 @@ export function deriveInvestigationStream(
       }
 
       default:
-        // All other kinds (acp_handoff, judge_selfscore, manifest bookkeeping,
+        // All other kinds (acp_handoff, manifest bookkeeping,
         // forward-looking chain_update/finding_draft, …) are not part of this
         // panel's terminal/finding view. Intentionally ignored.
         break;
@@ -331,16 +330,17 @@ const MOTION_CSS = `
   .verdict-row-in, .verdict-card-in, .verdict-pulse { animation: none; }
   .verdict-cursor { animation: none; opacity: 1; }
 }
-/* Content grid: terminal ~62% + cards ~38%; collapse to one column
-   (terminal first, cards below) under ~1100px. Media query is the only
+/* Content grid: terminal ~58% + cards ~42%; collapse to one column
+   (terminal first, cards below) under ~1280px so the finding descriptions
+   never get squished in a too-narrow column. Media query is the only
    reliable way to drop a ratioed 2-col grid to a single stacked column. */
 .verdict-stream-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.62fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: clamp(16px, 2vw, 28px);
   align-items: start;
 }
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
   .verdict-stream-grid { grid-template-columns: 1fr; }
 }
 `;
@@ -426,7 +426,7 @@ function TerminalWindow({ rows, isEmpty }: TerminalWindowProps) {
         <span
           style={{
             marginLeft: 12,
-            fontFamily: MONO,
+            fontFamily: GROTESK,
             fontSize: 13,
             color: VERDICT.muted,
           }}
@@ -698,7 +698,6 @@ export function InvestigationStreamPanel({
       }}
     >
       <MotionStyles />
-      <GridOverlay opacity={0.04} />
 
       {/* Header band */}
       <div
@@ -756,8 +755,6 @@ export function InvestigationStreamPanel({
           )}
         </div>
       </div>
-
-      <Watermark />
     </section>
   );
 }

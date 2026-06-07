@@ -7,7 +7,7 @@
 
 This is the demo-video script for the Devpost submission. Hard cap
 5:00 (Devpost rejects longer). Each beat has the spoken narration,
-the on-screen content, and the rubric criterion it hits. Words are
+the on-screen content, and the capability it demonstrates. Words are
 written to be read aloud at ~150 wpm.
 
 ---
@@ -40,17 +40,17 @@ Before recording:
 
 ## Beat map
 
-| # | Time      | Length | Beat                          | Rubric criteria hit |
-|---|-----------|--------|-------------------------------|---------------------|
-| 1 | 0:00–0:25 | 0:25   | Cold open + problem framing   | Stakes              |
-| 2 | 0:25–0:50 | 0:25   | Architecture                  | 4 (Constraints)     |
-| 3 | 0:50–1:35 | 0:45   | Single-host investigation     | 1, 2, 5             |
-| 4 | 1:35–2:35 | 1:00   | Live ACH disagreement         | 1, 2                |
-| 5 | 2:35–3:10 | 0:35   | Crypto chain-of-custody       | 4, 5                |
-| 6 | 3:10–4:00 | 0:50   | 22-host fleet investigation   | 3 (Breadth/Depth)   |
-| 7 | 4:00–4:30 | 0:30   | Cross-host APT signal         | 3, 6                |
-| 8 | 4:30–4:50 | 0:20   | Tiebreaker — self-score chip  | 1, 5                |
-| 9 | 4:50–5:00 | 0:10   | Outro — repo URL + license    | —                   |
+| # | Time      | Length | Beat                          | Focus                        |
+|---|-----------|--------|-------------------------------|------------------------------|
+| 1 | 0:00–0:25 | 0:25   | Cold open + problem framing   | Stakes                       |
+| 2 | 0:25–0:50 | 0:25   | Architecture                  | Constraints / guardrails     |
+| 3 | 0:50–1:35 | 0:45   | Single-host investigation     | Epistemic discipline         |
+| 4 | 1:35–2:35 | 1:00   | Live ACH disagreement         | Competing hypotheses         |
+| 5 | 2:35–3:10 | 0:35   | Crypto chain-of-custody       | Verifiable evidence          |
+| 6 | 3:10–4:00 | 0:50   | 22-host fleet investigation   | Breadth / depth              |
+| 7 | 4:00–4:30 | 0:30   | Cross-host APT signal         | Cross-host correlation       |
+| 8 | 4:30–4:50 | 0:20   | Signed verdict                | Sealed, verifiable output    |
+| 9 | 4:50–5:00 | 0:10   | Outro — repo URL + license    | —                            |
 
 ---
 
@@ -92,8 +92,8 @@ each of the five boundaries as the narrator names them.
 > is no `execute_shell` tool — by design.
 
 **Notes:**
-- "By design" is the key phrase — judges weight architectural
-  guardrails over feature surface (per Spec #2 and SOUL.md).
+- "By design" is the key phrase — architectural guardrails matter
+  more than feature surface (per Spec #2 and SOUL.md).
 
 ---
 
@@ -107,7 +107,7 @@ hash-chained record landing.
 
 **Voice-over:**
 
-> One command. Tesla-mode. The agent opens the case, hashes the
+> One command. The agent opens the case, hashes the
 > image, walks the active process list with Volatility's pslist,
 > then signature-scans EPROCESS pool memory with psscan — and the
 > two disagree. That divergence *can* be a DKOM rootkit signature —
@@ -144,9 +144,8 @@ credibility-weighted merge selects Pool A's framing.
 > consensus-seeking single agent can give them that.
 
 **Notes:**
-- This is the "Tiebreaker" rubric criterion (autonomous reasoning +
-  self-correction). Make the contradiction record visible on screen
-  for ≥3 seconds.
+- This shows autonomous reasoning + self-correction. Make the
+  contradiction record visible on screen for ≥3 seconds.
 
 ---
 
@@ -236,40 +235,36 @@ table; highlight `rubyw.exe` on 4 hosts.
 
 ---
 
-## Beat 8 — Tiebreaker self-score (4:30–4:50)
+## Beat 8 — Signed verdict (4:30–4:50)
 
-**On-screen:** Split-screen. Left: terminal running
-
-```bash
-grep '"kind":"judge_selfscore"' tmp/auto-runs/auto-<uuid>/audit.jsonl | jq .payload
-```
-
-— six lines emit, one per criterion, with the agent's grade. Right:
-the rendered `REPORT.pdf` open at the "Judge self-score (agent's
-own assessment)" table, scrolled into view. The cursor on the
-right-hand pane highlights the line in the report header that
-says "the score below is itself part of the cryptographic
-attestation."
+**On-screen:** Split-screen. Left: terminal showing the tail end of
+the `scripts/verdict <evidence>` run — the signed `verdict.json`
+landing in the case dir, with its `verdict`, `confidence`, and the
+sigstore-signed `run.manifest.json` written alongside. Right:
+terminal driving `manifest_verify` against that same case dir,
+output `overall=True, audit_chain_ok=True, merkle_root_ok=True,
+signature_present=True`. The cursor highlights the `verdict` and
+`merkle_root` fields in `verdict.json`.
 
 **Voice-over:**
 
-> One last thing. The agent self-scores against the SANS rubric
-> and writes that grade into the audit chain — before
-> manifest_finalize. So the score itself is signed by the same
-> sigstore signature and rooted in the same Merkle tree as every
-> other finding. Judges grep one line, see the agent's own
-> assessment of how it did against the same rubric they're using,
-> and know we couldn't have revised it after the fact.
+> Cut evidence in, get a signed verdict out — one command. The
+> `verdict` command runs the whole pipeline and seals the result:
+> a `verdict.json` carrying the call and its confidence, rooted in
+> the same Merkle tree and covered by the same sigstore signature
+> as every Finding behind it. Anyone can re-run `manifest_verify`
+> offline and confirm nothing moved. The verdict isn't a claim you
+> have to trust — it's a sealed artifact you can check.
 
 **Notes:**
-- This is a tiebreaker move — most submissions won't include it.
-  Don't oversell; deliver as a closing flourish.
-- The actual implementation lives at
-  `scripts/find_evil_auto.py::_emit_judge_selfscore` (commit
-  94c08dd) and the report-rendering at
-  `scripts/render_report.py::write_markdown` (commit 7729cfc).
-  If you need to re-record this beat, point at any case dir
-  produced after those two commits — they all carry the records.
+- This is the payoff beat — the single signed output the whole
+  pipeline exists to produce. Don't oversell; deliver as a
+  closing flourish.
+- The signed `verdict.json` + `run.manifest.json` are produced by
+  `scripts/verdict <evidence>` (which drives the headless engine
+  and the crypto chain). If you need to re-record this beat, point
+  `manifest_verify` at any case dir a `verdict` run produced — they
+  all carry the signed manifest and verdict.
 
 ---
 
@@ -288,7 +283,7 @@ SHA, build status badge. Hold for 7 seconds, then fade to black.
 ## Recording mechanics
 
 - **Resolution:** 1920×1080. Devpost recompresses; lower-res
-  source loses crispness on the rubric chart.
+  source loses crispness on the small-text terminal panes.
 - **Capture tool:** OBS Studio, x264 software encode at CRF 18.
   No GPU encode (NVENC artifacts on small text).
 - **Audio:** voice-over recorded separately to a clean track,
@@ -308,9 +303,6 @@ SHA, build status badge. Hold for 7 seconds, then fade to black.
 - **The Next.js SPA.** Deferred to bonus polish under A2; not on
   the critical path. If the SPA ships before recording, add it
   as a 15-second cutaway in Beat 6.
-- **The build swarm.** Builds the code overnight in draft PRs;
-  invisible to the user-facing demo. Mention only in the
-  Devpost README, not the video.
 - **L0-L3 sandbox layers.** They gate CI; they're not a user-
   facing feature. Mention in Devpost, not video.
 - **Apologies for missing features.** Don't list what we didn't

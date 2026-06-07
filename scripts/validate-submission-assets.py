@@ -49,7 +49,6 @@ READINESS_REQUIRED_ARTIFACTS = {
 }
 
 READINESS_REQUIRED_AUDIT_KINDS = {
-    "judge_selfscore",
     "report_qa",
     "customer_release_gate",
     "verdict_artifact",

@@ -93,8 +93,8 @@ The "agent army" largely exists — it just isn't dressed in sprites yet:
 - **`agent-config/AGENTS.md`** — Pool A (persistence) + Pool B (exfil) + verifier + judge +
   correlator. **That is the army.**
 - **`scripts/find-evil`** — interactive `claude` session (the canonical entry point).
-- **`scripts/find-evil-auto`** + **`scripts/find_evil_auto.py`** — Tesla-mode SIFT-VM headless
-  orchestrator. Already a harness, not a `/loop`.
+- **`scripts/find-evil-auto`** + **`scripts/find_evil_auto.py`** — the headless SIFT-VM
+  orchestrator engine (the wrapper `scripts/verdict` calls). Already a harness, not a `/loop`.
 - **`scripts/autonomous-loop.py`** — queue-driven `claude -p` spawner. Lightweight non-`/loop`
   runner already settled (memory: `feedback_use_harness_not_loop.md`).
 - **`findevil-mcp`** (Rust, 13 typed DFIR tools) + **`findevil-agent-mcp`** (Python, 11

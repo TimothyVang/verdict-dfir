@@ -280,7 +280,7 @@ These follow-up actions are within Find Evil!'s tool surface (in-process YARA, r
 
 ### 9.1 Fleet roll-up (added 2026-04-26 after the DC investigation)
 
-The full 22-host corpus has since been investigated end-to-end via `find-evil-auto` (Tesla mode) and rolled up by `fleet_correlate.py` + `render_fleet_report.py`. The fleet artifact set sits at `tmp/fleet-runs/fleet-20260426T055440Z/`. Headline numbers:
+The full 22-host corpus has since been investigated end-to-end via the headless engine (`find-evil-auto`, the wrapper `scripts/verdict` calls) and rolled up by `fleet_correlate.py` + `render_fleet_report.py`. The fleet artifact set sits at `tmp/fleet-runs/fleet-20260426T055440Z/`. Headline numbers:
 
 | Metric | Value |
 |---|---|

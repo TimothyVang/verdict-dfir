@@ -15,22 +15,19 @@ Every step declares its "green" condition. Stop at the first red; chase the root
 - [ ] `gh auth status` green (authenticated to the target repo).
 - [ ] `docker` + `docker compose` + `bash` + `jq` + `git` + `curl` on `PATH`.
 - [ ] Repo cloned at the expected path; `git status` clean on `master`.
-- [ ] `bash scripts/verify-sandbox.sh` reports all runnable layers PASS and Swarm PASS.
+- [ ] `bash scripts/verify-sandbox.sh` reports all runnable layers PASS.
 
 ## 1. Branch protection applied
 
 - [ ] `bash scripts/setup-branch-protection.sh` exits 0 (or confirms rules already in place).
-- [ ] `gh api repos/${OWNER}/${REPO}/branches/master/protection --jq '.required_status_checks.contexts'` returns the full list: `l0-static / workflow-lint`, `shell-lint`, `python-lint`, `rust-lint`, `typescript-lint`, `docs-consistency`, `amendment-option-b-guard`, and `l1-unit / unit-build`.
+- [ ] `gh api repos/${OWNER}/${REPO}/branches/master/protection --jq '.required_status_checks.contexts'` returns the full list: `l0-static / workflow-lint`, `shell-lint`, `python-lint`, `rust-lint`, `typescript-lint`, `docs-consistency`, and `l1-unit / unit-build`.
 
-## 2. Swarm → L0 → L1 happy path
+## 2. PR → L0 → L1 happy path
 
-- [ ] `docker compose -f docker/swarm-postgres.yml up -d` — postgres healthy within 30s.
-- [ ] `claude` CLI on PATH and either `CLAUDE_CODE_OAUTH_TOKEN` set or `~/.claude/` populated via `claude auth login`.
-- [ ] `bash scripts/swarm-start.sh --week 1 --mock-workers --no-dry-run-gate` completes with `prs_opened=['week1-...']` in the final summary.
-- [ ] Mock PR appears via `gh pr list --label swarm-generated --state open`.
-- [ ] On the mock PR: `l0-static` and `l1-unit` workflows auto-trigger and go green within 10 minutes.
+- [ ] Push a throwaway branch with a trivial change and open a draft PR via `gh pr create --draft`.
+- [ ] On the PR: `l0-static` and `l1-unit` workflows auto-trigger and go green within 10 minutes.
 - [ ] `l2-sift-lite` (advisory) posts a sticky comment on the PR with "does not block merge" disclaimer.
-- [ ] Merge the mock PR via `gh pr merge <N> --squash` (manual — swarm never auto-merges).
+- [ ] Merge the PR via `gh pr merge <N> --squash` (manual — never auto-merge).
 
 ## 3. L3 nightly on merge
 
@@ -63,13 +60,7 @@ Clean up with `gh release delete v-smoke -y && git push origin :refs/tags/v-smok
 - [ ] `chore/competitor-state` branch has an updated `state/competitor-watch.json` (only if any watched repo changed since last run).
 - [ ] Slack `#competitor-watch` either posts a delta report or stays quiet (both correct).
 
-## 6. Budget guard (Option B aware)
-
-- [ ] `gh workflow run budget-guard.yml`.
-- [ ] If `ANTHROPIC_API_KEY` secret is unset: log shows `"Option B mode — no metered API in use"` and exits 0.
-- [ ] If set: the query to Anthropic's usage endpoint runs; warn at >$40, halt at >$50 by setting `SWARM_HALT=true` repo variable.
-
-## 7. Devpost submission dry-run
+## 6. Devpost submission dry-run
 
 Pre-condition: set `DEMO_VIDEO_URL` actions variable to a real URL (YouTube/Vimeo):
 
@@ -91,7 +82,7 @@ gh variable set DEMO_VIDEO_URL --body "https://youtu.be/<id>"
 
 Clean up any test tags: `gh release delete v-submit-smoke -y && git push origin :refs/tags/v-submit-smoke`.
 
-## 7b. Local readiness packet
+## 6b. Local readiness packet
 
 Run this on native Windows when preparing a human expert review packet:
 
@@ -110,13 +101,7 @@ If the gate prints `READINESS_BLOCKED`, inspect `blockers` in `readiness-summary
 
 Fixed `-RunId` reruns refresh generated packet contents. If the original `<run-id>-build` local-build child run already exists, the gate may create a fresh `<run-id>-build-<timestamp>` child run while keeping the readiness packet under the requested `<run-id>`.
 
-## 8. Amendment A1 compliance (Option B)
-
-- [ ] `grep -rn -E 'litellm|ANTHROPIC_API_KEY.*=.*sk-ant|\$50 cap|max_budget' services/swarm/` returns zero hits.
-- [ ] L0 `amendment-option-b-guard` job is green on the latest commit.
-- [ ] `services/swarm/findevil_swarm/session_guard.py` imports without error and its `is_rate_limited("You're out of extra usage")` returns `True`.
-
-## 9. Documentation parity
+## 7. Documentation parity
 
 - [ ] `docs/architecture.md` renders the Mermaid diagrams (paste into a Mermaid-capable viewer or check on GitHub).
 - [ ] `docs/DATASET.md` lists every fixture that `scripts/fetch-fixtures.sh` downloads.

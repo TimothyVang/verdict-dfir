@@ -6,6 +6,8 @@
 **Deadline:** 2026-06-15 (deliverables ideally land 2 weeks earlier so we can re-record the demo video against final art).
 **Status when this brief was written:** all five sprite components and the dashboard page are scaffolded with placeholder visuals; the engineering contract (props, state machine, file paths) is locked.
 
+> **Archive note (non-authoritative).** This parked brief predates the self-score change. `judge_selfscore` is no longer emitted into the investigation pipeline and the dashboard no longer renders it — the SANS-rubric self-assessment now lives only in the standalone pre-submission grader `scripts/self-score.py` (writes `<case>/self-score.json`; does not touch the sealed audit chain). Where the AuditBeadString palette and `kind` references below mention `judge_selfscore`, treat them as historical: that bead kind no longer appears in a live audit stream. The Pool A/B `judge_findings` MERGE agent (the "Judge" sprite) is unrelated and unaffected. CLAUDE.md is authoritative.
+
 ---
 
 ## 1. What's being designed

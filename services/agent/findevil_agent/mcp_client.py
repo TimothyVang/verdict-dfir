@@ -300,7 +300,7 @@ class StdioMcpClient:
 
 
 # ---------------------------------------------------------------------------
-# MockMcpClient — used by tests + the swarm's mock-workers mode.
+# MockMcpClient — used by tests.
 # ---------------------------------------------------------------------------
 
 

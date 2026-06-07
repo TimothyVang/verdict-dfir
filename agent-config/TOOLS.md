@@ -100,7 +100,7 @@ Use when: any of Velociraptor's 200+ DFIR artifacts (`Windows.Forensics.Prefetch
 ### audit_append
 Args: `{path, kind, payload}`
 Returns: `{seq, ts, kind, prev_hash, line_hash}`
-Use when: writing any record to the hash-chained audit log. Every tool call, finding emission, agent message, judge selfscore record goes here. The `prev_hash` is auto-computed.
+Use when: writing any record to the hash-chained audit log. Every tool call, finding emission, and agent message goes here. The `prev_hash` is auto-computed.
 
 ### audit_verify
 Args: `{path}`
@@ -156,12 +156,6 @@ Use when: one role/pool needs to formally hand structured findings or context to
 Args: `{case_id, finding_id?, edit_type, edit_text, expert_name?, ledger_path}`
 Returns: `{seq, ts, line_hash, prev_hash, github_issue_url?}`
 Use when: a human expert edits the auto-drafted PDF before release. Records a `kind="expert_miss"` line in the hash-chained `expert_misses.jsonl` ledger so corrections become connector, playbook, rule, QA, escalation, or language follow-up work. GitHub issue creation is default-off and only attempted when `FINDEVIL_MISS_GH_ENABLED=1`; `FINDEVIL_MISS_GH_REDACT=1` redacts case IDs in issue text.
-
----
-
-## End-of-investigation
-
-Per `agent-config/JUDGING.md` §End-of-investigation, after `correlate_findings` returns and BEFORE `manifest_finalize`, the supervisor emits **6 `kind=judge_selfscore` audit records** — one per SANS Find Evil! 2026 rubric criterion (failures+corrections, confidence distribution, artifact classes, typed-surface rejections, citation rate, reproducibility). The orchestrator (`scripts/find_evil_auto.py::_emit_judge_selfscore`) does this automatically. Judges grep `"kind":"judge_selfscore"` to find the agent's own assessment cryptographically locked.
 
 ---
 

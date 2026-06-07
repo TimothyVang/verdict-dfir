@@ -147,11 +147,12 @@ for fixture in "${FIXTURES[@]}"; do
   case_path="~/${fixture}"
   run_log="${LOG_DIR}/${fixture}-run.log"
 
-  # Under Amendment A2 the headless single-shot orchestrator is
-  # `scripts/find-evil-auto` (Tesla mode); the pre-A2 `find-evil run`
-  # subcommand was dropped along with findevil_agent/cli.py.
-  # Guarded by `|| true` so the L3 workflow stays exercised even
-  # when the SIFT VM doesn't have the orchestrator deployed yet.
+  # `scripts/find-evil-auto` is the internal headless engine that the
+  # user-facing `scripts/verdict` command calls; L3 invokes the engine
+  # wrapper directly. (The pre-A2 `find-evil run` subcommand was dropped
+  # along with findevil_agent/cli.py.) Guarded by `|| true` so the L3
+  # workflow stays exercised even when the SIFT VM doesn't have the
+  # orchestrator deployed yet.
   ssh_exec "bash scripts/find-evil-auto ${case_path} --unattended 2>/dev/null" \
     > "${run_log}" \
     || {

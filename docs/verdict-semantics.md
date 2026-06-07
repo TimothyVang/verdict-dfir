@@ -167,8 +167,6 @@ fleet investigation done
                           - temporal_clusters figure (multi-host
                             simultaneous-second runs are
                             attacker-tooling-or-IR signature)
-                          - judge_selfscore aggregate (criterion 3:
-                            artifact classes touched per host)
        │
        ▼
 0 NO_EVIL hosts ────────► spot-check 1-2 to confirm playbook ran
@@ -193,8 +191,9 @@ is a code change with a clear diff and CI run.
   authoritative implementation (25 lines).
 - `agent-config/SOUL.md` — the epistemic hierarchy that defines
   CONFIRMED / INFERRED / HYPOTHESIS at the per-finding level.
-- `agent-config/JUDGING.md` §End-of-investigation — the SANS
-  rubric criteria the agent self-scores against.
+- `agent-config/JUDGING.md` — the pre-submission self-assessment
+  rubric `scripts/self-score.py` grades a completed case against
+  (not part of the investigation pipeline).
 - `docs/false-positives.md` — the architectural and operational
   layers that reduce false-positive rate.
 - `docs/cryptographic-attestation.md` — the chain that proves

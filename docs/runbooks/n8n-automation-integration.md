@@ -82,6 +82,21 @@ These keep n8n from polluting the investigation's evidentiary guarantees:
 
 ## Install
 
+### 0. One-shot: `scripts/setup-n8n.py` (automated, idempotent)
+
+`scripts/install.sh` runs this automatically (best-effort, non-fatal); you can also run it directly:
+
+```bash
+N8N_AUTO_DOCKER=1 python3 scripts/setup-n8n.py   # starts n8n if none is up, then provisions it
+```
+
+It ensures an owner account exists (creating one on a fresh instance, else logging in), ensures a
+REST API key exists, and deploys + activates the `findevil-finding-to-action` workflow. Credentials
+and the key are written to gitignored `tmp/n8n-credentials.txt` / `tmp/n8n-apikey.txt` (the paths
+`scripts/n8n_post.py` and the dashboard already read). Env: `N8N_BASE`, `N8N_OWNER_EMAIL`,
+`N8N_OWNER_PASSWORD`, `SLACK_WEBHOOK_URL`, `N8N_AUTO_DOCKER=1`. Skip from install with
+`FINDEVIL_SKIP_N8N=1`. The manual steps below are the fallback when you'd rather set it up by hand.
+
 ### 1. Run a local n8n instance (operator-owned)
 
 ```bash

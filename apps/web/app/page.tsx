@@ -16,11 +16,18 @@
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DashboardNav } from "@/components/DashboardNav";
+import { AutomationPanel } from "@/components/investigation/AutomationPanel";
+import { EvidenceBanner } from "@/components/investigation/EvidenceBanner";
 import { InvestigationStreamPanel } from "@/components/investigation/InvestigationStreamPanel";
-import { BrandMark, GridOverlay, MONO, RadialGlow, VERDICT } from "@/lib/verdict-ui";
+import { LiveTimeline } from "@/components/investigation/LiveTimeline";
+import { ReportPanel } from "@/components/investigation/ReportPanel";
+import { StageRail } from "@/components/investigation/StageRail";
+import { deriveEvidenceMeta } from "@/lib/evidence-meta";
+import { deriveStageStates } from "@/lib/stage-state";
+import { BrandMark, Kicker, MONO, RuleLine, SerifHeadline, VERDICT } from "@/lib/verdict-ui";
 
 // Mirror /debug's local AuditLine shape — importing from @/lib/audit-tail
 // would drag node:fs + chokidar into the client bundle. Keep in sync with
@@ -146,24 +153,56 @@ export default function DashboardPage() {
   // events — surface it so a judge doesn't trust frozen data.
   const showStaleBanner = conn === "disconnected" && events.length > 0;
 
+  // Report readiness is reported up by ReportPanel so the stage rail can light
+  // its terminal "report" stage.
+  const [reportReady, setReportReady] = useState(false);
+
+  // The run has finalized once the terminal attestation beat lands. The engine
+  // records manifest_finalize as a tool CALL (not its own kind) and closes with
+  // verdict_artifact -> verdict_packet, so detect any of those terminal signals.
+  const manifestDone = useMemo(
+    () =>
+      events.some(
+        (e) =>
+          e.kind === "verdict_packet" ||
+          e.kind === "verdict_artifact" ||
+          e.kind === "manifest_finalize" ||
+          (e.kind === "tool_call_start" &&
+            (e.payload as { tool?: string }).tool === "manifest_finalize"),
+      ),
+    [events],
+  );
+
+  // The connected case dir (deep-link or the connect form), drives the report
+  // and timeline fetches.
+  const connectedCase = conn !== "disconnected" || events.length > 0 ? casePath : "";
+
+  // Pipeline progression for the stage rail (mission-control glance).
+  const stages = useMemo(
+    () => deriveStageStates(events, reportReady),
+    [events, reportReady],
+  );
+
+  // What's under investigation — surfaced as the sticky evidence banner. Pulled
+  // from the case_open audit events (path/sha256/size); null until they stream.
+  const evidenceMeta = useMemo(() => deriveEvidenceMeta(events), [events]);
+
   return (
     <main
       style={{
         position: "relative",
         minHeight: "100vh",
-        background: VERDICT.bg,
+        background: "transparent",
         color: VERDICT.text,
         fontFamily: MONO,
         overflowX: "hidden",
       }}
     >
-      <GridOverlay opacity={0.04} />
-      <RadialGlow alpha={0.1} position="50% 0%" />
-
       <div
+        className="verdict-reveal"
         style={{
           position: "relative",
-          maxWidth: 1320,
+          maxWidth: 1600,
           margin: "0 auto",
           padding: "clamp(20px, 4vw, 40px)",
         }}
@@ -176,10 +215,14 @@ export default function DashboardPage() {
             justifyContent: "space-between",
             flexWrap: "wrap",
             gap: 20,
-            marginBottom: 24,
+            marginBottom: 16,
           }}
         >
-          <BrandMark size={56} withWordmark withTagline />
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <Kicker>Live Investigation</Kicker>
+            <SerifHeadline size={44}>Mission Control</SerifHeadline>
+            <BrandMark size={56} withWordmark withTagline />
+          </div>
           <span
             style={{
               display: "inline-flex",
@@ -203,6 +246,12 @@ export default function DashboardPage() {
             {conn}
           </span>
         </header>
+
+        <RuleLine style={{ marginBottom: 24 }} />
+
+        {/* What's under investigation — sticky so it stays in view while the
+            terminal stream scrolls. */}
+        <EvidenceBanner meta={evidenceMeta} />
 
         <DashboardNav active="audit" variant="dark" />
 
@@ -256,7 +305,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => connect()}
                 style={{
-                  background: "rgba(155,89,182,0.15)",
+                  background: `${VERDICT.accentPurple}26`,
                   border: `1px solid ${VERDICT.accentPurple}`,
                   color: VERDICT.accentPurpleLight,
                   borderRadius: 8,
@@ -274,7 +323,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={disconnect}
                 style={{
-                  background: "rgba(231,76,60,0.15)",
+                  background: `${VERDICT.alertRed}26`,
                   border: `1px solid ${VERDICT.alertRed}`,
                   color: VERDICT.alertRed,
                   borderRadius: 8,
@@ -303,7 +352,7 @@ export default function DashboardPage() {
             <div
               style={{
                 marginTop: 14,
-                background: "rgba(231,76,60,0.1)",
+                background: `${VERDICT.alertRed}1a`,
                 border: `1px solid ${VERDICT.alertRed}44`,
                 borderRadius: 8,
                 padding: "10px 14px",
@@ -319,7 +368,7 @@ export default function DashboardPage() {
             <div
               style={{
                 marginTop: 14,
-                background: "rgba(243,156,18,0.1)",
+                background: `${VERDICT.inferred}1a`,
                 border: `1px solid ${VERDICT.inferred}44`,
                 borderRadius: 8,
                 padding: "10px 14px",
@@ -333,8 +382,39 @@ export default function DashboardPage() {
           ) : null}
         </section>
 
-        {/* Marquee: the live single-host investigation stream */}
-        <InvestigationStreamPanel events={events} />
+        {/* Pipeline progression — the "is the machine alive?" glance */}
+        <StageRail stages={stages} />
+
+        {/* Mission control: stream + timeline (left), automation + report (right) */}
+        <style>{`
+          .verdict-mission-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+            gap: clamp(16px, 2vw, 28px);
+            align-items: start;
+          }
+          @media (max-width: 1080px) {
+            .verdict-mission-grid { grid-template-columns: 1fr; }
+          }
+        `}</style>
+        <div className="verdict-mission-grid">
+          <div style={{ minWidth: 0 }}>
+            <InvestigationStreamPanel events={events} />
+            <LiveTimeline
+              events={events}
+              caseDir={connectedCase}
+              manifestDone={manifestDone}
+            />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
+            <AutomationPanel caseDir={connectedCase} manifestDone={manifestDone} />
+            <ReportPanel
+              caseDir={connectedCase}
+              manifestDone={manifestDone}
+              onReadyChange={setReportReady}
+            />
+          </div>
+        </div>
       </div>
     </main>
   );

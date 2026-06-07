@@ -5,6 +5,21 @@
 **Supersedes:** `docs/plans/2026-05-20-finish-to-v-submit-plan.md` (combined into this doc — see
 "What carried over" below). This is the single authoritative finish plan.
 
+> **Superseded by two later consolidations — read before the task tables below:**
+> 1. **One operator command is `scripts/verdict <evidence>`.** The Phase 2.5
+>    `find-evil-run` entry shipped, but `find-evil-run` (and `find-evil-live`)
+>    are now deprecated shims that forward to `scripts/verdict`; `find-evil-auto`
+>    is the internal headless engine `verdict` calls; `find-evil-sift` is the
+>    SIFT-VM helper (`scripts/verdict --sift`). Read every `find-evil-run` /
+>    `find-evil-auto` invocation below as `scripts/verdict`.
+> 2. **`judge_selfscore` is removed from the investigation pipeline.** The
+>    Phase 1.3 wiring (auto path emitting `kind=judge_selfscore` into the audit
+>    chain; dashboard reading it) was rolled back. The six-criterion grade now
+>    lives only in the standalone maintainer tool `scripts/self-score.py`, run
+>    by hand before submission (writes `<case>/self-score.json`; does not touch
+>    the sealed audit chain). `agent-config/JUDGING.md` is that grader's rubric.
+>    The `judge_findings` Pool A/B merge agent (core ACH) is unchanged.
+
 ## Context
 
 The SANS **Find Evil!** submission is feature-rich but not *seamless*: the "many tools and files"
@@ -123,7 +138,7 @@ VMware-only paths; starter data has no local-staging hook wired through to golde
 
 Out of scope (note only): `sift-vm-bootstrap.sh` VMware paths (one-time, gated by 2.3); dev-mode
 `C--Users-newbi-...` memory path in `CLAUDE.md:293`/autonomous-loop (not on the investigate path).
-**Verify Phase 2:** each `python3 scripts/<new>-smoke.py` RED→GREEN; `python3 scripts/render_report.py goldens/nist-hacking-case` degrades cleanly (chrome present, pandoc absent here); `bash scripts/find-evil-run --dry-run`; `bash scripts/run-all-smokes.sh` = baseline + 5 new, 0 failed.
+**Verify Phase 2:** each `python3 scripts/<new>-smoke.py` RED→GREEN; `python3 scripts/render_report.py goldens/nist-hacking-case` degrades cleanly (chrome present, pandoc absent here); `bash scripts/verdict --dry-run`; `bash scripts/run-all-smokes.sh` = baseline + 5 new, 0 failed.
 
 ---
 
@@ -247,7 +262,7 @@ python3 scripts/validate-submission-assets.py --zip find-evil-submission.zip
 1. `bash scripts/run-all-smokes.sh` exits 0; `cargo test --workspace --locked`; `pnpm --filter @findevil/web test`.
 2. L1 + l3-nightly green on the exact commit tagged `v-submit` (`gh run list ... headSha` match).
 3. l3-weekly-goldens has a downloadable `l3-weekly-verdicts` artifact.
-4. One-command path: `bash scripts/find-evil-run --dry-run` clean; a real run produces a signed
+4. One-command path: `bash scripts/verdict --dry-run` clean; a real run produces a signed
    `run.manifest.json` + report, with the unified audit stream (Phase 1 manual checks).
 5. `python3 scripts/divergence-smoke.py` green (tool counts + `.mcp.json` surface lock).
 6. Readiness packet (if re-run): `*_READY_FOR_EXPERT_REVIEW`, `blockers:[]`, `customer_releasable:false`.

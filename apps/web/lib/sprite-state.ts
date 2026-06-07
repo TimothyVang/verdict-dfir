@@ -130,12 +130,6 @@ export function deriveRoleStates(
         break;
       }
 
-      case "judge_selfscore": {
-        // Judge is actively emitting self-score criteria — mark it working.
-        states.judge = "working";
-        break;
-      }
-
       case "contradiction_resolved": {
         // Verifier resolved a contradiction between pools — flip to verdict.
         states.verifier = "verdict";

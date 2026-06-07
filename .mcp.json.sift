@@ -7,7 +7,7 @@
       "command": "ssh",
       "args": [
         "-i",
-        "~/.ssh/sift_key",
+        "/home/analyst/.ssh/sift_key",
         "-T",
         "-o",
         "StrictHostKeyChecking=accept-new",
@@ -15,7 +15,7 @@
         "ServerAliveInterval=30",
         "-o",
         "ServerAliveCountMax=3",
-        "sansforensics@127.0.0.1",
+        "sansforensics@192.168.137.130",
         "VOLATILITY_BIN=/home/sansforensics/.local/bin/vol HAYABUSA_BIN=/home/sansforensics/.local/bin/hayabusa VELOCIRAPTOR_BIN=/home/sansforensics/.local/bin/velociraptor exec /home/sansforensics/find-evil/target/release/findevil-mcp"
       ]
     },
@@ -24,7 +24,7 @@
       "command": "ssh",
       "args": [
         "-i",
-        "~/.ssh/sift_key",
+        "/home/analyst/.ssh/sift_key",
         "-T",
         "-o",
         "StrictHostKeyChecking=accept-new",
@@ -32,7 +32,7 @@
         "ServerAliveInterval=30",
         "-o",
         "ServerAliveCountMax=3",
-        "sansforensics@127.0.0.1",
+        "sansforensics@192.168.137.130",
         "cd /home/sansforensics/find-evil/services/agent_mcp && exec /home/sansforensics/.local/bin/uv run python -m findevil_agent_mcp.server"
       ]
     }

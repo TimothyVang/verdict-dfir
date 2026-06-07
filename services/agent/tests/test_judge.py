@@ -68,10 +68,11 @@ class TestSinglePoolFindings:
         b = PoolStats(pool="B", findings=[])
         merged = judge_findings(a, b)
         assert len(merged) == 1
-        # With only Pool A's score, no corroboration bonus, judge
-        # divides by (cred_a + cred_b) = 0.6 + 0.6 = 1.2.
-        # score_a = 1.0 * 0.6 = 0.6; merged = 0.6 / 1.2 = 0.5 → INFERRED.
-        assert merged[0].finding.confidence == "INFERRED"
+        # A solo, verifier-approved CONFIRMED fact is NOT downgraded for lack of
+        # cross-pool corroboration: the judge corroborates/raises, it does not
+        # re-litigate a confirmed observation the verifier already approved.
+        # (Corroboration across pools can still only push confidence higher.)
+        assert merged[0].finding.confidence == "CONFIRMED"
 
     def test_pool_b_only(self) -> None:
         a = PoolStats(pool="A", findings=[])

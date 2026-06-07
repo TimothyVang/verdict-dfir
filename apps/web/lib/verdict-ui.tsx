@@ -9,30 +9,33 @@ import React from "react";
 // video components. GitHub-dark neutral scaffold + 5 semantic accents.
 // ---------------------------------------------------------------------------
 
-/** Color tokens. Neutral scaffold = GitHub dark; 5 semantic accents carry meaning. */
+/** Color tokens — editorial "forensic case file" palette (mirrors the demo's
+ *  scripts/make-demo-video/src/components/shared/editorial.ts). Warm near-black
+ *  paper, cream ink, one brand accent + one alert, three desaturated confidence
+ *  tiers. Key names are unchanged so all inline call-sites cascade for free. */
 export const VERDICT = {
-  bg: "#0d1117",
-  surface: "#161b22",
-  surfaceInset: "#0d1117",
-  border: "#30363d",
-  borderSubtle: "#1e2530",
-  text: "#e6edf3",
-  muted: "#8b949e",
-  mutedDark: "#6e7681",
-  faint: "#30363d",
+  bg: "#0e0c10", // warm near-black "paper"
+  surface: "#161318", // raised exhibit panel
+  surfaceInset: "#0b0a0d", // code/quote block — a touch darker than paper
+  border: "#2b2620", // editorial hairline
+  borderSubtle: "#211d18", // fainter hairline
+  text: "#ece6da", // warm cream ink (not pure white)
+  muted: "#8c8576", // captions / furniture
+  mutedDark: "#544f48", // hairline-adjacent text
+  faint: "#2b2620",
   // Semantic accents (never use decoratively against their meaning):
-  confirmed: "#2ecc71", // green  = CONFIRMED / verified / clean / pass
-  inferred: "#f39c12", // amber  = INFERRED / warning / running
-  hypothesis: "#3498db", // blue   = HYPOTHESIS / info / FRE-note
+  confirmed: "#7fae6e", // green  = CONFIRMED / verified / clean / pass
+  inferred: "#c79a4a", // amber  = INFERRED / warning / running
+  hypothesis: "#6f93b8", // blue   = HYPOTHESIS / info / FRE-note
   accentPurple: "#9b59b6", // purple = brand / crypto / Merkle / MITRE
-  accentPurpleLight: "#b17fd4",
-  alertRed: "#e74c3c", // red    = ERROR / contradiction / alert / flagged
+  accentPurpleLight: "#b98fce",
+  alertRed: "#d6452f", // red    = ERROR / contradiction / alert / flagged
   // Per-beat section-accent extras (only place these appear):
   beatTeal: "#1abc9c",
   beatOrange: "#e67e22",
   beatSlate: "#2c3e50",
-  white: "#ffffff",
-  gridLine: "rgba(255,255,255,0.04)",
+  white: "#ece6da", // retire pure white → ink (no harsh white on paper)
+  gridLine: "rgba(236,230,218,0.035)",
 } as const;
 
 /** The single font stack used across the ENTIRE UI, wordmark included.
@@ -40,6 +43,16 @@ export const VERDICT = {
  *  falls back to a system mono if the variable is absent. */
 export const MONO =
   "var(--font-jbm), 'JetBrains Mono', 'Courier New', monospace";
+
+/** Editorial display serif (Fraunces) — mastheads/headlines/panel titles ONLY,
+ *  at display sizes (>=22px). Never body copy, rows, or small captions. */
+export const SERIF =
+  "var(--font-fraunces), 'Fraunces', Georgia, 'Times New Roman', serif";
+
+/** Editorial grotesque (Archivo) — kickers, labels, nav, furniture, section
+ *  headings, chips. The "furniture" voice between serif headlines and mono data. */
+export const GROTESK =
+  "var(--font-archivo), 'Archivo', system-ui, -apple-system, sans-serif";
 
 /** Border-radius scale: pills/rows 6, tiles/insets/notes 8, cards/panels 10-12. */
 export const RADIUS = { pill: 6, tile: 8, card: 12 } as const;
@@ -55,11 +68,11 @@ interface ChipColors {
 
 /** Chip taxonomy: 15% alpha fill, solid full-accent border, full-accent text. */
 export const CHIP_COLORS: Record<ChipVariant, ChipColors> = {
-  CONFIRMED: { bg: "rgba(46,204,113,0.15)", border: VERDICT.confirmed, text: VERDICT.confirmed },
-  INFERRED: { bg: "rgba(243,156,18,0.15)", border: VERDICT.inferred, text: VERDICT.inferred },
-  HYPOTHESIS: { bg: "rgba(52,152,219,0.15)", border: VERDICT.hypothesis, text: VERDICT.hypothesis },
+  CONFIRMED: { bg: "rgba(127,174,110,0.15)", border: VERDICT.confirmed, text: VERDICT.confirmed },
+  INFERRED: { bg: "rgba(199,154,74,0.15)", border: VERDICT.inferred, text: VERDICT.inferred },
+  HYPOTHESIS: { bg: "rgba(111,147,184,0.15)", border: VERDICT.hypothesis, text: VERDICT.hypothesis },
   MITRE: { bg: "rgba(155,89,182,0.15)", border: VERDICT.accentPurple, text: VERDICT.accentPurple },
-  ERROR: { bg: "rgba(231,76,60,0.15)", border: VERDICT.alertRed, text: VERDICT.alertRed },
+  ERROR: { bg: "rgba(214,69,47,0.15)", border: VERDICT.alertRed, text: VERDICT.alertRed },
 };
 
 /** Confidence-label color map (used outside chips too: audit rows, terminal text). */
@@ -287,15 +300,18 @@ interface PanelTitleProps {
   style?: React.CSSProperties;
 }
 
-/** Title block: weight-800 H1 in text color with a muted subtitle 6-8px below. */
-export function PanelTitle({ title, subtitle, size = 22, letterSpacing = 0, style }: PanelTitleProps) {
+/** Title block: serif display H1 in ink with a muted MONO subtitle 6-8px below.
+ *  Title is Fraunces (display); subtitle stays JetBrains Mono (it's metadata). */
+export function PanelTitle({ title, subtitle, size = 28, letterSpacing = -0.5, style }: PanelTitleProps) {
   return (
-    <div style={{ fontFamily: MONO, ...style }}>
-      <div style={{ fontSize: size, fontWeight: 800, color: VERDICT.text, letterSpacing, lineHeight: 1.15 }}>
+    <div style={style}>
+      <div style={{ fontFamily: SERIF, fontSize: size, fontWeight: 600, color: VERDICT.text, letterSpacing, lineHeight: 1.1 }}>
         {title}
       </div>
       {subtitle && (
-        <div style={{ fontSize: 20, fontWeight: 400, color: VERDICT.muted, marginTop: 6 }}>{subtitle}</div>
+        <div style={{ fontFamily: MONO, fontSize: 16, fontWeight: 400, color: VERDICT.muted, marginTop: 8, letterSpacing: 0.5 }}>
+          {subtitle}
+        </div>
       )}
     </div>
   );
@@ -362,7 +378,7 @@ export function HashBead({ hash, prevHash, kind, confidence, highlight, dim, sty
         gap: 12,
         padding: "8px 16px",
         borderRadius: RADIUS.pill,
-        background: highlight ? "rgba(155,89,182,0.12)" : "rgba(22,27,34,0.8)",
+        background: highlight ? "rgba(155,89,182,0.12)" : "rgba(22,19,24,0.8)",
         border: highlight ? "1px solid rgba(155,89,182,0.5)" : `1px solid ${VERDICT.border}`,
         opacity: dim ? 0.35 : 1,
         fontFamily: MONO,
@@ -420,17 +436,17 @@ export function BrandMark({
       }}
     >
       <svg width={size} height={size} viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-label="VERDICT logo">
-        <circle cx="40" cy="40" r="38" fill="#161b22" stroke="#9b59b6" strokeWidth="2" />
+        <circle cx="40" cy="40" r="38" fill="#161318" stroke="#9b59b6" strokeWidth="2" />
         <rect x="14" y="18" width="38" height="17" rx="4" fill="#9b59b6" />
-        <rect x="22" y="18" width="38" height="6" rx="3" fill="#b17fd4" opacity="0.4" />
-        <rect x="31" y="29" width="5" height="30" rx="2.5" fill="#30363d" transform="rotate(-30 33 44)" />
-        <ellipse cx="20" cy="58" rx="8" ry="5" fill="none" stroke="#8b949e" strokeWidth="2.5" />
-        <ellipse cx="36" cy="58" rx="8" ry="5" fill="none" stroke="#8b949e" strokeWidth="2.5" />
-        <circle cx="56" cy="58" r="8" fill="#2ecc71" opacity="0.9" />
+        <rect x="22" y="18" width="38" height="6" rx="3" fill="#b98fce" opacity="0.4" />
+        <rect x="31" y="29" width="5" height="30" rx="2.5" fill="#2b2620" transform="rotate(-30 33 44)" />
+        <ellipse cx="20" cy="58" rx="8" ry="5" fill="none" stroke="#8c8576" strokeWidth="2.5" />
+        <ellipse cx="36" cy="58" rx="8" ry="5" fill="none" stroke="#8c8576" strokeWidth="2.5" />
+        <circle cx="56" cy="58" r="8" fill="#7fae6e" opacity="0.9" />
         <polyline
           points="52,58 55,61 61,54"
           fill="none"
-          stroke="#0d1117"
+          stroke="#0e0c10"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -485,6 +501,274 @@ export function Watermark() {
       <span style={{ fontFamily: MONO, fontSize: 15, color: VERDICT.text, fontWeight: 700, letterSpacing: 3 }}>
         VERDICT
       </span>
+    </div>
+  );
+}
+
+// ===========================================================================
+// EDITORIAL KIT — DOM/CSS ports of the demo's editorial-ui primitives
+// (scripts/make-demo-video/src/components/shared/editorial-ui.tsx). Remotion's
+// frame-driven animation is replaced by static styling + the global
+// `.verdict-reveal` CSS class (see globals.css), which is reduced-motion gated.
+// ===========================================================================
+
+interface KickerProps {
+  children: React.ReactNode;
+  /** Default brand purple; pass confidenceColor(tier) for a semantic kicker. */
+  color?: string;
+  style?: React.CSSProperties;
+}
+
+/** Small uppercase grotesque label that sits above a headline. */
+export function Kicker({ children, color = VERDICT.accentPurple, style }: KickerProps) {
+  return (
+    <div
+      style={{
+        fontFamily: GROTESK,
+        fontSize: 13,
+        fontWeight: 600,
+        letterSpacing: 5,
+        textTransform: "uppercase",
+        color,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+interface RuleLineProps {
+  color?: string;
+  thickness?: number;
+  width?: number | string;
+  style?: React.CSSProperties;
+}
+
+/** Editorial hairline rule. */
+export function RuleLine({ color = VERDICT.border, thickness = 1, width = "100%", style }: RuleLineProps) {
+  return <div aria-hidden style={{ width, height: thickness, background: color, ...style }} />;
+}
+
+interface SerifHeadlineProps {
+  children: React.ReactNode;
+  /** Display sizes only (>=22px). */
+  size?: number;
+  color?: string;
+  italic?: boolean;
+  weight?: number;
+  style?: React.CSSProperties;
+}
+
+/** Fraunces display headline (mastheads/H1). Static port of KineticHeadline. */
+export function SerifHeadline({ children, size = 40, color = VERDICT.text, italic = false, weight = 600, style }: SerifHeadlineProps) {
+  return (
+    <div
+      style={{
+        fontFamily: SERIF,
+        fontSize: size,
+        fontWeight: weight,
+        fontStyle: italic ? "italic" : "normal",
+        color,
+        lineHeight: 1.04,
+        letterSpacing: -0.5,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+interface PullQuoteProps {
+  children: React.ReactNode;
+  size?: number;
+  color?: string;
+  style?: React.CSSProperties;
+}
+
+/** Serif pull-quote / lede. */
+export function PullQuote({ children, size = 30, color = VERDICT.text, style }: PullQuoteProps) {
+  return (
+    <blockquote style={{ fontFamily: SERIF, fontSize: size, fontWeight: 600, color, lineHeight: 1.15, margin: 0, ...style }}>
+      {children}
+    </blockquote>
+  );
+}
+
+interface EvidenceTagProps {
+  label: string;
+  /** CONFIRMED/INFERRED/HYPOTHESIS → semantic tone; omit for ink. */
+  tier?: Confidence | string;
+  fontSize?: number;
+  style?: React.CSSProperties;
+}
+
+/** Editorial outline chip: a dot + uppercase grotesque label in a thin tone
+ *  border (the case-file form, distinct from the filled ConfidenceChip pill). */
+export function EvidenceTag({ label, tier, fontSize = 13, style }: EvidenceTagProps) {
+  const tone = tier ? CONFIDENCE_COLOR[tier] ?? VERDICT.text : VERDICT.text;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        fontFamily: GROTESK,
+        fontSize,
+        fontWeight: 600,
+        letterSpacing: 2.5,
+        textTransform: "uppercase",
+        color: tone,
+        border: `1px solid ${tone}66`,
+        borderRadius: 4,
+        padding: "5px 12px",
+        ...style,
+      }}
+    >
+      <span aria-hidden style={{ width: 6, height: 6, borderRadius: "50%", background: tone }} />
+      {label}
+    </span>
+  );
+}
+
+interface StampProps {
+  label: string;
+  color?: string;
+  rotate?: number;
+  fontSize?: number;
+  style?: React.CSSProperties;
+}
+
+/** Letterpress stamp (rotated outline). Default alert red; pass confirmed/etc. */
+export function Stamp({ label, color = VERDICT.alertRed, rotate = -7, fontSize = 18, style }: StampProps) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        fontFamily: GROTESK,
+        fontSize,
+        fontWeight: 700,
+        letterSpacing: 4,
+        textTransform: "uppercase",
+        color,
+        border: `3px solid ${color}`,
+        borderRadius: 6,
+        padding: "6px 16px",
+        transform: `rotate(${rotate}deg)`,
+        ...style,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+interface SectionHeadingProps {
+  children: React.ReactNode;
+  /** Optional right-aligned mono meta (e.g. an event count). */
+  right?: React.ReactNode;
+  style?: React.CSSProperties;
+}
+
+/** Grotesque uppercase section label + hairline beneath. Replaces bare <h2>. */
+export function SectionHeading({ children, right, style }: SectionHeadingProps) {
+  return (
+    <div style={{ marginBottom: 14, ...style }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+        <span style={{ fontFamily: GROTESK, fontSize: 13, fontWeight: 600, letterSpacing: 3, textTransform: "uppercase", color: VERDICT.muted }}>
+          {children}
+        </span>
+        {right != null && <span style={{ fontFamily: MONO, fontSize: 12, color: VERDICT.mutedDark }}>{right}</span>}
+      </div>
+      <RuleLine />
+    </div>
+  );
+}
+
+// --- Atmosphere overlays (fixed, static, GPU-cheap) ------------------------
+
+// A single static SVG-noise tile (feTurbulence, desaturated). NOT frame-animated
+// — it composites once and never repaints on SSE re-renders. # and % encoded.
+const GRAIN_DATA_URI =
+  "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='300'%20height='300'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.85'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'/%3E%3C/svg%3E";
+
+/** Fixed film-grain overlay (mix-blend overlay). pointerEvents none. */
+export function Grain({ opacity = 0.05 }: { opacity?: number }) {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 60,
+        pointerEvents: "none",
+        opacity,
+        mixBlendMode: "overlay",
+        backgroundImage: `url("${GRAIN_DATA_URI}")`,
+        backgroundSize: "300px 300px",
+      }}
+    />
+  );
+}
+
+/** Fixed vignette overlay darkening toward the paper edge. pointerEvents none. */
+export function Vignette({ strength = 0.55 }: { strength?: number }) {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 55,
+        pointerEvents: "none",
+        background: `radial-gradient(ellipse 92% 86% at 50% 42%, transparent 42%, ${VERDICT.bg} 100%)`,
+        opacity: strength,
+      }}
+    />
+  );
+}
+
+// --- Case-file running furniture (in-flow header/footer bands) --------------
+
+/** Running case-file header band (top of every page). */
+export function CaseFurnitureHeader() {
+  const label = {
+    fontFamily: GROTESK,
+    fontSize: 12,
+    fontWeight: 600,
+    letterSpacing: 3,
+    textTransform: "uppercase" as const,
+    color: VERDICT.muted,
+  };
+  return (
+    <div style={{ padding: "14px 32px 0", position: "relative", zIndex: 1 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", maxWidth: 1600, margin: "0 auto", ...label }}>
+        <span>Verdict — DFIR Case File</span>
+        <span style={{ letterSpacing: 4 }}>A Forensic Case File</span>
+      </div>
+      <div style={{ maxWidth: 1600, margin: "10px auto 0", height: 1, background: VERDICT.border }} />
+    </div>
+  );
+}
+
+/** Running case-file footer band (bottom of every page). */
+export function CaseFurnitureFooter() {
+  const label = {
+    fontFamily: GROTESK,
+    fontSize: 12,
+    fontWeight: 600,
+    letterSpacing: 3,
+    textTransform: "uppercase" as const,
+    color: VERDICT.mutedDark,
+  };
+  return (
+    <div style={{ padding: "0 32px 20px", marginTop: 48, position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: 1600, margin: "0 auto 10px", height: 1, background: VERDICT.border }} />
+      <div style={{ display: "flex", justifyContent: "space-between", maxWidth: 1600, margin: "0 auto", ...label }}>
+        <span>VERDICT · DFIR at machine speed</span>
+        <span>Apache-2.0 · sigstore-signed</span>
+      </div>
     </div>
   );
 }

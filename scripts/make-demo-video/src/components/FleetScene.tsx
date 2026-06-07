@@ -1,152 +1,329 @@
 import React from "react";
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { C, GROTESK, MARGIN, MONO, SERIF } from "./shared/editorial";
+import { Scene } from "./shared/Scene";
+import { Kicker, KineticHeadline, PullQuote, RuleLine, Stamp } from "./shared/editorial-ui";
 import { spread } from "./shared/pacing";
-import { Watermark } from "./shared/Watermark";
 
-const MONO = "'JetBrains Mono', 'Courier New', monospace";
+// Beat 6 — "Twenty-two hosts." The fleet as a forensic contact sheet: 22 host
+// tiles in a tight editorial index (flagged = alert, clean = confirmed tone,
+// running/queued = muted) with mono host ids, beside a stat sidebar of
+// oversized Fraunces numerals and a signed note. Replaces the old GitHub-dark
+// grid + rounded-card rollup.
 
-const FINDING_COUNTS = [3,1,0,2,1,4,0,1,2,0,3,1,0,1,2,0,1,3,0,0,0,0];
+const FINDING_COUNTS = [3, 1, 0, 2, 1, 4, 0, 1, 2, 0, 3, 1, 0, 1, 2, 0, 1, 3, 0, 0, 0, 0];
 
-const HOSTS = Array.from({ length: 22 }, (_, i) => {
+type HostStatus = "flagged" | "clean" | "running" | "queued";
+interface Host {
+  id: number;
+  name: string;
+  status: HostStatus;
+  findings: number;
+}
+
+const HOSTS: Host[] = Array.from({ length: 22 }, (_, i) => {
   const findings = FINDING_COUNTS[i] ?? 0;
   const rawStatus = i < 18 ? "done" : i < 20 ? "running" : "queued";
-  return {
-    id: i + 1,
-    name: `HOST-${String(i + 1).padStart(3, "0")}`,
-    status: rawStatus === "done" && findings > 0 ? "flagged" : rawStatus,
-    findings,
-  };
+  const status: HostStatus =
+    rawStatus === "done" ? (findings > 0 ? "flagged" : "clean") : (rawStatus as HostStatus);
+  return { id: i + 1, name: `HOST-${String(i + 1).padStart(3, "0")}`, status, findings };
 });
 
-const STATUS_COLOR: Record<string, string> = {
-  done:    "#2ecc71",
-  flagged: "#e74c3c",
-  running: "#f39c12",
-  queued:  "#30363d",
+const STATUS_TONE: Record<HostStatus, string> = {
+  flagged: C.alert,
+  clean: C.confirmed,
+  running: C.inkMuted,
+  queued: C.inkFaint,
 };
+
+// The fleet rollup of record — stated totals, preserved verbatim from the case.
+const STATS: { value: string; label: string; tone: string }[] = [
+  { value: "22", label: "Hosts investigated", tone: C.ink },
+  { value: "24", label: "Total findings", tone: C.alert },
+  { value: "11", label: "Confirmed", tone: C.confirmed },
+  { value: "08", label: "Inferred", tone: C.inferred },
+  { value: "05", label: "Hypothesis", tone: C.hypothesis },
+];
 
 export function FleetScene() {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
-  const fadeOut = interpolate(frame, [durationInFrames - 15, durationInFrames], [1, 0], {
-    extrapolateLeft: "clamp", extrapolateRight: "clamp",
-  });
+  const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
-  const titleOp = interpolate(frame, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // Spread the host fan-out across the full 50s beat so the grid fills in step
-  // with the narration instead of completing in the first ~4s.
-  const hostDelay = (id: number) => spread(20 + id * 4, 24, 108, durationInFrames, 30, 200);
-  const rollupD = spread(95, 24, 108, durationInFrames, 30, 200);
-
-  // Progress = hosts whose investigation has finished. Both clean ("done") and
-  // flagged hosts are investigated — flagged just have findings — so the
-  // counter must include them or it under-reports against the visible grid.
-  const doneCount = HOSTS.filter((h) => {
-    const investigated = h.status === "done" || h.status === "flagged";
-    return investigated && frame > hostDelay(h.id);
-  }).length;
-  const progressWidth = (doneCount / 22) * 100;
-
-  // Fleet rollup slides in near the end of the fan-out.
-  const rollupOp = interpolate(frame - rollupD, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const rollupX = interpolate(frame - rollupD, [0, 16], [60, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // Spread the host fan-out across the full 50s beat so the index fills in step
+  // with the narration instead of completing in the first few seconds.
+  const hostDelay = (id: number) => spread(70 + id * 4, 74, 158, durationInFrames, 60, 220);
+  const statD = (i: number) => spread(96 + i * 6, 96, 130, durationInFrames, 60, 220);
+  const sealD = spread(132, 96, 132, durationInFrames, 60, 220);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
-      <div style={{
-        position: "absolute", inset: 0, opacity: 0.04,
-        backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-        backgroundSize: "60px 60px",
-      }} />
-
-      {/* Title */}
-      <div style={{ position: "absolute", top: 52, left: 140, right: 140, opacity: titleOp }}>
-        <div style={{ fontFamily: MONO, fontSize: 52, fontWeight: 800, color: "#e6edf3" }}>
-          22-Host Fleet Investigation
-        </div>
-        <div style={{ fontFamily: MONO, fontSize: 20, color: "#8b949e", marginTop: 6 }}>
-          84 GB of memory images — one command — crash-resilient progress
+    <Scene page={9} caption="Fleet · 84 GB">
+      {/* Masthead — kicker + kinetic headline */}
+      <div style={{ position: "absolute", left: MARGIN, top: 132, width: 1000 }}>
+        <Kicker frame={frame} delay={10} color={C.accent}>
+          Fleet · 84 GB · one command
+        </Kicker>
+        <div style={{ marginTop: 14 }}>
+          <KineticHeadline text="Twenty-two hosts." frame={frame} delay={20} size={92} />
         </div>
       </div>
 
-      {/* Host grid */}
-      <div style={{
-        position: "absolute", top: 185, left: 140, right: 540,
-        display: "grid",
-        gridTemplateColumns: "repeat(6, 1fr)",
-        gap: 14,
-      }}>
-        {HOSTS.map((host) => {
-          const delay = hostDelay(host.id);
-          const s = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 110 } });
-          const op = interpolate(frame - delay, [0, 10], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-          const color = STATUS_COLOR[host.status];
-          return (
-            <div key={host.id} style={{
-              opacity: op,
-              transform: `scale(${0.6 + s * 0.4})`,
-              background: `${color}12`,
-              border: `1px solid ${color}55`,
-              borderRadius: 8,
-              padding: "12px 10px",
-              textAlign: "center",
-            }}>
-              <div style={{ fontFamily: MONO, fontSize: 12, color, fontWeight: 700 }}>{host.name}</div>
-              {host.status === "done" && host.findings > 0 && (
-                <div style={{ fontFamily: MONO, fontSize: 11, color: "#e74c3c", marginTop: 4 }}>
-                  {host.findings}F
+      {/* Left — the contact sheet / host index */}
+      <div style={{ position: "absolute", left: MARGIN, top: 290, width: 960 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            fontFamily: MONO,
+            fontSize: 13,
+            letterSpacing: 3,
+            textTransform: "uppercase",
+            color: C.inkMuted,
+            marginBottom: 14,
+          }}
+        >
+          <span>Exhibit F — Host Index</span>
+          <span style={{ color: C.inkFaint }}>memory images · 22 of 22</span>
+        </div>
+        <RuleLine frame={frame} delay={44} color={C.hairline} />
+
+        <div
+          style={{
+            marginTop: 18,
+            display: "grid",
+            gridTemplateColumns: "repeat(6, 1fr)",
+            columnGap: 2,
+            rowGap: 2,
+            borderTop: `1px solid ${C.hairline}`,
+            borderLeft: `1px solid ${C.hairline}`,
+          }}
+        >
+          {HOSTS.map((host) => {
+            const delay = hostDelay(host.id);
+            const s = spring({ frame: frame - delay, fps, config: { damping: 16, stiffness: 120 } });
+            const op = interpolate(frame - delay, [0, 12], [0, 1], clampOpts);
+            const tone = STATUS_TONE[host.status];
+            const isFlagged = host.status === "flagged";
+            const meta =
+              host.status === "flagged"
+                ? `${host.findings} ${host.findings === 1 ? "finding" : "findings"}`
+                : host.status === "clean"
+                  ? "clean"
+                  : host.status === "running"
+                    ? "running"
+                    : "queued";
+            return (
+              <div
+                key={host.id}
+                style={{
+                  opacity: op,
+                  transform: `translateY(${(1 - s) * 8}px)`,
+                  borderRight: `1px solid ${C.hairline}`,
+                  borderBottom: `1px solid ${C.hairline}`,
+                  background: isFlagged ? `${C.alert}10` : "transparent",
+                  padding: "16px 16px 14px",
+                  minHeight: 86,
+                  position: "relative",
+                }}
+              >
+                {/* flagged corner tick — the redaction-margin flag */}
+                {isFlagged && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: 3,
+                      bottom: 0,
+                      background: C.alert,
+                    }}
+                  />
+                )}
+                <div
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    letterSpacing: 0.5,
+                    color: host.status === "queued" ? C.inkFaint : C.ink,
+                  }}
+                >
+                  {host.name}
                 </div>
-              )}
-              {host.status === "done" && host.findings === 0 && (
-                <div style={{ fontFamily: MONO, fontSize: 11, color: "#2ecc71", marginTop: 4 }}>clean</div>
-              )}
-              {host.status === "running" && (
-                <div style={{ fontFamily: MONO, fontSize: 11, color: "#f39c12", marginTop: 4 }}>…</div>
-              )}
+                <div
+                  style={{
+                    fontFamily: isFlagged ? SERIF : MONO,
+                    fontStyle: isFlagged ? "italic" : "normal",
+                    fontSize: isFlagged ? 19 : 13,
+                    fontWeight: isFlagged ? 600 : 400,
+                    color: tone,
+                    marginTop: 8,
+                    letterSpacing: isFlagged ? -0.3 : 1,
+                  }}
+                >
+                  {meta}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* legend strip */}
+        <div
+          style={{
+            marginTop: 18,
+            display: "flex",
+            gap: 30,
+            fontFamily: GROTESK,
+            fontSize: 13,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+            color: C.inkMuted,
+            opacity: interpolate(frame - 60, [0, 16], [0, 1], clampOpts),
+          }}
+        >
+          <LegendDot tone={C.alert} label="Flagged · 9" />
+          <LegendDot tone={C.confirmed} label="Clean · 13" />
+          <LegendDot tone={C.inkMuted} label="Running" />
+          <LegendDot tone={C.inkFaint} label="Queued" />
+        </div>
+      </div>
+
+      {/* Right — the stat sidebar: oversized Fraunces numerals of record */}
+      <div style={{ position: "absolute", right: MARGIN, top: 290, width: 470 }}>
+        <div
+          style={{
+            fontFamily: MONO,
+            fontSize: 13,
+            letterSpacing: 3,
+            textTransform: "uppercase",
+            color: C.inkMuted,
+            marginBottom: 16,
+          }}
+        >
+          Fleet Rollup of Record
+        </div>
+        <RuleLine frame={frame} delay={80} color={C.hairline} />
+
+        {STATS.map((stat, i) => {
+          const d = statD(i);
+          const op = interpolate(frame - d, [0, 14], [0, 1], clampOpts);
+          const ty = interpolate(frame - d, [0, 16], [16, 0], clampOpts);
+          const big = i === 0;
+          return (
+            <div
+              key={stat.label}
+              style={{
+                opacity: op,
+                transform: `translateY(${ty}px)`,
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 20,
+                padding: big ? "22px 0 18px" : "13px 0",
+                borderBottom: `1px solid ${C.hairline}`,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: SERIF,
+                  fontWeight: 900,
+                  fontSize: big ? 96 : 58,
+                  lineHeight: 0.9,
+                  letterSpacing: -2,
+                  color: stat.tone,
+                }}
+              >
+                {stat.value}
+              </span>
+              <span
+                style={{
+                  fontFamily: GROTESK,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  letterSpacing: 3,
+                  textTransform: "uppercase",
+                  color: C.inkMuted,
+                  textAlign: "right",
+                  maxWidth: 180,
+                }}
+              >
+                {stat.label}
+              </span>
             </div>
           );
         })}
-      </div>
 
-      {/* Progress bar */}
-      <div style={{ position: "absolute", top: 680, left: 140, right: 540 }}>
-        <div style={{ fontFamily: MONO, fontSize: 14, color: "#8b949e", marginBottom: 8 }}>
-          {doneCount}/22 complete — progress persisted to Postgres checkpoint
+        {/* secondary tallies */}
+        <div
+          style={{
+            marginTop: 22,
+            display: "flex",
+            gap: 36,
+            opacity: interpolate(frame - statD(5), [0, 16], [0, 1], clampOpts),
+          }}
+        >
+          <Tally value="9" label="hosts with IOC" tone={C.alert} />
+          <Tally value="13" label="clean" tone={C.confirmed} />
         </div>
-        <div style={{ height: 8, background: "#161b22", borderRadius: 4 }}>
-          <div style={{ height: "100%", width: `${progressWidth}%`, background: "#2ecc71", borderRadius: 4, transition: "width 0.1s" }} />
-        </div>
-      </div>
 
-      {/* Fleet rollup */}
-      <div style={{
-        position: "absolute", top: 185, right: 60, width: 420,
-        opacity: rollupOp,
-        transform: `translateX(${rollupX}px)`,
-        background: "#161b22",
-        border: "1px solid #30363d",
-        borderRadius: 12,
-        padding: 24,
-        fontFamily: MONO, fontSize: 14, lineHeight: 1.9,
-      }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: "#e6edf3", marginBottom: 16 }}>Fleet Rollup</div>
-        <div style={{ color: "#8b949e" }}>Hosts investigated: <span style={{ color: "#e6edf3" }}>22</span></div>
-        <div style={{ color: "#8b949e" }}>Total findings:     <span style={{ color: "#e74c3c" }}>24</span></div>
-        <div style={{ color: "#8b949e" }}>CONFIRMED:          <span style={{ color: "#2ecc71" }}>11</span></div>
-        <div style={{ color: "#8b949e" }}>INFERRED:           <span style={{ color: "#f39c12" }}>8</span></div>
-        <div style={{ color: "#8b949e" }}>HYPOTHESIS:         <span style={{ color: "#3498db" }}>5</span></div>
-        <div style={{ borderTop: "1px solid #30363d", marginTop: 12, paddingTop: 12 }}>
-          <div style={{ color: "#8b949e" }}>Hosts with IOC:     <span style={{ color: "#e74c3c" }}>9</span></div>
-          <div style={{ color: "#8b949e" }}>Clean:              <span style={{ color: "#2ecc71" }}>13</span></div>
-        </div>
-        <div style={{ marginTop: 16, background: "#0d1117", borderRadius: 6, padding: "10px 14px" }}>
-          <div style={{ color: "#9b59b6", fontSize: 12 }}>manifest_verify: ✓ signed</div>
-          <div style={{ color: "#9b59b6", fontSize: 12 }}>sigstore Rekor: ✓ recorded</div>
+        {/* signed note + seal */}
+        <div style={{ marginTop: 40, display: "flex", alignItems: "center", gap: 24 }}>
+          <Stamp label="Signed · sigstore" frame={frame} delay={sealD} color={C.confirmed} rotate={-6} size={22} />
+          <div
+            style={{
+              fontFamily: MONO,
+              fontSize: 13,
+              color: C.inkMuted,
+              lineHeight: 1.7,
+              opacity: interpolate(frame - sealD - 10, [0, 16], [0, 1], clampOpts),
+            }}
+          >
+            manifest_verify ✓<br />
+            Rekor recorded · one signed run
+          </div>
         </div>
       </div>
 
-      <Watermark />
-    </AbsoluteFill>
+      {/* a single editorial pull-quote anchoring the spread */}
+      <div style={{ position: "absolute", left: MARGIN, bottom: 110, width: 880 }}>
+        <PullQuote frame={frame} delay={spread(120, 96, 130, durationInFrames, 60, 220)} size={30} color={C.inkMuted}>
+          84&nbsp;GB of memory images. One command. Crash-resilient progress, checkpointed —
+          and every host accounted for under one signature.
+        </PullQuote>
+      </div>
+    </Scene>
+  );
+}
+
+function LegendDot({ tone, label }: { tone: string; label: string }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+      <span style={{ width: 8, height: 8, background: tone, display: "inline-block" }} />
+      {label}
+    </span>
+  );
+}
+
+function Tally({ value, label, tone }: { value: string; label: string; tone: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+      <span style={{ fontFamily: SERIF, fontWeight: 900, fontSize: 40, lineHeight: 1, letterSpacing: -1, color: tone }}>
+        {value}
+      </span>
+      <span
+        style={{
+          fontFamily: GROTESK,
+          fontSize: 12,
+          fontWeight: 600,
+          letterSpacing: 2,
+          textTransform: "uppercase",
+          color: C.inkMuted,
+        }}
+      >
+        {label}
+      </span>
+    </div>
   );
 }

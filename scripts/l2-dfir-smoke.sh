@@ -116,6 +116,6 @@ if [[ $fail -gt 0 ]]; then
 fi
 
 # Advisory-only — always exit 0. Judging criterion 3 ("depth over
-# breadth") means flaky DFIR tooling should never stall the swarm's
+# breadth") means flaky DFIR tooling should never stall the
 # main pipeline. Real validation lives in L3 goldens.
 exit 0

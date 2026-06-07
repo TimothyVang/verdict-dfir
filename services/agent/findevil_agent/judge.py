@@ -187,6 +187,18 @@ def judge_findings(
         if chosen is None:
             continue  # impossible — group has at least one item
         new_label = _confidence_for_score(merged)
+        # A directly-observed CONFIRMED fact reported by a single pool must not
+        # be downgraded purely for lack of cross-pool corroboration. The merge
+        # divides a solo finding's score by BOTH pools' credibility
+        # (score_a / (cred_a + cred_b)), collapsing 1.0 → ~0.5 (INFERRED). But
+        # the verifier already re-executed and approved this finding before the
+        # judge ran — rejected/downgraded findings never reach here still labeled
+        # CONFIRMED — so the judge's job is to corroborate and *raise*, not to
+        # re-litigate a confirmed observation (e.g. an EID 1102 log-clear).
+        # Corroboration across pools can still only push confidence higher.
+        is_solo = not (a_finding and b_finding)
+        if is_solo and chosen.confidence == "CONFIRMED":
+            new_label = "CONFIRMED"
         merged_finding = chosen.model_copy(
             update={
                 "confidence": new_label,

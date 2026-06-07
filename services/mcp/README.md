@@ -54,7 +54,7 @@ The `vol_pslist` + `vol_psscan` pair is deliberately redundant — pslist walks 
 
 Subprocess tools resolve their binary via a tool-specific env var first (`$HAYABUSA_BIN`, `$VOLATILITY_BIN`, `$VELOCIRAPTOR_BIN`), then PATH lookup. AGPL/GPL backing tools are NEVER linked — see Spec #2 invariant in `CLAUDE.md`.
 
-## Structure for swarm-written tools
+## Structure for new tools
 
 Every tool module must:
 
@@ -104,7 +104,7 @@ cargo test -p findevil-mcp --test tool_smoke
 cargo test --workspace --locked
 ```
 
-## Notes for swarm workers
+## Notes for contributors
 
 - Do **not** add a dependency without listing it in Spec #2 §16 first.
 - Do **not** link AGPL/GPL code (Hayabusa, Chainsaw, Volatility3, Velociraptor, YARA). Subprocess only.

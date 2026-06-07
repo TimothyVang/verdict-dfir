@@ -69,9 +69,9 @@ services:
 
         # Run pytest in every services/*/pyproject.toml directory. There is
         # no repo-root pyproject — each Python service is its own uv project
-        # (services/agent, services/agent_mcp, services/swarm) so we iterate.
+        # (services/agent, services/agent_mcp) so we iterate.
         python_any=false
-        for proj in services/agent services/agent_mcp services/swarm; do
+        for proj in services/agent services/agent_mcp; do
           if [ -f "$$proj/pyproject.toml" ]; then
             python_any=true
             venv_dir="/home/dev/.cache/uv/venvs/$${proj//\//-}"
@@ -246,11 +246,6 @@ services:
         if [ -f scripts/smoke-regex-tests.py ]; then
           echo "== scripts/smoke-regex-tests.py (audit-smoke regex/helper policy self-tests) =="
           python3 scripts/smoke-regex-tests.py
-        fi
-
-        if [ -f scripts/autonomous-loop-smoke.py ]; then
-          echo "== scripts/autonomous-loop-smoke.py (8h dry-run + empty-queue timing) =="
-          python3 scripts/autonomous-loop-smoke.py
         fi
 
         echo "READINESS_L1_PASS"

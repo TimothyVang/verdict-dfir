@@ -69,7 +69,7 @@ end-to-end against a SIFT VM accessed over SSH.
  #!/usr/bin/env bash
  set -euo pipefail
 -exec python3 -m findevil_agent.cli "$@"
-+# A2: there is no findevil_agent.cli; route to the Tesla-mode
++# A2: there is no findevil_agent.cli; route to the headless
 +# orchestrator instead.  Requires SIFT VM accessible over SSH;
 +# preflight check inside find_evil_auto.py validates that.
 +exec python3 /usr/share/find-evil/find_evil_auto.py "$@"

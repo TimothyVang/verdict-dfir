@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# find-evil-sift — daily launcher: ensures the SIFT VM is running and
-# Claude Code talks stdio to its MCP servers over SSH.
+# find-evil-sift — SIFT VM helper: ensures the VM is running and Claude Code
+# talks stdio to its MCP servers over SSH (the interactive in-VM path).
+# For the one-command headless workflow, use:  scripts/verdict --sift <evidence>
 #
 # First run: defer to scripts/sift-vm-bootstrap.sh (one-time, ~15 min).
 # Subsequent runs: detect VM state, boot if stopped, get fresh IP from

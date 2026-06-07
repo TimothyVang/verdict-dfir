@@ -52,10 +52,10 @@ if [[ -n "${EVIDENCE_RUN_DIR:-}" ]]; then
   if [[ "${EVIDENCE_RUN_DIR}" == *smoke* ]]; then
     fail "EVIDENCE_RUN_DIR looks like a smoke run: ${EVIDENCE_RUN_DIR}"
   elif [[ -f "${EVIDENCE_RUN_DIR}/run.manifest.json" && -f "${EVIDENCE_RUN_DIR}/audit.jsonl" && -f "${EVIDENCE_RUN_DIR}/verdict.json" ]]; then
-    if grep -q '"kind":"judge_selfscore"' "${EVIDENCE_RUN_DIR}/audit.jsonl" || grep -q '"kind": "judge_selfscore"' "${EVIDENCE_RUN_DIR}/audit.jsonl"; then
+    if grep -q '"kind":"report_qa"' "${EVIDENCE_RUN_DIR}/audit.jsonl" || grep -q '"kind": "report_qa"' "${EVIDENCE_RUN_DIR}/audit.jsonl"; then
       log "PASS: explicit evidence run artifact set present (${EVIDENCE_RUN_DIR})"
     else
-      fail "EVIDENCE_RUN_DIR audit log lacks judge_selfscore records: ${EVIDENCE_RUN_DIR}"
+      fail "EVIDENCE_RUN_DIR audit log lacks report_qa records: ${EVIDENCE_RUN_DIR}"
     fi
   else
     fail "EVIDENCE_RUN_DIR must contain run.manifest.json, audit.jsonl, and verdict.json: ${EVIDENCE_RUN_DIR}"

@@ -138,12 +138,7 @@ run_smoke \
     "smoke-regex-tests (synthetic +/- cases against audit-smoke regex/helper policies)" \
     "python3 scripts/smoke-regex-tests.py"
 
-# 10. Autonomous-loop CLI behavior smoke.
-run_smoke \
-    "autonomous-loop-smoke (8h dry-run + tiny empty-queue timing)" \
-    "python3 scripts/autonomous-loop-smoke.py"
-
-# 11. Phase 2 cross-platform smokes (render, sift config, starter data, find-evil-run).
+# 10. Phase 2 cross-platform smokes (render, sift config, starter data, find-evil-run).
 run_smoke \
     "render-binary-smoke (pandoc/chrome resolve via PATH, graceful degrade)" \
     "python3 scripts/render-binary-smoke.py"
@@ -153,8 +148,8 @@ run_smoke \
     "python3 scripts/starter-data-smoke.py"
 
 run_smoke \
-    "find-evil-run-smoke (one-command operator entry, --dry-run)" \
-    "python3 scripts/find-evil-run-smoke.py"
+    "verdict-smoke (the one command, --dry-run)" \
+    "python3 scripts/verdict-smoke.py"
 
 run_smoke \
     "make-demo-video-smoke (TTS+ffmpeg video builder, --dry-run)" \
@@ -177,8 +172,8 @@ run_smoke \
     "cargo fmt --all --check" \
     "command -v cargo && [ -f Cargo.toml ]"
 
-# Rust lint/test gates from the autonomous-loop verification spec. The ruff
-# pair and cargo fmt are above; clippy and test go here. cargo test is the
+# Rust lint/test gates. The ruff pair and cargo fmt are above; clippy and
+# test go here. cargo test is the
 # slowest entry (~20s cached); set SKIP_SLOW_RUST=1 to skip it during fast
 # iteration.
 run_smoke \
@@ -187,7 +182,7 @@ run_smoke \
     "command -v cargo && [ -f Cargo.toml ]"
 if [ "${SKIP_SLOW_RUST:-0}" != "1" ]; then
     run_smoke \
-        "cargo test --workspace --locked (Rust test suite — matches autonomous-loop verification spec)" \
+        "cargo test --workspace --locked (Rust test suite)" \
         "cargo test --workspace --locked" \
         "command -v cargo && [ -f Cargo.toml ]"
 fi

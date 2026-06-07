@@ -1,17 +1,58 @@
 /* Tailwind v4 — CSS-first import. */
 @import "tailwindcss";
 
-/* NES.css — 8-bit pixel-art component library that powers the
- * sprite + chrome aesthetic per Amendment A3 §1.2. Imported AFTER
- * Tailwind so its component classes (.nes-container, .nes-btn,
- * .nes-icon) win over generic Tailwind base styles. */
-@import "nes.css/css/nes.min.css";
+/* Editorial "forensic case file" theme tokens (mirror lib/verdict-ui.tsx +
+ * scripts/make-demo-video editorial.ts). Exposed as Tailwind utilities for the
+ * surfaces still styled with classes (/codex, DashboardNav): bg-paper, text-ink,
+ * border-hairline, text-accent, font-serif/grotesk/mono, etc. The hexes are the
+ * canonical VERDICT mapping — keep in sync with lib/verdict-ui.tsx. */
+@theme {
+  --color-paper: #0e0c10;
+  --color-paper-edge: #060507;
+  --color-surface: #161318;
+  --color-ink: #ece6da;
+  --color-ink-muted: #8c8576;
+  --color-ink-faint: #544f48;
+  --color-hairline: #2b2620;
+  --color-accent: #9b59b6;
+  --color-alert: #d6452f;
+  --color-confirmed: #7fae6e;
+  --color-inferred: #c79a4a;
+  --color-hypothesis: #6f93b8;
 
-/* Pin the body to NES.css's pixel font (Press Start 2P would be
- * the canonical pick; nes.css itself doesn't bundle it, so we
- * stay on the system stack until the sprite-components PR ships
- * the font asset). */
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-grotesk: var(--font-archivo), system-ui, sans-serif;
+  --font-mono: var(--font-jbm), "JetBrains Mono", monospace;
+}
+
+/* Warm-paper base so first paint (and any unstyled fallback) reads as the case
+ * file, never a white flash. JetBrains Mono is the base; serif/grotesk are
+ * applied per-element via the design tokens. */
 body {
-  font-family: "Press Start 2P", system-ui, -apple-system, sans-serif;
-  background: #fff;
+  background: #0e0c10;
+  color: #ece6da;
+  font-family: var(--font-jbm), "JetBrains Mono", "Courier New", monospace;
+}
+
+/* Subtle editorial reveal for page containers / panels. Mirrors the demo's
+ * fade+rise. Gated behind prefers-reduced-motion. */
+@keyframes verdictReveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.verdict-reveal {
+  animation: verdictReveal 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verdict-reveal {
+    animation: none;
+  }
 }

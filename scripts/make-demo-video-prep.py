@@ -40,9 +40,9 @@ class Beat:
 BEATS: list[Beat] = [
     Beat(1, "Cold open + problem framing", 25,
          "Modern attackers move at machine speed — the median ransomware dwell time is now "
-         "measured in hours, not days. The SANS Find Evil hackathon asks: can an agent reproduce "
-         "a forensic investigator's work fast enough to keep up — and prove what it did. Our "
-         "submission says yes, and gives the analyst a sigstore-backed signature on every "
+         "measured in hours, not days. The question: can an agent reproduce "
+         "a forensic investigator's work fast enough to keep up — and prove what it did. "
+         "VERDICT says yes, and gives the analyst a sigstore-backed signature on every "
          "finding, verifiable offline."),
     Beat(2, "Architecture", 25,
          "Five trust boundaries. Evidence vault — read-only. SIFT tools as subprocesses, never "
@@ -51,7 +51,7 @@ BEATS: list[Beat] = [
          "cites a tool-call ID; every tool call hashes its output. There is no execute_shell "
          "tool — by design."),
     Beat(3, "Single-host investigation", 45,
-         "One command. Tesla-mode. The agent opens the case, hashes the image, walks the active "
+         "One command, fully autonomous. The agent opens the case, hashes the image, walks the active "
          "process list with Volatility pslist, then signature-scans EPROCESS pool memory with "
          "psscan — and the two disagree. That divergence can be a DKOM rootkit signature, but on "
          "this image the agent spots the acquisition-smear tells (core OS singletons recovered only "
@@ -69,7 +69,7 @@ BEATS: list[Beat] = [
          "investigation end, we Merkle-tree the chain and sign the root with sigstore, whose "
          "Rekor transparency log records the signature as an independent third party. This "
          "supports a Federal Rule of Evidence 902-14 self-authenticating-evidence claim. A judge "
-         "in a literal court can verify this submission's integrity from the manifest alone, "
+         "in a literal court can verify this case's integrity from the manifest alone, "
          "three years from now, without trusting us."),
     Beat(6, "22-host fleet investigation", 50,
          "Single-host is the demo; fleet investigation is the use case. Twenty-two memory "
@@ -83,12 +83,11 @@ BEATS: list[Beat] = [
          "an SCCM push. Four different hosts ran rubyw — Ruby for Windows isn't enterprise "
          "tooling. These are correlations no single-host investigation would surface. The agent "
          "surfaces them as HYPOTHESIS and names the threshold. The analyst confirms."),
-    Beat(8, "Tiebreaker — self-score chip", 20,
-         "The agent self-scores against the SANS rubric and writes that grade into the audit "
-         "chain — before manifest_finalize. So the score itself is signed by the same sigstore "
-         "signature and rooted in the same Merkle tree as every other finding. Judges grep one "
-         "line, see the agent's own assessment of how it did, and know we couldn't have revised "
-         "it after the fact."),
+    Beat(8, "Signed verdict", 20,
+         "When the investigation closes, VERDICT writes a signed verdict — the finding, its "
+         "confidence, the MITRE technique, and the tool calls that prove it — sealed in the same "
+         "Merkle tree as the audit chain and signed by sigstore. One file, verifiable offline, "
+         "years from now, without trusting us."),
     Beat(9, "Outro — repo URL + license", 10,
          "Source is open. License is Apache-2.0. Build is green. Cut evidence in. "
          "Get a signed verdict out. Thank you."),

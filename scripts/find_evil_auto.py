@@ -14,16 +14,12 @@ What it does:
        (Pool A = persistence-biased framing; Pool B = exfil/general-malware framing)
     6. detect_contradictions surfaces disagreements
     7. judge_findings + correlate_findings (SOUL.md ≥2 rule)
-    8. _emit_judge_selfscore writes 6 kind=judge_selfscore audit records,
-       one per SANS Find Evil! 2026 rubric criterion (see
-       agent-config/JUDGING.md). Lands in the chain BEFORE finalize so
-       the score is part of the cryptographic attestation.
-    9. manifest_finalize: Merkle tree + sigstore signature
-   10. Writes verdict.json + (optional) PDF report (the report
-       surfaces the selfscore table from the audit chain).
+    8. manifest_finalize: Merkle tree + sigstore signature
+    9. Writes verdict.json + (optional) PDF report (the report
+       surfaces the findings, ATT&CK coverage, and audit chain).
 
-This is the "Tesla mode" entrypoint — point at evidence, get a signed
-verdict. No interactive Claude Code session required.
+This is the headless investigation engine behind `scripts/verdict` — point
+at evidence, get a signed verdict. No interactive Claude Code session required.
 
 Designed to run as a one-shot from the Windows host. Re-runs are
 idempotent on a fresh case_id; the same evidence file produces the
@@ -41,6 +37,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import threading
@@ -57,7 +54,6 @@ try:
         RAW_DISK_EXTS as _PLAYBOOK_RAW_DISK_EXTS,
         REGISTRY_HIVE_NAMES as _PLAYBOOK_REGISTRY_HIVE_NAMES,
         YARA_TARGET_EXTS as _PLAYBOOK_YARA_TARGET_EXTS,
-        JUDGE_SELFSCORE_CRITERIA as _PLAYBOOK_JUDGE_SELFSCORE_CRITERIA,
         classify_artifact_path as _playbook_classify,
         detect_evidence_type as _playbook_detect,
     )
@@ -84,6 +80,13 @@ RUST_TOOL_ENV = {
     "VOLATILITY_BIN": "/home/sansforensics/.local/bin/vol",
     "HAYABUSA_BIN": "/home/sansforensics/.local/bin/hayabusa",
     "VELOCIRAPTOR_BIN": "/home/sansforensics/.local/bin/velociraptor",
+    # disk_mount loop-mounts the image read-only in the guest, which needs root.
+    # Route mount through a passwordless-sudo wrapper (auto_unmount in disk.rs
+    # already sudo-falls-back; auto_mount does not). Override the wrapper path
+    # via FIND_EVIL_GUEST_MOUNT_BIN. SIFT-only — local mode uses _local_rust_env.
+    "FINDEVIL_MOUNT_BIN": os.environ.get(
+        "FIND_EVIL_GUEST_MOUNT_BIN", "/home/sansforensics/sudo-mount"
+    ),
 }
 MEMORY_YARA_RULES = os.environ.get("FIND_EVIL_MEMORY_YARA_RULES")
 DISK_YARA_RULES = os.environ.get("FIND_EVIL_DISK_YARA_RULES")
@@ -106,6 +109,58 @@ PY_MCP_LAUNCHER = (
     f"cd {AGENT_MCP_DIR_Q} && exec "
     "/home/sansforensics/.local/bin/uv run python -m findevil_agent_mcp.server"
 )
+
+# ---------------------------------------------------------------------------
+# Local mode (no SIFT VM): run both MCP servers on the host over stdio.
+# Toggled by --local / FIND_EVIL_LOCAL=1. The host is Linux and every remote
+# command this orchestrator issues is plain POSIX, so ssh_run() runs it
+# locally and the case dir lives under the repo's tmp/auto-runs/<case>/ — an
+# allow-listed root the live dashboard can tail in real time (no SCP delay).
+# ---------------------------------------------------------------------------
+
+LOCAL_MODE = os.environ.get("FIND_EVIL_LOCAL") == "1"
+LOCAL_RUST_BIN = str(REPO_ROOT / "target" / "release" / "findevil-mcp")
+LOCAL_AGENT_MCP_DIR = str(REPO_ROOT / "services" / "agent_mcp")
+LOCAL_RUNS_DIR = REPO_ROOT / "tmp" / "auto-runs"
+
+
+def _local_rust_env() -> dict[str, str]:
+    """Resolve host DFIR binaries the way the Rust server does: honor an
+    explicit ``$<TOOL>_BIN`` else fall back to PATH. Only emit a var when the
+    binary actually resolves — a missing tool degrades to a clean
+    ``BinaryNotFound`` the engine pivots on, never a bogus path."""
+    env: dict[str, str] = {}
+    for var, name in (
+        ("VOLATILITY_BIN", "vol"),
+        ("HAYABUSA_BIN", "hayabusa"),
+        ("VELOCIRAPTOR_BIN", "velociraptor"),
+    ):
+        resolved = os.environ.get(var) or shutil.which(name)
+        if resolved:
+            env[var] = resolved
+    return env
+
+
+def _local_rust_command() -> str:
+    prefix = " ".join(f"{k}={shlex.quote(v)}" for k, v in _local_rust_env().items())
+    return (f"{prefix} " if prefix else "") + f"exec {shlex.quote(LOCAL_RUST_BIN)}"
+
+
+def _local_py_command() -> str:
+    uv = shutil.which("uv") or "uv"
+    return (
+        f"cd {shlex.quote(LOCAL_AGENT_MCP_DIR)} && "
+        f"exec {shlex.quote(uv)} run python -m findevil_agent_mcp.server"
+    )
+
+
+def rust_replay_command() -> list[str]:
+    """The argv the Python MCP uses to re-spawn the Rust server for verifier
+    replay. Mode-aware: host binary + host env locally, guest paths in VM
+    mode (the immutable ``RUST_REPLAY_COMMAND``)."""
+    if LOCAL_MODE:
+        return ["env", *(f"{k}={v}" for k, v in _local_rust_env().items()), LOCAL_RUST_BIN]
+    return RUST_REPLAY_COMMAND
 
 
 # ---------------------------------------------------------------------------
@@ -216,6 +271,27 @@ class SshMcpClient:
             self.proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             self.proc.kill()
+
+
+class StdioMcpClient(SshMcpClient):
+    """Local-mode MCP client: spawns the server on the host over stdio via
+    ``bash -lc <command>`` instead of tunnelling through ssh. Reuses
+    SshMcpClient's JSON-RPC framing / reader thread verbatim."""
+
+    def __init__(self, local_command: str, label: str) -> None:
+        self.label = label
+        self.proc = subprocess.Popen(
+            ["bash", "-lc", local_command],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            bufsize=1,
+        )
+        self._next_id = 1
+        self._q: Queue[str | None] = Queue()
+        threading.Thread(target=self._reader, daemon=True).start()
 
 
 # ---------------------------------------------------------------------------
@@ -406,7 +482,7 @@ def _safe_zip_member_path(member_name: str) -> str | None:
 
 
 def classify_velociraptor_zip_member(member_name: str) -> dict[str, Any]:
-    """Classify a zip member and mark whether Tesla mode can safely extract it."""
+    """Classify a zip member and mark whether the engine can safely extract it."""
     safe_member = _safe_zip_member_path(member_name)
     if safe_member is None:
         return {
@@ -858,6 +934,16 @@ def inventory_supported_entries(inventory: dict[str, Any]) -> list[dict[str, Any
 
 
 def ssh_run(remote_command: str, timeout: int = 600) -> tuple[int, str, str]:
+    if LOCAL_MODE:
+        # Local mode: the host IS the analysis box. Every command this
+        # orchestrator issues is plain POSIX, so run it locally.
+        r = subprocess.run(
+            ["bash", "-lc", remote_command],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return r.returncode, r.stdout, r.stderr
     r = subprocess.run(
         [
             "ssh",
@@ -2025,7 +2111,19 @@ def build_report_qa_signoff(
             *(str(item).lower() for item in customer_visible_text or []),
         ]
     )
-    forbidden_hits = [term for term in forbidden_terms if term and term in report_text]
+    # Match each forbidden exoneration term as a prose word/phrase, not as a
+    # substring buried inside a machine identifier or filename. A legitimate
+    # log-clearing finding (T1070.001) otherwise trips the check: the finding_id
+    # "f-A-evtx-audit-log-cleared" and the evidence filename
+    # "..._log_cleared.evtx" both contain the substring "cleared". Treating word
+    # chars AND hyphens as token-internal means hyphen/underscore-joined
+    # identifiers don't match, while real prose ("host is clean", "evidence is
+    # absent", "customer-ready") still does.
+    forbidden_hits = [
+        term
+        for term in forbidden_terms
+        if term and re.search(rf"(?<![\w-]){re.escape(term)}(?![\w-])", report_text)
+    ]
     if forbidden_hits:
         _qa_check(
             checks,
@@ -3233,16 +3331,38 @@ class Investigation:
         with_report: bool = True,
         signer: str = "stub",
         force_fresh_replay: bool = False,
+        case_id: str | None = None,
     ) -> None:
         self.evidence = evidence_path
+        # In local mode, pin the evidence to an absolute path so every consumer
+        # resolves it identically regardless of cwd. The verifier's fresh replay
+        # spawns findevil-mcp from the agent-MCP server's cwd (services/agent_mcp,
+        # per _local_py_command), where a *relative* evidence path 404s with
+        # "image not found" (-32602) even though the original run — launched from
+        # the repo root — resolved it fine. That mismatch was rejecting every
+        # finding and dead-ending runs at INDETERMINATE/blocked. SIFT mode keeps
+        # the VM-side path untouched (it doesn't exist on the host FS).
+        if LOCAL_MODE:
+            try:
+                local_evidence = Path(evidence_path)
+                if local_evidence.exists():
+                    self.evidence = str(local_evidence.resolve())
+            except OSError:
+                pass
         self.unattended = unattended
         self.with_report = with_report
         self.signer = signer
         self.force_fresh_replay = force_fresh_replay
-        self.case_id = f"auto-{uuid.uuid4()}"
+        # The launcher can pin the case_id so it can deep-link the dashboard to
+        # the case dir BEFORE the run starts (live watching). Else a fresh uuid.
+        self.case_id = case_id or f"auto-{uuid.uuid4()}"
         self.run_id = f"auto-{int(time.time())}"
         self.started_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        self.case_dir = f"{GUEST_REPO}/tmp/{self.case_id}"
+        self.case_dir = (
+            str(LOCAL_RUNS_DIR / self.case_id)
+            if LOCAL_MODE
+            else f"{GUEST_REPO}/tmp/{self.case_id}"
+        )
         self.audit_path = f"{self.case_dir}/audit.jsonl"
         self.manifest_path = f"{self.case_dir}/run.manifest.json"
         self.verdict_path = f"{self.case_dir}/verdict.json"
@@ -3290,6 +3410,15 @@ class Investigation:
                 "payload": payload,
             },
         )
+        # Optional demo pacing: FIND_EVIL_PACE=<seconds> spaces audit appends so
+        # the live dashboard's stage rail / timeline build visibly even when the
+        # tools (cached) return instantly. No effect on real runs (unset).
+        pace = os.environ.get("FIND_EVIL_PACE")
+        if pace:
+            try:
+                time.sleep(float(pace))
+            except ValueError:
+                pass
 
     def _record_tool(
         self,
@@ -3576,6 +3705,9 @@ class Investigation:
             {
                 "case_id": self.handle["id"],
                 "size_bytes": self.handle["image_size_bytes"],
+                # Authoritative evidence type for the dashboard's evidence
+                # banner (UI otherwise guesses from the file extension).
+                "evidence_type": detect_evidence_type(self.evidence),
             },
             arguments=case_open_args,
         )
@@ -5152,7 +5284,7 @@ class Investigation:
             verify_args = {
                 "finding": finding,
                 "tool_call_index": tool_call_index,
-                "findevil_mcp_command": RUST_REPLAY_COMMAND,
+                "findevil_mcp_command": rust_replay_command(),
             }
             if self.force_fresh_replay:
                 verify_args["force_fresh_replay"] = True
@@ -5350,117 +5482,6 @@ class Investigation:
 
         merged = self._embed_verifier_replays(merged)
         return merged, len(contras), kept, downgraded
-
-    def _emit_judge_selfscore(
-        self,
-        py: SshMcpClient,
-        merged: list[dict[str, Any]],
-        contras: int,
-        kept: int,
-        downgraded: int,
-    ) -> None:
-        """Walk the audit trail + findings and emit six audit_append
-        records with kind="judge_selfscore", one per SANS Find Evil!
-        2026 rubric criterion (see agent-config/JUDGING.md §"End-of-
-        investigation self-check"). Judges grep `kind=judge_selfscore`
-        to find the agent's own assessment alongside their own scoring.
-
-        The records land in the audit chain BEFORE manifest_finalize
-        so the self-score itself is part of the cryptographic
-        attestation — the agent doesn't get to revise it after seeing
-        the score it actually got.
-        """
-        scored_findings = list(merged)
-
-        # Criterion 1: tool failures and corrections.
-        failures = sum(
-            1
-            for tc in self.tool_calls
-            if "error" in tc or tc.get("output_hash") in {None, ""}
-        )
-
-        # Criterion 2: confidence distribution across the final findings.
-        n = max(1, len(scored_findings))
-        c_count = sum(1 for f in scored_findings if f.get("confidence") == "CONFIRMED")
-        i_count = sum(1 for f in scored_findings if f.get("confidence") == "INFERRED")
-        h_count = sum(1 for f in scored_findings if f.get("confidence") == "HYPOTHESIS")
-
-        # Criterion 3: artifact classes touched (one per tool name we ran).
-        artifact_class_for_tool = {
-            "vol_pslist": "memory",
-            "vol_psscan": "memory",
-            "vol_psxview": "memory",
-            "vol_malfind": "memory",
-            "evtx_query": "evtx",
-            "hayabusa_scan": "evtx",
-            "mft_timeline": "mft",
-            "usnjrnl_query": "usnjrnl",
-            "registry_query": "registry",
-            "prefetch_parse": "prefetch",
-            "yara_scan": "yara",
-            "vel_collect": "velociraptor",
-        }
-        classes_touched = sorted(
-            {
-                artifact_class_for_tool[tc["tool"]]
-                for tc in self.tool_calls
-                if tc.get("tool") in artifact_class_for_tool
-            }
-        )
-        # Crossing >=2 artifact classes is the SOUL.md upgrade rule.
-        # The correlator already enforced it on `merged`; we don't get
-        # the per-finding outcome list back here, so use the kept count
-        # as a proxy only when the run actually touched >=2 classes.
-        cross_class_findings = kept if len(classes_touched) >= 2 else 0
-
-        # Criterion 4: typed-surface validation rejections. We catch tool
-        # errors as `_error` keys on tool_calls; rejection reasons live
-        # in the original error message.
-        rejected = sum(1 for tc in self.tool_calls if tc.get("rejected"))
-
-        # Criterion 5: tool_call_id citation rate on findings. The verifier
-        # vetoes uncited findings, but we record the rate honestly.
-        cited = sum(1 for f in scored_findings if f.get("tool_call_id"))
-
-        # Criterion 6: reproducibility — every tool call has an
-        # output_hash AND the manifest is signed (signer != "stub" in a
-        # production setting; we record the actual signer).
-        all_have_hashes = all(tc.get("output_hash") for tc in self.tool_calls)
-        reproducible = "yes" if all_have_hashes and self.tool_calls else "no"
-
-        answers = [
-            f"failures={failures} corrections=0",
-            f"C={c_count * 100 // n}% I={i_count * 100 // n}% "
-            f"H={h_count * 100 // n}% (n={len(scored_findings)})",
-            f"classes={classes_touched} crossed={cross_class_findings}",
-            f"rejected={rejected} reasons=[]",
-            f"cited={cited}/{len(scored_findings)}",
-            f"reproducible={reproducible}",
-        ]
-        criteria_source = (
-            _PLAYBOOK_JUDGE_SELFSCORE_CRITERIA
-            if _PLAYBOOK_AVAILABLE
-            else [{"criterion": i, "question": q} for i, q in enumerate([
-                "Did any tool call fail this run?",
-                "Confidence distribution",
-                "Artifact classes touched + cross-class corroboration",
-                "Typed-surface rejections",
-                "tool_call_id citation rate",
-                "Reproducible from manifest alone?",
-            ], 1)]
-        )
-        records = [
-            (c["criterion"], c["question"], answers[c["criterion"] - 1])
-            for c in criteria_source
-        ]
-        print("\n=== judge self-score ===")
-        for criterion, question, answer in records:
-            print(f"  #{criterion} {answer}")
-            self._audit(
-                py,
-                "judge_selfscore",
-                {"criterion": criterion, "question": question, "answer": answer},
-            )
 
     def _build_report_metadata(
         self, merged: list[dict[str, Any]], verdict: str
@@ -6065,27 +6086,32 @@ class Investigation:
             "cryptographic_attestation": cryptographic_attestation,
             "agent": "find-evil-auto MVP",
         }
-        # Write inside the VM
         verdict_json = json.dumps(verdict_obj, indent=2, sort_keys=True)
         verdict_bytes = verdict_json.encode("utf-8")
-        # Use a heredoc via SSH to avoid quoting hell
-        proc = subprocess.run(
-            [
-                "ssh",
-                "-i",
-                SSH_KEY,
-                "-o",
-                "BatchMode=yes",
-                f"{GUEST_USER}@{GUEST_IP}",
-                f"cat > {shlex.quote(self.verdict_path)}",
-            ],
-            input=verdict_bytes,
-            capture_output=True,
-            timeout=30,
-        )
-        if proc.returncode != 0:
-            stderr = proc.stderr.decode("utf-8", errors="replace")
-            print(f"  WARN: failed to write verdict.json: {stderr}")
+        if LOCAL_MODE:
+            # Local mode: write straight to the host case dir.
+            verdict_file = Path(self.verdict_path)
+            verdict_file.parent.mkdir(parents=True, exist_ok=True)
+            verdict_file.write_bytes(verdict_bytes)
+        else:
+            # SIFT mode: pipe into the VM via SSH cat to avoid quoting hell.
+            proc = subprocess.run(
+                [
+                    "ssh",
+                    "-i",
+                    SSH_KEY,
+                    "-o",
+                    "BatchMode=yes",
+                    f"{GUEST_USER}@{GUEST_IP}",
+                    f"cat > {shlex.quote(self.verdict_path)}",
+                ],
+                input=verdict_bytes,
+                capture_output=True,
+                timeout=30,
+            )
+            if proc.returncode != 0:
+                stderr = proc.stderr.decode("utf-8", errors="replace")
+                print(f"  WARN: failed to write verdict.json: {stderr}")
         print(f"  verdict          = {verdict}")
         print(f"  verdict_path     = {self.verdict_path}")
         return verdict_json
@@ -6093,34 +6119,44 @@ class Investigation:
     def fetch_artifacts_to_host(self) -> Path:
         """Pull manifest + audit + verdict from VM to local host for the
         report-generator step."""
-        local_dir = (
-            Path(__file__).resolve().parent.parent / "tmp" / "auto-runs" / self.case_id
-        )
-        local_dir.mkdir(parents=True, exist_ok=True)
-        self.local_run_dir = local_dir
-        for remote, name in [
-            (self.audit_path, "audit.jsonl"),
-            (self.manifest_path, "run.manifest.json"),
-            (self.verdict_path, "verdict.json"),
-        ]:
-            proc = subprocess.run(
-                [
-                    "scp",
-                    "-i",
-                    SSH_KEY,
-                    "-o",
-                    "BatchMode=yes",
-                    f"{GUEST_USER}@{GUEST_IP}:{remote}",
-                    str(local_dir / name),
-                ],
-                capture_output=True,
-                timeout=30,
+        if LOCAL_MODE:
+            # Local mode: the case dir IS a host path; the local MCP servers
+            # already wrote audit/manifest/verdict there. No SCP needed.
+            local_dir = Path(self.case_dir)
+            local_dir.mkdir(parents=True, exist_ok=True)
+            self.local_run_dir = local_dir
+        else:
+            local_dir = (
+                Path(__file__).resolve().parent.parent
+                / "tmp"
+                / "auto-runs"
+                / self.case_id
             )
-            if proc.returncode != 0:
-                stderr = proc.stderr.decode("utf-8", errors="replace")
-                raise RuntimeError(
-                    f"failed to fetch {name} from SIFT VM: {stderr[:300]}"
+            local_dir.mkdir(parents=True, exist_ok=True)
+            self.local_run_dir = local_dir
+            for remote, name in [
+                (self.audit_path, "audit.jsonl"),
+                (self.manifest_path, "run.manifest.json"),
+                (self.verdict_path, "verdict.json"),
+            ]:
+                proc = subprocess.run(
+                    [
+                        "scp",
+                        "-i",
+                        SSH_KEY,
+                        "-o",
+                        "BatchMode=yes",
+                        f"{GUEST_USER}@{GUEST_IP}:{remote}",
+                        str(local_dir / name),
+                    ],
+                    capture_output=True,
+                    timeout=30,
                 )
+                if proc.returncode != 0:
+                    stderr = proc.stderr.decode("utf-8", errors="replace")
+                    raise RuntimeError(
+                        f"failed to fetch {name} from SIFT VM: {stderr[:300]}"
+                    )
         # Also persist psscan output if we have it (for the report)
         if "psscan_json" in self.local_artifacts:
             (local_dir / "psscan.json").write_text(
@@ -6320,8 +6356,12 @@ class Investigation:
         print(f"  evidence_type   = {etype}")
         print(f"  signer          = {self.signer}")
 
-        rust = SshMcpClient(PY_LAUNCHER, "rust-mcp")
-        py = SshMcpClient(PY_MCP_LAUNCHER, "py-mcp")
+        if LOCAL_MODE:
+            rust = StdioMcpClient(_local_rust_command(), "rust-mcp")
+            py = StdioMcpClient(_local_py_command(), "py-mcp")
+        else:
+            rust = SshMcpClient(PY_LAUNCHER, "rust-mcp")
+            py = SshMcpClient(PY_MCP_LAUNCHER, "py-mcp")
         try:
             # Initialize handshakes
             for client in (rust, py):
@@ -6368,13 +6408,6 @@ class Investigation:
 
             # Phase 2: Reasoning
             merged, contras, kept, downgraded = self.reason(py)
-
-            # Phase 2b: Self-score against the SANS Find Evil! 2026
-            # rubric. Lands in the audit chain BEFORE manifest_finalize
-            # so the score itself is part of the cryptographic
-            # attestation — the agent doesn't get to revise after the
-            # fact. See agent-config/JUDGING.md §End-of-investigation.
-            self._emit_judge_selfscore(py, merged, contras, kept, downgraded)
             verdict = self.compute_verdict(merged)
             report_metadata = self._build_report_metadata(merged, verdict)
             self._emit_report_qa(py, report_metadata["report_qa"])
@@ -6484,7 +6517,8 @@ class Investigation:
                 print("  release_blockers:")
                 for blocker in final_release_gate.get("release_blockers", [])[:5]:
                     print(f"    - {blocker}")
-            print(f"  Inside VM      : {self.case_dir}/")
+            if not LOCAL_MODE:
+                print(f"  Inside VM      : {self.case_dir}/")
             print(f"  On host (local): {local_dir}")
             return {
                 "case_id": self.case_id,
@@ -6510,6 +6544,24 @@ def preflight_check() -> None:
     BEFORE spawning the orchestrator. A judge running this script
     without a configured SIFT VM will see a clear error pointing at
     scripts/sift-vm-bootstrap.sh, not a Python stack trace."""
+    if LOCAL_MODE:
+        missing: list[str] = []
+        if not Path(LOCAL_RUST_BIN).is_file():
+            missing.append(
+                f"Rust MCP binary not built: {LOCAL_RUST_BIN}\n"
+                "      fix: cargo build --release -p findevil-mcp"
+            )
+        if not Path(LOCAL_AGENT_MCP_DIR).is_dir():
+            missing.append(f"Python agent_mcp dir missing: {LOCAL_AGENT_MCP_DIR}")
+        if not shutil.which("uv"):
+            missing.append("uv not on PATH (fix: pip install uv)")
+        if missing:
+            print(
+                "ERROR: local-mode pre-flight failed:\n  - " + "\n  - ".join(missing),
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        return
     if not Path(SSH_KEY).is_file():
         print(
             f"ERROR: SSH key not found at {SSH_KEY}\n\n"
@@ -6636,6 +6688,13 @@ def main() -> int:
         help="Signer passed to manifest_finalize. Use sigstore for customer-release candidates; stub is dev/offline only.",
     )
     p.add_argument(
+        "--local",
+        action="store_true",
+        help="Run both MCP servers on the host over stdio (no SIFT VM / SSH). "
+        "Writes the case under tmp/auto-runs/<case>/ so the live dashboard can "
+        "tail it in real time. Requires host DFIR tools — run scripts/doctor.sh.",
+    )
+    p.add_argument(
         "--skip-preflight",
         action="store_true",
         help="Skip SSH/VM pre-flight checks. Useful when the orchestrator "
@@ -6652,7 +6711,19 @@ def main() -> int:
         metavar="PATH",
         help="Write a machine-readable JSON run summary to PATH without changing human stdout.",
     )
+    p.add_argument(
+        "--case-id",
+        metavar="ID",
+        default=None,
+        help="Pin the case_id (default: auto-<uuid>). Local mode writes to "
+        "tmp/auto-runs/<case-id>/ so a launcher can deep-link the dashboard "
+        "before the run starts.",
+    )
     args = p.parse_args()
+
+    global LOCAL_MODE
+    if args.local or os.environ.get("FIND_EVIL_LOCAL") == "1":
+        LOCAL_MODE = True
 
     try:
         evidence_path = resolve_evidence_path(args.evidence_path)
@@ -6669,6 +6740,7 @@ def main() -> int:
         with_report=not args.no_report,
         signer=args.signer,
         force_fresh_replay=args.force_fresh_replay,
+        case_id=args.case_id,
     )
 
     if not args.skip_preflight:

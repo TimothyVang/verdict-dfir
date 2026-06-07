@@ -22,7 +22,7 @@ Find Evil! automates repeatable Windows host DFIR mechanics for memory captures,
 
 3. **Analysis of Competing Hypotheses as agent topology.** Two pools investigate the same evidence with opposing priors (persistence-biased vs. exfil-biased). Disagreements emit as `kind=contradiction` audit records *before* the judge merges — surfaced as first-class output, not hidden in consensus. Heuer's 1970s intelligence-analysis framework applied as live agent architecture.
 
-4. **Self-score inside the cryptographic attestation.** The agent emits 6 `kind=judge_selfscore` audit records (one per SANS rubric criterion) *before* `manifest_finalize`. Because they land before the Merkle tree closes, the agent's own self-assessment is part of the signed manifest — judges can `grep '"kind":"judge_selfscore"' audit.jsonl` and see the agent's own score.
+4. **Pre-submission self-score, separate from the sealed chain.** A standalone maintainer tool, `scripts/self-score.py`, grades a *completed* run against the six SANS rubric criteria before submission. It reads the case's `audit.jsonl`, reconstructs the criterion signals, and writes `<case>/self-score.json` — it does **not** emit records into the investigation pipeline or touch the sealed audit chain. The self-score is a maintainer QA artifact, not part of the signed manifest. (The Pool A/B `judge_findings` MERGE agent is unrelated and unaffected.)
 
 ## How it's built
 
@@ -64,13 +64,17 @@ curl -fsSL https://raw.githubusercontent.com/<OWNER>/<REPO>/master/scripts/insta
 ## Run
 
 ```bash
-# Open an investigation. .mcp.json auto-spawns both MCP servers
+# THE ONE COMMAND: preflight → investigate → open the live dashboard →
+# signed verdict + report. .mcp.json auto-spawns both MCP servers
 # (findevil-mcp + findevil-agent-mcp) over stdio.
-scripts/find-evil
-# … or equivalently from this repo's root:
-claude
+scripts/verdict fixtures/nist-hacking-case/SCHARDT.001
 
-# Then prompt: "investigate fixtures/nist-hacking-case/SCHARDT.001"
+# Flags: --sift (run DFIR tools in the SANS SIFT VM), --no-dashboard,
+#        --skip-build, --dry-run, --run-summary <path>.
+
+# Interactive equivalent — open Claude Code from this repo's root:
+claude
+# … then prompt: "investigate fixtures/nist-hacking-case/SCHARDT.001"
 # The agent calls case_open → fork Pool A/B subagents → run DFIR tools →
 # detect_contradictions → judge → correlate → manifest_finalize.
 
@@ -79,7 +83,7 @@ claude
 # Claude Code, ChatGPT) — no network, no third-party servers.
 ```
 
-Headless single-shot: `bash scripts/find-evil-auto <evidence-path> --unattended`. Add `--run-summary <path>` to write a machine-readable JSON pointer to the run directory, artifact paths, report QA, release-gate/expert-signoff state, readiness state, blockers, and warnings. Multi-host fleet: `python scripts/fleet_investigate.py && python scripts/fleet_correlate.py && python scripts/render_fleet_report.py`.
+`scripts/verdict` calls the internal headless engine (`scripts/find-evil-auto`) under the hood; `find-evil-run` and `find-evil-live` are deprecated shims that forward to `verdict`, and `find-evil-sift` is the SIFT-VM helper. Add `--run-summary <path>` to write a machine-readable JSON pointer to the run directory, artifact paths, report QA, release-gate/expert-signoff state, readiness state, blockers, and warnings. Multi-host fleet: `python scripts/fleet_investigate.py && python scripts/fleet_correlate.py && python scripts/render_fleet_report.py`.
 
 For expert-review packaging on native Windows, run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -EvidencePath <path-inside-sift-vm> -RunL1Docker`. It writes `readiness-summary.json`, `readiness-packet-manifest.json`, and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`. Fixed `-RunId` reruns refresh generated packet contents and may use a timestamped local-build child run. `READY_FOR_EXPERT_REVIEW` means human expert review can begin; automation does not mark customer release ready.
 

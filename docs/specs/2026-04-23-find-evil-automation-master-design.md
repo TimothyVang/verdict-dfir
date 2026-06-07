@@ -1,6 +1,6 @@
 # Find Evil! — Automation Master Design (v1)
 
-> **Status: SHIPPED.** The 4-subsystem decomposition described here (Sandbox, Build Swarm, Product, Orchestration Glue) all exist and CI is green. Subsequent amendments A1, A2, A3, A5 modified what's actually built — read those after this. A4 adds a future-deployment mode (not on the SANS critical path).
+> **Status: SHIPPED, partially superseded.** The 4-subsystem decomposition described here (Sandbox, Build Swarm, Product, Orchestration Glue) was built and CI was green. **Amendment A6 (2026-06-07) removed the Build Swarm subsystem entirely** — the decomposition is now 3 subsystems (Sandbox, Product, Orchestration Glue). Treat all "Build Swarm" content below as historical. Subsequent amendments A1, A2, A3, A5 modified what's actually built — read those after this. A4 adds a future-deployment mode (not on the SANS critical path).
 
 **Date:** 2026-04-23
 **Submission deadline:** 2026-06-15 22:45 CDT (53 days out)

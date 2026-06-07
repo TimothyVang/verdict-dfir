@@ -1,7 +1,7 @@
 // Dev/QA debug page: subscribe to /api/audit?case=<path> SSE stream
-// from the browser and dump each `audit_line` event as a small NES.css
-// card. This remains the raw-events QA view; the main dashboard renders
-// role-state cards from the same stream.
+// from the browser and dump each `audit_line` event as a small editorial
+// case-file card. This remains the raw-events QA view; the main dashboard
+// renders role-state cards from the same stream.
 //
 // Importing the AuditLine type from `@/lib/audit-tail` would drag the
 // server-only `node:fs` + chokidar imports into the client bundle, so
@@ -13,6 +13,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DashboardNav } from "@/components/DashboardNav";
+import {
+  VERDICT,
+  MONO,
+  GROTESK,
+  RADIUS,
+  Surface,
+  SectionHeading,
+  confidenceColor,
+} from "@/lib/verdict-ui";
 
 interface AuditLine {
   seq: number;
@@ -118,106 +127,176 @@ export default function DebugPage() {
 
   const dotColor =
     conn === "live"
-      ? "#22c55e"
+      ? VERDICT.confirmed
       : conn === "connecting"
-        ? "#eab308"
-        : "#ef4444";
+        ? VERDICT.inferred
+        : VERDICT.alertRed;
+
+  // Editorial buttons share a pill shape; only the accent color differs.
+  const buttonBase = {
+    borderRadius: RADIUS.pill,
+    padding: "10px 18px",
+    fontFamily: MONO,
+    fontWeight: 700,
+    cursor: "pointer",
+  } as const;
+
+  const connectButtonStyle: React.CSSProperties = {
+    ...buttonBase,
+    background: `${VERDICT.accentPurple}26`,
+    border: `1px solid ${VERDICT.accentPurple}`,
+    color: VERDICT.accentPurple,
+  };
+
+  const disconnectButtonStyle: React.CSSProperties = {
+    ...buttonBase,
+    background: `${VERDICT.alertRed}26`,
+    border: `1px solid ${VERDICT.alertRed}`,
+    color: VERDICT.alertRed,
+  };
+
+  const clearButtonStyle: React.CSSProperties = {
+    ...buttonBase,
+    background: `${VERDICT.muted}26`,
+    border: `1px solid ${VERDICT.muted}`,
+    color: VERDICT.muted,
+    cursor: events.length === 0 ? "not-allowed" : "pointer",
+    opacity: events.length === 0 ? 0.5 : 1,
+  };
 
   return (
     <main className="min-h-screen overflow-x-hidden p-4 md:p-8">
       <DashboardNav active="debug" />
-      <div className="nes-container with-title is-rounded max-w-4xl mx-auto">
-        <p className="title">/debug — audit.jsonl SSE stream viewer</p>
-        <p className="text-sm">
-          Dev/QA tool. Subscribe to <code>/api/audit?case=&lt;path&gt;</code>{" "}
-          and dump each <code>audit_line</code> event raw. The main dashboard
-          renders role-state cards from the same stream; this page keeps a
-          low-level stream check available without <code>curl</code>.
-        </p>
+      <div className="max-w-4xl mx-auto">
+        <Surface>
+          <SectionHeading>RAW AUDIT STREAM</SectionHeading>
+          <p style={{ fontFamily: GROTESK, fontSize: 14, color: VERDICT.muted, lineHeight: 1.6 }}>
+            Dev/QA tool. Subscribe to <code style={{ fontFamily: MONO, color: VERDICT.text }}>/api/audit?case=&lt;path&gt;</code>{" "}
+            and dump each <code style={{ fontFamily: MONO, color: VERDICT.text }}>audit_line</code> event raw. The main dashboard
+            renders role-state cards from the same stream; this page keeps a
+            low-level stream check available without <code style={{ fontFamily: MONO, color: VERDICT.text }}>curl</code>.
+          </p>
 
-        <div className="nes-field mt-6">
-          <label htmlFor="case-path">Case directory (absolute path)</label>
-          <input
-            id="case-path"
-            type="text"
-            className="nes-input"
-            placeholder="absolute path to a case dir containing audit.jsonl"
-            value={casePath}
-            onChange={(e) => setCasePath(e.target.value)}
-            disabled={conn !== "disconnected"}
-          />
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {conn === "disconnected" ? (
-            <button
-              type="button"
-              className="nes-btn is-primary"
-              onClick={connect}
-            >
-              Connect
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="nes-btn is-error"
-              onClick={disconnect}
-            >
-              Disconnect
-            </button>
-          )}
-          <button
-            type="button"
-            className="nes-btn"
-            onClick={clearEvents}
-            disabled={events.length === 0}
-          >
-            Clear ({events.length})
-          </button>
-          <label className="text-sm flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="nes-checkbox"
-              checked={showPayloads}
-              onChange={(e) => setShowPayloads(e.target.checked)}
-            />
-            <span>Show payloads</span>
-          </label>
-          <span className="ml-auto inline-flex items-center gap-2 text-sm">
-            <span
-              aria-label={`stream ${conn}`}
+          <div style={{ marginTop: 24 }}>
+            <label
+              htmlFor="case-path"
               style={{
-                display: "inline-block",
-                width: "0.75rem",
-                height: "0.75rem",
-                borderRadius: "9999px",
-                background: dotColor,
-                boxShadow: `0 0 6px ${dotColor}`,
+                display: "block",
+                fontFamily: GROTESK,
+                fontSize: 13,
+                fontWeight: 600,
+                letterSpacing: 1,
+                color: VERDICT.muted,
+                marginBottom: 8,
+              }}
+            >
+              Case directory (absolute path)
+            </label>
+            <input
+              id="case-path"
+              type="text"
+              placeholder="absolute path to a case dir containing audit.jsonl"
+              value={casePath}
+              onChange={(e) => setCasePath(e.target.value)}
+              disabled={conn !== "disconnected"}
+              style={{
+                background: VERDICT.surfaceInset,
+                border: `1px solid ${VERDICT.border}`,
+                borderRadius: RADIUS.tile,
+                padding: "10px 14px",
+                fontFamily: MONO,
+                fontSize: 14,
+                color: VERDICT.text,
+                width: "100%",
               }}
             />
-            <span>{conn}</span>
-          </span>
-        </div>
-
-        {errorMsg ? (
-          <div className="nes-container is-rounded is-error mt-4">
-            <p className="text-sm">
-              <strong>error:</strong> {errorMsg}
-            </p>
           </div>
-        ) : null}
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {conn === "disconnected" ? (
+              <button type="button" style={connectButtonStyle} onClick={connect}>
+                Connect
+              </button>
+            ) : (
+              <button type="button" style={disconnectButtonStyle} onClick={disconnect}>
+                Disconnect
+              </button>
+            )}
+            <button
+              type="button"
+              style={clearButtonStyle}
+              onClick={clearEvents}
+              disabled={events.length === 0}
+            >
+              Clear ({events.length})
+            </button>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontFamily: GROTESK,
+                fontSize: 14,
+                color: VERDICT.text,
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={showPayloads}
+                onChange={(e) => setShowPayloads(e.target.checked)}
+              />
+              <span>Show payloads</span>
+            </label>
+            <span
+              style={{
+                marginLeft: "auto",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontFamily: MONO,
+                fontSize: 13,
+                color: VERDICT.muted,
+              }}
+            >
+              <span
+                aria-label={`stream ${conn}`}
+                style={{
+                  display: "inline-block",
+                  width: "0.75rem",
+                  height: "0.75rem",
+                  borderRadius: "9999px",
+                  background: dotColor,
+                  boxShadow: `0 0 6px ${dotColor}`,
+                }}
+              />
+              <span>{conn}</span>
+            </span>
+          </div>
+
+          {errorMsg ? (
+            <Surface
+              borderColor={VERDICT.alertRed}
+              style={{ color: VERDICT.alertRed, marginTop: 16, padding: 14 }}
+            >
+              <p style={{ fontFamily: MONO, fontSize: 13, margin: 0 }}>
+                <strong>error:</strong> {errorMsg}
+              </p>
+            </Surface>
+          ) : null}
+        </Surface>
       </div>
 
       <div className="max-w-4xl mx-auto mt-6 space-y-3">
         {events.length === 0 ? (
-          <div className="nes-container is-rounded">
-            <p className="text-sm">
+          <Surface tone="inset" style={{ padding: 14 }}>
+            <p style={{ fontFamily: MONO, fontSize: 13, color: VERDICT.muted, margin: 0 }}>
               No events yet.{" "}
               {conn === "live"
                 ? "Stream is live — waiting for the next audit append."
                 : "Click Connect to start tailing."}
             </p>
-          </div>
+          </Surface>
         ) : (
           events.map((line, idx) => {
             const payloadStr = JSON.stringify(line.payload);
@@ -228,19 +307,40 @@ export default function DebugPage() {
             // Use seq + idx so we don't collide on bookkeeping lines
             // that happen to share a seq (e.g. -1 sentinel).
             const key = `${line.seq}-${idx}-${line.line_hash ?? ""}`;
+            // Color the kind: confidence-bearing payloads map to their
+            // semantic tier; everything else takes the brand accent.
+            const confidence =
+              typeof line.payload?.confidence === "string"
+                ? line.payload.confidence
+                : undefined;
+            const kindColor = confidence
+              ? confidenceColor(confidence)
+              : VERDICT.accentPurple;
             return (
-              <div key={key} className="nes-container is-rounded">
-                <p className="text-sm">
-                  <code>[seq {line.seq}]</code>{" "}
-                  <code>[{line.kind}]</code>{" "}
-                  <code>[{line.ts}]</code>
+              <Surface key={key} tone="inset" style={{ padding: 14 }}>
+                <p style={{ fontFamily: MONO, fontSize: 13, margin: 0, color: VERDICT.muted }}>
+                  <span>[seq {line.seq}]</span>{" "}
+                  <span style={{ color: VERDICT.mutedDark }}>·</span>{" "}
+                  <span style={{ color: kindColor, fontWeight: 700 }}>[{line.kind}]</span>{" "}
+                  <span style={{ color: VERDICT.mutedDark }}>·</span>{" "}
+                  <span>[{line.ts}]</span>
                 </p>
                 {showPayloads ? (
-                  <pre className="mt-2 text-xs whitespace-pre-wrap break-all">
-                    <code>{truncated}</code>
+                  <pre
+                    style={{
+                      fontFamily: MONO,
+                      fontSize: 12,
+                      color: VERDICT.muted,
+                      whiteSpace: "pre-wrap",
+                      margin: 0,
+                      marginTop: 8,
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {truncated}
                   </pre>
                 ) : null}
-              </div>
+              </Surface>
             );
           })
         )}

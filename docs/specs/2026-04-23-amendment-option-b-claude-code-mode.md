@@ -1,6 +1,6 @@
 # Amendment A1 — Option B: Claude Code Subscription Mode
 
-> **Status: SHIPPED.** The Product accepts three credential modes (`CLAUDE_CODE_OAUTH_TOKEN`, interactive `~/.claude/`, `ANTHROPIC_API_KEY`); the build swarm uses the user's subscription via the `claude` CLI. LiteLLM proxy + `services/swarm/budget.py` were never built (per A1). Live wiring lives in `scripts/install.sh` + `services/swarm/findevil_swarm/session_guard.py`.
+> **Status: SHIPPED, swarm specifics superseded by A6.** The Product accepts three credential modes (`CLAUDE_CODE_OAUTH_TOKEN`, interactive `~/.claude/`, `ANTHROPIC_API_KEY`) — that part is live in `scripts/install.sh`. This amendment's primary subject, the **build swarm**, was removed entirely under **Amendment A6 (2026-06-07)**: `services/swarm/` and all swarm wiring no longer exist. Treat the swarm-specific content below (worker credentials, `session_guard.py`, LiteLLM removal) as historical. LiteLLM proxy + `services/swarm/budget.py` were never built (per A1).
 
 **Date:** 2026-04-23
 **Status:** Active — supersedes affected sections of Spec #1 and Spec #2

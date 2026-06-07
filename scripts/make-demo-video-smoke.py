@@ -24,7 +24,7 @@ EXPECTED_COMPONENTS = [
     "HashChainScene.tsx",
     "FleetScene.tsx",
     "ClusterScene.tsx",
-    "SelfScoreScene.tsx",
+    "VerdictScene.tsx",
     "OutroScene.tsx",
     "shared/ChipBadge.tsx",
     "shared/AuditLine.tsx",

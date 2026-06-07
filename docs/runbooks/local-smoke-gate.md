@@ -56,7 +56,6 @@ Exit code 0 = all smokes passed (or skipped); non-zero = at least one failed.
 | 7 | `divergence-smoke` | Active CLAUDE.md divergences not reintroduced in live files |
 | 8 | `path-existence-smoke` | Every backtick-quoted path in operator docs resolves to a real file/dir |
 | 9 | `smoke-regex-tests` | Synthetic +/- cases against audit-smoke regex/helper policies |
-| 10 | `autonomous-loop-smoke` | 8-hour dry-run + empty-queue timing |
 | L | `ruff check .` | Python lint clean (skips if ruff absent) |
 | L | `ruff format --check .` | Python formatter clean (skips if ruff absent) |
 | L | `cargo fmt --all --check` | Rust formatter clean (skips if cargo absent) |

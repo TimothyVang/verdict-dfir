@@ -28,7 +28,7 @@ When the user requests a continuous timed run, such as 8 hours:
 - Do not add product-default MCPs for filesystem, git, browser, Docker, Kubernetes, GitHub, fetch, shell, or any raw-command passthrough.
 - SIFT mode is encoded in `.mcp.json.sift` and launched by `bash scripts/find-evil-sift`; do not rewrite user-level Claude/Codex config unless explicitly asked.
 - `services/agent/` is a library (`findevil_agent`) imported by `services/agent_mcp/`; A2 forbids restoring `graph.py`, `api.py`, `cli.py`, `supervisor.py`, `specialists/`, FastAPI, or LangGraph Product orchestrator code there.
-- Python package names are `findevil_agent`, `findevil_agent_mcp`, and `findevil_swarm`; old `services.*` imports are plan-era drift.
+- Python package names are `findevil_agent` and `findevil_agent_mcp`; old `services.*` imports are plan-era drift.
 - Rust MCP uses a hand-rolled stdio JSON-RPC server in `services/mcp/src/server.rs`; `rmcp` is intentionally not a runtime dependency.
 - `apps/web/` is the only live pnpm workspace package. `apps/mcp-widgets/` remains deferred.
 
@@ -63,7 +63,7 @@ When the user requests a continuous timed run, such as 8 hours:
 - Rust lint: `cargo check --workspace --locked`; `cargo clippy --workspace --all-targets --locked -- -D warnings`; `cargo fmt --all --check`.
 - Rust tests: `cargo test --workspace --locked`; single MCP integration file: `cargo test -p findevil-mcp --test tool_smoke`; crate unit tests: `cargo test -p findevil-mcp --lib`.
 - Python lint/format from repo root: `ruff check .`; `ruff format --check .`.
-- Python service tests use per-service uv projects, not a root `pyproject.toml`: `uv run --directory services/agent pytest`, `uv run --directory services/agent_mcp pytest`, `uv run --directory services/swarm pytest`.
+- Python service tests use per-service uv projects, not a root `pyproject.toml`: `uv run --directory services/agent pytest`, `uv run --directory services/agent_mcp pytest`.
 - Single Python test example: `uv run --directory services/agent pytest tests/test_crypto_audit_log.py::TestCanonicalize::test_sorted_keys -v`.
 - Web install/build/test: `pnpm install --frozen-lockfile`; `pnpm --filter @findevil/web lint`; `pnpm --filter @findevil/web typecheck`; `pnpm --filter @findevil/web build`; `pnpm --filter @findevil/web test`.
 - Web single test file: `pnpm --filter @findevil/web test -- __tests__/audit-tail.test.ts`.
@@ -80,6 +80,5 @@ When the user requests a continuous timed run, such as 8 hours:
 - Web dashboard audit tail is SSE at `/api/audit`, not WebSocket; allowed case roots live in `apps/web/lib/audit-tail.ts` and `FINDEVIL_DASHBOARD_EXTRA_ROOTS` extends them.
 - Codex dashboard support lives at `.agents/skills/dashboard` and `http://localhost:3000/codex`; manual fallback is `powershell -ExecutionPolicy Bypass -File scripts/codex-dashboard.ps1`.
 - The `/api/codex` one-shot runner is local-only and disabled unless `FINDEVIL_CODEX_UI_ENABLE=1`; it expects a built Rust MCP binary for evidence modes.
-- Build swarm is developer automation, not the judging Product: start Postgres with `docker compose -f docker/swarm-postgres.yml up -d`, then `bash scripts/swarm-start.sh`; never auto-merge swarm PRs.
 - `manifest_verify` is an MCP/library verification path, not a standalone shell command; do not put `manifest_verify <file>` in customer-facing instructions unless a wrapper exists.
 - `scripts/run-all-smokes.sh` and `scripts/run-all-smokes.ps1` are the general local smoke gates and include report-policy smoke coverage. Do not hard-code smoke counts in docs; the runners print the current tally. Treat source/README/tool registry as authoritative for MCP counts.
