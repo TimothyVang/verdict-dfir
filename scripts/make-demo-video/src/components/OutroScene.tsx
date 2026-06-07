@@ -21,10 +21,11 @@ export function OutroScene() {
 
   // Detail lines
   const details = [
-    { text: "github.com/TimothyVang/sans-hackathon", color: "#3498db", delay: 36 },
-    { text: "License: Apache-2.0", color: "#8b949e", delay: 44 },
-    { text: "Build: ✓ green", color: "#2ecc71", delay: 52 },
-    { text: "SANS Find Evil! 2026", color: "#9b59b6", delay: 60 },
+    { text: "github.com/TimothyVang/sans-hackathon",  color: "#3498db", delay: 36 },
+    { text: "License: Apache-2.0",                     color: "#8b949e", delay: 44 },
+    { text: "CI: L0 · L1 · L2 · L3  ✓ green",         color: "#2ecc71", delay: 52 },
+    { text: "MCP: 19 Rust tools · 12 Python tools",    color: "#9b59b6", delay: 58 },
+    { text: "SANS Find Evil! 2026",                     color: "#8b949e", delay: 66 },
   ];
 
   return (

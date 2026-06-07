@@ -4,17 +4,24 @@ import { Watermark } from "./shared/Watermark";
 
 const MONO = "'JetBrains Mono', 'Courier New', monospace";
 
-const HOSTS = Array.from({ length: 22 }, (_, i) => ({
-  id: i + 1,
-  name: `HOST-${String(i + 1).padStart(3, "0")}`,
-  status: i < 18 ? "done" : i < 20 ? "running" : "queued",
-  findings: [3, 1, 0, 2, 1, 4, 0, 1, 2, 0, 3, 1, 0, 1, 2, 0, 1, 3, 0, 0, 0, 0][i] ?? 0,
-}));
+const FINDING_COUNTS = [3,1,0,2,1,4,0,1,2,0,3,1,0,1,2,0,1,3,0,0,0,0];
+
+const HOSTS = Array.from({ length: 22 }, (_, i) => {
+  const findings = FINDING_COUNTS[i] ?? 0;
+  const rawStatus = i < 18 ? "done" : i < 20 ? "running" : "queued";
+  return {
+    id: i + 1,
+    name: `HOST-${String(i + 1).padStart(3, "0")}`,
+    status: rawStatus === "done" && findings > 0 ? "flagged" : rawStatus,
+    findings,
+  };
+});
 
 const STATUS_COLOR: Record<string, string> = {
-  done: "#2ecc71",
+  done:    "#2ecc71",
+  flagged: "#e74c3c",
   running: "#f39c12",
-  queued: "#30363d",
+  queued:  "#30363d",
 };
 
 export function FleetScene() {

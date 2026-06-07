@@ -5,17 +5,22 @@ import { Watermark } from "./shared/Watermark";
 const MONO = "'JetBrains Mono', 'Courier New', monospace";
 
 const JQ_LINES = [
-  { text: '{ "kind": "judge_selfscore",', color: "#9b59b6" },
-  { text: '  "criterion": "Evidence Coverage",', color: "#e6edf3" },
-  { text: '  "score": 4, "max": 5,', color: "#2ecc71" },
+  { text: '{ "kind": "judge_selfscore",',              color: "#9b59b6" },
+  { text: '  "criterion": "Evidence Coverage",',        color: "#e6edf3" },
+  { text: '  "score": 4, "max": 5,',                    color: "#2ecc71" },
+  { text: '  "ts": "2026-06-07T14:28:40Z",',            color: "#30363d" },
+  { text: '  "prev_hash": "4a7d1e9c03b2f581",',         color: "#30363d" },
   { text: '  "notes": "All 4 artifact classes exercised" }', color: "#8b949e" },
-  { text: '{ "kind": "judge_selfscore",', color: "#9b59b6" },
-  { text: '  "criterion": "Finding Quality",', color: "#e6edf3" },
-  { text: '  "score": 5, "max": 5,', color: "#2ecc71" },
-  { text: '  "notes": "DKOM CONFIRMED via >=2 classes" }', color: "#8b949e" },
-  { text: '{ "kind": "judge_selfscore",', color: "#9b59b6" },
-  { text: '  "criterion": "Chain-of-Custody",', color: "#e6edf3" },
-  { text: '  "score": 5, "max": 5,', color: "#2ecc71" },
+  { text: '{ "kind": "judge_selfscore",',              color: "#9b59b6" },
+  { text: '  "criterion": "Finding Quality",',          color: "#e6edf3" },
+  { text: '  "score": 5, "max": 5,',                    color: "#2ecc71" },
+  { text: '  "prev_hash": "e3b0c44298fc1c14",',         color: "#30363d" },
+  { text: '  "notes": "DKOM CONFIRMED via >=2 artifact classes" }', color: "#8b949e" },
+  { text: '{ "kind": "judge_selfscore",',              color: "#9b59b6" },
+  { text: '  "criterion": "Chain-of-Custody",',         color: "#e6edf3" },
+  { text: '  "score": 5, "max": 5,',                    color: "#2ecc71" },
+  { text: '  "ts": "2026-06-07T14:28:44Z",',            color: "#30363d" },
+  { text: '  "prev_hash": "8c3f0bde7a214e90",',         color: "#30363d" },
   { text: '  "notes": "sigstore Rekor, offline verifiable" }', color: "#8b949e" },
 ];
 

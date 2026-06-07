@@ -6,12 +6,12 @@ import { Watermark } from "./shared/Watermark";
 const MONO = "'JetBrains Mono', 'Courier New', monospace";
 
 const AUDIT_RECORDS = [
-  { kind: "case_open",       hash: "9b57a2f3", prevHash: "00000000", confidence: undefined },
-  { kind: "tool_call",       hash: "e3b0c442", prevHash: "9b57a2f3", confidence: undefined },
-  { kind: "finding",         hash: "4a7d1e9c", prevHash: "e3b0c442", confidence: "INFERRED" },
-  { kind: "verify_finding",  hash: "8c3f0bde", prevHash: "4a7d1e9c", confidence: "CONFIRMED" },
-  { kind: "judge_selfscore", hash: "2f6a8d01", prevHash: "8c3f0bde", confidence: undefined },
-  { kind: "manifest_finalize", hash: "d1e4bc7a", prevHash: "2f6a8d01", confidence: undefined },
+  { kind: "case_open",        hash: "9b57a2f3c841e609", prevHash: "0000000000000000", confidence: undefined },
+  { kind: "tool_call",        hash: "e3b0c44298fc1c14", prevHash: "9b57a2f3c841e609", confidence: undefined },
+  { kind: "finding",          hash: "4a7d1e9c03b2f581", prevHash: "e3b0c44298fc1c14", confidence: "INFERRED"  },
+  { kind: "verify_finding",   hash: "8c3f0bde7a214e90", prevHash: "4a7d1e9c03b2f581", confidence: "CONFIRMED" },
+  { kind: "judge_selfscore",  hash: "2f6a8d01c943b7e5", prevHash: "8c3f0bde7a214e90", confidence: undefined  },
+  { kind: "manifest_finalize",hash: "d1e4bc7a906f2c38", prevHash: "2f6a8d01c943b7e5", confidence: undefined  },
 ];
 
 export function HashChainScene() {
@@ -131,6 +131,24 @@ export function HashChainScene() {
           FRE 902(14) — self-authenticating electronic evidence.<br/>
           A court can verify this manifest from the sigstore Rekor<br/>
           transparency log — no expert witness required.
+        </div>
+
+        {/* manifest_verify CLI block */}
+        <div style={{
+          opacity: freOp,
+          background: "#0d1117",
+          border: "1px solid #30363d",
+          borderRadius: 8,
+          padding: "12px 18px",
+          fontFamily: MONO, fontSize: 12, lineHeight: 1.9,
+        }}>
+          <div style={{ color: "#e6edf3" }}>
+            $ uv run python -m findevil_agent_mcp.server manifest_verify
+          </div>
+          <div style={{ color: "#2ecc71" }}>chain:        OK</div>
+          <div style={{ color: "#2ecc71" }}>merkle_root:  d1e4bc7a906f2c38</div>
+          <div style={{ color: "#2ecc71" }}>sigstore:     VERIFIED (rekor.sigstore.dev/24922385)</div>
+          <div style={{ color: "#8b949e" }}>records:      6  ·  findings: 2  ·  CONFIRMED: 1</div>
         </div>
       </div>
 

@@ -86,9 +86,13 @@ export function ClusterScene() {
                   const dotS = spring({ frame: frame - dotDelay, fps, config: { damping: 12, stiffness: 150 } });
                   const dotOp = interpolate(frame - dotDelay, [0, 8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
                   const cx = 160 + timeToX(t);
+                  const hostLabel = `H-${String((ri * 3 + di + 1)).padStart(3, "0")}`;
                   return (
                     <g key={di} opacity={dotOp}>
                       <circle cx={cx} cy={y} r={dotS * 8} fill={row.color} opacity="0.85"/>
+                      <text x={cx + 11} y={y - 10} fontFamily={MONO} fontSize="9" fill={row.color} opacity="0.7">
+                        {hostLabel}
+                      </text>
                     </g>
                   );
                 })}
@@ -98,7 +102,7 @@ export function ClusterScene() {
         </svg>
       </div>
 
-      {/* Cluster annotation */}
+      {/* Autoruns cluster annotation */}
       <div style={{
         position: "absolute", top: 220, left: 240,
         opacity: annotOp,
@@ -111,11 +115,32 @@ export function ClusterScene() {
           padding: "12px 18px",
           fontFamily: MONO, fontSize: 14, color: "#e74c3c",
         }}>
-          6 hosts, same second<br/>
+          6 hosts, same second (T+0s)<br/>
           <span style={{ color: "#8b949e", fontSize: 12 }}>→ PsExec sweep or SCCM push</span><br/>
           <span style={{ color: "#f39c12", fontSize: 12, fontWeight: 700 }}>HYPOTHESIS: T1569.002</span>
         </div>
       </div>
+
+      {/* rubyw annotation */}
+      {frame > 60 && (
+        <div style={{
+          position: "absolute", top: 330, left: 480,
+          opacity: interpolate(frame - 60, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
+          transform: `scale(${0.7 + spring({ frame: frame - 60, fps, config: { damping: 12, stiffness: 100 } }) * 0.3})`,
+        }}>
+          <div style={{
+            background: "rgba(243,156,18,0.12)",
+            border: "1.5px solid #f39c12",
+            borderRadius: 8,
+            padding: "12px 18px",
+            fontFamily: MONO, fontSize: 14, color: "#f39c12",
+          }}>
+            4 hosts, rubyw.exe scattered<br/>
+            <span style={{ color: "#8b949e", fontSize: 12 }}>→ Ruby not in enterprise baseline</span><br/>
+            <span style={{ color: "#3498db", fontSize: 12, fontWeight: 700 }}>HYPOTHESIS: T1059.007</span>
+          </div>
+        </div>
+      )}
 
       <Watermark />
     </AbsoluteFill>

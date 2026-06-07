@@ -90,8 +90,17 @@ export function ContradictionScene() {
             <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: "#e74c3c", letterSpacing: 1 }}>
               kind=contradiction
             </div>
-            <div style={{ fontFamily: MONO, fontSize: 11, color: "#8b949e", marginTop: 4 }}>
-              detect_contradictions
+            <div style={{ fontFamily: MONO, fontSize: 10, color: "#8b949e", marginTop: 6 }}>
+              A: registry_key present
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 10, color: "#30363d" }}>
+              (tci_reg_00c2a1)
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 10, color: "#8b949e", marginTop: 4 }}>
+              B: mft_created alongside OS
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 10, color: "#30363d" }}>
+              (tci_mft_009f44)
             </div>
           </div>
 
@@ -114,8 +123,11 @@ export function ContradictionScene() {
               <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: "#2ecc71", letterSpacing: 1 }}>
                 judge_findings
               </div>
-              <div style={{ fontFamily: MONO, fontSize: 11, color: "#8b949e", marginTop: 4 }}>
-                credibility-weighted
+              <div style={{ fontFamily: MONO, fontSize: 11, color: "#8b949e", marginTop: 4, lineHeight: 1.7 }}>
+                weight A: 0.72 · weight B: 0.41
+              </div>
+              <div style={{ fontFamily: MONO, fontSize: 11, color: "#2ecc71", fontWeight: 700 }}>
+                → INFERRED: malicious persistence
               </div>
             </div>
           )}
@@ -159,7 +171,7 @@ function PoolCard({ pool }: { pool: typeof POOL_A }) {
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {pool.notes.map((note, i) => (
-          <div key={i} style={{ fontFamily: MONO, fontSize: 13, color: "#30363d" }}>
+          <div key={i} style={{ fontFamily: MONO, fontSize: 13, color: "#6e7681" }}>
             › {note}
           </div>
         ))}
