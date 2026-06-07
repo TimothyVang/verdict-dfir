@@ -1,52 +1,54 @@
 #!/usr/bin/env python3
-"""Smoke tests for scripts/make-demo-video.py."""
+"""Smoke tests for the Remotion-based demo video builder."""
 from __future__ import annotations
 
 import ast
+import json
 import subprocess
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = REPO_ROOT / "scripts" / "make-demo-video.py"
-DEMO_SCRIPT = REPO_ROOT / "docs" / "demo-script-a2.md"
+PREP_SCRIPT = REPO_ROOT / "scripts" / "make-demo-video-prep.py"
+REMOTION_DIR = REPO_ROOT / "scripts" / "make-demo-video"
+ROOT_TSX = REMOTION_DIR / "src" / "Root.tsx"
+PKG_JSON = REMOTION_DIR / "package.json"
 
 
-def test_script_syntax() -> None:
-    source = SCRIPT.read_text(encoding="utf-8")
+def test_prep_script_syntax() -> None:
+    source = PREP_SCRIPT.read_text(encoding="utf-8")
     ast.parse(source)
 
 
-def test_parse_beats_returns_nine_and_300s() -> None:
+def test_remotion_package_has_remotion_dep() -> None:
+    pkg = json.loads(PKG_JSON.read_text(encoding="utf-8"))
+    deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
+    assert "remotion" in deps, f"remotion not in deps: {list(deps.keys())}"
+    assert "@remotion/cli" in deps, "@remotion/cli not in deps"
+
+
+def test_root_tsx_has_register_root() -> None:
+    src = ROOT_TSX.read_text(encoding="utf-8")
+    assert "registerRoot" in src, "Root.tsx must call registerRoot()"
+
+
+def test_dry_run_shows_nine_beats_and_300s() -> None:
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), "--dry-run"],
+        [sys.executable, str(PREP_SCRIPT), "--dry-run"],
         capture_output=True, text=True, timeout=15,
     )
-    assert result.returncode == 0, f"dry-run failed:\n{result.stderr[:300]}"
-    lines = [l for l in result.stdout.splitlines() if l.strip().startswith("Beat")]
-    assert len(lines) == 9, f"Expected 9 beat lines, got {len(lines)}:\n{result.stdout}"
-    # Total duration line: "Parsed 9 beats, total 300s"
-    assert "300s" in result.stdout, f"Expected 300s total in output:\n{result.stdout}"
-
-
-def test_dry_run_prints_beats_without_ffmpeg() -> None:
-    result = subprocess.run(
-        [sys.executable, str(SCRIPT), "--dry-run"],
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
     assert result.returncode == 0, f"--dry-run failed:\n{result.stderr[:300]}"
-    assert "Beat" in result.stdout, "Expected beat listing in --dry-run output"
-    assert "ffmpeg" not in result.stdout.lower() or "stopping" in result.stdout.lower(), \
-        "ffmpeg should not be invoked in --dry-run mode"
+    lines = [l for l in result.stdout.splitlines() if "Beat" in l and "s " in l]
+    assert len(lines) == 9, f"Expected 9 beat lines, got {len(lines)}:\n{result.stdout}"
+    assert "300s" in result.stdout, f"Expected 300s total:\n{result.stdout}"
 
 
 def main() -> int:
     tests = [
-        ("script_syntax", test_script_syntax),
-        ("parse_beats_returns_nine_and_300s", test_parse_beats_returns_nine_and_300s),
-        ("dry_run_prints_beats_without_ffmpeg", test_dry_run_prints_beats_without_ffmpeg),
+        ("prep_script_syntax", test_prep_script_syntax),
+        ("remotion_package_has_remotion_dep", test_remotion_package_has_remotion_dep),
+        ("root_tsx_has_register_root", test_root_tsx_has_register_root),
+        ("dry_run_shows_nine_beats_and_300s", test_dry_run_shows_nine_beats_and_300s),
     ]
     passed = failed = 0
     for name, fn in tests:

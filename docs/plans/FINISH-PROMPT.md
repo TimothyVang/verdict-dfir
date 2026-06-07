@@ -97,23 +97,25 @@ F4 (read-only) Verify L1 + l3-nightly green on the exact commit to be tagged; l3
 F5 **Automated demo video** — generate `docs/find-evil-demo.mp4` using TTS + ffmpeg:
   ```bash
   # Prerequisites (one-time):
-  pip install edge-tts          # Microsoft neural TTS, no API key required
-  # sudo apt install ffmpeg     # or brew install ffmpeg
+  pip install edge-tts                                        # TTS, no API key
+  pnpm install --dir scripts/make-demo-video --ignore-workspace  # Remotion deps
 
-  # Optional: set GITHUB_TOKEN to enrich narration via GitHub Models API
+  # Optional: enrich narration via GitHub Models API
   # export GITHUB_TOKEN=$(gh auth token)
 
-  # Generate the 5-minute MP4:
-  python3 scripts/make-demo-video.py
+  # Dry-run (no TTS/render — verify beat parsing):
+  python3 scripts/make-demo-video-prep.py --dry-run
 
-  # Dry-run (no ffmpeg/TTS; verify beat parsing):
-  python3 scripts/make-demo-video.py --dry-run
+  # Full generate (TTS + Remotion animated render → docs/find-evil-demo.mp4):
+  bash scripts/make-demo-video.sh
   ```
-  The script reads the 9-beat structure from `docs/demo-script-a2.md`, generates TTS
-  audio per beat (`en-US-AriaNeural` voice), renders 1920×1080 title cards via ffmpeg
-  `drawtext`, muxes audio + video, and concatenates into `docs/find-evil-demo.mp4`.
+  Uses **[Remotion](https://github.com/remotion-dev/remotion)** (React-based video,
+  headless Chrome render) for animated title cards with motion graphics (fade-in,
+  typewriter narration, spring transitions). TTS audio (`edge-tts`, `en-US-AriaNeural`)
+  is layered as an `<Audio>` track. Optional GitHub Models API rewrites narration before
+  TTS if `GITHUB_TOKEN` is set.
   Commit the resulting MP4:
-  - `feat(submission): generate demo video via TTS+ffmpeg`
+  - `feat(submission): generate demo video via Remotion + TTS`
 
 Then run the plan's **Appendix A** ordered command sequence and confirm **Appendix B** verification checklist passes end-to-end.
 
