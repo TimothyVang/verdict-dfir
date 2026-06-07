@@ -54,11 +54,31 @@ Findings follow a strict epistemic hierarchy — **CONFIRMED** (≥2 corroborati
 verifier-passed) > **INFERRED** (derived from confirmed facts) > **HYPOTHESIS** — and execution
 claims require at least two artifact classes. Evidence is opened read-only.
 
+## Hi, I'm new
+
+New here? You have two equivalent ways to get a working setup. Both install the full toolchain
+(Rust, uv, Node, pnpm), build the `findevil-mcp` server, sync the Python agent-mcp venv, and
+install the host DFIR tools.
+
+- **From a terminal:** run `bash scripts/setup`. It installs everything, re-checks what is
+  still missing, and prints a green/red summary. Safe to re-run.
+- **From Claude Code:** open the repo with `claude` and type `setup` (or `i'm new`). The agent
+  runs the same install, then — for any asset behind a registration form, EULA, or login (such
+  as the SANS SIFT VM) — drives a browser to fetch it and moves it into place for you. If the
+  download site cannot be automated, the agent opens the page and walks you through it.
+
+When setup is green, point VERDICT at evidence: `scripts/verdict <path-to-evidence>`, or open
+`claude` and prompt `investigate <path>`. Per-environment setup (local DFIR tools vs. the SANS
+SIFT VM) is in [QUICKSTART.md](QUICKSTART.md); what the in-agent `setup` trigger does is in
+[docs/onboarding.md](docs/onboarding.md).
+
 ## Quickstart
 
 ```bash
 git clone https://github.com/TimothyVang/sans-hackathon.git verdict
 cd verdict
+bash scripts/setup          # one-shot: preflight + build + DFIR tools + honest summary
+# or, just the build step:
 bash scripts/install.sh     # preflight + build (Rust MCP server + Python env)
 ```
 

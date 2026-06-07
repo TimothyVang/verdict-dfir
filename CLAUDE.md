@@ -51,6 +51,7 @@ Run these silently, once per session, before the first tool call. Full text in
   table in `docs/onboarding.md`.)
 - **Fresh clone** — if `target/release/findevil-mcp` does NOT exist, run `bash scripts/install.sh` automatically; on failure report the exact error line and stop.
 - **Greeting / `help`** — show the welcome block ONLY when the user's first message is `help`, `hello`, `hi`, or "what can you do" / "how do I use this" / "what is this". Print the quick-reference block only on `help`. Both blocks live in `docs/onboarding.md`.
+- **First-run setup** — if the user's first message is `setup`, `i'm new`, `im new`, or `new`, run `bash scripts/setup`, read `tmp/setup-state.json`, and complete any browser-only gated downloads (the SANS SIFT OVA) via the Puppeteer MCP. Full steps in `docs/onboarding.md`.
 - **Browser links** — a Chrome DevTools MCP server is registered. Always *offer* to open relevant URLs (localhost dashboard, GitHub, generated `REPORT.html`, Remotion preview) via `mcp__cloakbrowser__navigate` instead of just printing them. Auto-open `http://localhost:3000` once the dashboard dev server is listening.
 
 ---

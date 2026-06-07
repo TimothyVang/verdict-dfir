@@ -87,6 +87,60 @@ environment silently.
 
 ---
 
+## First-run setup ("setup" / "i'm new")
+
+When the user's first message is `setup`, `i'm new`, `im new`, or `new`, run the full first-run
+setup, then finish any browser-only steps the shell could not.
+
+Steps:
+
+1. Run the orchestrator and stream its output (do not silence it):
+
+   ```bash
+   bash scripts/setup
+   ```
+
+   `scripts/setup` runs `scripts/install.sh` (toolchain + `findevil-mcp` build + agent-mcp venv
+   + host DFIR tools), re-checks what is still missing, and writes a handoff at
+   `tmp/setup-state.json`.
+
+2. Read `tmp/setup-state.json`. Report the one-line status from `ready`. If `missing_required`
+   is non-empty, surface each `{label, remedy}` and stop — the environment is not yet usable.
+   If `missing_curl` is non-empty, offer to re-run `bash scripts/install-dfir-tools.sh`
+   (non-blocking).
+
+3. If `gated` contains an entry with `present:false`, run the browser fallback. Look it up in
+   `scripts/gated-tools.json`, then:
+   - Drive the Puppeteer MCP (`mcp__puppeteer__puppeteer_*`) to navigate `landing_url`. These
+     tools are not pre-approved, so the user will be prompted to allow them on first use; that
+     is expected. If `login_required`, use the `credentials_env` vars when present; otherwise
+     pause and let the user log in in the visible browser, then continue. Never invent or store
+     credentials; never log them.
+   - The seeded `browser.steps` are marked NEEDS-LIVE-CONFIRMATION. On a first run, do a
+     human-supervised recon pass (navigate + screenshot) to capture the real form fields, EULA
+     control, and resolved `.ova` href before trusting any automated steps.
+   - Complete the form/EULA, then `puppeteer_evaluate` to resolve the download URL.
+   - Fetch with `curl -fL -C -` to the destination (resumable). If the URL needs the session,
+     export cookies from the browser and pass via `curl --cookie`.
+   - Verify (`verify.min_bytes`, reject HTML error pages, record sha256), then place as
+     `sift-<version>.ova` at the repo root (or set `OVA_PATH`).
+   - Re-run `bash scripts/setup` to confirm the asset is now detected.
+   - On ANY failure (site changed, login wall, blocked, no file, checksum/HTML mismatch,
+     offline): delete any partial file, report the exact failing step with a screenshot, and
+     fall back to the registry `manual_fallback` (open the page, user downloads manually). A
+     "could not fetch" must never block the rest of setup — local-host mode works without the OVA.
+
+4. When setup is green, offer the next action: `scripts/verdict <path>` (hands-free) or
+   `investigate <path>` (interactive). Offer to open the dashboard at `http://localhost:3000`
+   once `pnpm --filter @findevil/web dev` is listening (see the Chrome DevTools section above).
+
+Do not auto-fetch the SANS SIFT OVA unless the user wants SIFT/disk mode — local-host mode is
+the default and needs no gated asset. A user who wants prompt-free browser runs can add the
+`mcp__puppeteer__puppeteer_*` tools to `.claude/settings.local.json` themselves; note
+`puppeteer_evaluate` executes arbitrary JS, so that is their explicit choice to make.
+
+---
+
 ## Quick reference (print on `help`)
 
 When the user types `help` (and only then), print this:
