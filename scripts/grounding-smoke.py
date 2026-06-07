@@ -287,18 +287,22 @@ def offline_ioc_checks(gv) -> None:
     spec.loader.exec_module(mod)
     check(hasattr(mod, "enrich"), "ioc_enrich.enrich present")
     check(
+        hasattr(mod, "vt_key") and hasattr(mod, "abusech_key"),
+        "ioc_enrich exposes vt_key + abusech_key",
+    )
+    check(
         mod._classify("http://x") == "urls"
         and mod._classify("a" * 64) == "hashes"
         and mod._classify("1.2.3.4") == "ips"
         and mod._classify("evil.test") == "domains",
         "ioc_enrich classifies hash/domain/ip/url",
     )
-    # No key configured in CI/offline -> enrich reports unavailable, never crashes.
-    if not mod.vt_key():
+    # No provider key configured (CI/offline) -> enrich reports unavailable, never crashes.
+    if not mod.vt_key() and not mod.abusech_key():
         out = mod.enrich({"hashes": ["a" * 64], "domains": [], "ips": [], "urls": []})
         check(
             out.get("available") is False,
-            "ioc_enrich degrades cleanly with no VT key (available=false)",
+            "ioc_enrich degrades cleanly with no provider key (available=false)",
         )
 
 

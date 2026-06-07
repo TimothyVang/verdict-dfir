@@ -19,6 +19,7 @@ Keys (gitignored): tmp/api-keys/virustotal.txt (or VT_API_KEY),
                    tmp/api-keys/abusech.txt   (or ABUSECH_API_KEY).
 CLI: python3 scripts/ioc_enrich.py <hash|domain|ip|url> [...]
 """
+
 from __future__ import annotations
 
 import base64
@@ -115,19 +116,27 @@ def _vt_gui(ioc: str, kind: str) -> str:
 
 def _vt_source(ioc: str, kind: str, key: str) -> dict[str, Any]:
     status, body = _http(f"{VT_BASE}/{_vt_path(ioc, kind)}", {"x-apikey": key}, None)
-    src: dict[str, Any] = {"provider": "virustotal", "url": _vt_gui(ioc, kind), "found": False}
+    src: dict[str, Any] = {
+        "provider": "virustotal",
+        "url": _vt_gui(ioc, kind),
+        "found": False,
+    }
     if status == 429:
         src["error"] = "rate_limited"
         return src
     if status != 200 or "data" not in body:
-        err = (body.get("error") or {}).get("code") or (body.get("error") or {}).get("message")
+        err = (body.get("error") or {}).get("code") or (body.get("error") or {}).get(
+            "message"
+        )
         src["error"] = err or f"not_found ({status})"
         return src
     a = body["data"].get("attributes", {})
     stats = a.get("last_analysis_stats", {})
     mal = stats.get("malicious") or 0
     total = sum(v for v in stats.values() if isinstance(v, int))
-    names = a.get("names") or ([a.get("meaningful_name")] if a.get("meaningful_name") else [])
+    names = a.get("names") or (
+        [a.get("meaningful_name")] if a.get("meaningful_name") else []
+    )
     fs = a.get("first_submission_date") or a.get("creation_date")
     src.update(
         {
@@ -210,7 +219,11 @@ def _urlhaus(ioc: str, kind: str, key: str) -> dict[str, Any]:
         {"Auth-Key": key, "Content-Type": "application/x-www-form-urlencoded"},
         data,
     )
-    src: dict[str, Any] = {"provider": "urlhaus", "url": "https://urlhaus.abuse.ch/", "found": False}
+    src: dict[str, Any] = {
+        "provider": "urlhaus",
+        "url": "https://urlhaus.abuse.ch/",
+        "found": False,
+    }
     if resp.get("query_status") == "ok":
         tags = ", ".join(resp.get("tags") or [])
         src.update(
@@ -321,7 +334,9 @@ def main(argv: list[str]) -> int:
     def _log(e: dict[str, Any]) -> None:
         mk = "ok  " if e["found"] else "MISS"
         prov = ",".join(e["providers"]) or "-"
-        print(f"  {mk} {e['type']:<6} mal_src={e['malicious_sources']} [{prov}] {e['ioc'][:44]}")
+        print(
+            f"  {mk} {e['type']:<6} mal_src={e['malicious_sources']} [{prov}] {e['ioc'][:44]}"
+        )
         for s in e["sources"]:
             if s.get("found"):
                 print(f"        {s['provider']}: {s.get('detail')}")

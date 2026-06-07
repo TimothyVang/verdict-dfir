@@ -227,29 +227,37 @@ post-verdict sidecars — never a `tool_call_id`, never appended to `audit.jsonl
 `run.manifest.json`, and they never change a finding's Confidence or the Verdict (frozen at
 `manifest_finalize`). The grounding smoke asserts the chain is byte-unchanged after a run.
 
-## IOC reputation enrichment (Phase 2, host-side)
+## IOC reputation enrichment (host-side, multi-source)
 
 Alongside technique grounding, `ground_verdict.py` enriches the verdict's typed IOCs
 (`malware_triage.aggregate_iocs` — hashes/domains/ips/urls, never a blind regex) against
-VirusTotal and writes an `ioc_enrichment` block into `grounding_research.json`; the judge then
-records per-IOC `malicious | clean | unknown` in `grounding.json` (`ioc_grounding[]`), surfaced in
-the dashboard GroundingPanel.
+**multiple sources — VirusTotal v3 and abuse.ch (ThreatFox / MalwareBazaar / URLhaus)** — and
+writes an `ioc_enrichment` block (per-IOC `sources[]`, one record per provider) into
+`grounding_research.json`. The judge then records per-IOC `malicious | clean | unknown` in
+`grounding.json` (`ioc_grounding[]`), surfaced in the dashboard GroundingPanel.
+
+**Multi-source corroboration + conflict resolution.** Agreeing sources strengthen `malicious`;
+when sources conflict (e.g. VirusTotal `0/91` clean on a major domain vs a single ThreatFox
+`botnet_cc` hit on `google.com`), the judge resolves by **breadth of consensus** — the domain is
+benign infrastructure abused by malware, judged `clean` with the conflict noted, both sources
+quoted (`agent-config/GROUNDING.md`).
 
 **Enrichment runs HOST-SIDE, not in n8n.** n8n persists execution inputs in its database, so
 routing an API key through the webhook would leak the secret into n8n's execution store.
 VirusTotal/abuse.ch are plain JSON APIs (no browser needed), so the host calls them directly and
-the key never leaves the gitignored file. n8n stays the **browser-rendered-research** engine
-(MITRE now, open-web search later) where the value is rendering untrusted HTML and no secret is
-involved.
+keys never leave the gitignored files. n8n stays the **browser-rendered-research** engine (MITRE
+now, open-web search later) where the value is rendering untrusted HTML and no secret is involved.
 
 **Keys (browser login):** `scripts/get-api-key.cjs <provider>` opens **real Google Chrome** with
 the automation fingerprints stripped (so Google SSO is not blocked), waits for the operator to
-sign in, then reads the API key off the account page and saves it to gitignored
-`tmp/api-keys/<provider>.txt` (or set `VT_API_KEY`). VirusTotal is wired; abuse.ch is the next
-provider. Same boundary: enrichment results are an operator aid, never evidence.
+sign in, then reads the API key off the account page → gitignored `tmp/api-keys/<provider>.txt`
+(or set `VT_API_KEY` / `ABUSECH_API_KEY`). VirusTotal: key shown directly. abuse.ch: requires a
+completed profile (unique username + display name → Create Profile) before **Generate Key** issues
+an Auth-Key — shown **once** ("not viewable again"), so capture/copy it then. Same boundary:
+enrichment results are an operator aid, never evidence.
 
-**Phase 2 remaining:** abuse.ch (URLHaus/ThreatFox/MalwareBazaar) enrichment + open-web search
-(search API + browserless when no API exists), plus grounding-aware action routing.
+**Remaining:** open-web research (browserless-only SERP, keyless), grounding-aware action routing,
+and CVE/NVD grounding — see the plan.
 
 ---
 
