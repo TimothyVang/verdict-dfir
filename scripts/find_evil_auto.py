@@ -3802,53 +3802,120 @@ class Investigation:
             print(f"  vol_psxview skipped: {divergence_reason}")
 
         # Synthesize findings
-        # Finding 1 — pslist=0 + psscan>0 = DKOM signal
-        # Per agent-config/SOUL.md "Epistemic hierarchy": even the
-        # textbook-clear DKOM case is INFERRED, not CONFIRMED, because
-        # the *conclusion* T1014/DKOM is derived from two confirmed
-        # observations (pslist returned 0 + psscan returned N>0).  The
-        # underlying tool outputs are CONFIRMED individually; the
-        # rootkit-conclusion drawn from their disagreement is INFERRED.
-        # This branch is theoretical — real fleets show pslist > 0 in
-        # practice — but keeping the tier consistent with SOUL.md
-        # avoids a latent epistemic-hierarchy violation if a fully-
-        # rootkitted host ever hits this code path.
+        # Finding 1 — pslist=0 + psscan>0. This split has TWO opposite causes
+        # that look identical at the tool level, so disambiguate before asserting:
+        #   (a) genuine selective DKOM — a rootkit unlinks a FEW attacker
+        #       processes from PsActiveProcessHead (T1014); or
+        #   (b) acquisition smear / kernel-global read failure — the whole
+        #       active-list walk fails so EVERY process (incl. core OS singletons)
+        #       drops out of pslist, while pool-tag scanning (psscan) still works.
+        # Tell (b) apart via smear signatures derivable from psscan: core OS
+        # singletons (System/csrss/lsass/...) that a rootkit CANNOT hide showing
+        # up only through psscan, and duplicate immortal-singleton EPROCESS
+        # objects (e.g. two System PID 4) — neither is producible by real DKOM.
+        # Per agent-config/SOUL.md, when a benign explanation outranks the
+        # malicious one the claim is a HYPOTHESIS, not INFERRED; and a T1014
+        # assertion needs >=2 artifact classes, not one process-view divergence.
         if ps_seen == 0 and psscan_count > 0:
-            self.findings_pool_a.append(
-                {
-                    "case_id": self.handle["id"],
-                    "finding_id": self._finding_id_for("f-A-dkom", evidence_path),
-                    "tool_call_id": tcid_psxview,
-                    "artifact_path": evidence_path,
-                    "description": (
-                        f"Process linked-list returns 0 processes via vol_pslist "
-                        f"but vol_psscan recovers {psscan_count} EPROCESS objects — "
-                        f"classic DKOM unlinking signature (T1014 Rootkit)."
-                    ),
-                    "confidence": "INFERRED",
-                    "pool_origin": "A",
-                    "mitre_technique": "T1014",
-                }
+            _core_os = {
+                "system", "smss.exe", "csrss.exe", "wininit.exe",
+                "services.exe", "lsass.exe",
+            }
+            _ps_list = psscan if isinstance(psscan, list) else []
+
+            def _ps_name(p):
+                return (p.get("image_name") or p.get("ImageFileName") or "").lower()
+
+            def _ps_pid(p):
+                return p.get("pid", p.get("PID"))
+
+            core_via_psscan = sorted(
+                {_ps_name(p) for p in _ps_list if _ps_name(p) in _core_os}
             )
-            self.findings_pool_b.append(
-                {
-                    "case_id": self.handle["id"],
-                    "finding_id": self._finding_id_for(
-                        "f-B-dump-integrity", evidence_path
-                    ),
-                    "tool_call_id": tcid_psscan,
-                    "artifact_path": evidence_path,
-                    "description": (
-                        f"vol_psscan recovers {psscan_count} processes; memory image "
-                        f"is structurally intact but the active-process linked "
-                        f"list has been tampered with (could be DKOM or partial "
-                        f"acquisition artifact)."
-                    ),
-                    "confidence": "INFERRED",
-                    "pool_origin": "B",
-                    "mitre_technique": "T1014",
-                }
-            )
+            system_copies = sum(1 for p in _ps_list if str(_ps_pid(p)) == "4")
+            smear_tells = []
+            if core_via_psscan:
+                smear_tells.append(
+                    "core OS singletons recovered only by psscan "
+                    f"({', '.join(core_via_psscan)})"
+                )
+            if system_copies > 1:
+                smear_tells.append(
+                    f"{system_copies} duplicate System(PID 4) EPROCESS objects"
+                )
+
+            if smear_tells:
+                # Acquisition smear / kernel-global read failure — NOT DKOM.
+                # Process-hiding is INDETERMINATE; do not assert T1014.
+                self.findings_pool_a.append(
+                    {
+                        "case_id": self.handle["id"],
+                        "finding_id": self._finding_id_for(
+                            "f-A-enum-smear", evidence_path
+                        ),
+                        "tool_call_id": tcid_psxview,
+                        "artifact_path": evidence_path,
+                        "description": (
+                            f"Active-process enumeration failed (vol_pslist=0) "
+                            f"while vol_psscan recovered {psscan_count} EPROCESS "
+                            f"objects INCLUDING core OS singletons a rootkit "
+                            f"cannot hide ({'; '.join(smear_tells)}). Consistent "
+                            f"with an acquisition smear / kernel-global read "
+                            f"failure, NOT selective DKOM (T1014). Process-hiding "
+                            f"is INDETERMINATE; a T1014 claim requires >=2 "
+                            f"artifact classes (e.g. a carved non-Microsoft .sys "
+                            f"driver or a YARA rootkit hit)."
+                        ),
+                        "confidence": "HYPOTHESIS",
+                        "pool_origin": "A",
+                        "mitre_technique": None,
+                    }
+                )
+            else:
+                # No smear signature: a clean image with only a few processes
+                # unlinked == the genuine selective-DKOM case. The conclusion
+                # T1014 is INFERRED (drawn from two CONFIRMED tool outputs:
+                # pslist returned 0 + psscan returned N>0); the tool outputs
+                # themselves are CONFIRMED individually.
+                self.findings_pool_a.append(
+                    {
+                        "case_id": self.handle["id"],
+                        "finding_id": self._finding_id_for(
+                            "f-A-dkom", evidence_path
+                        ),
+                        "tool_call_id": tcid_psxview,
+                        "artifact_path": evidence_path,
+                        "description": (
+                            f"Process linked-list returns 0 processes via "
+                            f"vol_pslist but vol_psscan recovers {psscan_count} "
+                            f"EPROCESS objects, with no acquisition-smear "
+                            f"signature — selective DKOM unlinking signature "
+                            f"(T1014 Rootkit)."
+                        ),
+                        "confidence": "INFERRED",
+                        "pool_origin": "A",
+                        "mitre_technique": "T1014",
+                    }
+                )
+                self.findings_pool_b.append(
+                    {
+                        "case_id": self.handle["id"],
+                        "finding_id": self._finding_id_for(
+                            "f-B-dump-integrity", evidence_path
+                        ),
+                        "tool_call_id": tcid_psscan,
+                        "artifact_path": evidence_path,
+                        "description": (
+                            f"vol_psscan recovers {psscan_count} processes; "
+                            f"memory image is structurally intact but the "
+                            f"active-process linked list has been tampered with "
+                            f"(DKOM; no smear signature present)."
+                        ),
+                        "confidence": "INFERRED",
+                        "pool_origin": "B",
+                        "mitre_technique": "T1014",
+                    }
+                )
 
         # Finding 2 — malfind hits = code injection
         if len(injs) > 0:

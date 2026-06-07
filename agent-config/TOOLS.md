@@ -71,7 +71,7 @@ Use when: raw PCAP/PCAPNG is supplied. Uses fixed `tshark`/`zeek` subprocess arg
 ### vol_pslist
 Args: `{case_id, memory_path, pid_filter?: int[], limit?}`
 Returns: `{processes[], processes_seen, stderr_tail}` where each process is `{pid, ppid, image_name, create_time_iso, exit_time_iso?, threads, handles, session_id, wow64}`
-Use when: enumerating processes from a memory image via the kernel's active list. **Always pair with `vol_psscan` for DKOM cross-validation.** pslist=0 + psscan>0 is the textbook T1014 (Rootkit) signature. Subprocess to `volatility3` (BSD-2 — never linked, env var `$VOLATILITY_BIN` first then PATH).
+Use when: enumerating processes from a memory image via the kernel's active list. **Always pair with `vol_psscan` for DKOM cross-validation.** pslist=0 + psscan>0 *can* be the T1014 (Rootkit) signature — but **disambiguate from an acquisition smear / kernel-global read failure before asserting T1014**: if `psscan` recovered core OS singletons (System/csrss/lsass) or duplicate `System` (PID 4) EPROCESS, or `windows.info` shows `KeNumberProcessors`=0, the active-list walk failed for the whole image (smear) rather than a rootkit unlinking a few processes — label it a HYPOTHESIS and require ≥2 artifact classes for T1014. Subprocess to `volatility3` (BSD-2 — never linked, env var `$VOLATILITY_BIN` first then PATH).
 
 ### vol_psscan
 Args: `{case_id, memory_path, pid_filter?: int[], limit?}`

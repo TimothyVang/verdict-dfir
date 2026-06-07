@@ -153,7 +153,7 @@ Two MCP servers are registered in `.mcp.json` and auto-spawned by Claude Code on
 | `findevil-mcp` | Rust (`services/mcp/`) | 19 | `case_open`, `disk_mount`, `disk_extract_artifacts`, `disk_unmount`, `evtx_query`, `mft_timeline`, `hayabusa_scan`, `vol_pslist`, `vol_psscan`, `vol_psxview`, `vol_malfind`, `yara_scan`, `usnjrnl_query`, `registry_query`, `prefetch_parse`, `vel_collect`, `sysmon_network_query`, `zeek_summary`, `pcap_triage`. Read-only on evidence; SHA-256 every output. |
 | `findevil-agent-mcp` | Python (`services/agent_mcp/`) | 12 | Crypto/ACH: `audit_append`, `audit_verify`, `manifest_finalize`, `manifest_verify`, `verify_finding`, `detect_contradictions`, `judge_findings`, `correlate_findings`. Hermes cross-case memory: `memory_remember`, `memory_recall`. IBM-ACP handoff: `pool_handoff`. Expert miss feedback: `expert_miss_capture`. |
 
-**DKOM redundancy is intentional.** `vol_pslist` walks the active list; `vol_psscan` signature-scans EPROCESS pool memory; `vol_psxview` cross-references process views. Divergence between them is the textbook DKOM / T1014 (Rootkit) signature. Don't fold them.
+**DKOM redundancy is intentional.** `vol_pslist` walks the active list; `vol_psscan` signature-scans EPROCESS pool memory; `vol_psxview` cross-references process views. Divergence between them is the classic DKOM / T1014 (Rootkit) signal — but the agent must first disambiguate it from an acquisition smear / kernel-global read failure (core OS singletons recovered only by `psscan`, duplicate `System` EPROCESS, `KeNumberProcessors`=0) before asserting T1014; see `agent-config/TOOLS.md` and the report §4.3. Don't fold them.
 
 **Entry points (Amendment A2 — Claude Code as primary interface):**
 
@@ -380,7 +380,7 @@ All four subsystems exist. Local smoke gate is `bash scripts/run-all-smokes.sh` 
 To run the agent against evidence right now, see **`QUICKSTART.md`** at the repo root. Three steps: pick environment (SIFT VM or local), open Claude Code, prompt `investigate <path>`.
 
 - False-positive prevention strategy + analyst checklists: **`docs/false-positives.md`**.
-- Example end-to-end investigation report: **`docs/reports/2026-04-26-srl2018-dc-investigation.md`** (SRL-2018 SANS HACKATHON-2026 dataset, CONFIRMED DKOM finding / MITRE T1014).
+- Example end-to-end investigation report: **`docs/reports/2026-04-26-srl2018-dc-investigation.md`** (SRL-2018 SANS HACKATHON-2026 dataset). The process-enumeration divergence (`vol_pslist`=0 vs `vol_psscan`=124) is reported as a **HYPOTHESIS**, not confirmed DKOM: on this image it is an acquisition smear / kernel-global read failure (`KeNumberProcessors`=0, core OS singletons recovered only by `psscan`, duplicate `System` EPROCESS) — which a rootkit cannot produce. The corroborable leads are `subject_srv.exe` (T1543.003) and service-spawned `cmd.exe` bursts (T1059.003); a T1014 claim needs ≥2 artifact classes (e.g. a carved non-Microsoft `.sys` driver).
 
 ### Memory system
 

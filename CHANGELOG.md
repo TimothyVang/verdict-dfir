@@ -123,8 +123,10 @@ once the first `v0.x` is cut on the `v-submit` tag.
 - **12th Rust MCP tool: `vol_psscan`** (commit `0de2e53`). Mirror of
   `vol_pslist` but invokes Volatility 3's `windows.psscan` instead.
   Critical for DKOM cross-validation against the active-list
-  walker — `pslist=0` + `psscan>0` is the textbook MITRE T1014
-  Rootkit signature. Spec #2 §6 enumerated 11; this brings the
+  walker — `pslist=0` + `psscan>0` *can* indicate the MITRE T1014
+  Rootkit signature, but the agent now disambiguates it from an
+  acquisition smear before asserting T1014 (report §4.3 /
+  `find_evil_auto.py` smear detection). Spec #2 §6 enumerated 11; this brings the
   shipped count to 12.
 - **13th Rust MCP tool: `vol_psxview`**. Wraps Volatility 3's
   `windows.psxview` for cross-view process enumeration after a
@@ -909,8 +911,11 @@ once the first `v0.x` is cut on the `v-submit` tag.
 - **22-host SRL-2018 fleet investigation completed** (artifact:
   `tmp/fleet-runs/fleet-20260426T055440Z/`). 12 SUSPICIOUS, 10
   INDETERMINATE, 0 NO_EVIL. 22/22 unique Merkle roots — chain
-  integrity intact across the fleet. 11/22 hosts show T1014
-  (DKOM/Rootkit), 9/22 show T1055 (Process Injection). Headline
+  integrity intact across the fleet. 11/22 hosts show the
+  `pslist`=0/`psscan`>0 enumeration divergence — treated as a
+  HYPOTHESIS (likely a shared acquisition smear, **not** 11 confirmed
+  rootkits; see report §4.3) — and 9/22 show T1055 (Process
+  Injection) leads. Headline
   cross-host patterns: 6 hosts ran `Autorunsc.exe` at the *exact
   same second* (cluster 1 in `temporal_clusters.png` — automated
   recon sweep fingerprint), `rubyw.exe` on 13 hosts and `ruby.exe`

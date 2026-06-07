@@ -53,10 +53,11 @@ BEATS: list[Beat] = [
     Beat(3, "Single-host investigation", 45,
          "One command. Tesla-mode. The agent opens the case, hashes the image, walks the active "
          "process list with Volatility pslist, then signature-scans EPROCESS pool memory with "
-         "psscan — and the two disagree. That divergence is the textbook DKOM rootkit signature. "
-         "The agent labels the finding INFERRED because two tool outputs corroborate it. It will "
-         "not label this CONFIRMED until the verifier re-runs both calls and matches the original "
-         "hashes. That distinction is non-negotiable."),
+         "psscan — and the two disagree. That divergence can be a DKOM rootkit signature, but on "
+         "this image the agent spots the acquisition-smear tells (core OS singletons recovered only "
+         "by psscan, duplicate System EPROCESS) and labels it a HYPOTHESIS, not a confirmed rootkit, "
+         "refusing to assert T1014 without a second artifact class. It does not over-claim CONFIRMED. "
+         "That epistemic discipline is non-negotiable."),
     Beat(4, "Live ACH disagreement", 60,
          "Heuer's Analysis of Competing Hypotheses, applied at agent architecture. Two pools "
          "investigate the same evidence with opposing priors. They will disagree — and that "

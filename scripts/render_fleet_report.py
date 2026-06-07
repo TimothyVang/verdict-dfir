@@ -285,14 +285,25 @@ def write_markdown(fleet_dir: Path, corr: dict, has_temporal: bool) -> Path:
     if mitre:
         out.append("![MITRE technique density](figures/mitre_density.png)")
         out.append("")
-        # If T1014 covers most hosts, surface this prominently
+        # If a T1014 / enumeration-divergence pattern covers most hosts,
+        # surface it — but a HIGH fleet prevalence argues AGAINST a
+        # coordinated rootkit (which would have to unlink every core OS
+        # process per host without crashing it) and FOR a shared
+        # acquisition-smear / kernel-global read failure. Report as a
+        # HYPOTHESIS, not N confirmed rootkits. (Post-smear-detection,
+        # find_evil_auto tags smeared hosts mitre=None, so this count
+        # reflects only genuine-DKOM hosts.)
         t1014 = mitre.get("T1014", 0)
         if t1014 >= max(2, h // 3):
             out.append(
-                f"> **{t1014} hosts** show DKOM/T1014 (Rootkit) findings. "
-                f"This is a fleet-level rootkit signal — the rootkit has "
-                f"spread or was deployed simultaneously. Treat as APT "
-                f"lateral-movement until disproven."
+                f"> **{t1014} hosts** show the `pslist`=0 / `psscan`>0 "
+                f"process-enumeration divergence. Treat this as a "
+                f"**HYPOTHESIS**, not {t1014} confirmed rootkits: a high "
+                f"fleet prevalence is more consistent with a shared "
+                f"acquisition-smear / kernel-global read failure than with a "
+                f"coordinated DKOM rootkit. Confirm or dismiss per host via "
+                f"on-disk service/driver artifacts (≥2 artifact classes) "
+                f"before asserting T1014."
             )
             out.append("")
 

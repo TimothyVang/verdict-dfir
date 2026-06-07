@@ -20,7 +20,7 @@
 This report documents an end-to-end forensic investigation conducted by **Find Evil!**, an AI-orchestrated DFIR pipeline built on the SANS SIFT Workstation, against the *SRL-2018 Compromised Enterprise Network* dataset shipped as the SANS HACKATHON-2026 starter corpus. The investigation:
 
 1. **Ingested** 79 GB of E01 disk images (4 hosts) and 98 GB of raw memory captures (22 host images), with full SHA-256 chain-of-custody verification on receipt and on every subsequent tool call. Every byte read by the agent was hash-verified against the receipt manifest [§3].
-2. **Detected a process-enumeration divergence** on the Domain Controller's memory image: Volatility 3's `windows.pslist` (linked-list walk) returned **0 processes** while `windows.psscan` (memory-signature scan) returned **124 processes**. This pslist/psscan divergence is a textbook signature of *Direct Kernel Object Manipulation (DKOM)* unlinking — MITRE ATT&CK technique **T1014 — Rootkit** [§4.3] [^mitre-t1014].
+2. **Detected a process-enumeration divergence** on the Domain Controller's memory image: Volatility 3's `windows.pslist` (linked-list walk) returned **0 processes** while `windows.psscan` (memory-signature scan) returned **124 processes** [§4.3]. While that split *can* indicate *Direct Kernel Object Manipulation (DKOM)* unlinking (MITRE ATT&CK **T1014 — Rootkit** [^mitre-t1014]), re-examination (2026-06-07, Volatility 2.27/2.28) shows it is better explained on this image as an **acquisition smear / kernel-global read failure** — `KeNumberProcessors`=0, core OS singletons (`System`/`csrss`/`lsass`) recovered only by `psscan`, and duplicate `System` EPROCESS, none of which a rootkit can produce. It is therefore reported as a **HYPOTHESIS**, not a confirmed rootkit; process-hiding is **INDETERMINATE** pending disk corroboration. The corroborable leads are the service implant `subject_srv.exe` (T1543.003) and service-spawned `cmd.exe` bursts (T1059.003).
 3. **Surfaced the divergence as a Pool A vs Pool B contradiction** before judging — the architectural feature that distinguishes Find Evil! from consensus-seeking single-agent forensic tools [§5] [^heuer-1999] [^estornell-2025].
 4. **Produced a cryptographically-signed run manifest** anchored to a hash-chained audit log with an `rs_merkle` Merkle tree over every tool call's output digest. The manifest is offline-verifiable; tampering with any byte produces the exact diagnostic shown in §7 [^fre-902-14].
 5. **Demonstrated tamper detection** as a live negative test: deliberately corrupting the Merkle root field of the on-disk manifest produced the precise mismatch diagnostic at verification time [§7].
@@ -86,7 +86,7 @@ Every tool call writes a record to `audit.jsonl` containing `prev_hash` (SHA-256
 | 4 | tool_call_output | tc-2 |
 | 5 | agent_message (supervisor commentary) | — |
 
-The chain's terminal record, when canonicalized and SHA-256ed, produces the value committed to the run manifest as `audit_log_final_hash` (§5). The DKOM analysis in §4.3 is based on the preserved Volatility 3 `windows.pslist` and `windows.psscan` outputs summarized there; a regenerated report should include those Volatility tool-call rows directly in this table so the finding-to-`tool_call_id` path is visible without consulting sidecar evidence files.
+The chain's terminal record, when canonicalized and SHA-256ed, produces the value committed to the run manifest as `audit_log_final_hash` (§5). The process-enumeration analysis in §4.3 is based on the preserved Volatility 3 `windows.pslist` and `windows.psscan` outputs summarized there; a regenerated report should include those Volatility tool-call rows directly in this table so the finding-to-`tool_call_id` path is visible without consulting sidecar evidence files.
 
 ---
 
@@ -126,15 +126,21 @@ The PDB GUID resolves to a Windows Server 2008 R2 build [^vol3-symbols]. The Vol
 
 ![pslist vs psscan divergence](figures-2026-04-26/04_pslist_vs_psscan.png)
 
-This is the textbook signature of **DKOM (Direct Kernel Object Manipulation) process hiding** — MITRE ATT&CK technique **T1014 (Rootkit)** [^mitre-t1014]. A rootkit (kernel module, driver, or memory-resident shellcode) unlinks malicious processes from `PsActiveProcessHead` while leaving their `EPROCESS` structures intact in pool memory. `pslist` follows the linked list and finds nothing because the unlinking has been done; `psscan` finds the orphaned `EPROCESS` objects by signature and produces the true count.
+At face value this looks like the textbook signature of **DKOM (Direct Kernel Object Manipulation) process hiding** — MITRE ATT&CK technique **T1014 (Rootkit)** [^mitre-t1014] — where a rootkit unlinks malicious processes from `PsActiveProcessHead` while leaving their `EPROCESS` structures intact in pool memory. The Volatility documentation does identify this divergence as a *possible* indicator of rootkit activity [^vol3-malware-analysis], documented in incidents involving Necurs, FU, and Hacker Defender [^volatility-cookbook].
 
-The Volatility documentation explicitly identifies this divergence as evidence of rootkit activity [^vol3-malware-analysis]. The exact same divergence has been documented in real-world incidents involving the Necurs rootkit, FU rootkit, and Hacker Defender [^volatility-cookbook].
+**On *this* image, however, that interpretation does not hold — a more mundane explanation outranks it.** Re-examination on 2026-06-07 (Volatility 2.27.0 *and* 2.28.0) surfaced three signatures, **none of which a rootkit can produce**, that point to an **acquisition smear / kernel-global read failure** rather than DKOM:
 
-**Pool A vs Pool B framing:**
+1. **`KeNumberProcessors` reads 0** in `windows.info` — impossible on a live host. Volatility uses this kernel global to bound the `PsActiveProcessHead` walk; read as 0, *every* linked-list plugin (`pslist`, `thrdscan`, `csrss`) degrades to 0 hits, while pool-tag scanning (`psscan`) is unaffected. This alone produces the divergence.
+2. **The "hidden" set is 100% of processes, including the core OS singletons** (`System`, `csrss.exe`, `lsass.exe`, `services.exe`). Real DKOM unlinks a *few* attacker processes; unlinking the core OS singletons would bugcheck the host instantly, so universal invisibility is mechanically inconsistent with a rootkit.
+3. **Duplicate `EPROCESS` for the immortal `System` (PID 4)** at two offsets (plus multiple `csrss` copies) — a page-inconsistency artifact of a smeared live `dc3dd` capture, not something a rootkit produces.
+
+(The agent's automated smear detector in `find_evil_auto.py` keys on tells 2 and 3 — both derivable from `psscan` alone; tell 1, `KeNumberProcessors`=0, is a corroborating reading from `windows.info`.) Identical results across two Volatility versions rule out a single-version regression and mean the SIFT VM would hit the same wall — **no Volatility version recovers a smeared capture.** Per `agent-config/SOUL.md`, when a benign explanation outranks the malicious one the claim is a **HYPOTHESIS at most**, and a T1014 assertion would require ≥2 corroborating artifact classes (e.g. a carved non-Microsoft `.sys` driver or a YARA rootkit hit) — neither present here. **Process-hiding verdict: INDETERMINATE.** (This section originally read the divergence as a CONFIRMED textbook DKOM signature; the correction above is the epistemic-discipline outcome SOUL.md requires — surfacing the smear and refusing to assert a rootkit it cannot prove.)
+
+**Pool A vs Pool B framing (pre-resolution hypotheses, not the delivered verdict):**
 - **Pool A** (persistence): "The active process list is empty — investigate `PsActiveProcessHead`. Possible kernel module hijack."
 - **Pool B** (general malware): "psscan confirms 124 processes including standard Windows kernel, suggesting memory image is intact but the linked list has been tampered with."
 
-The contradiction surface fires on this disagreement (`detect_contradictions` returns 1) — exactly as designed.
+The contradiction surface fires on this disagreement (`detect_contradictions` returns 1) — exactly as designed. **It is then resolved by the smear analysis above:** the linked list is unreliable because of an acquisition smear / kernel-global read failure, **not** because a rootkit tampered with it — so neither pool's malicious reading (kernel-module hijack / DKOM tampering) is asserted, and process-hiding is left **INDETERMINATE**.
 
 ### 4.4 Process timeline
 
@@ -165,11 +171,11 @@ The process-name distribution is consistent with a Windows Server 2008 R2 Domain
 * `Microsoft.Active...` — Active Directory Web Services (truncated by Vol3 to 14 chars)
 * `mmc.exe` (×2) — admin sessions noted above
 
-No obviously-named persistence implants are visible at this layer (no `svhost.exe`, no `lssas.exe`, no random-letter binaries). However, **the absence of suspicious names in the EPROCESS list is not evidence of absence** — the DKOM unlinking from §4.3 means the canonical linked list is unreliable, and any rootkit-hidden process would not appear here even via psscan if its `EPROCESS` block has been overwritten or reallocated. The corroborating step is `vol_psxview`, now part of the typed MCP surface, which cross-references multiple process-listing methods.
+No obviously-named persistence implants are visible at this layer (no `svhost.exe`, no `lssas.exe`, no random-letter binaries). However, **the absence of suspicious names in the EPROCESS list is not evidence of absence** — the enumeration failure from §4.3 (an acquisition smear on this image, not DKOM) means the canonical linked list is unreliable here, and any genuinely hidden process would not appear even via psscan if its `EPROCESS` block has been overwritten or reallocated. The corroborating step is `vol_psxview`, now part of the typed MCP surface, which cross-references multiple process-listing methods.
 
 ### 4.6 vol_malfind — code injection scan
 
-`windows.malfind` returned 0 injection candidates. This is *not* exonerating: malfind walks the same VAD tree that pslist's linked-list dependency requires. With DKOM unlinking active, malfind shares pslist's blindness. The corroborating step would be a memory-resident YARA scan (`yara_scan` against the `.img` file directly) plus offline string/PE-header carving — both partially supported but not run in this investigation [§8].
+`windows.malfind` returned 0 injection candidates. This is *not* exonerating: malfind walks the same VAD tree that pslist's linked-list dependency requires. With the active-list walk failing on this image (§4.3), malfind shares pslist's blindness. The corroborating step would be a memory-resident YARA scan (`yara_scan` against the `.img` file directly) plus offline string/PE-header carving — both partially supported but not run in this investigation [§8].
 
 ---
 
@@ -246,7 +252,7 @@ The narrow tool surface is **architecturally deliberate** [§2] — the typed MC
 
 **8.3** *(Reserved — was: "No Internet-connected verification" caveat about `ots_stamp` not running. The OpenTimestamps + Bitcoin tier was removed under Amendment A5; this caveat is no longer applicable.)*
 
-**8.4 The DKOM finding is observational, not attributional.** Section 4.3 reports a pslist/psscan divergence consistent with DKOM rootkit activity. Find Evil! does **not** attribute the activity to any specific actor or malware family — that requires deeper analysis (kernel module fingerprinting, YARA-Forge rule scan against memory, IOC matching against threat-intel feeds) and is properly the analyst's call after reviewing additional artifacts. The non-attribution stance is a SOUL.md non-negotiable invariant.
+**8.4 The process-enumeration divergence is observational, and on this image points to capture integrity — not DKOM.** Section 4.3 reports a pslist/psscan divergence; re-examination found it best explained as an acquisition smear (HYPOTHESIS), so Find Evil! does **not** assert T1014 on it. Were it genuine DKOM, Find Evil! would still **not** attribute the activity to any specific actor or malware family — that requires deeper analysis (kernel module fingerprinting, YARA-Forge rule scan against memory, IOC matching against threat-intel feeds) and is properly the analyst's call after reviewing additional artifacts. The non-attribution stance is a SOUL.md non-negotiable invariant.
 
 **8.5 Volatility 3 symbol resolution depends on Microsoft's symbol server.** The kernel symbol resolution in §4.2 succeeded because Volatility 3 was able to fetch `ntkrnlmp.pdb` from `msdl.microsoft.com`. For investigations conducted against air-gapped evidence, the Microsoft symbol server is not reachable, and Vol3 will fall back to its bundled symbol pack — which may not include every Windows build. For the SRL-2018 dataset (which uses a 2018 Windows Server 2008 R2 build), the bundled pack was sufficient.
 
@@ -257,13 +263,13 @@ The narrow tool surface is **architecturally deliberate** [§2] — the typed MC
 | # | Finding | Confidence | Artifact class | MITRE ATT&CK |
 |:-:|:--|:-:|:--|:--|
 | 1 | DC memory image is a valid Windows Server 2008 R2 kernel | CONFIRMED | Vol3 windows.info | n/a |
-| 2 | Process linked-list is unlinked (DKOM signature) | CONFIRMED | Vol3 pslist=0, psscan=124 | T1014 (Rootkit) |
+| 2 | Active-list enumeration fails (pslist=0) while psscan recovers 124 — **acquisition smear, not DKOM** (§4.3) | HYPOTHESIS | Vol3 pslist=0 / psscan=124 + smear tells | — (T1014 *not* asserted) |
 | 3 | Administrator session activity 2018-08-16 22:32 UTC and 2018-08-17 15:22 UTC | INFERRED | Vol3 psscan timestamps on `mmc.exe` | n/a |
 | 4 | Windows Error Reporting Manager fired 2018-09-06 21:22 UTC, ~1.5 hr before memory acquisition | INFERRED | Vol3 psscan timestamp on `wermgr.exe` | n/a |
 | 5 | Cryptographic chain of custody intact | CONFIRMED | manifest_verify all 4 checks green | n/a |
 | 6 | Tamper detection works — `ff…ff` Merkle root rejected with full diagnostic | CONFIRMED | manifest_verify negative test | n/a |
 
-**Overall verdict: SUSPICIOUS, requires deeper analysis.** The DKOM signature is sufficient evidence to escalate to a full incident response, including:
+**Overall verdict: SUSPICIOUS, requires deeper analysis** — driven by the corroborable service-implant leads (`subject_srv.exe`, T1543.003; service-spawned `cmd.exe` bursts, T1059.003), **not** by the process-enumeration divergence, which is INDETERMINATE (acquisition smear, §4.3). Recommended escalation:
 
 * Memory-resident YARA scan against the raw `.img` for known rootkit signatures (HackerDefender, FU, Necurs, Sednit/APT28 driver families)
 * `windows.psxview` cross-reference against `_EPROCESS`, `_PspCidTable`, `_KPRCB.WaitListHead`, `_KPRCB.NextThread`, and process VADs to identify which specific PIDs are unlinked (`vol_psxview` is now in the typed MCP surface)
@@ -280,16 +286,16 @@ The full 22-host corpus has since been investigated end-to-end via `find-evil-au
 |---|---|
 | Hosts investigated | **22** (12 SUSPICIOUS, 10 INDETERMINATE, 0 NO_EVIL) |
 | Cryptographic integrity | 22/22 unique Merkle roots — chain integrity intact |
-| Hosts showing T1014 (Rootkit / DKOM) | **11/22** (52%) — fleet-level rootkit signal |
+| Hosts showing the `pslist`=0 / `psscan`>0 enumeration divergence | **11/22** (52%) — most likely a **shared acquisition-smear condition** (HYPOTHESIS), not 11 confirmed rootkits (§4.3) |
 | Hosts showing T1055 (Process Injection) | **9/22** (41%) |
 | Cross-host process correlations (≥2 hosts, after FP filter) | 73 image names |
 | Multi-host temporal clusters (≥2 hosts within 60s) | 31 clusters |
 
 The most striking single pattern: **6 hosts ran `Autorunsc.exe` at the exact same second** (cluster 1 in `figures/temporal_clusters.png` of the fleet report) — this is not natural system behavior; it's the temporal fingerprint of an automated sweep (PsExec push, SCCM, WMI execution chain, or scheduled-task pivot). On its own, the simultaneity tells you only that *something* coordinated the execution; whether the coordinator was the IR team running forensic recon or an attacker living off Sysinternals tooling is the analyst's call (see `docs/false-positives.md` "Sysinternals tools deliberately not filtered").
 
-Other strong cross-host signals: `rubyw.exe` on 13 hosts and `ruby.exe` on 12 (Ruby for Windows is not standard enterprise tooling on a Server 2008 R2 fleet); `msadvapi2_32.e` and `msadvapi2_64.e` on 8 hosts each (non-native, name-spoofing the legitimate `advapi32.dll`); `subject_srv.ex` on 19 hosts (investigate which McAfee/Trellix component this maps to before dismissing). The complete prioritized list with per-host pivot points is in the fleet report's "Recommended analyst priorities" section.
+Other strong cross-host signals: `rubyw.exe` on 13 hosts and `ruby.exe` on 12 (Ruby for Windows is not standard enterprise tooling on a Server 2008 R2 fleet); `msadvapi2_32.e` and `msadvapi2_64.e` on 8 hosts each (non-native, name-spoofing the legitimate `advapi32.dll`); `subject_srv.ex` on 19 hosts — on the DC this is a non-standard binary launched by `services.exe` **inside the incident window** (still running at capture), a genuine **T1543.003** service-implant lead; confirm the on-disk binary + service registry key before attributing, and rule out a McAfee/Trellix component. The complete prioritized list with per-host pivot points is in the fleet report's "Recommended analyst priorities" section.
 
-The DC analyzed in this document is one of the 11 T1014 hosts; the other 10 should be triaged with the same `\Windows\System32\drivers\` search the §9 callout above prescribes.
+The DC analyzed in this document is one of the 11 hosts showing the enumeration divergence — and that 11/22 prevalence is itself evidence *for* the shared-smear reading (a coordinated rootkit on exactly half the fleet that hides every core OS process without crashing any host is far less parsimonious than 11 hosts sharing one live-acquisition artifact). Treat the divergence as a capture-integrity **HYPOTHESIS** on all 11 and pivot to the on-disk service/driver artifacts (e.g. `subject_srv`, and a `\Windows\System32\drivers\` search) to confirm or dismiss.
 
 ---
 

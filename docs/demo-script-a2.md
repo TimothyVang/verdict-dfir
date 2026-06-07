@@ -110,11 +110,13 @@ hash-chained record landing.
 > One command. Tesla-mode. The agent opens the case, hashes the
 > image, walks the active process list with Volatility's pslist,
 > then signature-scans EPROCESS pool memory with psscan — and the
-> two disagree. That divergence is the textbook DKOM rootkit
-> signature. The agent labels the finding `INFERRED` because two
-> tool outputs corroborate. It will *not* label this `CONFIRMED`
-> until the verifier re-runs both calls and matches the original
-> hashes. That distinction is non-negotiable.
+> two disagree. That divergence *can* be a DKOM rootkit signature —
+> but on this image the agent spots the acquisition-smear tells
+> (core OS singletons recovered only by psscan, duplicate `System`
+> EPROCESS — which a rootkit can't produce) and labels it a
+> `HYPOTHESIS`, **not** a confirmed rootkit, refusing to assert
+> T1014 without a second artifact class. It does **not** over-claim
+> `CONFIRMED`. That epistemic discipline is non-negotiable.
 
 **Notes:**
 - The "INFERRED, not CONFIRMED" line is what proves we're not

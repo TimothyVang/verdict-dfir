@@ -185,10 +185,12 @@ of your Project.
 > **Markdown source:**
 > [`docs/reports/2026-04-26-srl2018-dc-investigation.md`](docs/reports/2026-04-26-srl2018-dc-investigation.md)
 >
-> Key accuracy metrics from the NIST CFReDS Hacking Case:
+> Key accuracy metrics — **NIST CFReDS Hacking Case** (`SCHARDT.001` golden):
 > - **Recall target:** ≥ 71% of 14 canonical findings (per golden at
 >   `goldens/nist-hacking-case/expected-findings.json`)
-> - **CONFIRMED DKOM finding** (MITRE T1014) fully reproduced and verified
+>
+> Key findings — **SRL-2018 DC** (the showcase report, a different dataset):
+> - **Process-enumeration divergence** (`vol_pslist`=0 vs `vol_psscan`=124) reported as a **HYPOTHESIS**, not confirmed DKOM — on the SRL-2018 DC image it is an acquisition smear / kernel-global read failure (`KeNumberProcessors`=0, core OS singletons recovered only by `psscan`, duplicate `System` EPROCESS); the agent refuses to assert T1014 without ≥2 artifact classes. Corroborable leads: `subject_srv.exe` (T1543.003) + service-spawned `cmd.exe` (T1059.003).
 > - Fleet accuracy summary: §9.1 of the report (22-host SRL-2018 rollup)
 
 ---
