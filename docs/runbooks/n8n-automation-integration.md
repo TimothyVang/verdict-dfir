@@ -227,9 +227,29 @@ post-verdict sidecars — never a `tool_call_id`, never appended to `audit.jsonl
 `run.manifest.json`, and they never change a finding's Confidence or the Verdict (frozen at
 `manifest_finalize`). The grounding smoke asserts the chain is byte-unchanged after a run.
 
-**Phase 2 (keyed, not yet wired):** abuse.ch / VirusTotal IOC enrichment + open-web search, with
-keys acquired via a browser-login key helper (scripts/get-api-key.py, Phase 2 — not yet created),
-plus a dashboard GroundingPanel.
+## IOC reputation enrichment (Phase 2, host-side)
+
+Alongside technique grounding, `ground_verdict.py` enriches the verdict's typed IOCs
+(`malware_triage.aggregate_iocs` — hashes/domains/ips/urls, never a blind regex) against
+VirusTotal and writes an `ioc_enrichment` block into `grounding_research.json`; the judge then
+records per-IOC `malicious | clean | unknown` in `grounding.json` (`ioc_grounding[]`), surfaced in
+the dashboard GroundingPanel.
+
+**Enrichment runs HOST-SIDE, not in n8n.** n8n persists execution inputs in its database, so
+routing an API key through the webhook would leak the secret into n8n's execution store.
+VirusTotal/abuse.ch are plain JSON APIs (no browser needed), so the host calls them directly and
+the key never leaves the gitignored file. n8n stays the **browser-rendered-research** engine
+(MITRE now, open-web search later) where the value is rendering untrusted HTML and no secret is
+involved.
+
+**Keys (browser login):** `scripts/get-api-key.cjs <provider>` opens **real Google Chrome** with
+the automation fingerprints stripped (so Google SSO is not blocked), waits for the operator to
+sign in, then reads the API key off the account page and saves it to gitignored
+`tmp/api-keys/<provider>.txt` (or set `VT_API_KEY`). VirusTotal is wired; abuse.ch is the next
+provider. Same boundary: enrichment results are an operator aid, never evidence.
+
+**Phase 2 remaining:** abuse.ch (URLHaus/ThreatFox/MalwareBazaar) enrichment + open-web search
+(search API + browserless when no API exists), plus grounding-aware action routing.
 
 ---
 
