@@ -204,7 +204,58 @@ fi
 ok ".mcp.json registers both MCP servers."
 
 # ---------------------------------------------------------------------------
-# 6. Next steps.
+# 6. Optional: visible launch-banner alias.
+# ---------------------------------------------------------------------------
+#
+# The SessionStart hook (.claude/settings.json -> scripts/session-suggest.sh)
+# already injects the onboarding suggestions into every session automatically.
+# Whether its banner is *visible at launch* depends on how the installed Claude
+# Code version surfaces hook stderr. scripts/claude is a thin wrapper that prints
+# the banner unconditionally, then forwards to the real CLI. Aliasing `claude` to
+# it guarantees the banner for this user. Idempotent; skipped non-interactively.
+
+setup_banner_alias() {
+    local rc alias_line marker
+    case "${SHELL:-}" in
+        */zsh) rc="${HOME}/.zshrc" ;;
+        *)     rc="${HOME}/.bashrc" ;;
+    esac
+    marker="# VERDICT launch-banner alias"
+    alias_line="alias claude='bash ${REPO}/scripts/claude'  ${marker}"
+
+    if [ -f "${rc}" ] && grep -qF "${marker}" "${rc}"; then
+        ok "Launch-banner alias already present in ${rc}."
+        return 0
+    fi
+
+    if [ ! -t 0 ]; then
+        info "Non-interactive shell — skipping alias prompt. To enable the visible"
+        info "  launch banner, add this line to your shell rc (${rc}):"
+        echo "    ${alias_line}"
+        return 0
+    fi
+
+    echo ""
+    info "Optional: alias \`claude\` to print the VERDICT launch banner at startup?"
+    info "  Adds to ${rc}:  ${alias_line}"
+    printf "  Add it now? [y/N] "
+    read -r reply
+    case "${reply}" in
+        [yY]|[yY][eE][sS])
+            printf '\n%s\n' "${alias_line}" >> "${rc}"
+            ok "Alias added to ${rc}. Run: source ${rc}  (or open a new terminal)."
+            ;;
+        *)
+            info "Skipped. You can add it later:"
+            echo "    ${alias_line}"
+            ;;
+    esac
+}
+
+setup_banner_alias
+
+# ---------------------------------------------------------------------------
+# 7. Next steps.
 # ---------------------------------------------------------------------------
 
 echo ""
