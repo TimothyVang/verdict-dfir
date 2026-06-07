@@ -243,6 +243,12 @@ else
   row warn "chrome" "absent — needed for PDF/HTML report render"
   REMEDIES+=("chrome: sudo apt-get install -y chromium-browser   (or install Google Chrome)")
 fi
+if python3 -c 'import matplotlib' >/dev/null 2>&1; then
+  row ok "matplotlib" "$(python3 -c 'import matplotlib as m; print(m.__version__)' 2>/dev/null)"
+else
+  row warn "matplotlib" "absent — report figures skipped (text/HTML/PDF still render)"
+  REMEDIES+=("matplotlib: pip3 install --user matplotlib")
+fi
 
 GROUP="Demo recording"
 [ -z "${JSON_MODE}" ] && { echo; echo "${c_blu}Demo recording${c_off} ${c_dim}(for scripts/record-demo.sh)${c_off}"; }

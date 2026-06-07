@@ -113,6 +113,21 @@ else
   rm -rf "${t}"
 fi
 
+# --- matplotlib (report figures in scripts/render_report.py) — pip --user ---
+# Host-side only: render_report runs in find_evil_auto.py on the host in BOTH
+# local and --sift modes, so the SIFT VM never needs it. Without it the report
+# still renders (text/HTML/PDF) but every figure is skipped.
+if python3 -c 'import matplotlib' >/dev/null 2>&1; then
+  ok "matplotlib present ($(python3 -c 'import matplotlib as m; print(m.__version__)' 2>/dev/null))."
+else
+  info "Installing matplotlib (pip --user; report figures)..."
+  if pip3 install --user --quiet matplotlib; then
+    ok "matplotlib installed."
+  else
+    warn "matplotlib install failed — try: pip3 install --user --break-system-packages matplotlib (or use a venv). Report figures will be skipped."
+  fi
+fi
+
 # --- tshark (pcap_triage) — system package; not user-space installable ---
 if have tshark; then
   ok "tshark present."
