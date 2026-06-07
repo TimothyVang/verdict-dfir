@@ -339,6 +339,59 @@ def _path_is_allowed(rel_posix: str, allowed: tuple[str, ...]) -> bool:
     return any(rel_posix == a or rel_posix.startswith(a + "/") for a in allowed)
 
 
+_MCP_JSON_FORBIDDEN_TOKENS = (
+    "protocol-sift",
+    "sift-gateway",
+    "execute_shell",
+    "bash -c",
+    "fetch",
+    "browser",
+)
+_MCP_JSON_REQUIRED_SERVERS = frozenset({"findevil-mcp", "findevil-agent-mcp"})
+
+
+def _check_mcp_json_surface() -> list[str]:
+    """Assert .mcp.json has exactly the two typed servers and no gateway/shell tokens."""
+    import json
+
+    mcp_path = REPO / ".mcp.json"
+    if not mcp_path.exists():
+        return [".mcp.json not found — required for Find Evil! agent session"]
+
+    try:
+        data = json.loads(mcp_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [f".mcp.json is not valid JSON: {exc}"]
+
+    servers = data.get("mcpServers", {})
+    server_names = frozenset(servers.keys())
+    issues = []
+
+    extra = server_names - _MCP_JSON_REQUIRED_SERVERS
+    if extra:
+        issues.append(
+            f".mcp.json has unexpected server(s): {sorted(extra)} — "
+            "only findevil-mcp and findevil-agent-mcp are permitted"
+        )
+    missing = _MCP_JSON_REQUIRED_SERVERS - server_names
+    if missing:
+        issues.append(
+            f".mcp.json is missing required server(s): {sorted(missing)}"
+        )
+
+    for name, server in servers.items():
+        args = server.get("args", [])
+        cmd = server.get("command", "")
+        combined = " ".join([cmd] + args).lower()
+        for token in _MCP_JSON_FORBIDDEN_TOKENS:
+            if token in combined:
+                issues.append(
+                    f".mcp.json server '{name}' contains forbidden token '{token}' "
+                    f"in command/args — gateway/shell pass-through is not permitted"
+                )
+    return issues
+
+
 def main() -> int:
     print("=" * 60)
     print("Find Evil! - divergence-smoke")
@@ -384,6 +437,22 @@ def main() -> int:
             failed += 1
         else:
             print(_ascii_safe(f"[OK  ] {div['id']}  {div['label']}"))
+
+    # Structural check: .mcp.json surface lock
+    total_checks += 1
+    mcp_issues = _check_mcp_json_surface()
+    if mcp_issues:
+        print("[FAIL] #10  .mcp.json locked to two typed servers, no gateway/shell drift")
+        for issue in mcp_issues:
+            print(f"         {issue}")
+        print(
+            "         remediation: .mcp.json must contain exactly findevil-mcp and "
+            "findevil-agent-mcp with no protocol-sift, sift-gateway, execute_shell, "
+            "bash -c, fetch, or browser tokens in command/args."
+        )
+        failed += 1
+    else:
+        print("[OK  ] #10  .mcp.json locked to two typed servers, no gateway/shell drift")
 
     print()
     print("=" * 60)
