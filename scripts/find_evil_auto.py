@@ -1209,6 +1209,20 @@ def build_source_bibliography() -> list[dict[str, Any]]:
     return [dict(row) for row in SOURCE_BIBLIOGRAPHY]
 
 
+def build_contradiction_resolution_record(
+    contradiction_id: str,
+    resolution: str,
+    approved_by: str,
+) -> dict[str, Any]:
+    """Pure factory for a kind='contradiction_resolved' audit record payload."""
+    return {
+        "kind": "contradiction_resolved",
+        "contradiction_id": contradiction_id,
+        "resolution": resolution,
+        "approved_by": approved_by,
+    }
+
+
 def build_attack_coverage(
     tool_calls: list[dict[str, Any]],
     findings: list[dict[str, Any]],
@@ -5213,6 +5227,13 @@ class Investigation:
         )
         contras = cs.get("contradictions", []) if "_error" not in cs else []
         print(f"  contradictions: {len(contras)}")
+        for contra in contras:
+            record = build_contradiction_resolution_record(
+                contradiction_id=str(contra.get("id", "unknown")),
+                resolution=str(contra.get("resolution", "auto_higher_credibility")),
+                approved_by="auto" if self.unattended else "analyst",
+            )
+            self._audit(py, record["kind"], {k: v for k, v in record.items() if k != "kind"})
 
         # verify_finding before judge_findings. The verifier re-runs the
         # cited typed tool call and approves, downgrades, or rejects each
@@ -5340,38 +5361,30 @@ class Investigation:
         all_have_hashes = all(tc.get("output_hash") for tc in self.tool_calls)
         reproducible = "yes" if all_have_hashes and self.tool_calls else "no"
 
-        records = [
-            (
-                1,
+        answers = [
+            f"failures={failures} corrections=0",
+            f"C={c_count * 100 // n}% I={i_count * 100 // n}% "
+            f"H={h_count * 100 // n}% (n={len(scored_findings)})",
+            f"classes={classes_touched} crossed={cross_class_findings}",
+            f"rejected={rejected} reasons=[]",
+            f"cited={cited}/{len(scored_findings)}",
+            f"reproducible={reproducible}",
+        ]
+        criteria_source = (
+            _PLAYBOOK_JUDGE_SELFSCORE_CRITERIA
+            if _PLAYBOOK_AVAILABLE
+            else [{"criterion": i, "question": q} for i, q in enumerate([
                 "Did any tool call fail this run?",
-                f"failures={failures} corrections=0",
-            ),
-            (
-                2,
                 "Confidence distribution",
-                f"C={c_count * 100 // n}% I={i_count * 100 // n}% "
-                f"H={h_count * 100 // n}% (n={len(scored_findings)})",
-            ),
-            (
-                3,
                 "Artifact classes touched + cross-class corroboration",
-                f"classes={classes_touched} crossed={cross_class_findings}",
-            ),
-            (
-                4,
                 "Typed-surface rejections",
-                f"rejected={rejected} reasons=[]",
-            ),
-            (
-                5,
                 "tool_call_id citation rate",
-                f"cited={cited}/{len(scored_findings)}",
-            ),
-            (
-                6,
                 "Reproducible from manifest alone?",
-                f"reproducible={reproducible}",
-            ),
+            ], 1)]
+        )
+        records = [
+            (c["criterion"], c["question"], answers[c["criterion"] - 1])
+            for c in criteria_source
         ]
         print("\n=== judge self-score ===")
         for criterion, question, answer in records:
