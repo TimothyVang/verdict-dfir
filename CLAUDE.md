@@ -20,7 +20,7 @@ If a user prompt fits *either* mode, finish reading this file before acting.
 When the user asks you to **investigate `<case path>`** or similar, read these in order — they encode mission, identity, and hard rules that you MUST not violate:
 
 1. **`agent-config/SOUL.md`** — purpose; epistemic hierarchy (CONFIRMED > INFERRED > HYPOTHESIS); FRE 902(14) self-authenticating-evidence stance; strict cross-artifact rule for execution claims; no-attribution rule.
-2. **`agent-config/AGENTS.md`** — supervisor / Pool A / Pool B / judge / verifier / correlator role descriptions. You are the supervisor; the two pools are forked subagents (`CLAUDE_CODE_FORK_SUBAGENT=1`).
+2. **`agent-config/AGENTS.md`** — supervisor / Pool A / Pool B / judge / verifier / correlator role descriptions. You are the supervisor; the two pools are forked as subagents via Claude Code's native Task mechanism (not via `CLAUDE_CODE_FORK_SUBAGENT=1`, which is a build-swarm internal).
 3. **`agent-config/PLAYBOOK.md`** — investigation tool sequences per evidence type (`.e01`, `.mem`, `.evtx`, Velociraptor `.zip`, mixed case dirs). Defaults, not laws — deviate when the case shape diverges and log the deviation.
 4. **`agent-config/TOOLS.md`** — the typed tool surface (Rust `findevil-mcp` + Python `findevil-agent-mcp`).
 5. **`agent-config/MEMORY.md`** — Tier-1 DFIR caveats (Amcache LastModified ≠ execution, ShimCache order changed at Win8.1, EVTX Logon Type 3 vs 10, etc.).

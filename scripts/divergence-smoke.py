@@ -266,6 +266,33 @@ DIVERGENCES = [
             "'Spec/code divergences' SSE-not-WebSocket entry."
         ),
     },
+    {
+        "id": "#9",
+        "label": "Product forks Pool A/B via native Task, not CLAUDE_CODE_FORK_SUBAGENT",
+        "regex": re.compile(r"CLAUDE_CODE_FORK_SUBAGENT"),
+        "allowed_in_path": (
+            # The env var IS real in the build swarm's critic.py.
+            "services/swarm",
+            # The divergence check itself must name the pattern.
+            "scripts/divergence-smoke.py",
+            # Docs that EXPLAIN the divergence necessarily quote the env var.
+            "agent-config/PLAYBOOK.md",
+            "agent-config/AGENTS.md",
+            "docs/architecture.md",
+            "CLAUDE.md",
+            # Plan and braindump docs that document this task.
+            "docs/plans",
+            "docs/braindumps",
+        ),
+        "remediation": (
+            "CLAUDE_CODE_FORK_SUBAGENT=1 is a build-swarm internal "
+            "(services/swarm/findevil_swarm/critic.py). In the product "
+            "(what judges run), Claude Code forks Pool A/B via its "
+            "native Task mechanism — no env var is set. Docs that "
+            "claim the product uses this env var mislead judges. "
+            "Use 'native Task mechanism' instead."
+        ),
+    },
 ]
 
 

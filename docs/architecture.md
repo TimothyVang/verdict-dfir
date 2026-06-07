@@ -10,7 +10,7 @@ This document is the single-page visual summary judges reach first. Full detail 
 
 Per SANS Find Evil! rules, submissions declare which of four supported patterns they implement. Our submission combines **two** patterns:
 
-1. **Direct Agent Extension** (rules §1) — Claude Code IS the agent. The judge runs `scripts/find-evil` (or `claude`) at the repo root; `.mcp.json` auto-spawns both MCP servers; Claude Code drives the investigation as supervisor + Pool A/B subagents (`CLAUDE_CODE_FORK_SUBAGENT=1`). The SANS rules call this "the fastest path to a working submission."
+1. **Direct Agent Extension** (rules §1) — Claude Code IS the agent. The judge runs `scripts/find-evil` (or `claude`) at the repo root; `.mcp.json` auto-spawns both MCP servers; Claude Code drives the investigation as supervisor + Pool A/B subagents (native Task mechanism — not `CLAUDE_CODE_FORK_SUBAGENT`, which is a build-swarm internal). The SANS rules call this "the fastest path to a working submission."
 2. **Custom MCP Server** (rules §2) — two purpose-built MCP servers expose the typed tool surface:
    - `findevil-mcp` (Rust) — 19 DFIR primitives (case_open, disk_mount/extract/unmount, evtx_query, mft_timeline, hayabusa_scan, vol_pslist, vol_psscan, vol_psxview, vol_malfind, yara_scan, usnjrnl_query, registry_query, prefetch_parse, vel_collect, sysmon_network_query, zeek_summary, pcap_triage). Read-only on evidence; SHA-256 every output. **NO `execute_shell`.**
    - `findevil-agent-mcp` (Python) — 12 crypto + ACH + memory + ACP + expert-feedback tools (audit_append/verify, manifest_finalize/verify, verify_finding, detect_contradictions, judge_findings, correlate_findings, memory_remember/recall, pool_handoff, expert_miss_capture). The pre-A5 `ots_stamp`/`ots_verify` pair was removed.
@@ -65,8 +65,8 @@ flowchart TB
 
     subgraph Trust3["**TRUST BOUNDARY 3** — Claude Code agent loop (A2 — replaces LangGraph)"]
         Supervisor["Claude Code main agent<br/>= supervisor<br/>reads agent-config/SOUL.md<br/>+ AGENTS.md + MEMORY.md"]
-        PoolA["Pool A subagent<br/>CLAUDE_CODE_FORK_SUBAGENT=1<br/>persistence-biased prompt:<br/>Tasks, Services, WMI,<br/>Run, IFEO, LOLBins"]
-        PoolB["Pool B subagent<br/>CLAUDE_CODE_FORK_SUBAGENT=1<br/>exfil-biased prompt:<br/>net connections, staging,<br/>certutil/bitsadmin, cloud sync,<br/>USB writes"]
+        PoolA["Pool A subagent<br/>(native Task mechanism)<br/>persistence-biased prompt:<br/>Tasks, Services, WMI,<br/>Run, IFEO, LOLBins"]
+        PoolB["Pool B subagent<br/>(native Task mechanism)<br/>exfil-biased prompt:<br/>net connections, staging,<br/>certutil/bitsadmin, cloud sync,<br/>USB writes"]
         Contradiction["detect_contradictions<br/>(MCP tool call into agent_mcp)<br/>FIRES BEFORE JUDGE"]
         Judge["judge_findings<br/>credibility-weighted<br/>Estornell ICML 2025"]
         Verifier["verify_finding<br/>re-executes cited tool calls<br/>vetos uncited Findings"]
@@ -260,7 +260,7 @@ All three modes are **judge-valid**. Judges pick whichever they already have —
 
 1. Judge runs `scripts/find-evil` (or `claude`) at the repo root. Claude Code reads `.mcp.json`, spawns both MCP servers, ingests `CLAUDE.md` + `agent-config/*` as system context.
 2. Judge prompts: "investigate fixtures/nist-hacking-case/SCHARDT.001". Claude Code (acting as supervisor) calls `case_open` (Rust MCP) — SHA-256 verifies the image, opens via libewf read-only, initializes DuckDB at `~/.findevil/cases/<id>/evidence.ddb`, calls `audit_append` (Python MCP) for the open event.
-3. Claude Code emits a plan as text (no `PlanProposed` event needed — the terminal IS the channel) and forks two subagents with `CLAUDE_CODE_FORK_SUBAGENT=1`: one with the Pool A persistence prompt, one with Pool B exfil.
+3. Claude Code emits a plan as text (no `PlanProposed` event needed — the terminal IS the channel) and forks two subagents via the native Task mechanism: one with the Pool A persistence prompt, one with Pool B exfil.
 4. Each pool subagent invokes Rust MCP DFIR tools (`evtx_query`, `mft_timeline`, `hayabusa_scan`, etc.); each call's SHA-256 output digest is `audit_append`-ed and contributes a Merkle leaf at `manifest_finalize` time.
 5. Both subagents return Findings (each citing a `tool_call_id`). Supervisor calls `detect_contradictions` (Python MCP) which surfaces Pool A vs Pool B disagreements **before** the judge fires.
 6. Analyst resolves contradictions (Trust A / Trust B / Flag) in the terminal, or `--unattended` mode auto-passes them.
