@@ -1,0 +1,35 @@
+{
+  "schema": "verdict.gated-tools/v1",
+  "_comment": "Assets a plain shell cannot fetch (registration form / EULA / login). scripts/setup checks presence and lists missing ones in tmp/setup-state.json; the Claude path (docs/onboarding.md) drives the browser MCP to fetch them. Every GitHub-release DFIR binary is curl-able and handled by scripts/install-dfir-tools.sh instead, so it does NOT belong here. To add a binary later, use kind:binary with destination.dir ~/.local/bin and env_var $<TOOL>_BIN.",
+  "tools": [
+    {
+      "id": "sift-ova",
+      "name": "SANS SIFT Workstation OVA",
+      "kind": "ova",
+      "landing_url": "https://www.sans.org/tools/sift-workstation/",
+      "presence": { "glob": "sift-*.ova", "fallback_glob": "*.ova", "min_bytes": 5000000000 },
+      "destination": {
+        "type": "file",
+        "dir": "<repo-root>",
+        "name_template": "sift-<version>.ova",
+        "consumer": "scripts/sift-vm-bootstrap.sh",
+        "env_var": "OVA_PATH"
+      },
+      "browser": {
+        "engine": "puppeteer",
+        "login_required": true,
+        "credentials_env": ["SANS_PORTAL_USER", "SANS_PORTAL_PASS"],
+        "steps": "NEEDS-LIVE-CONFIRMATION: capture the real SANS form fields, EULA control, login wall, and resolved .ova href in a human-supervised recon dry-run before trusting these steps. Until then, default to manual_fallback.",
+        "extract": "puppeteer_evaluate(): resolve the .ova download href (direct or signed CDN URL)"
+      },
+      "fetch": {
+        "method": "curl",
+        "flags": "-fL -C -",
+        "resume": true,
+        "pass_cookies_if_needed": true
+      },
+      "verify": { "min_bytes": 5000000000, "reject_html": true, "sha256": null },
+      "manual_fallback": "Open the landing_url, complete the SANS form/login/EULA, download the OVA, and save it as sift-<version>.ova at the repo root (or set OVA_PATH=/path/to/your.ova). Then re-run: bash scripts/setup."
+    }
+  ]
+}
