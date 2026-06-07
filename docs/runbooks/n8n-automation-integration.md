@@ -176,6 +176,63 @@ product proves what happened.
 
 ---
 
+## The grounding workflow (anti-hallucination) — `findevil-grounding`
+
+The second, higher-value seam. Where finding-to-action *acts* on a verdict, grounding *checks*
+one: it researches the verdict's MITRE-technique claims against authoritative sources and flags
+the ones the sources do not support — the likely-hallucination surface. Same one-directional,
+post-verdict, never-evidence posture as above.
+
+```
+verdict.json ──► scripts/ground_verdict.py (host) ──► POST findevil-grounding (n8n)
+                        │                                    │
+                        │                       browserless renders attack.mitre.org
+                        │                       (structured extract: name + excerpt + provenance)
+                        ▼                                    │
+        grounding_research.json  ◄───── research_bundle (no LLM in n8n) ──┘
+                        │
+                        ▼  Claude Code judges in-session (agent-config/GROUNDING.md)
+                  grounding.json   { per-claim: supported | contradicted | unsupported | unknown,
+                                     quoted source excerpts, possible_hallucination flag }
+```
+
+**Why n8n carries no LLM.** The workflow only fetches and *structures* public sources. Claude
+Code is the brain: it reads the bundle and renders the per-claim verdict itself (no Anthropic key,
+no `claude -p`). This keeps the judgment in the audited agent, not in an opaque automation step.
+
+**Run it (Phase 1, keyless):**
+
+```bash
+python3 scripts/setup-grounding-workflow.py          # self-bootstraps: findevil-net + browserless + deploy
+python3 scripts/ground_verdict.py <case-dir|case-id> # writes <case>/grounding_research.json
+# then, in a Claude Code session: judge the bundle per agent-config/GROUNDING.md -> <case>/grounding.json
+```
+
+**Networking.** browserless is host-bound at `127.0.0.1:3000`; n8n reaches it container-to-container
+as `http://browserless:3000` over the shared `findevil-net` network. `setup-grounding-workflow.py`
+creates the network, starts browserless on it, and attaches a running n8n container — idempotently.
+
+**Anti-hallucination contract (locked by `scripts/grounding-smoke.py`):**
+- a real technique grounds (`found: true`, name + quoted MITRE excerpt);
+- a bogus id is rejected (`found: false`) — MITRE's 404 page does not name it;
+- a renumbered id is surfaced (`id_match: false`, `mitre_id` = the id MITRE now serves) rather
+  than silently passed or dropped;
+- fetched web text is **untrusted DATA** — n8n returns structured-extract only (tags stripped,
+  excerpt length-capped), and the judge treats any embedded instructions as inert (GROUNDING.md);
+- **quote-or-`unknown`:** no claim is `supported` without a verbatim excerpt from an allowlisted
+  authoritative source.
+
+**Boundary (same as the whole runbook).** `grounding_research.json` and `grounding.json` are
+post-verdict sidecars — never a `tool_call_id`, never appended to `audit.jsonl`, never in
+`run.manifest.json`, and they never change a finding's Confidence or the Verdict (frozen at
+`manifest_finalize`). The grounding smoke asserts the chain is byte-unchanged after a run.
+
+**Phase 2 (keyed, not yet wired):** abuse.ch / VirusTotal IOC enrichment + open-web search, with
+keys acquired via a browser-login key helper (scripts/get-api-key.py, Phase 2 — not yet created),
+plus a dashboard GroundingPanel.
+
+---
+
 ## Verify
 
 ```bash
