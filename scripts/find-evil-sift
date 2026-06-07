@@ -20,7 +20,11 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_ROOT}"
 
 VM_NAME="${VM_NAME:-Find-Evil-SIFT}"
-VM_DIR="${VM_DIR:-$HOME/Documents/Virtual Machines/${VM_NAME}}"
+# VM working dir is OS-specific (matches scripts/sift-vm-bootstrap.sh).
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) VM_DIR="${VM_DIR:-$HOME/Documents/Virtual Machines/${VM_NAME}}" ;;
+  *)                    VM_DIR="${VM_DIR:-$HOME/vmware/${VM_NAME}}" ;;
+esac
 VM_VMX="${VM_DIR}/${VM_NAME}.vmx"
 SSH_KEY="${SIFT_SSH_KEY:-$HOME/.ssh/sift_key}"
 GUEST_USER="${GUEST_USER:-sansforensics}"
@@ -58,10 +62,15 @@ HYPERVISOR=""
 if [[ -f "$VMRUN_WIN" ]]; then
   HYPERVISOR="vmware"
   VMRUN="$VMRUN_WIN"
+elif command -v vmrun &>/dev/null; then
+  # VMware Workstation on Linux — vmrun on PATH. Same code path as Windows
+  # (to_winpath is a no-op on native Linux paths).
+  HYPERVISOR="vmware"
+  VMRUN="$(command -v vmrun)"
 elif command -v virsh &>/dev/null; then
   HYPERVISOR="libvirt"
 else
-  fail "No supported hypervisor found. Expected VMware Workstation (vmrun.exe) or libvirt (virsh). Set VM_NAME to the libvirt domain name or ensure vmrun.exe is on PATH."
+  fail "No supported hypervisor found. Expected VMware Workstation (vmrun) or libvirt (virsh). Set VM_NAME to the libvirt domain name or ensure vmrun is on PATH."
 fi
 log "hypervisor: $HYPERVISOR"
 

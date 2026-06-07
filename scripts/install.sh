@@ -424,62 +424,98 @@ setup_banner_alias() {
 setup_banner_alias
 
 # ---------------------------------------------------------------------------
-# 8. Connect to SIFT VM (optional, non-blocking).
+# 8. Set up / connect the SIFT VM (optional, non-blocking).
 # ---------------------------------------------------------------------------
 #
-# SIFT mode runs the DFIR tools inside the SANS SIFT VM over SSH; local host is
-# the default. This step is opt-in and NEVER fails the installer — on any problem
-# it prints guidance and continues. Set FINDEVIL_SKIP_SIFT=1 to skip entirely.
+# SIFT mode runs the DFIR tools inside the SANS SIFT Workstation VM over SSH;
+# local host is the default. If a SIFT OVA is staged at the repo root this step
+# offers to BUILD the VM end-to-end via scripts/sift-vm-bootstrap.sh (convert /
+# import the OVA, boot, install an SSH key, sync the repo, build the MCP server
+# inside). It NEVER fails the installer. Controls:
+#   FINDEVIL_SKIP_SIFT=1    skip this step entirely
+#   FINDEVIL_SETUP_SIFT=1   build without prompting (for non-interactive runs)
+#   (no OVA at repo root)    -> local-host mode; prints how to enable SIFT
 
 connect_sift_vm() {
-    # Honor every env var name the two SIFT entrypoints use, then the canonical
-    # defaults from scripts/find_evil_auto.py:68-71. (find-evil-sift reads
+    # Honor every env var name the two SIFT entrypoints use. (find-evil-sift reads
     # SIFT_SSH_KEY/GUEST_USER/GUEST_REPO_PATH/SIFT_VM_IP; find_evil_auto.py reads
-    # FIND_EVIL_GUEST_IP/_USER/_SSH_KEY/_GUEST_REPO.)
-    local guest_ip="${FIND_EVIL_GUEST_IP:-${SIFT_VM_IP:-192.168.197.143}}"
+    # FIND_EVIL_GUEST_IP/_USER/_SSH_KEY/_GUEST_REPO.) No IP default — the VM uses
+    # DHCP, so a reachability probe only runs when an IP was actually provided.
+    local guest_ip="${FIND_EVIL_GUEST_IP:-${SIFT_VM_IP:-}}"
     local guest_user="${FIND_EVIL_GUEST_USER:-${GUEST_USER:-sansforensics}}"
     local ssh_key="${FIND_EVIL_SSH_KEY:-${SIFT_SSH_KEY:-${HOME}/.ssh/sift_key}}"
     local guest_repo="${FIND_EVIL_GUEST_REPO:-${GUEST_REPO_PATH:-/home/sansforensics/find-evil}}"
 
     if [ "${FINDEVIL_SKIP_SIFT:-}" = "1" ]; then
-        info "Skipping SIFT VM connect (FINDEVIL_SKIP_SIFT=1)."
+        info "Skipping SIFT VM setup (FINDEVIL_SKIP_SIFT=1)."
         return 0
     fi
 
-    # No key yet -> first-time VM creation must go through the bootstrap.
-    if [ ! -f "${ssh_key}" ]; then
-        info "SIFT VM is optional (local host is the default). No SSH key at:"
-        echo "    ${ssh_key}"
-        info "To create the SIFT VM + key, run:  bash scripts/sift-vm-bootstrap.sh"
+    # A SIFT OVA at the repo root is the trigger for VM setup. No OVA -> the user
+    # is in local-host mode (the default); just tell them how to enable SIFT.
+    local ova=""
+    ova="$(ls -S "${REPO}"/sift-*.ova 2>/dev/null | head -1 || true)"
+    [ -z "${ova}" ] && ova="$(ls -S "${REPO}"/*.ova 2>/dev/null | head -1 || true)"
+    if [ -z "${ova}" ]; then
+        info "SIFT VM is optional (local-host mode is the default)."
+        info "  For disk forensics in the SANS SIFT Workstation, download the OVA"
+        info "  (https://www.sans.org/tools/sift-workstation/), drop it at the repo"
+        info "  root, and re-run this installer — it will build + connect the VM."
         return 0
     fi
+    info "SIFT OVA detected: $(basename "${ova}")"
 
-    # Non-interactive shell: don't reach out over the network; print the hint.
-    if [ ! -t 0 ]; then
-        info "Non-interactive shell — skipping SIFT reachability probe."
-        info "  To use SIFT mode later:  scripts/find-evil-sift   (or  bash scripts/verdict --sift)"
-        return 0
-    fi
-
-    # Key exists -> short, timeout-bounded, BatchMode probe. Same idiom as
-    # scripts/find-evil-sift; guarded so a failed ssh can't kill the script.
-    info "Probing SIFT VM at ${guest_user}@${guest_ip} (5s timeout)..."
-    if ssh -i "${ssh_key}" -o BatchMode=yes -o ConnectTimeout=5 \
-        -o StrictHostKeyChecking=accept-new \
-        "${guest_user}@${guest_ip}" \
-        "test -x ${guest_repo}/target/release/findevil-mcp" >/dev/null 2>&1; then
-        ok "SIFT VM reachable; findevil-mcp is built inside the guest."
-        if [ -f .mcp.json.sift ]; then
-            ok ".mcp.json.sift template is present."
-        else
-            warn ".mcp.json.sift missing — run scripts/sift-vm-bootstrap.sh to regenerate it."
+    # Fast path: already built + reachable at a known IP -> never rebuild.
+    if [ -f "${ssh_key}" ] && [ -n "${guest_ip}" ]; then
+        if ssh -i "${ssh_key}" -o BatchMode=yes -o ConnectTimeout=5 \
+            -o StrictHostKeyChecking=accept-new \
+            "${guest_user}@${guest_ip}" \
+            "test -x ${guest_repo}/target/release/findevil-mcp" >/dev/null 2>&1; then
+            ok "SIFT VM already set up + reachable at ${guest_ip}."
+            info "Run in SIFT mode:  scripts/find-evil-sift   (or  bash scripts/verdict --sift)"
+            return 0
         fi
-        info "To run in SIFT mode:  scripts/find-evil-sift   (or  bash scripts/verdict --sift)"
+    fi
+
+    # Which backend will the bootstrap use? (Prompt text only — the bootstrap
+    # auto-detects and installs KVM/libvirt itself when VMware is absent.)
+    local backend_msg
+    if command -v vmrun >/dev/null 2>&1 && command -v ovftool >/dev/null 2>&1; then
+        backend_msg="VMware Workstation"
+    elif command -v virsh >/dev/null 2>&1 || command -v apt-get >/dev/null 2>&1; then
+        backend_msg="KVM/libvirt (VMware Workstation not found)"
     else
-        warn "SIFT VM not reachable at ${guest_ip} (or findevil-mcp not built in the guest)."
-        info "  Optional — local host mode still works. The VM uses DHCP, so if it's"
-        info "  running, set FIND_EVIL_GUEST_IP=<ip> (or SIFT_VM_IP=<ip>) and re-run."
-        info "  To create/repair the VM:  bash scripts/sift-vm-bootstrap.sh"
+        backend_msg="(no hypervisor found — install VMware Workstation or KVM/libvirt)"
+    fi
+
+    # Decide whether to run the (long, possibly sudo-prompting) bootstrap.
+    if [ "${FINDEVIL_SETUP_SIFT:-}" = "1" ]; then
+        info "FINDEVIL_SETUP_SIFT=1 — building the SIFT VM via ${backend_msg}..."
+    elif [ -t 0 ]; then
+        echo
+        info "Ready to build the SIFT VM from $(basename "${ova}") via ${backend_msg}."
+        info "This can take 20-40 min and may prompt for sudo (kernel modules / packages)."
+        printf "  Build it now? [Y/n] "
+        local reply=""
+        read -r reply || reply=""
+        case "${reply}" in
+            [Nn]*)
+                info "Skipped. Build later:  bash scripts/sift-vm-bootstrap.sh"
+                return 0 ;;
+        esac
+    else
+        info "OVA present but shell is non-interactive — not building automatically."
+        info "  Build now:   FINDEVIL_SETUP_SIFT=1 bash scripts/install.sh"
+        info "  Or run:      bash scripts/sift-vm-bootstrap.sh"
+        return 0
+    fi
+
+    info "Running scripts/sift-vm-bootstrap.sh ..."
+    if bash "${REPO}/scripts/sift-vm-bootstrap.sh"; then
+        ok "SIFT VM bootstrap complete. Run:  scripts/find-evil-sift"
+    else
+        warn "SIFT bootstrap did not complete (non-fatal — local-host mode still works)."
+        warn "  Re-run when ready:  bash scripts/sift-vm-bootstrap.sh"
     fi
     return 0
 }
@@ -540,7 +576,8 @@ echo ""
 echo "${c_blu}QUICK COMMAND REFERENCE${c_off}"
 echo ""
 echo "  bash scripts/find-evil                    # interactive local mode"
-echo "  bash scripts/find-evil-sift               # SIFT-VM mode (VMware Workstation)"
+echo "  bash scripts/sift-vm-bootstrap.sh         # build the SIFT VM (VMware or KVM/libvirt)"
+echo "  bash scripts/find-evil-sift               # SIFT-VM mode (after bootstrap)"
 echo "  bash scripts/find-evil-auto <evidence>    # headless single-shot"
 echo "  bash scripts/run-all-smokes.sh            # full smoke gate (pre-commit)"
 echo "  bash scripts/make-demo-video.sh           # generate demo video"
