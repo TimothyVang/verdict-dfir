@@ -4,6 +4,100 @@ This file guides Claude Code (claude.ai/code) when working in this repository. U
 
 ---
 
+## 0. Session Start — Pre-flight, Onboarding, and Browser Integration
+
+**Run this section's checks automatically at the start of every session before doing anything else.** A first-time user has no idea what is installed or how to use this tool. You are responsible for guiding them.
+
+### 0.1 How to use VERDICT (tell this to new users)
+
+When a user opens Claude Code in this repo for the first time, greet them with:
+
+> **Welcome to VERDICT — DFIR at machine speed.**
+>
+> You can do two things here:
+>
+> 1. **Investigate evidence** — paste a path to your evidence file and say `investigate <path>`. Example: `investigate /cases/nist-hacking-case.E01`
+>    VERDICT will open the case, fork two analysis pools, run DFIR tools, and produce a sigstore-signed report.
+>
+> 2. **Develop the tool** — ask me to read/write code, fix bugs, run tests, or build the demo video.
+>
+> Type `help` at any time for a list of commands, or `investigate <path>` to start an investigation.
+
+Only show this greeting when the user's first message is `help`, `hello`, `hi`, or they ask "what can you do" / "how do I use this" / "what is this". Do not show it on every session start.
+
+### 0.2 Pre-flight checklist (run ONCE per session, silently, before the first tool call)
+
+Check each item. For any failure, print a clear one-line message and offer to fix it automatically or provide the exact install command.
+
+```
+ITEM                    CHECK                                    AUTO-FIX OFFER
+────────────────────────────────────────────────────────────────────────────────
+claude CLI              which claude                             "Run: claude auth login"
+Rust toolchain          cargo --version                          "Run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+uv (Python env)         uv --version                             "Run: pip install uv"
+Node 20+                node --version (must be ≥20)             "Run: nvm install 20 && nvm use 20" or offer to open nodejs.org
+pnpm                    pnpm --version                           "Run: npm install -g pnpm"
+MCP server binary       ls services/mcp/target/release/          "Run: cargo build --workspace --release --locked"
+Python agent-mcp env    uv sync --directory services/agent_mcp   (run it automatically with permission)
+edge-tts (optional)     python3 -c "import edge_tts"             "Run: pip install edge-tts  (only needed for demo video)"
+```
+
+After checks, print a one-line summary:
+- All green: `[preflight] All dependencies present. Ready.`
+- Any red: list what is missing and offer to install/fix before proceeding.
+
+**Do not block the user.** If a check fails for a non-critical dep (edge-tts), note it and continue. Only block on `claude CLI` and at least one of Rust OR Python being missing.
+
+### 0.3 Chrome DevTools — open links for the user
+
+A Chrome DevTools MCP server is registered globally. You CAN open URLs in the user's browser on their behalf. **Always offer to open relevant links instead of just printing them.**
+
+Rules:
+- When you reference a local server (`http://localhost:3000`, `http://localhost:3000/debug`), offer: "Want me to open that in Chrome for you?"
+- When you reference a GitHub URL, docs page, or external resource the user needs to read, offer: "Want me to open that link for you?"
+- When the dashboard dev server starts (`pnpm --filter @findevil/web dev`), automatically navigate to `http://localhost:3000` once it is listening, then tell the user it's open.
+- When a Remotion preview renders to `/tmp/find-evil-preview.mp4`, offer to open it.
+- When an investigation completes and `REPORT.html` is generated, offer to open it in the browser.
+
+To open a URL, use the `mcp__cloakbrowser__navigate` tool. If the browser is not connected, tell the user: "Chrome DevTools is not connected. Start Chrome with remote debugging: `google-chrome --remote-debugging-port=9222` then retry."
+
+### 0.4 First-run install helper
+
+If `services/mcp/target/release/findevil-mcp` does NOT exist (i.e., fresh clone), run the install script automatically:
+
+```bash
+bash scripts/install.sh
+```
+
+`scripts/install.sh` handles credential detection (OAuth token → interactive Claude session → API key), builds the Rust MCP server, syncs Python envs, and prints a checklist. If `install.sh` fails, report the exact error line and stop — do not try to work around a broken environment silently.
+
+### 0.5 Quick reference (print on `help`)
+
+When the user types `help` (and only then), print this:
+
+```
+VERDICT — Quick Reference
+─────────────────────────────────────────────────────
+investigate <path>          Run a full DFIR investigation against evidence
+bash scripts/run-all-smokes.sh   Run the full local smoke gate (pre-commit check)
+bash scripts/find-evil-auto <evidence>   Headless end-to-end run
+bash scripts/make-demo-video.sh  Generate the demo video (needs edge-tts + pnpm)
+pnpm --filter @findevil/web dev  Start the live audit dashboard at localhost:3000
+
+Credential modes (in priority order):
+  1. CLAUDE_CODE_OAUTH_TOKEN env var   (claude setup-token)
+  2. Interactive session               (claude auth login)
+  3. ANTHROPIC_API_KEY env var
+
+Docs:
+  QUICKSTART.md           — 3-step quick start
+  SUBMISSION_COMPLIANCE.md — judge compliance checklist
+  docs/false-positives.md  — analyst checklists
+─────────────────────────────────────────────────────
+```
+
+---
+
 ## 1. Mission
 
 This is the SANS **Find Evil!** hackathon submission (deadline **2026-06-15 22:45 CDT**). You operate in two modes:

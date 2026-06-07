@@ -37,6 +37,16 @@ info()  { echo "${c_blu}[INFO]${c_off}  $*"; }
 warn()  { echo "${c_yel}[WARN]${c_off}  $*"; }
 fail()  { echo "${c_red}[ERR]${c_off}   $*" >&2; }
 
+echo ""
+echo "  ██╗   ██╗███████╗██████╗ ██████╗ ██╗ ██████╗████████╗"
+echo "  ██║   ██║██╔════╝██╔══██╗██╔══██╗██║██╔════╝╚══██╔══╝"
+echo "  ██║   ██║█████╗  ██████╔╝██║  ██║██║██║        ██║   "
+echo "  ╚██╗ ██╔╝██╔══╝  ██╔══██╗██║  ██║██║██║        ██║   "
+echo "   ╚████╔╝ ███████╗██║  ██║██████╔╝██║╚██████╗   ██║   "
+echo "    ╚═══╝  ╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝ ╚═════╝   ╚═╝  "
+echo ""
+echo "  DFIR at machine speed. — SANS Find Evil! 2026"
+echo ""
 echo "=========================================="
 echo "Find Evil! — install pre-flight"
 echo "=========================================="
@@ -101,10 +111,50 @@ if ! printf '%s\n%s\n' "1.85" "${RUST_VER}" | sort -V -C; then
 fi
 
 if ! command -v uv &> /dev/null; then
-    fail "uv not on PATH. Install: https://docs.astral.sh/uv/"
+    fail "uv not on PATH."
+    echo ""
+    echo "  Install uv (Python environment manager):"
+    echo "    curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo "  Then re-run this script."
     exit 1
 fi
 ok "uv: $(uv --version)"
+
+# Node 20+ (required for apps/web dashboard + Remotion demo video)
+if ! command -v node &> /dev/null; then
+    warn "node not on PATH. The live dashboard (apps/web/) and demo video builder will not work."
+    echo "  Install Node 20 LTS: https://nodejs.org/en/download"
+    echo "  Or via nvm: nvm install 20 && nvm use 20"
+    NODE_OK=false
+else
+    NODE_VER_MAJOR=$(node --version | sed 's/v//' | cut -d. -f1)
+    if [ "${NODE_VER_MAJOR}" -lt 20 ]; then
+        warn "node $(node --version) is < 20. Upgrade to Node 20 LTS."
+        echo "  nvm install 20 && nvm use 20"
+        NODE_OK=false
+    else
+        ok "node: $(node --version)"
+        NODE_OK=true
+    fi
+fi
+
+# pnpm (required for dashboard + demo video)
+if $NODE_OK; then
+    if ! command -v pnpm &> /dev/null; then
+        warn "pnpm not on PATH. Installing via npm..."
+        npm install -g pnpm --silent && ok "pnpm installed." || warn "pnpm install failed — run: npm install -g pnpm"
+    else
+        ok "pnpm: $(pnpm --version)"
+    fi
+fi
+
+# edge-tts (optional — only needed for demo video TTS generation)
+if python3 -c "import edge_tts" 2>/dev/null; then
+    ok "edge-tts: present"
+else
+    info "edge-tts not installed (optional — only needed for demo video TTS)."
+    info "  Install when ready: pip install edge-tts"
+fi
 
 # ---------------------------------------------------------------------------
 # 3. Build the Rust MCP server (target/release/findevil-mcp).
@@ -159,22 +209,49 @@ ok ".mcp.json registers both MCP servers."
 
 echo ""
 echo "=========================================="
-echo "${c_grn}Find Evil! is ready.${c_off}"
+echo "${c_grn}VERDICT / Find Evil! is ready.${c_off}"
 echo "=========================================="
 echo ""
-echo "Next steps:"
+echo "${c_blu}HOW TO USE THIS TOOL${c_off}"
 echo ""
-echo "  ${c_blu}Local mode${c_off} (DFIR tool binaries on this host):"
-echo "    bash scripts/find-evil"
-echo "    # or, equivalently"
-echo "    claude    # the official Claude Code CLI; opens an interactive session in cwd"
+echo "  1. Open Claude Code in this repo:"
+echo "       claude"
+echo "     Claude Code IS the agent — it reads CLAUDE.md automatically."
 echo ""
-  echo "  ${c_blu}SIFT-VM mode${c_off} (Tesla-mode automation, agents run inside SIFT):"
-  echo "    bash scripts/find-evil-sift"
-  echo "    # Pre-flight: run bash scripts/sift-vm-bootstrap.sh once."
-  echo "    # Implemented hypervisor path: VMware Workstation."
+echo "  2. Type 'help' to see all commands."
 echo ""
-echo "  ${c_blu}Headless single-shot${c_off} (point at an evidence path, get a signed verdict):"
-echo "    bash scripts/find-evil-auto <evidence-path-inside-VM> --unattended"
+echo "  3. To run an investigation:"
+echo "       investigate /path/to/evidence.E01"
+echo "     The agent will open the case, fork Pool A + Pool B, emit signed Findings,"
+echo "     and produce REPORT.html + a sigstore-verified audit.jsonl."
 echo ""
-echo "  See ${c_blu}QUICKSTART.md${c_off} for the full per-mode walkthrough."
+echo "  4. To watch the live dashboard while an investigation runs:"
+echo "       pnpm --filter @findevil/web dev"
+echo "     Then open ${c_blu}http://localhost:3000${c_off} in Chrome."
+echo "     If you have Chrome DevTools MCP configured, Claude Code will"
+echo "     open that URL in Chrome for you automatically."
+echo ""
+echo "  5. To start Chrome with remote debugging (enables Claude to browse for you):"
+echo "       google-chrome --remote-debugging-port=9222 &"
+echo "     Then ask Claude Code: 'open the dashboard' or 'open the report'."
+echo ""
+echo "${c_blu}QUICK COMMAND REFERENCE${c_off}"
+echo ""
+echo "  bash scripts/find-evil                    # interactive local mode"
+echo "  bash scripts/find-evil-sift               # SIFT-VM mode (VMware Workstation)"
+echo "  bash scripts/find-evil-auto <evidence>    # headless single-shot"
+echo "  bash scripts/run-all-smokes.sh            # full smoke gate (pre-commit)"
+echo "  bash scripts/make-demo-video.sh           # generate demo video"
+echo "  pnpm --filter @findevil/web dev           # start live dashboard"
+echo ""
+echo "${c_blu}USEFUL DOCS${c_off}"
+echo ""
+echo "  QUICKSTART.md              — 3-step quick start for judges and new users"
+echo "  SUBMISSION_COMPLIANCE.md   — 10-item Devpost compliance checklist"
+echo "  docs/false-positives.md    — analyst checklists"
+echo "  docs/demo-script-a2.md    — walkthrough script for the demo video"
+echo ""
+echo "  To verify a signed manifest offline:"
+echo "    uv run --directory services/agent_mcp python -m findevil_agent_mcp.server"
+echo "    # then call the manifest_verify MCP tool"
+echo ""
