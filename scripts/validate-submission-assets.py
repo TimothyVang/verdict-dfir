@@ -191,10 +191,10 @@ def validate_report_text(text: str) -> CheckResult:
     investigation_required = (
         "qa / expert signoff",
         "customer release gate",
-        "findings overview",
-        "cryptographic chain of custody",
+        "findings",
+        "chain of custody",
         "tool_call_id",
-        "what we cannot prove",
+        "limitations",
     )
     missing_investigation = [
         token for token in investigation_required if token not in lowered

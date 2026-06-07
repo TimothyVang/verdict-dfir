@@ -281,10 +281,10 @@ def main(argv: list[str]) -> int:
         else:
             for r in ioc_block.get("results", []):
                 mk = "ok  " if r.get("found") else "MISS"
-                det = f"mal={r.get('malicious')}/{r.get('total_engines')}"
-                label = (r.get("names") or [r.get("error") or ""])[0]
+                prov = ",".join(r.get("providers") or []) or "-"
                 print(
-                    f"  [ioc] {mk} {r.get('type'):<6} {det:<12} {label} {r.get('ioc')[:44]}"
+                    f"  [ioc] {mk} {r.get('type'):<6} mal_src={r.get('malicious_sources')} "
+                    f"[{prov}] {r.get('ioc', '')[:40]}"
                 )
     print(f"\nwrote {out_path}")
     print(

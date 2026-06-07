@@ -111,8 +111,8 @@ def make_run(
     (run / "REPORT.html").write_text(
         "<!doctype html><html><body><h1>Find Evil Report</h1>"
         "<p>Cryptographic attestation. QA / Expert Signoff. "
-        "Customer Release Gate. Findings overview. tool_call_id. "
-        "What we cannot prove.</p>"
+        "Customer Release Gate. Findings Summary. tool_call_id. "
+        "Chain of Custody. Limitations.</p>"
         "<p>Signer: <code>stub</code>; stub signatures are dev/offline only.</p>"
         "<p>customer-ready reports must embed verifier replay evidence.</p>"
         "</body></html>",

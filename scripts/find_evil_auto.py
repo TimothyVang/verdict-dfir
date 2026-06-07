@@ -2115,8 +2115,8 @@ def build_indicators(
         "version": 1,
         "indicator_count": sum(len(values) for values in lists.values()),
         "note": (
-            "Indicators are observed artifacts pulled from the timeline and "
-            "findings; corroborate before detection deployment or blocking."
+            "Observed artifacts pulled from the timeline and findings; validate or "
+            "corroborate before detection deployment or blocking."
         ),
         **lists,
     }
@@ -2719,6 +2719,264 @@ def _confidence_distribution(findings: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
+# Plain-language meaning, why-it-matters, honest caveat, and justified unknowns
+# per MITRE technique. Drives the confident-but-scoped narrative. `action` is a
+# noun phrase for the headline; `cannot` items are (question, reason, recovery).
+TECHNIQUE_PROFILE: dict[str, dict[str, Any]] = {
+    "T1070.001": {
+        "name": "Indicator Removal: Clear Windows Event Logs",
+        "category": "defense evasion / anti-forensics",
+        "action": "a Security audit log clearing",
+        "evil": (
+            "Clearing the Windows Security log removes the local record of what "
+            "happened before it — logons, privilege use, object access, and "
+            "process creation. It is a recognized anti-forensic / defense-evasion "
+            "action."
+        ),
+        "honest_caveat": (
+            "Log clearing is not by itself proof of malicious intent; it also "
+            "happens during legitimate administration, re-imaging, or backup "
+            "onboarding. The record proves the clearing occurred and names the "
+            "account, not who operated it or why."
+        ),
+        "severity": "high",
+        "cannot": [
+            (
+                "What the clearing removed from the log",
+                "records that existed before the clearing are not in this artifact; "
+                "Event 1102 marks the boundary, it does not preserve what was removed",
+                "recover from WEF/Windows Event Forwarding or SIEM copies up to the "
+                "clearing time, EDR telemetry, or a VSS/backup of the EVTX predating it",
+            ),
+            (
+                "Whether the named account was used by its owner or a thief",
+                "a single Security log cannot separate legitimate-owner use from "
+                "credential theft",
+                "review 4624/4625 logon history (type, source host, time), 4768/4769 "
+                "Kerberos, and IdP or EDR sign-in data across hosts",
+            ),
+            (
+                "Whether the clearing was malicious or routine administration",
+                "Event 1102 carries no intent field — the same record is written by a "
+                "maintenance script and by an intruder",
+                "check change-management/ticketing, the account's role, and "
+                "corroborating 4672/4688 events on forwarded logs",
+            ),
+        ],
+    },
+    "T1059.001": {
+        "name": "Command and Scripting Interpreter: PowerShell",
+        "category": "execution",
+        "action": "suspicious PowerShell execution",
+        "evil": (
+            "Encoded or download-cradle PowerShell is a common way to run code "
+            "without dropping a file to disk."
+        ),
+        "honest_caveat": (
+            "Script-block content alone is a lead; admins and software also use "
+            "encoded PowerShell legitimately."
+        ),
+        "severity": "medium",
+        "cannot": [
+            (
+                "Whether the script actually ran and what it did",
+                "a script-block log records the text, not the runtime effect or child "
+                "processes",
+                "correlate with 4688 process creation, Sysmon 1, and EDR process trees",
+            ),
+        ],
+    },
+    "T1053.005": {
+        "name": "Scheduled Task/Job: Scheduled Task",
+        "category": "persistence / execution",
+        "action": "a scheduled-task creation with suspicious content",
+        "evil": (
+            "Scheduled tasks are a durable way to run code on a trigger and survive "
+            "reboots — a common persistence mechanism."
+        ),
+        "honest_caveat": "Most scheduled tasks are legitimate; the action content is the lead.",
+        "severity": "medium",
+        "cannot": [
+            (
+                "Whether the task executed and what it launched",
+                "the creation record does not prove the task fired",
+                "parse the TaskCache registry/XML, 4698/4702, and 4688 for the task's process",
+            ),
+        ],
+    },
+    "T1055": {
+        "name": "Process Injection",
+        "category": "defense evasion / privilege escalation",
+        "action": "memory consistent with process injection",
+        "evil": (
+            "Injected or unbacked executable memory lets code hide inside a "
+            "legitimate process."
+        ),
+        "honest_caveat": (
+            "malfind-style hits include false positives (JIT, packers); a single "
+            "region is a lead until bytes and process ancestry corroborate it."
+        ),
+        "severity": "medium",
+        "cannot": [
+            (
+                "Whether the region is malicious code or a benign JIT/packer artifact",
+                "memory protection flags alone do not classify intent",
+                "carve and analyze the bytes (capa/YARA), check the parent process, "
+                "and corroborate with disk or network artifacts",
+            ),
+        ],
+    },
+    "T1014": {
+        "name": "Rootkit",
+        "category": "defense evasion",
+        "action": "a process-view divergence",
+        "evil": (
+            "When the active process list and a pool scan disagree, a process may "
+            "be hidden — a rootkit/DKOM signal."
+        ),
+        "honest_caveat": (
+            "The same divergence is produced by an acquisition smear or a kernel "
+            "read failure, which a rootkit cannot; disambiguate before claiming T1014."
+        ),
+        "severity": "medium",
+        "cannot": [
+            (
+                "Whether the divergence is selective hiding or an acquisition artifact",
+                "core OS singletons recovered only by psscan and KeNumberProcessors=0 "
+                "point to a smear, not selective DKOM",
+                "look for a carved non-Microsoft .sys driver or a YARA rootkit hit; "
+                "re-acquire memory cleanly",
+            ),
+        ],
+    },
+    "T1003": {
+        "name": "OS Credential Dumping",
+        "category": "credential access",
+        "action": "activity consistent with credential access",
+        "evil": "Reading LSASS or the SAM yields credentials for lateral movement.",
+        "honest_caveat": "A single memory or tool indicator is a lead until corroborated.",
+        "severity": "high",
+        "cannot": [
+            (
+                "Whether credentials were actually extracted",
+                "presence of a tool or LSASS access is not proof of successful dumping",
+                "correlate with handle access to lsass, EDR alerts, and downstream "
+                "use of the credentials (4624 type 3 from new hosts)",
+            ),
+        ],
+    },
+    "T1547.001": {
+        "name": "Boot or Logon Autostart Execution: Registry Run Keys",
+        "category": "persistence",
+        "action": "a Run-key persistence entry",
+        "evil": "Run keys launch a program at logon — a simple, durable persistence spot.",
+        "honest_caveat": "Most Run-key entries are legitimate software; the target path is the lead.",
+        "severity": "medium",
+        "cannot": [
+            (
+                "Whether the referenced binary is malicious",
+                "the registry value is a pointer, not the file",
+                "extract and analyze the target binary; check its signature, prevalence, and Prefetch",
+            ),
+        ],
+    },
+}
+
+_GENERIC_PROFILE: dict[str, Any] = {
+    "name": "",
+    "category": "suspicious activity",
+    "action": "suspicious activity",
+    "evil": "The cited tool output meets a defined detection rule for this technique.",
+    "honest_caveat": "Treat single-source signals as leads until corroborated across artifact classes.",
+    "severity": "medium",
+    "cannot": [],
+}
+
+
+def _technique_profile(technique: Any) -> dict[str, Any]:
+    key = str(technique or "")
+    if key in TECHNIQUE_PROFILE:
+        return TECHNIQUE_PROFILE[key]
+    base = key.split(".")[0]
+    return TECHNIQUE_PROFILE.get(base, _GENERIC_PROFILE)
+
+
+# Per missing artifact class: (why we cannot conclude, how to recover).
+GAP_REASON: dict[str, tuple[str, str]] = {
+    "disk/filesystem": (
+        "execution and persistence cannot be confirmed without disk artifacts",
+        "parse a triage collection — $MFT, $UsnJrnl, Amcache, ShimCache, Prefetch, "
+        "and Registry run keys/services/tasks",
+    ),
+    "network": (
+        "command-and-control and exfiltration cannot be assessed without network data",
+        "collect DNS, proxy, firewall, or NetFlow logs, or a PCAP",
+    ),
+    "memory": (
+        "injected code and hidden processes cannot be examined without a memory image",
+        "capture RAM and run the volatility process and injection plugins",
+    ),
+    "evtx": (
+        "logon, process-creation, and PowerShell activity cannot be reviewed without event logs",
+        "collect the Security, Sysmon/Operational, and PowerShell/Operational logs",
+    ),
+}
+_GAP_PRIORITY = ("disk/filesystem", "network", "memory", "evtx")
+
+
+_CERTAINTY_BY_CONFIDENCE: dict[str, str] = {
+    "CONFIRMED": (
+        "High — reproducible from the cited tool call (the verifier re-runs it and "
+        "matches the SHA-256) and sealed in the signed run manifest. This does not "
+        "authenticate the source artifact upstream of this engine, nor does it prove "
+        "intent or a breach."
+    ),
+    "INFERRED": (
+        "Moderate — derived from at least two corroborating, reproducible facts; the "
+        "conclusion is an inference and should be confirmed by an analyst."
+    ),
+    "HYPOTHESIS": (
+        "Low — a single-source triage lead; treat it as a direction for further "
+        "collection, not a conclusion."
+    ),
+}
+
+
+def _lead_finding(findings: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Highest-confidence finding (CONFIRMED first), tie-broken by technique severity."""
+    if not findings:
+        return None
+    severity_rank = {"high": 2, "medium": 1, "low": 0}
+
+    def rank(finding: dict[str, Any]) -> tuple[int, int]:
+        conf = CONFIDENCE_RANK.get(finding.get("confidence"), 0)
+        severity = severity_rank.get(
+            _technique_profile(finding.get("mitre_technique")).get("severity"), 0
+        )
+        return (conf, severity)
+
+    return max(findings, key=rank)
+
+
+def _lead_entities(events: list[dict[str, Any]]) -> tuple[str, str]:
+    """(actor, host) from the earliest linked event carrying them; ('', '') if none."""
+    actor, host = "", ""
+    for event in sorted(events, key=lambda e: e.get("timestamp_utc") or ""):
+        entities = event.get("entities") or {}
+        if not actor and entities.get("account"):
+            actor = _format_account(entities.get("account"), entities.get("domain"))
+        if not host and (entities.get("host") or entities.get("workstation")):
+            host = str(entities.get("host") or entities.get("workstation"))
+        if actor and host:
+            break
+    return actor, host
+
+
+def _cap_first(text: str) -> str:
+    text = str(text or "")
+    return text[:1].upper() + text[1:] if text else text
+
+
 def build_executive_attack_story(
     findings: list[dict[str, Any]],
     verdict: str,
@@ -2757,6 +3015,8 @@ def build_executive_attack_story(
         if not artifact_classes:
             artifact_classes = ["see finding artifact"]
         confidence = finding.get("confidence", "HYPOTHESIS")
+        beat_actor, beat_host = _lead_entities(events)
+        beat_profile = _technique_profile(finding.get("mitre_technique"))
         caveat = {
             "CONFIRMED": "Confirmed means the cited tool output is reproducible; it does not imply attribution or complete scope.",
             "INFERRED": "Inferred means the story beat is derived from corroborated facts and still needs expert review.",
@@ -2773,6 +3033,9 @@ def build_executive_attack_story(
                 "mitre_technique": finding.get("mitre_technique"),
                 "tool_call_id": finding.get("tool_call_id"),
                 "artifact_classes": artifact_classes,
+                "actor": beat_actor,
+                "host": beat_host,
+                "action": beat_profile.get("action", ""),
                 "source_event_ids": [event.get("event_id") for event in events[:5]],
                 "why_it_matters": "This is part of the customer-facing attack story only because it is backed by a cited Finding.",
                 "caveat": caveat,
@@ -2781,38 +3044,115 @@ def build_executive_attack_story(
 
     distribution = _confidence_distribution(findings)
     touched = sorted(_touched_artifact_classes(case_completeness))
-    blind_spots = int(attack_coverage.get("blind_spot_count", 0) or 0)
-    if verdict == "SUSPICIOUS":
-        headline = "Suspicious activity requires expert review before customer release"
-        customer_summary = (
-            f"Find Evil produced {len(findings)} Finding(s) from the supplied evidence. "
-            "The attack story below is evidence-bound and must be signed off by the human expert."
-        )
-    elif verdict == "NO_EVIL":
-        headline = "No reportable Findings within the scoped artifacts examined"
-        customer_summary = (
-            "The run produced no reportable Findings in the artifact classes it examined. "
-            "This is scoped coverage, not environment-wide assurance."
+
+    # Lead finding drives a confident, evidence-bound headline + assessment.
+    lead = _lead_finding(findings)
+    lead_id = next((fid for fid, f in indexed_findings if f is lead), None)
+    lead_events = events_by_finding.get(str(lead_id), []) if lead_id else []
+    lead_conf = (lead or {}).get("confidence", "")
+    profile = _technique_profile((lead or {}).get("mitre_technique"))
+    actor, host = _lead_entities(lead_events)
+    lead_ts = next(
+        (
+            event.get("timestamp_utc")
+            for event in sorted(lead_events, key=lambda e: e.get("timestamp_utc") or "")
+            if event.get("timestamp_utc")
+        ),
+        None,
+    )
+
+    if lead is None:
+        if verdict == "NO_EVIL":
+            headline = "No reportable findings in the artifact classes examined"
+            customer_summary = (
+                "The run produced no reportable findings in the evidence it examined. "
+                "This is scoped coverage, not environment-wide assurance."
+            )
+        else:
+            headline = "Triage leads only — no confirmed evil in this evidence"
+            customer_summary = (
+                "The run produced limited or hypothesis-level signals. Treat this as a "
+                "direction for further collection, not a conclusion."
+            )
+        assessment = (
+            "No confirmed malicious activity in the examined evidence. See the "
+            "unknowns below for what could not be assessed and how to extend coverage."
         )
     else:
-        headline = "Evidence is insufficient for a final breach story"
-        customer_summary = "The run produced limited or hypothesis-level evidence. Treat this as an expert-review packet, not a final incident narrative."
+        where = f" on {host}" if host else ""
+        who = f" under the account {actor}" if actor else ""
+        when = f" at {lead_ts}" if lead_ts else ""
+        tier_word = {
+            "CONFIRMED": "Confirmed",
+            "INFERRED": "Likely",
+            "HYPOTHESIS": "Triage lead",
+        }.get(lead_conf, "Finding")
+        action = profile.get("action", "suspicious activity")
+        category = profile.get("category", "")
+        tail = f" — {category}" if category else ""
+        headline = f"{tier_word}: {action}{where}{who}{tail}."
+        customer_summary = (
+            f"The supplied evidence shows {action}{where}{who}{when}. "
+            f"{profile.get('evil', '')} {profile.get('honest_caveat', '')}"
+        ).strip()
+        assessment = (
+            f"{profile.get('evil', '')} {profile.get('honest_caveat', '')}"
+        ).strip()
 
-    cannot_say = [
-        "Who operated the activity; Find Evil does not assert attribution.",
+    certainty = _CERTAINTY_BY_CONFIDENCE.get(
+        lead_conf,
+        "Not applicable — no reportable finding in the examined evidence.",
+    )
+
+    # What we can say: the actual CONFIRMED/INFERRED facts, in record-field voice.
+    can_say: list[str] = []
+    for finding_id, finding in indexed_findings:
+        conf = finding.get("confidence")
+        if conf not in ("CONFIRMED", "INFERRED"):
+            continue
+        f_actor, f_host = _lead_entities(events_by_finding.get(finding_id, []))
+        f_profile = _technique_profile(finding.get("mitre_technique"))
+        loc = f" on {f_host}" if f_host else ""
+        acct = f" under the account {f_actor}" if f_actor else ""
+        tcid = finding.get("tool_call_id") or "n/a"
+        technique = finding.get("mitre_technique") or "n/a"
+        can_say.append(
+            f"{_cap_first(f_profile.get('action', 'activity'))}{loc}{acct} "
+            f"({conf}, {technique}, cited by {tcid})."
+        )
+    if not can_say:
+        can_say.append(
+            "The run produced only triage-level leads; read each cited tool call in "
+            "the findings detail before acting."
+        )
+
+    # What we could not determine — each a justified Undetermined/Reason/Resolve item.
+    cannot_say: list[str] = [
+        "Who operated the activity — this report does not assert attribution; naming "
+        "an account reflects a record field, not the human behind it.",
         "That unexamined artifact classes would produce the same result.",
         "That this single-evidence run covers the whole environment.",
     ]
-    if blind_spots:
-        cannot_say.append(
-            f"That ATT&CK blind spots were evaluated; {blind_spots} target area(s) lacked supplied evidence."
-        )
-    cannot_say.extend(analysis_limitations[:3])
+    for question, reason, recovery in profile.get("cannot", []):
+        cannot_say.append(f"Undetermined: {question}. Reason: {reason}. To resolve: {recovery}.")
+    checks = {c.get("artifact_class"): c for c in case_completeness.get("checks", [])}
+    gaps_added = 0
+    for cls in _GAP_PRIORITY:
+        if gaps_added >= 3:
+            break
+        if checks.get(cls, {}).get("touched"):
+            continue
+        reason, recovery = GAP_REASON[cls]
+        cannot_say.append(f"Undetermined: {reason}. To resolve: {recovery}.")
+        gaps_added += 1
+    cannot_say.extend(analysis_limitations[:2])
 
     return {
         "version": 1,
         "headline": headline,
         "customer_summary": customer_summary,
+        "assessment": assessment,
+        "certainty": certainty,
         "verdict": verdict,
         "verdict_meaning": "Use the verdict as a triage priority, then read each Finding confidence and citation before acting.",
         "confidence_posture": distribution,
@@ -2822,15 +3162,11 @@ def build_executive_attack_story(
             "artifact_classes_touched": touched,
             "coverage_summary": case_completeness.get("summary", ""),
         },
-        "how_they_got_in": "Not established by the supplied evidence unless a cited Finding below names an initial-access mechanism.",
-        "root_cause": "Not established by the supplied evidence; expert review required.",
-        "business_impact": "Technical risk only; business impact requires customer context and legal review.",
+        "how_they_got_in": "",
+        "root_cause": "",
+        "business_impact": "",
         "attack_chain": beats,
-        "what_we_can_say": [
-            customer_summary,
-            f"The case touched artifact classes: {', '.join(touched) if touched else 'none beyond custody'}.",
-            f"Report QA status is {report_qa.get('status')} with packet state {report_qa.get('packet_state')}; expert signoff is required before customer release.",
-        ],
+        "what_we_can_say": can_say,
         "what_we_cannot_say": cannot_say,
         "recommended_next_decisions": [
             action.get("action") for action in next_actions[:3] if action.get("action")
@@ -2860,6 +3196,8 @@ def customer_visible_report_text(
     for key in (
         "headline",
         "customer_summary",
+        "assessment",
+        "certainty",
         "how_they_got_in",
         "root_cause",
         "business_impact",

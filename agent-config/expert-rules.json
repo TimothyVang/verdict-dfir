@@ -106,14 +106,14 @@
   ],
   "report_quality": {
     "required_sections": [
-      "executive_attack_story",
+      "bottom_line_up_front",
       "qa_expert_signoff",
-      "findings_overview",
+      "findings_summary",
       "timeline",
-      "evidence_exhibits",
+      "figures",
       "scope_and_coverage",
       "limitations",
-      "next_actions",
+      "recommendations",
       "chain_of_custody"
     ],
     "ready_for_customer_pdf_requires": [

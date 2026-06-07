@@ -824,7 +824,7 @@ def build_scope_interpretation_section(
     )
 
     lines = [
-        "\n## Evidence Scope Interpretation\n",
+        "\n## Scope & Coverage Caveats\n",
         "This section states what the rendered coverage can and cannot prove. Limited coverage is not customer assurance about unexamined systems, techniques, or artifact classes.\n",
         "### Network Evidence Summary\n",
         f"* Available from supplied evidence: `{network_available}`",
@@ -902,6 +902,161 @@ def build_readiness_section(
     )
 
 
+# ---------------------------------------------------------------------------
+# Native HTML/CSS figures — authored as bespoke, VERDICT-themed markup and
+# injected into REPORT.html post-pandoc (see _inject_figures). Vector-crisp,
+# rendered by the same Chrome pass that prints the PDF; no charting library.
+# ---------------------------------------------------------------------------
+
+EVENT_ID_LABELS: dict[str, str] = {
+    "1102": "Log clearing",
+    "1116": "Defender detection",
+    "4624": "Logon",
+    "4625": "Failed logon",
+    "4634": "Logoff",
+    "4648": "Explicit-credential logon",
+    "4663": "File/handle access",
+    "4672": "Special privileges",
+    "4688": "Process created",
+    "4698": "Scheduled task created",
+    "4720": "User account created",
+    "4732": "Added to local group",
+    "4768": "Kerberos TGT",
+    "4769": "Kerberos service ticket",
+    "4776": "Credential validation",
+    "5140": "Share accessed",
+    "5156": "Network allowed",
+    "7045": "Service installed",
+}
+CRITICAL_EVENT_IDS: set[str] = {"1102", "1116", "4720", "4728", "4732", "7045", "4698"}
+
+
+def _h(value: Any) -> str:
+    """HTML-escape a data value for safe injection into the report figures."""
+    return escape(str(value if value is not None else ""), quote=True)
+
+
+def _event_id_from_ref(ref: Any) -> str:
+    match = re.search(r"event_id=(\d+)", str(ref or ""))
+    return match.group(1) if match else ""
+
+
+def html_scorecard(
+    verdict: str,
+    attack_story: dict[str, Any] | None,
+    merged: list[dict[str, Any]],
+) -> str:
+    """At-a-glance verdict card: verdict tier, headline, key entity/technique, counts."""
+    tier = {
+        "SUSPICIOUS": "alert",
+        "NO_EVIL": "confirmed",
+        "INDETERMINATE": "inferred",
+    }.get(verdict, "inferred")
+    story = attack_story or {}
+    certainty = str(story.get("certainty") or "")
+    certainty_word = certainty.split()[0].rstrip(".") if certainty else "—"
+    beat = (story.get("attack_chain") or [{}])[0] if story.get("attack_chain") else {}
+    meta = [
+        _h(v)
+        for v in (
+            beat.get("actor"),
+            beat.get("host"),
+            beat.get("mitre_technique"),
+        )
+        if v
+    ]
+    counts = {"CONFIRMED": 0, "INFERRED": 0, "HYPOTHESIS": 0}
+    for finding in merged:
+        c = finding.get("confidence")
+        if c in counts:
+            counts[c] += 1
+    chips = "".join(
+        f'<span class="vchip vchip-{name.lower()}">{counts[name]} {name.title()}</span>'
+        for name in ("CONFIRMED", "INFERRED", "HYPOTHESIS")
+        if counts[name]
+    )
+    return (
+        f'<div class="vfig vsc vsc-{tier}">'
+        f'<div class="vsc-rail"></div>'
+        f'<div class="vsc-body">'
+        f'<div class="vsc-top"><span class="vsc-verdict vsc-verdict-{tier}">{_h(verdict)}</span>'
+        f'<span class="vsc-cert">Certainty&nbsp;·&nbsp;{_h(certainty_word)}</span></div>'
+        f'<div class="vsc-headline">{_h(story.get("headline", ""))}</div>'
+        f'<div class="vsc-meta">{" &nbsp;·&nbsp; ".join(meta)}</div>'
+        f'<div class="vsc-chips">{chips}</div>'
+        f"</div></div>"
+    )
+
+
+def html_event_composition(evtx_summary: dict[str, Any] | None) -> str:
+    """Horizontal bars: what the evidence contains, critical event IDs flagged."""
+    if not evtx_summary:
+        return ""
+    top = evtx_summary.get("top_event_ids") or []
+    if not top:
+        return ""
+    counts = [int(row.get("count", 0) or 0) for row in top]
+    total = evtx_summary.get("records_seen") or sum(counts)
+    peak = max(counts, default=1) or 1
+    rows = []
+    for row in top[:8]:
+        eid = str(row.get("event_id"))
+        count = int(row.get("count", 0) or 0)
+        label = EVENT_ID_LABELS.get(eid, "Event")
+        critical = eid in CRITICAL_EVENT_IDS
+        pct = max(4, round(100 * count / peak))
+        flag = ' <span class="vcomp-flag">⚠</span>' if critical else ""
+        rows.append(
+            f'<div class="vcomp-row{" vcomp-crit" if critical else ""}">'
+            f'<span class="vcomp-label">{_h(eid)}&nbsp;·&nbsp;{_h(label)}</span>'
+            f'<span class="vcomp-track"><span class="vcomp-fill" style="width:{pct}%"></span></span>'
+            f'<span class="vcomp-count">{count}{flag}</span></div>'
+        )
+    return (
+        '<div class="vfig vcomp">'
+        f'<div class="vfig-title">What the evidence contains '
+        f'<span class="vfig-sub">{_h(total)} records</span></div>'
+        f'{"".join(rows)}</div>'
+    )
+
+
+def html_event_sequence(events: list[dict[str, Any]]) -> str:
+    """Vertical story-strip: key events in order, the cited finding(s) flagged."""
+    key_events = _select_key_events(events)
+    if not key_events:
+        return ""
+    rows = []
+    for event in key_events:
+        entities = event.get("entities") or {}
+        critical = _event_id_from_ref(event.get("source_record_ref")) in CRITICAL_EVENT_IDS
+        kind = "vseq-evil" if critical else "vseq-ctx"
+        who = _format_account_display(entities) or _entity_cell(
+            entities, "host", "workstation"
+        )
+        tcid = event.get("tool_call_id") or ""
+        flag = (
+            '<span class="vseq-flag">⚠ finding</span>'
+            if critical
+            else '<span class="vseq-tag">context</span>'
+        )
+        sub = " &nbsp;·&nbsp; ".join(
+            _h(v) for v in (who, tcid) if v
+        )
+        rows.append(
+            f'<li class="vseq-item {kind}"><span class="vseq-dot"></span>'
+            f'<span class="vseq-time">{_h(event.get("timestamp_utc") or "—")}</span>'
+            f'<div class="vseq-body"><div class="vseq-action">{_h((event.get("summary") or "")[:130])} {flag}</div>'
+            f'<div class="vseq-who">{sub}</div></div></li>'
+        )
+    return (
+        '<div class="vfig vseq">'
+        '<div class="vfig-title">What happened — key events</div>'
+        f'<ol class="vseq-list">{"".join(rows)}</ol>'
+        '<div class="vfig-note">⚠ marks a cited finding; other rows are surrounding '
+        "context, not findings.</div></div>"
+    )
+
+
 def build_bluf_section(
     attack_story: dict[str, Any] | None,
     verdict: str,
@@ -916,14 +1071,29 @@ def build_bluf_section(
             counts[confidence] += 1
     decisions = story.get("recommended_next_decisions") or []
     top = decisions[0] if decisions else "Expert review before customer release."
-    return (
-        "\n## Bottom Line Up Front\n\n"
-        f"**Verdict: {md_cell(verdict)}.** {md_cell(story.get('headline', ''))}\n\n"
-        f"{md_cell(story.get('customer_summary', ''))}\n\n"
+    parts = [
+        "\n## Bottom Line Up Front\n\n",
+        '::: {.report-fig data-fig="scorecard"}\n:::\n\n',
+        f"**Verdict: {md_cell(verdict)}.** {md_cell(story.get('headline', ''))}\n\n",
+        f"{md_cell(story.get('customer_summary', ''))}\n\n",
+    ]
+    if story.get("assessment"):
+        parts.append(f"**Assessment:** {md_cell(story['assessment'])}\n\n")
+    if story.get("certainty"):
+        parts.append(f"**Certainty:** {md_cell(story['certainty'])}\n\n")
+    key_findings = story.get("what_we_can_say") or []
+    if key_findings:
+        parts.append(
+            "**Key findings:**\n\n"
+            + "\n".join(f"* {md_cell(item)}" for item in key_findings)
+            + "\n\n"
+        )
+    parts.append(
         f"* Findings: {len(merged)} total — {counts['CONFIRMED']} confirmed, "
         f"{counts['INFERRED']} inferred, {counts['HYPOTHESIS']} hypothesis.\n"
         f"* Most important next step: {md_cell(top)}\n\n"
     )
+    return "".join(parts)
 
 
 def _select_key_events(
@@ -973,26 +1143,15 @@ def build_timeline_of_events_section(
     has_entity_fig: bool,
     has_timeline_fig: bool,
 ) -> str:
-    """Tier-1 narrative timeline: figures + per-event prose + a key-events table."""
+    """Tier-1 timeline: figures + a key-events table (no prose narrative)."""
     events = (normalized_timeline or {}).get("events", []) or []
-    narratives = event_narratives or []
-    if not events and not narratives:
+    if not events:
         return ""
-    figs = ""
-    if has_timeline_fig:
-        figs += "![Normalized timeline overview](figures/timeline_overview.png)\n\n"
-    if has_entity_fig:
-        figs += "![Entity timeline](figures/entity_timeline.png)\n\n"
+    figs = (
+        '::: {.report-fig data-fig="sequence"}\n:::\n\n'
+        '::: {.report-fig data-fig="composition"}\n:::\n\n'
+    )
     narrative_block = ""
-    if narratives:
-        narrative_block = (
-            "### What happened, in order\n\n"
-            + "\n".join(
-                f"{i}. {md_cell(item.get('text', ''))}"
-                for i, item in enumerate(narratives, 1)
-            )
-            + "\n\n"
-        )
     table_block = ""
     key_events = _select_key_events(events)
     if key_events:
@@ -1014,12 +1173,12 @@ def build_timeline_of_events_section(
                     tcid=md_cell(event.get("tool_call_id") or "?"),
                 )
             )
-        table_block = "### Key events\n\n" + "\n".join(rows) + "\n\n"
+        table_block = "### Key Events\n\n" + "\n".join(rows) + "\n\n"
     return (
-        "\n## Timeline of Events\n\n"
-        "A chronological account of the pivotal events, traceable by account, host, "
-        "and address. Every entry cites the tool call that produced it; the full event "
-        "ledger is in the technical report below.\n\n"
+        "\n## Timeline\n\n"
+        "Key events in chronological order, traceable by account, host, and address; "
+        "each cites the tool call that produced it. The full event ledger is in the "
+        "technical report below.\n\n"
         + figs
         + narrative_block
         + table_block
@@ -1068,13 +1227,9 @@ def build_detailed_event_timeline_section(
                 tcid=md_cell(event.get("tool_call_id", "?")),
             )
         )
-    fig_block = (
-        "![Normalized timeline overview](figures/timeline_overview.png)\n\n"
-        if has_timeline_fig
-        else ""
-    )
+    fig_block = ""
     return (
-        "\n## Detailed Event Timeline\n\n"
+        "\n## Full Event Timeline\n\n"
         f"Normalized timeline events: {len(timeline)}. First 40 shown below; full "
         f"data is in {exports}.\n\n"
         + fig_block
@@ -1121,7 +1276,7 @@ def build_cast_of_characters_section(entity_index: dict[str, Any] | None) -> str
     if not blocks:
         return ""
     return (
-        "\n## Cast of Characters\n\n"
+        "\n## Observed Hosts, Accounts & Processes\n\n"
         "Every account, host, address, and process observed across the timeline, with "
         "where it first and last appears and which findings cite it.\n\n"
         + "\n\n".join(blocks)
@@ -1156,7 +1311,7 @@ def build_indicators_section(indicators: dict[str, Any] | None) -> str:
         return ""
     note = indicators.get("note", "")
     return (
-        "\n## Indicators\n\n"
+        "\n## Indicators of Compromise (IOCs)\n\n"
         + (f"{md_cell(note)}\n\n" if note else "")
         + "\n".join(rows)
         + "\n\n"
@@ -1205,61 +1360,24 @@ def write_markdown(
     sig = manifest["signature"]["payload_sha256"]
     cf = manifest["signature"]["cert_fingerprint"]
 
-    attack_story_section = ""
+    # The executive narrative (headline / summary / assessment / certainty / key
+    # findings) lives entirely in the Bottom Line Up Front above. This block only
+    # produces the Recommendations list and captures the justified unknowns for
+    # the single merged ## Limitations section below.
+    attack_story_section = ""  # folded into Bottom Line Up Front
+    beats_section = ""  # removed: redundant with Detailed Findings + Timeline
     decisions_section = ""
-    beats_section = ""
+    cannot_say: list[str] = []
     if attack_story:
-        fig_block = (
-            "![How they got hacked timeline](figures/attack_story_timeline.png)\n\n"
-            if has_attack_story_fig
-            else ""
-        )
-        can_say = attack_story.get("what_we_can_say", []) or []
         cannot_say = attack_story.get("what_we_cannot_say", []) or []
         decisions = attack_story.get("recommended_next_decisions", []) or []
-        beats = attack_story.get("attack_chain", []) or []
-        attack_story_section = (
-            "\n## Executive Attack Story\n\n"
-            f"**Headline:** {md_cell(attack_story.get('headline', ''))}\n\n"
-            f"{md_cell(attack_story.get('customer_summary', ''))}\n\n"
-            f"**How they got in:** {md_cell(attack_story.get('how_they_got_in', ''))}\n\n"
-            f"**Root cause:** {md_cell(attack_story.get('root_cause', ''))}\n\n"
-            f"**Business impact:** {md_cell(attack_story.get('business_impact', ''))}\n\n"
-            + fig_block
-            + "### What We Can Say\n\n"
-            + "\n".join(f"* {md_cell(item)}" for item in can_say)
-            + "\n\n### What We Cannot Prove\n\n"
-            + "\n".join(f"* {md_cell(item)}" for item in cannot_say)
-            + "\n\n"
-        )
         decisions_section = (
-            "\n## Recommended Next Decisions\n\n"
+            "\n## Recommendations\n\n"
             + (
                 "\n".join(f"* {md_cell(item)}" for item in decisions)
                 or "* Expert review before customer release."
             )
             + "\n\n"
-        )
-        beat_lines = []
-        for beat in beats[:8]:
-            beat_lines.extend(
-                [
-                    f"### Beat {beat.get('order', '?')}: {md_cell(beat.get('title', 'Finding-backed story beat'))}",
-                    f"* Time: `{md_cell(beat.get('timestamp_utc') or 'not normalized')}`",
-                    f"* Confidence: `{md_cell(beat.get('confidence', ''))}`",
-                    f"* MITRE: `{md_cell(beat.get('mitre_technique') or 'n/a')}`",
-                    f"* Tool call: `{md_cell(beat.get('tool_call_id') or 'n/a')}`",
-                    f"* Artifact classes: `{md_cell(beat.get('artifact_classes', []))}`",
-                    f"* Caveat: {md_cell(beat.get('caveat', 'Expert review required.'))}",
-                    "",
-                ]
-            )
-        if not beat_lines:
-            beat_lines.append(
-                "*No finding-backed attack-story beats were produced in this run.*\n"
-            )
-        beats_section = (
-            "\n## Finding-Backed Story Beats\n\n" + "\n".join(beat_lines) + "\n"
         )
 
     qa_section = ""
@@ -1296,7 +1414,7 @@ def write_markdown(
                 f"{md_cell(rule.get('requirement', ''))} |"
             )
         expert_section = (
-            "\n## Expert Doctrine Applied\n\n"
+            "\n## Analysis Doctrine\n\n"
             f"{md_cell(expert_doctrine.get('operating_model', ''))}\n\n"
             + "\n".join(rows)
             + "\n\n"
@@ -1363,6 +1481,15 @@ def write_markdown(
         findings_md_lines.append(
             f"- artifact: `{md_cell(f.get('artifact_path', 'n/a'))}`"
         )
+        caveat = {
+            "CONFIRMED": "Confirmed — the cited tool output is reproducible; this does "
+            "not imply attribution or complete scope.",
+            "INFERRED": "Inferred — derived from corroborated facts; confirm before acting.",
+            "HYPOTHESIS": "Hypothesis — a single-source triage lead; corroborate before "
+            "any response action.",
+        }.get(f.get("confidence"), "")
+        if caveat:
+            findings_md_lines.append(f"- confidence: {caveat}")
         findings_md_lines.append("")
     findings_section = (
         "\n".join(findings_md_lines) if findings_md_lines else "*No merged findings.*"
@@ -1370,7 +1497,7 @@ def write_markdown(
     replay_appendix = ""
     if len(replay_rows) > 2:
         replay_appendix = (
-            "\n## Replay Determinism Appendix\n\n"
+            "\n## Reproducibility Appendix\n\n"
             "Verifier replay artifacts record whether each cited tool call reproduced "
             "the audited output hash. They do not change Track 3b severity policy.\n\n"
             + "\n".join(replay_rows)
@@ -1401,7 +1528,7 @@ def write_markdown(
                 )
             )
         completeness_section = (
-            "\n## Case Completeness\n\n"
+            "\n## Evidence Coverage\n\n"
             f"{completeness.get('summary', '')}\n\n" + "\n".join(rows) + "\n\n"
         )
 
@@ -1436,7 +1563,7 @@ def write_markdown(
                 f"{md_cell(status)} | `{md_cell(tools)}` | {md_cell(gap)} |"
             )
         attack_section = (
-            "\n## ATT&CK Coverage\n\n"
+            "\n## MITRE ATT&CK Coverage\n\n"
             f"{attack_coverage.get('summary', '')}\n\n" + "\n".join(rows) + "\n\n"
         )
 
@@ -1528,7 +1655,7 @@ def write_markdown(
         )
         channels = ", ".join(evtx_summary.get("channels", [])) or "none"
         evtx_section = (
-            "\n## EVTX Summary\n\n"
+            "\n## Windows Event Log Summary\n\n"
             f"* Records seen: {evtx_summary.get('records_seen', 0)}\n"
             f"* Rows returned: {evtx_summary.get('row_count', 0)}\n"
             f"* Parse errors: {evtx_summary.get('parse_errors', 0)}\n"
@@ -1551,13 +1678,17 @@ def write_markdown(
                 f"{md_cell(item.get('based_on', []))} | "
                 f"{md_cell(item.get('expected_evidence', ''))} |"
             )
-        actions_section = "\n## Next 5 Analyst Actions\n\n" + "\n".join(rows) + "\n\n"
+        actions_section = "\n## Recommended Analyst Actions\n\n" + "\n".join(rows) + "\n\n"
 
+    # Single authoritative Limitations section: the justified unknowns (from the
+    # attack story's what_we_cannot_say) plus any run-specific analysis limitations.
+    limitation_items = list(cannot_say) + list(analysis_limitations or [])
     limitations_section = ""
-    if analysis_limitations:
+    if limitation_items:
         limitations_section = (
-            "\n## Analysis Limitations\n\n"
-            + "\n".join(f"* {md_cell(item)}" for item in analysis_limitations)
+            "\n## Limitations\n\n"
+            "What the supplied evidence cannot establish, and how to resolve it.\n\n"
+            + "\n".join(f"* {md_cell(item)}" for item in limitation_items)
             + "\n\n"
         )
 
@@ -1577,7 +1708,7 @@ def write_markdown(
     visual_section = ""
     if evidence_cards:
         lines = [
-            "\n## Visual Evidence\n",
+            "\n## Figures\n",
             "Visual exhibits are generated from parsed tool outputs. They support cited findings but do not replace `tool_call_id`-backed evidence or upgrade confidence by themselves.\n",
         ]
         rendered_assets: set[str] = set()
@@ -1626,11 +1757,11 @@ def write_markdown(
                 f"{md_cell(source.get('url', ''))} | "
                 f"{md_cell(source.get('supports', []))} |"
             )
-        sources_section = "\n## Sources\n\n" + "\n".join(rows) + "\n\n"
+        sources_section = "\n## References\n\n" + "\n".join(rows) + "\n\n"
 
     caveats = build_false_positive_caveats(merged, completeness, attack_coverage)
     caveat_section = (
-        "\n## False-positive caveats\n\n"
+        "\n## False-Positive Considerations\n\n"
         + "\n".join(f"* {c}" for c in caveats)
         + "\n\n"
     )
@@ -1661,7 +1792,7 @@ def write_markdown(
 
 ---
 
-## Summary
+## Case Summary
 
 * **Total merged findings:** {len(merged)}
 * **By confidence:**
@@ -1679,11 +1810,13 @@ def write_markdown(
 
 {timeline_of_events_section}
 
-{decisions_section}
-
-## Findings at a Glance
+## Findings Summary
 
 ![Findings table](figures/findings_table.png)
+
+{decisions_section}
+
+{limitations_section}
 
 # Technical Report {{.tier-break}}
 
@@ -1692,7 +1825,7 @@ The sections below are the full analyst-grade record: every finding with its
 and indicators, coverage matrices, triage, sources, and the reproducibility and
 chain-of-custody appendices.
 
-## Findings detail
+## Detailed Findings
 
 {findings_section}
 
@@ -1726,19 +1859,17 @@ chain-of-custody appendices.
 
 {actions_section}
 
-{limitations_section}
-
 {replay_appendix}
 
 ---
 
-## Cryptographic chain of custody
+## Chain of Custody
 
-![Cryptographic chain of custody](figures/chain_of_custody.png)
+![Chain of custody](figures/chain_of_custody.png)
 {psscan_fig_block}
 ---
 
-## Verification
+## Integrity Verification
 
 This investigation produced a `run.manifest.json` that any third party can
 verify offline from the VERDICT repository using the manifest verification
@@ -1848,7 +1979,22 @@ def _colorize_html(html_text: str) -> str:
     return head + "".join(out) + tail
 
 
-def render_html_pdf(md_path: Path) -> tuple[Path, Path | None]:
+def _inject_figures(html_text: str, figures: dict[str, str]) -> str:
+    """Replace pandoc figure-placeholder divs with bespoke, pre-escaped figure HTML."""
+    for name, markup in (figures or {}).items():
+        if not markup:
+            continue
+        pattern = re.compile(
+            r'<div[^>]*\bdata-fig="' + re.escape(name) + r'"[^>]*>.*?</div>',
+            re.DOTALL,
+        )
+        html_text = pattern.sub(lambda _m, m=markup: m, html_text, count=1)
+    return html_text
+
+
+def render_html_pdf(
+    md_path: Path, figures: dict[str, str] | None = None
+) -> tuple[Path, Path | None]:
     case_dir = md_path.parent
     html = case_dir / "REPORT.html"
     pdf = case_dir / "REPORT.pdf"
@@ -1878,11 +2024,13 @@ def render_html_pdf(md_path: Path) -> tuple[Path, Path | None]:
         capture_output=True,
     )
 
-    # Color-code confidence + verdict keywords in the rendered HTML (best-effort).
+    # Inject bespoke figure HTML into the placeholder divs, then color-code the
+    # confidence/verdict keywords (both best-effort, never fatal to the render).
     try:
-        html.write_text(
-            _colorize_html(html.read_text(encoding="utf-8")), encoding="utf-8"
-        )
+        text = html.read_text(encoding="utf-8")
+        if figures:
+            text = _inject_figures(text, figures)
+        html.write_text(_colorize_html(text), encoding="utf-8")
     except Exception:
         pass
 
@@ -2096,12 +2244,17 @@ def render_report(
             except json.JSONDecodeError:
                 timeline = []
     timeline_csv_exists = (case_dir / "timeline.csv").exists()
-    has_timeline_fig = fig_timeline_overview(
-        timeline, fig_dir / "timeline_overview.png"
-    )
-    has_entity_timeline_fig = fig_entity_timeline(
-        timeline, fig_dir / "entity_timeline.png"
-    )
+    # The time-scatter figures are replaced by native HTML/CSS figures (built
+    # below and injected into REPORT.html); no longer generated.
+    has_timeline_fig = False
+    has_entity_timeline_fig = False
+
+    # Bespoke, vector HTML/CSS figures injected into the report post-pandoc.
+    figures_html = {
+        "scorecard": html_scorecard(verdict, attack_story, merged),
+        "sequence": html_event_sequence(timeline),
+        "composition": html_event_composition(verdict_obj.get("evtx_summary")),
+    }
 
     md = write_markdown(
         case_dir,
@@ -2139,7 +2292,7 @@ def render_report(
         has_process_view_fig=has_process_view_fig,
         has_entity_timeline_fig=has_entity_timeline_fig,
     )
-    html, pdf = render_html_pdf(md)
+    html, pdf = render_html_pdf(md, figures=figures_html)
     return pdf if pdf else html
 
 

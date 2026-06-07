@@ -1279,7 +1279,7 @@ def main() -> int:
             print(f"         actual  : {actual!r}")
             failures += 1
 
-    # --- EVTX entity extraction + Cast of Characters + Indicators ---------
+    # --- EVTX entity extraction + observed-entities index + indicators ----
     evtx_1102 = {
         "Event": {
             "System": {"EventID": 1102, "Channel": "Security", "Computer": "DC01"},
@@ -1365,7 +1365,7 @@ def main() -> int:
             "10.0.0.55",
         ),
         (
-            "Cast of Characters indexes the acting accounts",
+            "observed-entities index includes the acting accounts",
             account_values == {"CORP\\Administrator", "CORP\\jsmith"},
             True,
         ),
@@ -1385,6 +1385,99 @@ def main() -> int:
         ok = actual == expected
         marker = "OK  " if ok else "FAIL"
         print(f"  [{marker}] entity: {label}")
+        if not ok:
+            print(f"         expected: {expected!r}")
+            print(f"         actual  : {actual!r}")
+            failures += 1
+
+    # --- Evidence-driven attack story: confident headline + justified unknowns ---
+    narr_findings = [
+        {
+            "finding_id": "f-clear",
+            "tool_call_id": "tc-evtx",
+            "confidence": "CONFIRMED",
+            "mitre_technique": "T1070.001",
+            "description": "EVTX Security EID 1102 audit-log clear event",
+        }
+    ]
+    narr_nt = {
+        "events": [
+            {
+                "event_id": "timeline-0001",
+                "timestamp_utc": "2026-05-04T02:49:00Z",
+                "artifact_class": "evtx",
+                "tool_call_id": "tc-evtx",
+                "summary": "Security audit log clearing by CORP\\Administrator",
+                "significance": "finding_support",
+                "linked_finding_ids": ["f-clear"],
+                "confidence": "CONFIRMED",
+                "entities": {"account": "Administrator", "domain": "CORP", "host": "DC01"},
+                "source_record_ref": "evtx_query:event_id=1102;record_id=1",
+            }
+        ]
+    }
+    narr_completeness = {
+        "checks": [
+            {"artifact_class": "evtx", "available": True, "touched": True},
+            {"artifact_class": "disk/filesystem", "available": False, "touched": False},
+            {"artifact_class": "network", "available": False, "touched": False},
+        ]
+    }
+    story = build_executive_attack_story(
+        narr_findings,
+        "SUSPICIOUS",
+        narr_nt,
+        narr_completeness,
+        {"blind_spot_count": 3, "targets": []},
+        {"status": "WARN", "packet_state": "EXPERT_REVIEW_DRAFT"},
+        [{"action": "Collect forwarded Security logs"}],
+        [],
+        "/ev.evtx",
+    )
+    narr_blob = " ".join(
+        [story["headline"], story["assessment"], story["certainty"]]
+        + story["what_we_cannot_say"]
+    )
+    narrative_cases = [
+        (
+            "headline is confident, not 'expert review'",
+            "Confirmed" in story["headline"]
+            and "clearing" in story["headline"]
+            and "Administrator" in story["headline"]
+            and "expert review" not in story["headline"].lower(),
+            True,
+        ),
+        (
+            "headline avoids overclaiming verbs (wiped/cleared)",
+            "wiped" not in narr_blob and "cleared" not in narr_blob,
+            True,
+        ),
+        (
+            "certainty is reproducibility, not source tamper-evidence",
+            "reproducible" in story["certainty"] and "High" in story["certainty"],
+            True,
+        ),
+        (
+            "unknowns are justified with a recovery path",
+            any("To resolve:" in item for item in story["what_we_cannot_say"]),
+            True,
+        ),
+        (
+            "no-attribution caveat retained",
+            any("attribution" in item.lower() for item in story["what_we_cannot_say"]),
+            True,
+        ),
+        (
+            "what-we-can-say states the cited fact",
+            any("T1070.001" in item and "tc-evtx" in item for item in story["what_we_can_say"]),
+            True,
+        ),
+    ]
+    for label, actual, expected in narrative_cases:
+        process_checks += 1
+        ok = actual == expected
+        marker = "OK  " if ok else "FAIL"
+        print(f"  [{marker}] narrative: {label}")
         if not ok:
             print(f"         expected: {expected!r}")
             print(f"         actual  : {actual!r}")

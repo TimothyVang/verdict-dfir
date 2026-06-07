@@ -374,10 +374,10 @@ def main() -> int:
             <h2>Cryptographic Attestation</h2>
             <h2>QA / Expert Signoff</h2>
             <h2>Customer Release Gate</h2>
-            <h2>Findings Overview</h2>
-            <h2>Cryptographic chain of custody</h2>
+            <h2>Findings Summary</h2>
+            <h2>Chain of Custody</h2>
             <p>tool_call_id tc-psscan</p>
-            <h3>What We Cannot Prove</h3>
+            <h2>Limitations</h2>
             <p>stub signatures are dev/offline only; this is an explicit release blocker.</p>
             <p>Evidence-bound report text.</p>
             </body></html>""" + ("x" * 1800)
@@ -390,10 +390,10 @@ def main() -> int:
             <h2>Cryptographic Attestation</h2>
             <h2>QA / Expert Signoff</h2>
             <h2>Customer Release Gate</h2>
-            <h2>Findings Overview</h2>
-            <h2>Cryptographic chain of custody</h2>
+            <h2>Findings Summary</h2>
+            <h2>Chain of Custody</h2>
             <p>tool_call_id tc-psscan</p>
-            <h3>What We Cannot Prove</h3>
+            <h2>Limitations</h2>
             <p>TODO placeholder report text.</p>
             </body></html>"""
             + ("x" * 1800),
@@ -430,16 +430,22 @@ def main() -> int:
             "embedded replay mismatch follows configured severity",
             replay_mismatch_check["status"] == replay_mismatch_expected_status,
         ),
-        ("executive attack story heading", "## Executive Attack Story" in text),
+        (
+            "executive attack story wrapper removed",
+            "## Executive Attack Story" not in text,
+        ),
         ("qa signoff heading", "## QA / Expert Signoff" in text),
         ("customer release gate heading", "## Customer Release Gate" in text),
-        ("expert doctrine heading", "## Expert Doctrine Applied" in text),
+        ("analysis doctrine heading", "## Analysis Doctrine" in text),
         ("verdict rebrand title", "# VERDICT — Forensic Investigation Report" in text),
         ("bottom line up front heading", "## Bottom Line Up Front" in text),
-        ("timeline of events heading", "## Timeline of Events" in text),
-        ("detailed event timeline heading", "## Detailed Event Timeline" in text),
-        ("cast of characters heading", "## Cast of Characters" in text),
-        ("indicators heading", "## Indicators" in text),
+        ("timeline heading", "## Timeline" in text),
+        ("full event timeline heading", "## Full Event Timeline" in text),
+        (
+            "observed entities heading",
+            "## Observed Hosts, Accounts & Processes" in text,
+        ),
+        ("iocs heading", "## Indicators of Compromise (IOCs)" in text),
         ("analysis coverage by domain heading", "## Analysis Coverage by Domain" in text),
         ("technical report tier divider", "# Technical Report {.tier-break}" in text),
         (
@@ -456,7 +462,18 @@ def main() -> int:
             "Administrator" in text and "DC01" in text,
         ),
         ("finding tool call preserved", "tc-psscan" in text),
-        ("cannot prove section present", "### What We Cannot Prove" in text),
+        ("limitations section present", "## Limitations" in text),
+        (
+            "no narrative leftovers (story/cast/beats)",
+            not any(
+                s in text
+                for s in (
+                    "## Cast of Characters",
+                    "## Finding-Backed Story Beats",
+                    "What happened, in order",
+                )
+            ),
+        ),
         (
             "expert miss summary rendered",
             "Expert misses captured this case: 1 \\(qa=1\\)" in text,
