@@ -214,6 +214,15 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # `memory/project_autonomous_queue.md` which actually lives at
     # `~/.claude/projects/<project>/memory/...`, not at repo root.
     re.compile(r"^memory/"),
+    # External open-source project short paths (GitHub org/repo format).
+    # teamdfir/protocol-sift is an external competitor repo quoted in
+    # docs to explain the coexistence story.  It is not a path in this repo.
+    re.compile(r"^teamdfir/"),
+    # In-repo markdown anchor links (file.md#section-name).  The path-
+    # existence smoke resolves file paths by their prefix up to '#'; the
+    # anchor part is not a file system component.  These are allowed so
+    # that cross-file anchor links don't trip the smoke.
+    re.compile(r"^docs/[a-z][a-zA-Z0-9_/-]*\.md#"),
 )
 
 # Compile once.  PATH_RE matches any backtick-quoted token that
