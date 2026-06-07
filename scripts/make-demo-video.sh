@@ -18,10 +18,10 @@
 # Prerequisites:
 #   pip install edge-tts          (TTS generation)
 #   pnpm install --prefix scripts/make-demo-video  (Remotion deps, first run only)
-#   # GITHUB_TOKEN env var is optional — enriches narration via GitHub Models API
+#   # claude CLI on PATH → narration auto-enriched via `claude -p` (uses your session token)
 #
 # Example:
-#   export GITHUB_TOKEN=$(gh auth token)
+#   (no setup needed — just have `claude` on PATH)
 #   bash scripts/make-demo-video.sh
 
 set -euo pipefail

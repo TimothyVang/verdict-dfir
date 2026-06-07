@@ -5,8 +5,9 @@ Generates MP3 audio files for each beat and writes them to
 scripts/make-demo-video/src/audio/beat_NN.mp3 where Remotion's
 <Audio src={staticFile(...)}> can pick them up.
 
-Optionally rewrites narration via GitHub Models API (GITHUB_TOKEN env var)
-before feeding it to edge-tts.
+Optionally rewrites narration via `claude -p` (uses your Claude Code session
+token / ANTHROPIC_API_KEY — whatever `claude` is already configured with)
+before feeding the text to edge-tts.
 
 Usage:
     python3 scripts/make-demo-video-prep.py [--dry-run] [--voice VOICE]
@@ -92,34 +93,31 @@ BEATS: list[Beat] = [
 ]
 
 
-def _enrich_via_github_models(beats: list[Beat], token: str) -> list[Beat]:
-    try:
-        from openai import OpenAI
-    except ImportError:
-        print("[prep] openai not installed — skipping enrichment")
-        return beats
-
-    client = OpenAI(base_url="https://models.inference.ai.azure.com", api_key=token)
+def _enrich_via_claude(beats: list[Beat]) -> list[Beat]:
+    """Rewrite narrations using `claude -p` (uses your Claude Code session token)."""
     enriched = []
     for beat in beats:
+        prompt = (
+            f"Rewrite this DFIR demo voiceover for a {beat.duration_s}-second beat "
+            f"(~{beat.duration_s * 2} words) into a tight, professional narrator script. "
+            f"Return ONLY the rewritten narration text — no preamble, no quotes. "
+            f"Keep all technical terms exactly: DKOM, FRE 902(14), sigstore, "
+            f"INFERRED, CONFIRMED, HYPOTHESIS, manifest_finalize. "
+            f"Beat title: {beat.title}. "
+            f"Original: {beat.narration}"
+        )
         try:
-            resp = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{
-                    "role": "user",
-                    "content": (
-                        f"Rewrite this DFIR demo voiceover ({beat.duration_s}s, ~"
-                        f"{beat.duration_s * 2} words) into a tight narrator script. "
-                        f"Keep all technical terms (DKOM, FRE 902(14), sigstore, "
-                        f"INFERRED/CONFIRMED). Beat: {beat.title}. "
-                        f"Original: {beat.narration}"
-                    ),
-                }],
-                max_tokens=220,
+            result = subprocess.run(
+                ["claude", "-p", prompt],
+                capture_output=True, text=True, timeout=30,
             )
-            text = resp.choices[0].message.content.strip()
-            print(f"  [enrich] Beat {beat.number} enriched")
-            enriched.append(Beat(beat.number, beat.title, beat.duration_s, text))
+            if result.returncode == 0 and result.stdout.strip():
+                text = result.stdout.strip()
+                print(f"  [enrich] Beat {beat.number} enriched via claude -p")
+                enriched.append(Beat(beat.number, beat.title, beat.duration_s, text))
+            else:
+                print(f"  [enrich] Beat {beat.number} skipped (claude exit {result.returncode})")
+                enriched.append(beat)
         except Exception as exc:
             print(f"  [enrich] Beat {beat.number} skipped: {exc}")
             enriched.append(beat)
@@ -156,10 +154,11 @@ def main() -> int:
         return 1
 
     beats = BEATS
-    token = os.environ.get("GITHUB_TOKEN", "").strip()
-    if token:
-        print("\n[make-demo-video-prep] GITHUB_TOKEN set — enriching narrations")
-        beats = _enrich_via_github_models(beats, token)
+    if shutil.which("claude"):
+        print("\n[make-demo-video-prep] claude CLI found — enriching narrations via claude -p")
+        beats = _enrich_via_claude(beats)
+    else:
+        print("\n[make-demo-video-prep] claude CLI not on PATH — using raw narration text")
 
     AUDIO_OUT.mkdir(parents=True, exist_ok=True)
     print(f"\n[make-demo-video-prep] Generating TTS → {AUDIO_OUT}")
