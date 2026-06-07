@@ -1,0 +1,64 @@
+{
+  "_comment": [
+    "Ground truth for Ali Hadi case #1 'Web Server' (SQLi -> webshells -> RDP).",
+    "Source: https://archive.org/details/dfir-case1",
+    "Tier: YELLOW (build/test, score with care) — answers gated.",
+    "Disk + memory from one host: best fit for the cross-artifact correlation track.",
+    "A strong run corroborates the webshell across disk (file) and memory (process)."
+  ],
+  "case_id": "alihadi-01-webserver",
+  "source_url": "https://archive.org/details/dfir-case1",
+  "license": "Ali Hadi DFIR challenges — free for research/education (answers gated)",
+  "verdict": "CONFIRMED_EVIL",
+  "min_recall_percent": 60,
+  "findings": [
+    {
+      "finding_id": "ws-001",
+      "description": "SQL injection attempts against the web application in server access logs",
+      "mitre_technique": "T1190",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Web server access logs (IIS/Apache) with injection payloads"
+    },
+    {
+      "finding_id": "ws-002",
+      "description": "Webshell written to the web root following exploitation",
+      "mitre_technique": "T1505.003",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Suspicious script in wwwroot/htdocs; MFT creation time"
+    },
+    {
+      "finding_id": "ws-003",
+      "description": "Webshell-spawned process as an anomalous child of the web server in memory",
+      "mitre_technique": "T1059",
+      "confidence": "CONFIRMED",
+      "artifact_class": "memory",
+      "artifact_hint": "vol pslist/psscan: cmd/powershell child of w3wp/httpd"
+    },
+    {
+      "finding_id": "ws-004",
+      "description": "Interactive RDP logon after the web compromise",
+      "mitre_technique": "T1021.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Security.evtx EID 4624 Logon Type 10"
+    },
+    {
+      "finding_id": "ws-005",
+      "description": "New or elevated account created for persistence",
+      "mitre_technique": "T1136.001",
+      "confidence": "INFERRED",
+      "artifact_class": "log",
+      "artifact_hint": "Security.evtx EID 4720/4732"
+    },
+    {
+      "finding_id": "ws-006",
+      "description": "Attacker tooling staged on disk post-compromise",
+      "mitre_technique": "T1105",
+      "confidence": "INFERRED",
+      "artifact_class": "disk",
+      "artifact_hint": "Dropped binaries in temp/web paths; prefetch"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "_comment": [
+    "Ground truth for the DFRWS 2008 Forensic Challenge (Linux intrusion).",
+    "Source: https://github.com/dfrws/dfrws2008-challenge",
+    "Tier: YELLOW (build/test, score with care). Memory + disk + network, all in-repo.",
+    "Anna built a VIGIA/ground-truth file for this case; this golden mirrors its core",
+    "claims. Scenario: compromised Linux host abused for admin-share theft and used as",
+    "a proxy to relay exfiltration traffic."
+  ],
+  "case_id": "dfrws-2008-linux",
+  "source_url": "https://github.com/dfrws/dfrws2008-challenge",
+  "license": "DFRWS Forensic Challenge — public for research/education",
+  "verdict": "CONFIRMED_EVIL",
+  "min_recall_percent": 50,
+  "findings": [
+    {
+      "finding_id": "d8-001",
+      "description": "Unauthorized access to the host using compromised credentials / admin share",
+      "mitre_technique": "T1078",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "auth.log / wtmp logon records"
+    },
+    {
+      "finding_id": "d8-002",
+      "description": "Proxy software used to relay traffic for exfiltration",
+      "mitre_technique": "T1090",
+      "confidence": "CONFIRMED",
+      "artifact_class": "network",
+      "artifact_hint": "pcap flows showing relay/proxy behavior"
+    },
+    {
+      "finding_id": "d8-003",
+      "description": "Suspicious process resident in memory acting as the relay",
+      "mitre_technique": "T1057",
+      "confidence": "CONFIRMED",
+      "artifact_class": "memory",
+      "artifact_hint": "Linux memory process list; listening relay process"
+    },
+    {
+      "finding_id": "d8-004",
+      "description": "Data staged and transferred off the host",
+      "mitre_technique": "T1041",
+      "confidence": "INFERRED",
+      "artifact_class": "network",
+      "artifact_hint": "Outbound transfer volume in pcap correlated to disk staging"
+    },
+    {
+      "finding_id": "d8-005",
+      "description": "Log tampering or cleared records consistent with anti-forensics",
+      "mitre_technique": "T1070",
+      "confidence": "INFERRED",
+      "artifact_class": "disk",
+      "artifact_hint": "Gaps / truncation in system logs"
+    }
+  ]
+}

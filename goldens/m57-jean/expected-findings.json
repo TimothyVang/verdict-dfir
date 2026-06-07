@@ -1,0 +1,51 @@
+{
+  "_comment": [
+    "Ground truth for the M57-Jean scenario (CFO spear-phish, shifting Reply-To).",
+    "Source: https://digitalcorpora.org/corpora/scenarios/m57-jean/",
+    "Tier: ORANGE (practice only, do not score for accuracy claims) — solutions are",
+    "everywhere online, so a high score may reflect recall from training data rather",
+    "than reasoning. Use as a build/iteration fixture; flag the caveat in any report.",
+    "Scenario: Jean (M57 Patents CFO) is socially engineered into emailing a confidential",
+    "employee spreadsheet to an outsider via a spoofed exchange impersonating the company",
+    "president; the Reply-To diverges from the From across the thread."
+  ],
+  "case_id": "m57-jean",
+  "source_url": "https://digitalcorpora.org/corpora/scenarios/m57-jean/",
+  "license": "Digital Corpora — freely redistributable for research/education",
+  "verdict": "CONFIRMED_EVIL",
+  "min_recall_percent": 60,
+  "findings": [
+    {
+      "finding_id": "mj-001",
+      "description": "Spear-phishing email impersonating the company president targeting the CFO",
+      "mitre_technique": "T1566.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Outlook PST / OST mail store"
+    },
+    {
+      "finding_id": "mj-002",
+      "description": "Reply-To address diverges from the From header (spoofing indicator)",
+      "mitre_technique": "T1534",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Email headers in the mail store"
+    },
+    {
+      "finding_id": "mj-003",
+      "description": "Confidential employee PII spreadsheet exfiltrated as an email attachment",
+      "mitre_technique": "T1567",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Sent-items attachment + source spreadsheet on disk"
+    },
+    {
+      "finding_id": "mj-004",
+      "description": "Email thread shows social-engineering escalation across messages",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "disk",
+      "artifact_hint": "Reconstructed conversation timeline in the mail store"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "_comment": [
+    "Ground truth for Ali Hadi case #7 'SysInternals' (fake installer, persistence).",
+    "Source: https://archive.org/download/sysinternals-case",
+    "Tier: ORANGE (practice only) — single E01, answers instructor-gated. Use as a",
+    "build/iteration fixture; do not lean on the score for accuracy claims.",
+    "Scenario: a trojanized/fake SysInternals installer drops a payload and establishes",
+    "persistence."
+  ],
+  "case_id": "alihadi-07-sysinternals",
+  "source_url": "https://archive.org/download/sysinternals-case",
+  "license": "Ali Hadi DFIR challenges — free for research/education (answers gated)",
+  "verdict": "CONFIRMED_EVIL",
+  "min_recall_percent": 50,
+  "findings": [
+    {
+      "finding_id": "si-001",
+      "description": "Trojanized/fake SysInternals installer executed by the user",
+      "mitre_technique": "T1204.002",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Masquerading installer in Downloads; MFT + prefetch"
+    },
+    {
+      "finding_id": "si-002",
+      "description": "Persistence established via Run key, scheduled task, or service",
+      "mitre_technique": "T1547.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "registry",
+      "artifact_hint": "SOFTWARE Run keys / Tasks / Services hive"
+    },
+    {
+      "finding_id": "si-003",
+      "description": "Dropped payload binary written to disk by the installer",
+      "mitre_technique": "T1105",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Dropped binary in ProgramData/AppData; MFT creation"
+    },
+    {
+      "finding_id": "si-004",
+      "description": "Prefetch evidence of malicious payload execution",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "prefetch",
+      "artifact_hint": "C:\\Windows\\Prefetch\\*.pf for the dropped binary"
+    },
+    {
+      "finding_id": "si-005",
+      "description": "Network beacon / C2 connection from the payload",
+      "mitre_technique": "T1071.001",
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "network",
+      "artifact_hint": "Sysmon EID 3 / network artifacts if present"
+    }
+  ]
+}
