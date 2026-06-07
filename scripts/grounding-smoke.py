@@ -246,6 +246,62 @@ def offline_checks(gv) -> None:
         )
 
 
+def offline_ioc_checks(gv) -> None:
+    print("[offline] IOC extraction (typed only, no crypto-chain pollution)")
+    verdict = {
+        "malware_triage": {
+            "aggregate_iocs": {
+                "hashes": ["a" * 64],
+                "domains": ["evil.test"],
+                "ips": ["1.2.3.4"],
+                "urls": ["http://x.test/p"],
+                "emails": ["a@b.test"],
+                "paths": ["/tmp/x"],
+                "registry_keys": ["HKLM\\Run"],
+                "mutex_like": [],
+                "user_agents": [],
+            }
+        },
+        # a crypto-chain hash elsewhere in the verdict that MUST NOT be extracted
+        "tool_calls": [{"tool_call_id": "tc-1", "output_sha256": "b" * 64}],
+    }
+    iocs = gv.extract_iocs(verdict)
+    check(
+        set(iocs) == set(gv.ENRICHABLE_IOC_TYPES),
+        "extract_iocs returns only enrichable typed buckets",
+    )
+    check(iocs["hashes"] == ["a" * 64], "extract_iocs reads aggregate_iocs hashes")
+    check(
+        "b" * 64 not in iocs["hashes"],
+        "extract_iocs ignores crypto-chain hashes (no blind regex)",
+    )
+    check(
+        gv.run_ioc_enrichment({k: [] for k in gv.ENRICHABLE_IOC_TYPES}) is None,
+        "no IOCs -> enrichment skipped (None)",
+    )
+
+    spec = importlib.util.spec_from_file_location(
+        "ioc_enrich", ROOT / "scripts" / "ioc_enrich.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    check(hasattr(mod, "enrich"), "ioc_enrich.enrich present")
+    check(
+        mod._classify("http://x") == "urls"
+        and mod._classify("a" * 64) == "hashes"
+        and mod._classify("1.2.3.4") == "ips"
+        and mod._classify("evil.test") == "domains",
+        "ioc_enrich classifies hash/domain/ip/url",
+    )
+    # No key configured in CI/offline -> enrich reports unavailable, never crashes.
+    if not mod.vt_key():
+        out = mod.enrich({"hashes": ["a" * 64], "domains": [], "ips": [], "urls": []})
+        check(
+            out.get("available") is False,
+            "ioc_enrich degrades cleanly with no VT key (available=false)",
+        )
+
+
 def webhook_up() -> bool:
     try:
         with urllib.request.urlopen(N8N_HEALTH, timeout=4) as r:
@@ -310,6 +366,7 @@ def live_checks() -> None:
 def main() -> int:
     gv = load_ground_verdict()
     offline_checks(gv)
+    offline_ioc_checks(gv)
     if webhook_up():
         live_checks()
     else:
