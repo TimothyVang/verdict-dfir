@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# claude — thin wrapper that prints the VERDICT launch banner, then execs the real
+# claude CLI with all arguments forwarded. Guarantees a visible banner regardless of
+# how the installed Claude Code version surfaces SessionStart hook stderr.
+#
+# Usage: add this directory to the FRONT of PATH, or alias claude to this script:
+#   alias claude='bash /path/to/repo/scripts/claude'
+# It resolves the real binary via PATH while skipping itself, so no recursion.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+bash "${REPO_ROOT}/scripts/verdict-banner.sh" || true
+
+# Find the real claude binary, skipping this wrapper so we never recurse.
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+REAL_CLAUDE=""
+while IFS= read -r candidate; do
+  [[ "$(cd "$(dirname "${candidate}")" && pwd)/$(basename "${candidate}")" == "${SELF}" ]] && continue
+  REAL_CLAUDE="${candidate}"
+  break
+done < <(type -ap claude 2>/dev/null)
+
+if [[ -z "${REAL_CLAUDE}" ]]; then
+  echo "  [claude wrapper] real 'claude' CLI not found on PATH — install it or run: claude auth login" >&2
+  exit 127
+fi
+
+exec "${REAL_CLAUDE}" "$@"
