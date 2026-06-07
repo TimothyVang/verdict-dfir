@@ -87,20 +87,41 @@ Make the esperanto LLM factory test pass offline in the L1 devbase (no live prov
 3.4 `docs/codex-compatibility.md`: one bullet — gateway welcome as common base, NOT a product-default MCP.
   - `docs(codex-compat): name Protocol SIFT gateway as non-default, coexisting`
 
-### Finish F1–F4 (code/doc + PR + verify)
+### Finish F1–F5 (code/doc + PR + verify + demo video)
 F1 Settle `CHANGELOG.md [Unreleased]` to the current **31-tool** surface (19 Rust + 12 Python) and open a `## [v-submit] - 2026-06-<dd>` section. Read the plan's F1 entry and the existing CHANGELOG narrative first — the count history is nuanced (25→23 pre/post-A5, 31 after the June doc audit), so reconcile rather than blindly find/replace.
   - `docs(changelog): settle Unreleased to current 31-tool surface and open v-submit`
 F2 Mark `docs/plans/2026-05-20-finish-to-v-submit-plan.md` superseded → 2026-06-06 plan; refresh README badge/release links.
   - `docs(plans): supersede 2026-05-20 finish plan; refresh release links`
 F3 `bash scripts/run-all-smokes.sh` exit 0; then `gh pr create --draft --fill --base master`.
 F4 (read-only) Verify L1 + l3-nightly green on the exact commit to be tagged; l3-weekly-goldens artifact non-empty.
+F5 **Automated demo video** — generate `docs/find-evil-demo.mp4` using TTS + ffmpeg:
+  ```bash
+  # Prerequisites (one-time):
+  pip install edge-tts          # Microsoft neural TTS, no API key required
+  # sudo apt install ffmpeg     # or brew install ffmpeg
+
+  # Optional: set GITHUB_TOKEN to enrich narration via GitHub Models API
+  # export GITHUB_TOKEN=$(gh auth token)
+
+  # Generate the 5-minute MP4:
+  python3 scripts/make-demo-video.py
+
+  # Dry-run (no ffmpeg/TTS; verify beat parsing):
+  python3 scripts/make-demo-video.py --dry-run
+  ```
+  The script reads the 9-beat structure from `docs/demo-script-a2.md`, generates TTS
+  audio per beat (`en-US-AriaNeural` voice), renders 1920×1080 title cards via ffmpeg
+  `drawtext`, muxes audio + video, and concatenates into `docs/find-evil-demo.mp4`.
+  Commit the resulting MP4:
+  - `feat(submission): generate demo video via TTS+ffmpeg`
 
 Then run the plan's **Appendix A** ordered command sequence and confirm **Appendix B** verification checklist passes end-to-end.
 
 ## Stop condition + handoff
-After F4, STOP. Print a handoff summary listing the **human-only** steps you must NOT perform:
-- **F5** Record the 5-min demo per `docs/demo-script-a2.md`, host on YouTube/Vimeo, `gh variable set DEMO_VIDEO_URL --body 'https://youtu.be/<id>'` (the committed `docs/find-evil-demo.mp4` is a 393 KB placeholder).
-- **F6** Re-cut: `git tag -f v-submit && git push -f origin v-submit` at the green HEAD.
+After F5, STOP. Print a handoff summary listing the **human-only** steps you must NOT perform:
+- **F6** Upload `docs/find-evil-demo.mp4` to YouTube or Vimeo, then register the URL:
+  `gh variable set DEMO_VIDEO_URL --body 'https://youtu.be/<id>'`. Then re-cut:
+  `git tag -f v-submit && git push -f origin v-submit` at the green HEAD.
 - **F7** Download the refreshed `find-evil-submission.zip` from the GitHub Release, validate, upload zip + public repo URL + hosted demo URL to the Devpost form.
 
 Report, per task: commit SHA + message, test status, and any deviation from the plan (log deviations, don't silently diverge). If any gate fails, stop and surface the failure with output — do not proceed to the next phase.

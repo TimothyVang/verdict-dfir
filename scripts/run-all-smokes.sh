@@ -156,6 +156,10 @@ run_smoke \
     "find-evil-run-smoke (one-command operator entry, --dry-run)" \
     "python3 scripts/find-evil-run-smoke.py"
 
+run_smoke \
+    "make-demo-video-smoke (TTS+ffmpeg video builder, --dry-run)" \
+    "python3 scripts/make-demo-video-smoke.py"
+
 # Lint / format gates. L0 GHA workflow runs these too; mirror them locally
 # so a contributor running this script before commit catches a missing
 # `ruff format` or unformatted Rust before the push. Each gate uses

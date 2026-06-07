@@ -119,6 +119,7 @@ Invoke-Smoke -Label "autonomous-loop-smoke (8h dry-run + empty-queue timing)" -C
 Invoke-Smoke -Label "render-binary-smoke (pandoc/chrome resolve via PATH, graceful degrade)" -Command { & $python scripts/render-binary-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "starter-data-smoke (SANS_STARTER_URL contract + goldens stub)" -Command { & $python scripts/starter-data-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "find-evil-run-smoke (one-command operator entry, --dry-run)" -Command { & $python scripts/find-evil-run-smoke.py } -Prereq { $python }
+Invoke-Smoke -Label "make-demo-video-smoke (TTS+ffmpeg video builder, --dry-run)" -Command { & $python scripts/make-demo-video-smoke.py } -Prereq { $python }
 
 Invoke-Smoke -Label "ruff check . (lint clean across all Python services)" -Command { ruff check . } -Prereq { Test-CommandAvailable "ruff" }
 Invoke-Smoke -Label "ruff format --check . (formatter clean)" -Command { ruff format --check . } -Prereq { Test-CommandAvailable "ruff" }
