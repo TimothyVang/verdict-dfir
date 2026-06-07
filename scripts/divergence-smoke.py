@@ -59,6 +59,8 @@ EXCLUDED_PATH_PARTS = (
     # legitimate-but-unrelated patterns from upstream code (e.g.
     # Archon ships the `ws` npm dep, which trips divergence #8).
     "git-hub-references",
+    # n8n automation reference clones - .gitignore'd, never ship.
+    "n8n-references",
     # Build / venv / cache.
     "target",
     "node_modules",

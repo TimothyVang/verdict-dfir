@@ -78,7 +78,7 @@ RUN curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir /usr/lo
 
 # Python packaging: uv for env+lockfile (matches CLAUDE.md conventions).
 # Pinned per https://astral.sh/uv release notes around the plan date.
-RUN pip install --no-cache-dir 'uv==0.5.8' 'matplotlib>=3.8,<4.0' \
+RUN pip install --no-cache-dir 'uv==0.11.19' 'matplotlib>=3.8,<4.0' \
  && uv --version
 
 # Non-root build user. Anything that runs evidence-adjacent must be non-root.
