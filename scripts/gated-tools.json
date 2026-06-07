@@ -27,7 +27,9 @@
       },
       "fetch": {
         "preferred": "browser-download",
-        "browser_download": "click Download with the browser's download directory set to a controlled path (CDP Page.setDownloadBehavior, or the MCP browser's download dir), wait until the .ova file size is stable (no .crdownload), then move it to destination.dir.",
+        "download_dir": "tmp/gated-downloads — point the browser here via CDP Page.setDownloadBehavior (or set FINDEVIL_DOWNLOAD_DIR) BEFORE clicking Download, so the OVA never lands in ~/Downloads.",
+        "browser_download": "click Download (download dir set as above), wait until the .ova file size is stable (no .crdownload), then run the place_helper to move it into the project location.",
+        "place_helper": "bash scripts/place-gated-download.sh sift-ova — moves a finished download from the controlled dir or ~/Downloads to <repo-root>/sift-<version>.ova (idempotent; rejects HTML/partial files). Run this even if the download already went to ~/Downloads.",
         "curl_alt": "intercept the file-stream request triggered by the Download click (the signed URL) and run curl -fL --cookie <session-cookies> immediately; the URL is time-limited so resume across expiry is not guaranteed. Plain curl on the /dl/ URL returns HTML and will NOT work.",
         "notes": "no SANS credentials required (verified public share)."
       },

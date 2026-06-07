@@ -117,12 +117,21 @@ Steps:
      needed; never invent or store credentials.
    - Navigate `landing_url` and read the `Download` anchor's href (it matches
      `sansorg.egnyte.com/dl/`). Never hardcode the token — it rotates when SANS updates the OVA.
-   - Navigate that Egnyte share URL (public) and click its `Download` button. Note: the `/dl/`
-     URL returns `text/html`, so plain `curl` on it does NOT work — the file is served only
-     after the click via a dynamic signed URL. Prefer a browser-download to a controlled
-     directory (then move the file); the curl-with-captured-signed-URL path is the alternative.
-   - Verify (`verify.min_bytes` ~8 GB, reject HTML error pages, record sha256), then place as
-     `sift-<version>.ova` at the repo root (or set `OVA_PATH`).
+   - Before clicking, set the browser's download directory to `tmp/gated-downloads` (CDP
+     `Page.setDownloadBehavior`, or set `FINDEVIL_DOWNLOAD_DIR`) so the OVA does NOT land in
+     `~/Downloads`. Navigate the Egnyte share URL (public) and click its `Download` button.
+     Note: the `/dl/` URL returns `text/html`, so plain `curl` on it does NOT work — the file
+     is served only after the click via a dynamic signed URL.
+   - When the download finishes, place it in the project location (do not leave it in
+     Downloads):
+
+     ```bash
+     bash scripts/place-gated-download.sh sift-ova
+     ```
+
+     It moves the OVA from the controlled dir or `~/Downloads` to `<repo-root>/sift-<version>.ova`
+     (where `sift-vm-bootstrap.sh::resolve_ova` looks), verifies size, rejects HTML/partials,
+     and is idempotent. Run it too if the user downloaded the OVA manually.
    - Re-run `bash scripts/setup` to confirm the asset is now detected.
    - On ANY failure (site changed, blocked, no file, checksum/HTML mismatch, offline): delete
      any partial file, report the exact failing step with a screenshot, and fall back to the
