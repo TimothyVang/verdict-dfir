@@ -3,9 +3,8 @@ import { AbsoluteFill, Series } from "remotion";
 import { BeatScene } from "./beats/Beat";
 import { BEATS, FPS } from "./beats/beats-data";
 
-// Audio files are written to src/audio/ by make-demo-video-prep.py.
-// Remotion's staticFile() resolves relative to the project's public/ or src/ dir.
-// We reference them unconditionally; Remotion skips missing static files gracefully.
+// Audio files are written to public/audio/ by make-demo-video-prep.py.
+// Remotion's staticFile() serves files from public/ at render time.
 function audioFileForBeat(beatNumber: number): string {
   return `audio/beat_${String(beatNumber).padStart(2, "0")}.mp3`;
 }

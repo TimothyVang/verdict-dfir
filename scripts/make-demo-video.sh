@@ -81,13 +81,15 @@ if $PREVIEW; then
     "${REMOTION_DIR}/src/Root.tsx" FindEvilDemo \
     --output /tmp/find-evil-preview.mp4 \
     --codec h264 \
+    --public-dir "${REMOTION_DIR}/public" \
     --frames 0-89
   echo "[make-demo-video] Preview written to /tmp/find-evil-preview.mp4"
 else
   "${REMOTION_DIR}/node_modules/.bin/remotion" render \
     "${REMOTION_DIR}/src/Root.tsx" FindEvilDemo \
     --output "${OUT}" \
-    --codec h264
+    --codec h264 \
+    --public-dir "${REMOTION_DIR}/public"
   SIZE=$(du -sh "${OUT}" | cut -f1)
   echo ""
   echo "[make-demo-video] Done: ${OUT} (${SIZE})"

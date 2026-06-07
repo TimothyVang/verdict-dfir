@@ -18,13 +18,14 @@ import argparse
 import asyncio
 import importlib.util
 import os
+import subprocess
 import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-AUDIO_OUT = REPO_ROOT / "scripts" / "make-demo-video" / "src" / "audio"
+AUDIO_OUT = REPO_ROOT / "scripts" / "make-demo-video" / "public" / "audio"
 
 # Beat metadata mirrored from beats-data.ts (single source of truth is the TS
 # file for the video; this mirrors it for TTS generation purposes only).
