@@ -66,7 +66,7 @@ function isPoolTool(ev: AuditLine, p: Payload): boolean {
 const STAGE_DEFS: readonly StageDef[] = [
   {
     id: "case_open",
-    label: "case open",
+    label: "Evidence locked",
     order: 1,
     fired: (ev, p) =>
       (isToolCallStart(ev) && str(p.tool) === "case_open") ||
@@ -74,7 +74,7 @@ const STAGE_DEFS: readonly StageDef[] = [
   },
   {
     id: "pool_a",
-    label: "pool A · persistence",
+    label: "Team A · persistence",
     order: 2,
     fired: (ev, p) =>
       isPoolTool(ev, p) ||
@@ -82,7 +82,7 @@ const STAGE_DEFS: readonly StageDef[] = [
   },
   {
     id: "pool_b",
-    label: "pool B · exfil",
+    label: "Team B · exfiltration",
     order: 2,
     fired: (ev, p) =>
       isPoolTool(ev, p) ||
@@ -90,19 +90,19 @@ const STAGE_DEFS: readonly StageDef[] = [
   },
   {
     id: "contradictions",
-    label: "contradictions",
+    label: "Cross-check",
     order: 3,
     fired: (ev) => ev.kind.startsWith("contradiction"),
   },
   {
     id: "verify",
-    label: "verify",
+    label: "Verify findings",
     order: 4,
     fired: (ev) => ev.kind === "verifier_action" || ev.kind === "replay",
   },
   {
     id: "judge",
-    label: "judge",
+    label: "Weigh",
     order: 5,
     fired: (ev, p) =>
       (ev.kind === "acp_handoff" && str(p.to_role) === "judge") ||
@@ -110,14 +110,14 @@ const STAGE_DEFS: readonly StageDef[] = [
   },
   {
     id: "correlate",
-    label: "correlate",
+    label: "Correlate",
     order: 6,
     fired: (ev, p) =>
       ev.kind === "acp_handoff" && str(p.to_role) === "correlator",
   },
   {
     id: "manifest",
-    label: "manifest",
+    label: "Sign",
     order: 7,
     // The engine records manifest_finalize as a tool call and closes with
     // verdict_artifact -> verdict_packet; any of these means the attestation
@@ -132,7 +132,7 @@ const STAGE_DEFS: readonly StageDef[] = [
     id: "report",
     // Report has no audit kind — it renders after manifest. The page passes
     // `reportReady` once /api/report finds REPORT.pdf.
-    label: "report",
+    label: "Report",
     order: 8,
     fired: () => false,
   },

@@ -16,7 +16,7 @@ When the analyst says **"investigate &lt;path&gt;"**, **"find evil in &lt;path&g
 
 Report fields to interpret consistently:
 
-- `attck_practitioner_coverage` maps current evidence and typed-tool output to GCFA/GNFA/GREM-style practitioner lanes. It is honest coverage accounting, not a claim that the product replaces certified analysts.
+- `attck_practitioner_coverage` maps current evidence and typed-tool output to DFIR analysis-domain lanes (Host & Endpoint, Memory, Windows Event & Account, Network, Malware, Live Response). It is honest coverage accounting, not a claim that the product replaces certified analysts.
 - `normalized_timeline` preserves source timestamp, artifact class, `tool_call_id`, and source record reference. Timeline context does not become a Finding without artifact-backed semantics.
 - `report_evidence_cards` are generated exhibits for the PDF. Each card must point back to parsed tool output and source citations; visuals do not create Findings or raise confidence.
 - `source_bibliography` resolves external source citation IDs used for ATT&CK/data-source/report interpretation.

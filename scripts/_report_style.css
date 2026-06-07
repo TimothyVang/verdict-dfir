@@ -1,21 +1,205 @@
+/* VERDICT — editorial "forensic case file" report theme.
+   Mirrors apps/web/lib/verdict-ui.tsx + apps/web/app/globals.css: warm near-black
+   paper, cream ink, JetBrains Mono / Fraunces / Archivo, purple brand accent, and
+   the green/amber/blue confidence color system. Kept in sync with _DEFAULT_CSS in
+   scripts/render_report.py. */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
-body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-       max-width: 980px; margin: 2em auto; padding: 0 2.5em; line-height: 1.65;
-       color: #222; background: #fafafa; }
-h1 { color: #1565c0; border-bottom: 3px solid #1565c0; padding-bottom: 0.4em; font-size: 2em; }
-h2 { color: #1565c0; border-bottom: 1px solid #ccc; padding-bottom: 0.25em; margin-top: 2.5em; font-size: 1.4em; }
-h3 { color: #6a1b9a; margin-top: 1.6em; font-size: 1.15em; }
-img { max-width: 100%; display: block; margin: 2em auto; border: 1px solid #ddd;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 4px;
-      background: white; padding: 8px; }
-code { background: #eef2f5; padding: 0.1em 0.4em; border-radius: 3px;
-       font-family: "Consolas", monospace; font-size: 0.92em; color: #c62828; }
-pre { background: #2c3e50; color: #ecf0f1; padding: 1em 1.4em; border-radius: 4px; overflow-x: auto; }
-pre code { background: none; padding: 0; color: inherit; }
-blockquote { border-left: 4px solid #1565c0; padding: 0.7em 1.2em; margin: 1.2em 0;
-             background: #e3f2fd; border-radius: 0 4px 4px 0; }
-table { border-collapse: collapse; margin: 1.2em 0; width: 100%; }
-th, td { padding: 0.55em 0.9em; border: 1px solid #ddd; text-align: left; }
-th { background: #1565c0; color: white; font-weight: 600; }
-tr:nth-child(even) td { background: #f5f7fa; }
-strong { color: #1565c0; }
+:root {
+  --paper: #0e0c10;
+  --surface: #161318;
+  --inset: #0b0a0d;
+  --ink: #ece6da;
+  --muted: #8c8576;
+  --faint: #544f48;
+  --hairline: #2b2620;
+  --accent: #9b59b6;
+  --accent-light: #b98fce;
+  --alert: #d6452f;
+  --confirmed: #7fae6e;
+  --inferred: #c79a4a;
+  --hypothesis: #6f93b8;
+  --mono: "JetBrains Mono", "Courier New", monospace;
+  --serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --grotesk: "Archivo", system-ui, -apple-system, sans-serif;
+}
+
+@page { margin: 0; }
+
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+body {
+  background: #0e0c10;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 1.5cm 1.6cm 2cm;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  background-image:
+    linear-gradient(rgba(236, 230, 218, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(236, 230, 218, 0.022) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* Masthead — Fraunces display serif. */
+h1 {
+  font-family: var(--serif);
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 2.5em;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+  margin: 0 0 0.35em;
+  border: none;
+}
+
+/* Tier banners (Technical Report / Internal) — page break + purple band. */
+h1.tier-break {
+  page-break-before: always;
+  font-family: var(--grotesk);
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-size: 1.15em;
+  font-weight: 700;
+  color: var(--ink);
+  background: linear-gradient(90deg, rgba(155, 89, 182, 0.24), rgba(155, 89, 182, 0.04));
+  border: none;
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  padding: 0.65em 0.9em;
+  margin: 0 0 1.4em;
+}
+
+/* Section labels — grotesk uppercase + hairline rule. */
+h2 {
+  font-family: var(--grotesk);
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  font-size: 1.02em;
+  font-weight: 600;
+  color: var(--accent-light);
+  margin: 2.6em 0 1em;
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid var(--hairline);
+}
+
+h3 {
+  font-family: var(--grotesk);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 1.8em 0 0.7em;
+}
+
+p, li { color: var(--ink); }
+a {
+  color: var(--accent-light);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(155, 89, 182, 0.4);
+}
+strong { color: var(--ink); font-weight: 700; }
+em { color: var(--muted); }
+
+/* Figures presented as light "mounted exhibits" pinned to the dark case file. */
+img {
+  max-width: 100%;
+  display: block;
+  margin: 1.8em auto;
+  background: #fbfaf6;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.5);
+}
+
+/* Code. */
+code {
+  background: var(--inset);
+  color: var(--accent-light);
+  padding: 0.12em 0.45em;
+  border-radius: 4px;
+  border: 1px solid var(--hairline);
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+pre {
+  background: var(--inset);
+  color: var(--ink);
+  padding: 1.1em 1.4em;
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+  overflow-x: auto;
+}
+pre code { background: none; border: none; padding: 0; color: inherit; }
+
+/* Cryptographic-attestation blockquote — purple crypto card. */
+blockquote {
+  font-family: var(--mono);
+  color: var(--ink);
+  margin: 1.4em 0;
+  background: rgba(155, 89, 182, 0.1);
+  border: 1px solid rgba(155, 89, 182, 0.45);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  padding: 0.9em 1.3em;
+}
+blockquote strong { color: var(--accent-light); }
+
+/* Tables — dark surface, hairline grid, purple-tinted header. */
+table {
+  border-collapse: collapse;
+  margin: 1.3em 0;
+  width: 100%;
+  font-size: 0.84em;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+}
+th {
+  background: rgba(155, 89, 182, 0.16);
+  color: var(--accent-light);
+  font-family: var(--grotesk);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+  font-size: 0.95em;
+  padding: 0.55em 0.8em;
+  border: 1px solid var(--hairline);
+  text-align: left;
+}
+td {
+  padding: 0.5em 0.8em;
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  vertical-align: top;
+}
+tr:nth-child(even) td { background: rgba(236, 230, 218, 0.025); }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.4em 0; }
+
+/* Masthead kicker + tagline (pandoc bracketed spans). */
+.kicker {
+  font-family: var(--grotesk);
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  font-size: 0.72em;
+  font-weight: 600;
+  color: var(--accent);
+}
+.tagline {
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: 1px;
+  font-size: 0.86em;
+}
+
+/* Semantic confidence + verdict keywords (wrapped post-render). */
+.conf-confirmed, .verdict-confirmed { color: var(--confirmed); font-weight: 700; }
+.conf-inferred, .verdict-inferred { color: var(--inferred); font-weight: 700; }
+.conf-hypothesis { color: var(--hypothesis); font-weight: 700; }
+.verdict-alert { color: var(--alert); font-weight: 700; }

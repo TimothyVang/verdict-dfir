@@ -231,10 +231,76 @@ if ! grep -q '"findevil-agent-mcp"' .mcp.json; then
     fail ".mcp.json does not register 'findevil-agent-mcp'."
     exit 1
 fi
-ok ".mcp.json registers both MCP servers."
+ok ".mcp.json registers the project MCP servers (findevil-mcp + findevil-agent-mcp)."
 
 # ---------------------------------------------------------------------------
-# 5b. Optional: provision the n8n automation layer.
+# 5a. Install the required Claude Code MCP servers.
+# ---------------------------------------------------------------------------
+#
+# The two project servers (findevil-mcp Rust + findevil-agent-mcp Python) are
+# built in §3/§4 and auto-spawned from .mcp.json. The third is n8n-mcp — the
+# npx-based automation MCP that gives Claude Code the n8n node catalog +
+# workflow validation for the post-verdict finding-to-action lane. It's
+# registered in .mcp.json reading N8N_API_URL/N8N_API_KEY from your env (docs
+# tools work with neither set; the n8n_* management tools need them). Pre-fetch
+# it here so its first spawn is instant instead of a cold npx download.
+
+if grep -q '"n8n-mcp"' .mcp.json; then
+    ok ".mcp.json registers n8n-mcp (Claude Code automation MCP)."
+    if command -v npx &> /dev/null; then
+        info "Pre-fetching n8n-mcp into the npx cache..."
+        if timeout 120 env MCP_MODE=stdio DISABLE_CONSOLE_OUTPUT=true \
+            npx -y n8n-mcp </dev/null >/dev/null 2>&1; then
+            ok "n8n-mcp pre-fetched (first spawn will be instant)."
+        else
+            info "n8n-mcp pre-fetch skipped/timed out (non-fatal — npx fetches on first use)."
+        fi
+    else
+        warn "node/npx not on PATH — n8n-mcp can't spawn. Install Node 20+ to enable it."
+    fi
+else
+    warn ".mcp.json does not register n8n-mcp — Claude Code won't load the automation MCP."
+fi
+
+# ---------------------------------------------------------------------------
+# 5b. Browser automation — Playwright + Puppeteer (libraries + MCP servers).
+# ---------------------------------------------------------------------------
+#
+# Claude Code drives the live dashboard / report via Playwright (preferred) or
+# Puppeteer — the replacement for the removed cloakbrowser MCP. Install both
+# libraries + the Playwright Chromium, then pre-fetch the two MCP servers that
+# .mcp.json registers: @playwright/mcp and @modelcontextprotocol/server-puppeteer.
+# All best-effort + non-fatal (needs Node/npx; Puppeteer pulls its own Chromium
+# on install). Set FINDEVIL_SKIP_BROWSER=1 to skip.
+
+if [ "${FINDEVIL_SKIP_BROWSER:-}" = "1" ]; then
+    info "Skipping Playwright/Puppeteer install (FINDEVIL_SKIP_BROWSER=1)."
+elif command -v npm &> /dev/null; then
+    info "Installing Playwright + Puppeteer (browser automation libraries)..."
+    if npm install -g playwright puppeteer --silent >/dev/null 2>&1; then
+        ok "playwright + puppeteer installed (global)."
+    else
+        warn "playwright/puppeteer global install failed (non-fatal) — run: npm i -g playwright puppeteer"
+    fi
+
+    info "Installing the Playwright Chromium browser..."
+    if npx -y playwright install chromium >/dev/null 2>&1; then
+        ok "Playwright Chromium installed (~/.cache/ms-playwright)."
+    else
+        info "Playwright Chromium install skipped (non-fatal — first use fetches it)."
+    fi
+
+    info "Pre-fetching browser MCP servers (@playwright/mcp + server-puppeteer)..."
+    timeout 150 npx -y @playwright/mcp@latest --help </dev/null >/dev/null 2>&1 || true
+    timeout 150 npx -y @modelcontextprotocol/server-puppeteer </dev/null >/dev/null 2>&1 || true
+    if grep -q '"playwright"' .mcp.json; then ok ".mcp.json registers playwright MCP."; else warn ".mcp.json missing playwright MCP."; fi
+    if grep -q '"puppeteer"' .mcp.json;  then ok ".mcp.json registers puppeteer MCP.";  else warn ".mcp.json missing puppeteer MCP.";  fi
+else
+    warn "node/npm not on PATH — skipping Playwright/Puppeteer + their MCPs. Install Node 20+."
+fi
+
+# ---------------------------------------------------------------------------
+# 5c. Optional: provision the n8n automation layer.
 # ---------------------------------------------------------------------------
 #
 # n8n is the optional post-verdict automation (route findings -> Slack/ticket).
@@ -467,13 +533,9 @@ echo "     and produce REPORT.html + a sigstore-verified audit.jsonl."
 echo ""
 echo "  4. To watch the live dashboard while an investigation runs:"
 echo "       pnpm --filter @findevil/web dev"
-echo "     Then open ${c_blu}http://localhost:3000${c_off} in Chrome."
-echo "     If you have Chrome DevTools MCP configured, Claude Code will"
-echo "     open that URL in Chrome for you automatically."
-echo ""
-echo "  5. To start Chrome with remote debugging (enables Claude to browse for you):"
-echo "       google-chrome --remote-debugging-port=9222 &"
-echo "     Then ask Claude Code: 'open the dashboard' or 'open the report'."
+echo "     Then open ${c_blu}http://localhost:3000${c_off} in your browser."
+echo "     Claude Code can open or screenshot the dashboard/report for you via"
+echo "     Playwright or Puppeteer (host Chrome) — just ask: 'screenshot the dashboard'."
 echo ""
 echo "${c_blu}QUICK COMMAND REFERENCE${c_off}"
 echo ""

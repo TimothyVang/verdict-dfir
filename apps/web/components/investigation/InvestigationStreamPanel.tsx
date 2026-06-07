@@ -36,7 +36,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ConfidenceChip,
@@ -673,6 +673,10 @@ export function InvestigationStreamPanel({
     [streamRows, maxStreamRows],
   );
 
+  // Raw terminal stream is demoted to a collapsible affordance — investigators
+  // see the readable finding cards first; the machine log is opt-in.
+  const [showRaw, setShowRaw] = useState(false);
+
   const resolvedCaseId = caseId ?? deriveCaseId(events);
   const header = useMemo(() => deriveHeaderSummary(findings), [findings]);
 
@@ -681,6 +685,21 @@ export function InvestigationStreamPanel({
     : "live tool-call stream";
 
   const isEmpty = streamRows.length === 0 && findings.length === 0;
+
+  // The readable finding cards — the primary, prominent content.
+  const findingCards =
+    findings.length === 0 ? (
+      <Surface padding={24}>
+        <div style={{ color: VERDICT.muted, fontSize: 14 }}>
+          No findings yet. Cards appear as the pools emit confirmed,
+          tool-cited findings.
+        </div>
+      </Surface>
+    ) : (
+      findings.map((card) => (
+        <FindingCardView key={card.finding_id} card={card} />
+      ))
+    );
 
   return (
     <section
@@ -728,33 +747,65 @@ export function InvestigationStreamPanel({
         </div>
       </div>
 
-      {/* Content grid: terminal (left ~62%) + finding cards (right ~38%),
-          collapses to a single column under ~1100px (.verdict-stream-grid). */}
-      <div className="verdict-stream-grid" style={{ position: "relative" }}>
-        <TerminalWindow rows={boundedRows} isEmpty={isEmpty} />
+      {/* Findings-first: when the raw log is collapsed, the readable cards take
+          the full width. Expanding restores the 2-col terminal + cards grid. */}
+      {showRaw ? (
+        <div className="verdict-stream-grid" style={{ position: "relative" }}>
+          <TerminalWindow rows={boundedRows} isEmpty={isEmpty} />
 
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+              minWidth: 0,
+            }}
+          >
+            {findingCards}
+          </div>
+        </div>
+      ) : (
         <div
           style={{
+            position: "relative",
             display: "flex",
             flexDirection: "column",
             gap: 16,
             minWidth: 0,
           }}
         >
-          {findings.length === 0 ? (
-            <Surface padding={24}>
-              <div style={{ color: VERDICT.muted, fontSize: 14 }}>
-                No findings yet. Cards appear as the pools emit confirmed,
-                tool-cited findings.
-              </div>
-            </Surface>
-          ) : (
-            findings.map((card) => (
-              <FindingCardView key={card.finding_id} card={card} />
-            ))
-          )}
+          {findingCards}
         </div>
-      </div>
+      )}
+
+      {/* Raw activity log toggle — editorial section-header affordance. */}
+      <button
+        type="button"
+        onClick={() => setShowRaw((prev) => !prev)}
+        aria-expanded={showRaw}
+        style={{
+          appearance: "none",
+          width: "100%",
+          marginTop: "clamp(16px, 2vw, 28px)",
+          paddingTop: 16,
+          borderTop: `1px solid ${VERDICT.border}`,
+          borderRight: 0,
+          borderBottom: 0,
+          borderLeft: 0,
+          background: "transparent",
+          color: VERDICT.muted,
+          fontFamily: GROTESK,
+          fontSize: 13,
+          fontWeight: 700,
+          letterSpacing: 1.5,
+          textTransform: "uppercase",
+          textAlign: "left",
+          cursor: "pointer",
+          display: "block",
+        }}
+      >
+        {`${showRaw ? "▾" : "▸"} Raw activity log (${streamRows.length} events)`}
+      </button>
     </section>
   );
 }

@@ -281,6 +281,62 @@ def main() -> int:
         rr.fig_attack_story_timeline(
             attack_story, case_dir / "attack_story_timeline.png"
         )
+        entity_timeline = [
+            {
+                "event_id": "timeline-0001",
+                "timestamp_utc": "2026-05-04T02:49:00Z",
+                "artifact_class": "evtx",
+                "summary": "Security audit log clearing by CORP\\Administrator",
+                "significance": "finding_support",
+                "tool_call_id": "tc-evtx",
+                "confidence": "INFERRED",
+                "linked_finding_ids": ["f-clear"],
+                "entities": {
+                    "account": "Administrator",
+                    "domain": "CORP",
+                    "host": "DC01",
+                },
+            }
+        ]
+        entity_index = {
+            "accounts": [
+                {
+                    "value": "CORP\\Administrator",
+                    "event_count": 1,
+                    "first_seen": "2026-05-04T02:49:00Z",
+                    "last_seen": "2026-05-04T02:49:00Z",
+                    "artifact_classes": ["evtx"],
+                    "tool_call_ids": ["tc-evtx"],
+                    "linked_finding_ids": ["f-clear"],
+                }
+            ]
+        }
+        indicators = {
+            "accounts": ["CORP\\Administrator"],
+            "note": "Indicators are observed artifacts; corroborate before deployment.",
+        }
+        event_narratives = [
+            {
+                "text": "At 2026-05-04T02:49:00Z UTC, Security audit log cleared by "
+                "CORP\\Administrator (tool call tc-evtx, INFERRED)."
+            }
+        ]
+        practitioner_coverage = {
+            "lanes": {
+                "memory": {
+                    "label": "Memory Forensics",
+                    "status": "automated",
+                    "artifact_classes_seen": ["memory"],
+                    "tools_run": ["vol_psscan"],
+                    "attck_data_sources_seen": ["DS0009"],
+                    "coverage_gaps": [],
+                }
+            },
+            "overclaim_guardrails_applied": [
+                "Domain coverage describes triage/orchestration across the typed "
+                "tools that ran, not certified-analyst judgment"
+            ],
+        }
         md_path = rr.write_markdown(
             case_dir,
             manifest,
@@ -295,6 +351,12 @@ def main() -> int:
             report_qa=report_qa,
             expert_doctrine=doctrine,
             release_gate=release_gate,
+            timeline=entity_timeline,
+            normalized_timeline={"events": entity_timeline},
+            entity_index=entity_index,
+            indicators=indicators,
+            event_narratives=event_narratives,
+            practitioner_coverage=practitioner_coverage,
             has_attack_story_fig=True,
         )
         text = md_path.read_text(encoding="utf-8")
@@ -372,6 +434,27 @@ def main() -> int:
         ("qa signoff heading", "## QA / Expert Signoff" in text),
         ("customer release gate heading", "## Customer Release Gate" in text),
         ("expert doctrine heading", "## Expert Doctrine Applied" in text),
+        ("verdict rebrand title", "# VERDICT — Forensic Investigation Report" in text),
+        ("bottom line up front heading", "## Bottom Line Up Front" in text),
+        ("timeline of events heading", "## Timeline of Events" in text),
+        ("detailed event timeline heading", "## Detailed Event Timeline" in text),
+        ("cast of characters heading", "## Cast of Characters" in text),
+        ("indicators heading", "## Indicators" in text),
+        ("analysis coverage by domain heading", "## Analysis Coverage by Domain" in text),
+        ("technical report tier divider", "# Technical Report {.tier-break}" in text),
+        (
+            "internal gates tier divider",
+            "# Internal — QA & Release Gates" in text,
+        ),
+        ("legacy practitioner heading removed", "## Practitioner Coverage" not in text),
+        (
+            "no GIAC certification wording",
+            not any(cert in text for cert in ("GREM", "GCFA", "GNFA")),
+        ),
+        (
+            "entity timeline surfaces source account and host",
+            "Administrator" in text and "DC01" in text,
+        ),
         ("finding tool call preserved", "tc-psscan" in text),
         ("cannot prove section present", "### What We Cannot Prove" in text),
         (

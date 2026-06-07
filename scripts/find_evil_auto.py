@@ -35,6 +35,7 @@ import hashlib
 import ipaddress
 import json
 import os
+import codecs
 import re
 import shlex
 import shutil
@@ -374,6 +375,28 @@ def suspicious_prefetch_tool_hint(executable_name: str) -> tuple[str, str] | Non
         if needle in upper_name:
             return description, technique
     return None
+
+
+def _userassist_exe(encoded_name: str) -> str | None:
+    """Decode a UserAssist value name (ROT13) and return the executed .exe
+    basename, or None for non-execution entries (shortcut/RUNPIDL records).
+
+    UserAssist (NTUSER\\...\\Explorer\\UserAssist\\<GUID>\\Count) records
+    per-user GUI program execution. ``UEME_RUNPATH:<full path>`` entries name
+    a launched executable; ``UEME_RUNPIDL`` entries are folder/shortcut opens
+    and are not execution evidence.
+    """
+    if not encoded_name:
+        return None
+    try:
+        decoded = codecs.decode(encoded_name, "rot_13").lower()
+    except (UnicodeDecodeError, LookupError, ValueError):
+        return None
+    if "ueme_runpath" not in decoded:
+        return None
+    tail = decoded.rsplit(":", 1)[-1]
+    base = PurePosixPath(tail.replace("\\", "/")).name
+    return base if base.endswith(".exe") else None
 
 
 def classify_artifact_path(path: str) -> dict[str, str | None]:
@@ -1191,6 +1214,234 @@ TIMESTAMP_SOURCE_BY_TOOL: dict[str, str] = {
     "zeek_summary": "Zeek timestamp",
 }
 
+# Windows logon-type numeric codes -> analyst-readable labels (MEMORY.md: Type 3
+# = network, Type 10 = RemoteInteractive/RDP).
+LOGON_TYPE_LABELS: dict[str, str] = {
+    "2": "Interactive",
+    "3": "Network",
+    "4": "Batch",
+    "5": "Service",
+    "7": "Unlock",
+    "8": "NetworkCleartext",
+    "9": "NewCredentials",
+    "10": "RemoteInteractive (RDP)",
+    "11": "CachedInteractive",
+}
+
+# Security/System Event ID -> short human label for the timeline summary line.
+EVTX_EVENT_LABELS: dict[int, str] = {
+    1102: "Security audit log clearing",
+    1116: "Defender malware detected",
+    4624: "Successful logon",
+    4625: "Failed logon",
+    4634: "Logoff",
+    4647: "User-initiated logoff",
+    4648: "Logon with explicit credentials",
+    4672: "Special privileges assigned",
+    4688: "Process created",
+    4689: "Process exited",
+    4697: "Service installed",
+    4698: "Scheduled task created",
+    4699: "Scheduled task deleted",
+    4720: "User account created",
+    4722: "User account enabled",
+    4724: "Password reset attempt",
+    4728: "Member added to global group",
+    4732: "Member added to local group",
+    4738: "User account changed",
+    4740: "User account locked out",
+    4768: "Kerberos TGT requested",
+    4769: "Kerberos service ticket requested",
+    4776: "Credential validation",
+    7045: "Service installed",
+}
+
+# Raw EVTX EventData/UserData field name -> normalized entity key. Subject* keys
+# are the acting account; Target* keys are the affected account.
+_EVTX_FIELD_MAP: tuple[tuple[str, str], ...] = (
+    ("TargetUserName", "account"),
+    ("SubjectUserName", "subject_account"),
+    ("TargetDomainName", "domain"),
+    ("SubjectDomainName", "subject_domain"),
+    ("WorkstationName", "workstation"),
+    ("IpAddress", "source_ip"),
+    ("IpPort", "source_port"),
+    ("LogonType", "logon_type"),
+    ("NewProcessName", "process"),
+    ("ProcessName", "process"),
+    ("NewProcessId", "pid"),
+    ("ProcessId", "pid"),
+    ("CommandLine", "command_line"),
+    ("ParentProcessName", "parent_process"),
+    ("ServiceName", "service_name"),
+    ("ServiceFileName", "service_path"),
+    ("ImagePath", "service_path"),
+    ("TargetSid", "target_sid"),
+    ("SubjectUserSid", "subject_sid"),
+    ("TargetLogonId", "logon_id"),
+    ("SubjectLogonId", "subject_logon_id"),
+)
+
+# Normalized entity keys carried from a raw timeline event's `details` into the
+# `entities` block of each normalized event (and the report/CSV columns).
+_ENTITY_KEYS: tuple[str, ...] = (
+    "account",
+    "domain",
+    "host",
+    "workstation",
+    "source_ip",
+    "source_port",
+    "logon_type",
+    "logon_type_label",
+    "process",
+    "pid",
+    "command_line",
+    "parent_process",
+    "service_name",
+    "service_path",
+    "user",
+    "destination_ip",
+    "destination_hostname",
+    "destination_port",
+    "protocol",
+)
+
+
+def _flatten_evtx_eventdata(data: Any) -> dict[str, str]:
+    """Flatten Event/EventData and Event/UserData into a {name: value} dict.
+
+    The `evtx` crate renders named `<Data Name="X">v</Data>` as `{"X": "v"}`.
+    Event 1102 and some others carry their actor under `UserData/<Element>/...`,
+    so we descend one nested level. Scalars and `{"#text": v}` wrappers are kept;
+    attribute/namespace bookkeeping keys are skipped.
+    """
+    result: dict[str, str] = {}
+    if not isinstance(data, dict):
+        return result
+    event = data.get("Event") if isinstance(data.get("Event"), dict) else data
+    if not isinstance(event, dict):
+        return result
+    for container_key in ("EventData", "UserData"):
+        block = event.get(container_key)
+        if not isinstance(block, dict):
+            continue
+        blocks = [block]
+        # UserData wraps a single typed child element (e.g. LogFileCleared).
+        for value in block.values():
+            if isinstance(value, dict):
+                blocks.append(value)
+        for sub in blocks:
+            for key, value in sub.items():
+                if key in ("#attributes", "xmlns") or not isinstance(key, str):
+                    continue
+                if isinstance(value, (str, int, float)):
+                    result.setdefault(key, str(value))
+                elif isinstance(value, dict):
+                    text = value.get("#text")
+                    if isinstance(text, (str, int, float)):
+                        result.setdefault(key, str(text))
+    return result
+
+
+def _format_account(account: Any, domain: Any) -> str:
+    """Render an account as DOMAIN\\user when a real domain is present."""
+    account = str(account or "").strip()
+    if not account:
+        return ""
+    domain = str(domain or "").strip()
+    if domain and domain not in ("-", account):
+        return f"{domain}\\{account}"
+    return account
+
+
+def _evtx_event_summary(event_id: int | None, entities: dict[str, Any]) -> str:
+    """Build an analyst-readable one-line summary for an EVTX event."""
+    label = EVTX_EVENT_LABELS.get(
+        event_id, f"Windows event {event_id}" if event_id else "Windows event"
+    )
+    actor = _format_account(entities.get("account"), entities.get("domain"))
+    if event_id == 1102 and actor:
+        return f"{label} by {actor}"
+    bits: list[str] = []
+    if actor:
+        bits.append(f"account {actor}")
+    if entities.get("logon_type_label"):
+        bits.append(f"logon {entities['logon_type_label']}")
+    if entities.get("source_ip"):
+        bits.append(f"from {entities['source_ip']}")
+    if entities.get("workstation"):
+        bits.append(f"workstation {entities['workstation']}")
+    if entities.get("process"):
+        bits.append(f"process {entities['process']}")
+    if entities.get("service_name"):
+        bits.append(f"service '{entities['service_name']}'")
+    return f"{label}: " + ", ".join(bits) if bits else label
+
+
+def _extract_evtx_entities(data: Any, event_id: Any) -> dict[str, Any]:
+    """Surface user/host/network entities from one raw EVTX record JSON.
+
+    Returns normalized entity keys plus a human `summary`. Only fields actually
+    present in the record are included; nothing is invented.
+    """
+    entities: dict[str, Any] = {}
+    if not isinstance(data, dict):
+        return entities
+    event = data.get("Event") if isinstance(data.get("Event"), dict) else {}
+    system = event.get("System") if isinstance(event.get("System"), dict) else {}
+    computer = system.get("Computer")
+    if isinstance(computer, str) and computer.strip():
+        entities["host"] = computer.strip()
+
+    fields = _flatten_evtx_eventdata(data)
+    for raw_key, norm_key in _EVTX_FIELD_MAP:
+        value = fields.get(raw_key)
+        if value in (None, "", "-"):
+            continue
+        entities.setdefault(norm_key, value)
+
+    if "account" not in entities and entities.get("subject_account"):
+        entities["account"] = entities["subject_account"]
+    if "domain" not in entities and entities.get("subject_domain"):
+        entities["domain"] = entities["subject_domain"]
+
+    logon_raw = entities.get("logon_type")
+    if logon_raw is not None:
+        entities["logon_type_label"] = LOGON_TYPE_LABELS.get(
+            str(logon_raw).strip(), f"Type {logon_raw}"
+        )
+
+    try:
+        eid: int | None = int(event_id)
+    except (TypeError, ValueError):
+        eid = None
+    entities["summary"] = _evtx_event_summary(eid, entities)
+    return entities
+
+
+def _entities_from_details(details: dict[str, Any]) -> dict[str, Any]:
+    """Pick normalized entity fields from a raw timeline event's details dict."""
+    if not isinstance(details, dict):
+        return {}
+    out: dict[str, Any] = {}
+    for key in _ENTITY_KEYS:
+        value = details.get(key)
+        if value not in (None, "", "-"):
+            out[key] = value
+    # Cross-source aliases so memory/network rows expose the same columns.
+    if "process" not in out:
+        out_process = details.get("image") or details.get("image_name")
+        if out_process:
+            out["process"] = out_process
+    if "pid" not in out and details.get("process_id") not in (None, ""):
+        out["pid"] = details["process_id"]
+    if "account" not in out and details.get("user"):
+        out["account"] = details["user"]
+    if "protocol" not in out and details.get("proto"):
+        out["protocol"] = details["proto"]
+    return out
+
+
 TECHNIQUE_CITATIONS: dict[str, tuple[str, ...]] = {
     "T1014": ("CITE-MITRE-T1014", "CITE-VOLATILITY3"),
     "T1003": ("CITE-MITRE-T1003-001",),
@@ -1414,7 +1665,7 @@ def build_attck_practitioner_coverage(
     case_completeness: dict[str, Any],
     attack_coverage: dict[str, Any],
 ) -> dict[str, Any]:
-    """Translate tool coverage into GCFA/GNFA/GREM practitioner lanes."""
+    """Translate typed-tool coverage into DFIR analysis-domain lanes."""
     tools_run = {tc.get("tool") for tc in tool_calls if isinstance(tc.get("tool"), str)}
     tool_by_tcid = {
         tc.get("tool_call_id"): tc.get("tool")
@@ -1430,37 +1681,56 @@ def build_attck_practitioner_coverage(
     }
 
     lane_specs: dict[str, dict[str, Any]] = {
-        "GCFA_endpoint": {
-            "classes": {"memory", "evtx", "disk/filesystem"},
+        "endpoint_host": {
+            "label": "Host & Endpoint Forensics",
+            "classes": {"disk/filesystem"},
             "tools": {
-                "evtx_query",
-                "hayabusa_scan",
-                "vol_pslist",
-                "vol_psscan",
-                "vol_psxview",
-                "vol_malfind",
                 "registry_query",
                 "prefetch_parse",
                 "mft_timeline",
                 "usnjrnl_query",
-                "vel_collect",
+                "disk_extract_artifacts",
             },
-            "techniques": set(row["technique_id"] for row in ATTACK_COVERAGE_TARGETS),
+            "techniques": {"T1547.001", "T1053.005", "T1543.003", "T1112", "T1564.001"},
         },
-        "GNFA_network": {
+        "memory": {
+            "label": "Memory Forensics",
+            "classes": {"memory"},
+            "tools": {"vol_pslist", "vol_psscan", "vol_psxview", "vol_malfind"},
+            "techniques": {"T1055", "T1014", "T1003", "T1003.001"},
+        },
+        "windows_event": {
+            "label": "Windows Event & Account Analysis",
+            "classes": {"evtx"},
+            "tools": {"evtx_query", "hayabusa_scan"},
+            "techniques": {
+                "T1078",
+                "T1059.001",
+                "T1021.001",
+                "T1098",
+                "T1136.001",
+                "T1070.001",
+            },
+        },
+        "network": {
+            "label": "Network Forensics",
             "classes": {"network"},
-            "tools": {
-                "pcap_triage",
-                "zeek_summary",
-                "sysmon_network_query",
-                "vel_collect",
-            },
+            "tools": {"pcap_triage", "zeek_summary", "sysmon_network_query"},
             "techniques": {"T1041", "T1071", "T1071.001", "T1071.004", "T1105"},
+            "requires_artifact_class": True,
         },
-        "GREM_malware": {
+        "malware": {
+            "label": "Malware Analysis & Triage",
             "classes": {"memory", "disk/filesystem"},
             "tools": {"vol_malfind", "yara_scan"},
             "techniques": {"T1003", "T1003.001", "T1027", "T1055", "T1105"},
+            "triage_only": True,
+        },
+        "live_response": {
+            "label": "Endpoint Telemetry & Live Response",
+            "classes": {"velociraptor"},
+            "tools": {"vel_collect"},
+            "techniques": {"T1059", "T1003", "T1018"},
         },
     }
 
@@ -1494,11 +1764,11 @@ def build_attck_practitioner_coverage(
             and set(row.get("tools_observed") or []) & lane_tools
         ]
 
-        if lane_name == "GNFA_network" and not (
-            artifact_classes_seen or relevant_available
-        ):
+        requires_class = bool(spec.get("requires_artifact_class"))
+        triage_only = bool(spec.get("triage_only"))
+        if requires_class and not (artifact_classes_seen or relevant_available):
             status = "not_covered"
-        elif lane_name == "GREM_malware" and observed_tools:
+        elif triage_only and observed_tools:
             status = "partial"
         elif observed_tools and (linked_findings or coverage_notes):
             status = "automated"
@@ -1513,16 +1783,17 @@ def build_attck_practitioner_coverage(
             coverage_gaps.append(
                 "missing or untouched artifact classes: " + ", ".join(missing_classes)
             )
-        if lane_name == "GREM_malware" and observed_tools:
+        if triage_only and observed_tools:
             coverage_gaps.append(
                 "malware lane is triage only without payload extraction, capa-style capabilities, and cross-artifact corroboration"
             )
-        if lane_name == "GNFA_network" and status == "not_covered":
+        if requires_class and status == "not_covered":
             coverage_gaps.append(
                 "no PCAP, Zeek, proxy, DNS, firewall, or NetFlow telemetry supplied"
             )
 
         lanes[lane_name] = {
+            "label": spec.get("label", lane_name.replace("_", " ").title()),
             "status": status,
             "artifact_classes_seen": artifact_classes_seen,
             "tools_run": observed_tools,
@@ -1584,7 +1855,7 @@ def build_attck_practitioner_coverage(
         "data_source_coverage": data_source_rows,
         "overclaim_guardrails_applied": [
             "covered_no_finding is limited coverage, not a clean/cleared claim",
-            "GCFA/GNFA/GREM lanes describe triage/orchestration coverage, not certification-level analyst judgment",
+            "Domain coverage describes triage/orchestration across the typed tools that ran, not certified-analyst judgment",
             "visual exhibits do not create findings or upgrade confidence",
             "execution claims still require at least two artifact classes",
         ],
@@ -1611,14 +1882,23 @@ def _source_record_ref(event: dict[str, Any], fallback_index: int) -> str:
 
 
 def build_normalized_timeline(
-    timeline_events: list[dict[str, Any]], findings: list[dict[str, Any]]
+    timeline_events: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
+    corroboration_tcids: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     indexed_findings = [(_finding_id(f, i), f) for i, f in enumerate(findings, 1)]
+    corroboration_tcids = corroboration_tcids or {}
     findings_by_tool: dict[str, list[tuple[str, dict[str, Any]]]] = {}
     for fid, finding in indexed_findings:
         tcid = finding.get("tool_call_id")
         if isinstance(tcid, str) and tcid:
             findings_by_tool.setdefault(tcid, []).append((fid, finding))
+        # Cross-artifact corroboration: a finding confirmed by a SECOND tool
+        # (e.g. Prefetch execution corroborated by a UserAssist registry entry)
+        # also links to that tool's timeline events, so per-Finding artifact-class
+        # counting (the >=2-artifact-class execution gate) sees both classes.
+        for corr in corroboration_tcids.get(fid, []):
+            findings_by_tool.setdefault(corr, []).append((fid, finding))
 
     events = []
     for i, event in enumerate(
@@ -1658,6 +1938,7 @@ def build_normalized_timeline(
                 "tool_call_id": tcid,
                 "source_record_ref": _source_record_ref(event, i),
                 "summary": event.get("description") or "timeline event",
+                "entities": _entities_from_details(event.get("details") or {}),
                 "significance": "finding_support" if linked else "context",
                 "linked_finding_ids": [fid for fid, _ in linked],
                 "attck_techniques": techniques,
@@ -1679,6 +1960,244 @@ def build_normalized_timeline(
         if events
         else ["No timestamped events were normalized from the supplied evidence."],
     }
+
+
+_ENTITY_INDEX_BUCKETS: tuple[tuple[str, str], ...] = (
+    ("account", "accounts"),
+    ("host", "hosts"),
+    ("workstation", "workstations"),
+    ("source_ip", "source_ips"),
+    ("destination_ip", "destination_ips"),
+    ("process", "processes"),
+    ("service_name", "services"),
+)
+
+
+def build_entity_index(
+    normalized_events: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
+    per_bucket_cap: int = 50,
+) -> dict[str, Any]:
+    """Aggregate every observed entity (account/host/IP/process/service) with
+    first-seen, last-seen, event count, and the findings/tool calls that cite it.
+
+    This is the report's "Cast of Characters" — it lets an analyst trace one
+    actor or host across the whole case.
+    """
+    buckets: dict[str, dict[str, dict[str, Any]]] = {}
+    for event in normalized_events:
+        entities = event.get("entities") or {}
+        ts = event.get("timestamp_utc")
+        tcid = event.get("tool_call_id")
+        artifact_class = event.get("artifact_class")
+        linked = event.get("linked_finding_ids") or []
+        for field, bucket in _ENTITY_INDEX_BUCKETS:
+            raw = entities.get(field)
+            if raw in (None, "", "-"):
+                continue
+            if field == "account":
+                raw = _format_account(raw, entities.get("domain")) or raw
+            value = str(raw)
+            agg = buckets.setdefault(bucket, {}).setdefault(
+                value,
+                {
+                    "value": value,
+                    "event_count": 0,
+                    "first_seen": None,
+                    "last_seen": None,
+                    "artifact_classes": set(),
+                    "tool_call_ids": set(),
+                    "linked_finding_ids": set(),
+                },
+            )
+            agg["event_count"] += 1
+            if ts:
+                if agg["first_seen"] is None or ts < agg["first_seen"]:
+                    agg["first_seen"] = ts
+                if agg["last_seen"] is None or ts > agg["last_seen"]:
+                    agg["last_seen"] = ts
+            if artifact_class:
+                agg["artifact_classes"].add(artifact_class)
+            if tcid:
+                agg["tool_call_ids"].add(tcid)
+            for fid in linked:
+                agg["linked_finding_ids"].add(fid)
+
+    index: dict[str, Any] = {"version": 1}
+    total = 0
+    for _field, bucket in _ENTITY_INDEX_BUCKETS:
+        rows = []
+        for agg in buckets.get(bucket, {}).values():
+            rows.append(
+                {
+                    "value": agg["value"],
+                    "event_count": agg["event_count"],
+                    "first_seen": agg["first_seen"],
+                    "last_seen": agg["last_seen"],
+                    "artifact_classes": sorted(agg["artifact_classes"]),
+                    "tool_call_ids": sorted(agg["tool_call_ids"]),
+                    "linked_finding_ids": sorted(agg["linked_finding_ids"]),
+                }
+            )
+        rows.sort(key=lambda r: (-r["event_count"], str(r["value"])))
+        index[bucket] = rows[:per_bucket_cap]
+        total += len(index[bucket])
+    index["entity_count"] = total
+    return index
+
+
+def build_indicators(
+    normalized_events: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
+    malware_triage: dict[str, Any] | None,
+    per_list_cap: int = 100,
+) -> dict[str, Any]:
+    """Collect observed indicators (accounts, IPs, domains, paths, services,
+    hashes) from the timeline entities, findings, and malware triage for
+    detection-engineering / threat-hunting reuse."""
+    accounts: set[str] = set()
+    hosts: set[str] = set()
+    ips: set[str] = set()
+    processes: set[str] = set()
+    services: set[str] = set()
+    paths: set[str] = set()
+    for event in normalized_events:
+        entities = event.get("entities") or {}
+        if entities.get("account"):
+            accounts.add(
+                _format_account(entities.get("account"), entities.get("domain"))
+                or str(entities["account"])
+            )
+        for key in ("host", "workstation"):
+            if entities.get(key):
+                hosts.add(str(entities[key]))
+        for key in ("source_ip", "destination_ip"):
+            if entities.get(key):
+                ips.add(str(entities[key]))
+        if entities.get("process"):
+            processes.add(str(entities["process"]))
+        if entities.get("service_name"):
+            services.add(str(entities["service_name"]))
+        for key in ("service_path", "command_line"):
+            if entities.get(key):
+                paths.add(str(entities[key]))
+
+    triage = malware_triage or {}
+    aggregate = triage.get("aggregate_iocs") or {}
+    domains: set[str] = set(aggregate.get("domains", []) or [])
+    urls: set[str] = set(aggregate.get("urls", []) or [])
+    hashes: set[str] = set(aggregate.get("hashes", []) or [])
+    ips |= set(aggregate.get("ips", []) or [])
+    paths |= set(aggregate.get("paths", []) or [])
+
+    descriptions = [str(f.get("description") or "") for f in findings]
+    extra = _extract_iocs_from_texts(descriptions)
+    ips |= set(extra.get("ips", []) or [])
+    domains |= set(extra.get("domains", []) or [])
+    urls |= set(extra.get("urls", []) or [])
+    paths |= set(extra.get("paths", []) or [])
+
+    def _cap(values: set[str]) -> list[str]:
+        return sorted(v for v in values if v)[:per_list_cap]
+
+    lists = {
+        "accounts": _cap(accounts),
+        "hosts": _cap(hosts),
+        "ip_addresses": _cap(ips),
+        "domains": _cap(domains),
+        "urls": _cap(urls),
+        "processes": _cap(processes),
+        "services": _cap(services),
+        "file_paths": _cap(paths),
+        "hashes": _cap(hashes),
+    }
+    return {
+        "version": 1,
+        "indicator_count": sum(len(values) for values in lists.values()),
+        "note": (
+            "Indicators are observed artifacts pulled from the timeline and "
+            "findings; corroborate before detection deployment or blocking."
+        ),
+        **lists,
+    }
+
+
+def build_event_narratives(
+    normalized_events: list[dict[str, Any]],
+    findings: list[dict[str, Any]],
+    cap: int = 12,
+) -> list[dict[str, Any]]:
+    """Short, plain-language write-ups of the pivotal events so a non-analyst can
+    follow the story. Every line cites the tool call that produced it."""
+    interesting_keys = (
+        "account",
+        "source_ip",
+        "service_name",
+        "logon_type_label",
+        "command_line",
+    )
+    pivotal = [
+        event
+        for event in normalized_events
+        if event.get("significance") in ("finding_support", "triage_lead")
+        and event.get("timestamp_utc")
+    ]
+    entity_events = [
+        event
+        for event in pivotal
+        if any((event.get("entities") or {}).get(key) for key in interesting_keys)
+    ]
+    if entity_events:
+        candidates = entity_events
+    else:
+        # Memory-only / entity-poor cases: one representative event per finding.
+        candidates = []
+        seen_findings: set[str] = set()
+        for event in pivotal:
+            linked = event.get("linked_finding_ids") or ["_"]
+            key = linked[0]
+            if key in seen_findings:
+                continue
+            seen_findings.add(key)
+            candidates.append(event)
+
+    # Collapse repeated identical events (e.g. a burst of the same object-access
+    # record) to one representative line annotated with the repeat count, so the
+    # pivotal distinct events are not crowded out.
+    summary_counts: dict[str, int] = {}
+    for event in candidates:
+        summary_counts[str(event.get("summary") or "")] = (
+            summary_counts.get(str(event.get("summary") or ""), 0) + 1
+        )
+
+    narratives: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for event in sorted(candidates, key=lambda e: e.get("timestamp_utc") or ""):
+        ts = event.get("timestamp_utc")
+        summary = str(event.get("summary") or "timeline event").strip()
+        if summary in seen:
+            continue
+        seen.add(summary)
+        tcid = event.get("tool_call_id") or "n/a"
+        confidence = event.get("confidence") or "HYPOTHESIS"
+        sentence = summary[:1].upper() + summary[1:] if summary else summary
+        count = summary_counts.get(str(event.get("summary") or ""), 1)
+        repeat = f" (observed {count} times)" if count > 1 else ""
+        text = f"At {ts} UTC, {sentence}{repeat} (tool call {tcid}, {confidence})."
+        narratives.append(
+            {
+                "timestamp_utc": ts,
+                "text": text,
+                "summary": summary,
+                "tool_call_id": event.get("tool_call_id"),
+                "confidence": confidence,
+                "entities": event.get("entities") or {},
+                "linked_finding_ids": event.get("linked_finding_ids") or [],
+            }
+        )
+        if len(narratives) >= cap:
+            break
+    return narratives
 
 
 def build_report_evidence_cards(
@@ -2332,8 +2851,12 @@ def customer_visible_report_text(
     next_actions: list[dict[str, Any]],
     analysis_limitations: list[str],
     evidence_cards: list[dict[str, Any]],
+    event_narratives: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     values: list[str] = []
+    for narrative in event_narratives or []:
+        if narrative.get("text"):
+            values.append(str(narrative["text"]))
     for key in (
         "headline",
         "customer_summary",
@@ -3271,6 +3794,13 @@ def write_normalized_timeline_csv(events: list[dict[str, Any]], path: Path) -> N
         "artifact_class",
         "significance",
         "summary",
+        "account",
+        "domain",
+        "host",
+        "source_ip",
+        "logon_type",
+        "process",
+        "pid",
         "tool_call_id",
         "source_record_ref",
         "linked_finding_ids",
@@ -3283,6 +3813,7 @@ def write_normalized_timeline_csv(events: list[dict[str, Any]], path: Path) -> N
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for event in events:
+            ent = event.get("entities") or {}
             writer.writerow(
                 {
                     "event_id": event.get("event_id", ""),
@@ -3291,6 +3822,14 @@ def write_normalized_timeline_csv(events: list[dict[str, Any]], path: Path) -> N
                     "artifact_class": event.get("artifact_class", ""),
                     "significance": event.get("significance", ""),
                     "summary": event.get("summary", ""),
+                    "account": ent.get("account", ""),
+                    "domain": ent.get("domain", ""),
+                    "host": ent.get("host", ""),
+                    "source_ip": ent.get("source_ip", ""),
+                    "logon_type": ent.get("logon_type_label")
+                    or ent.get("logon_type", ""),
+                    "process": ent.get("process", ""),
+                    "pid": ent.get("pid", ""),
                     "tool_call_id": event.get("tool_call_id", ""),
                     "source_record_ref": event.get("source_record_ref", ""),
                     "linked_finding_ids": json.dumps(
@@ -3369,6 +3908,14 @@ class Investigation:
         self.local_artifacts: dict[str, str] = {}
         self.tool_calls: list[dict[str, Any]] = []
         self.timeline_events: list[dict[str, Any]] = []
+        # Execution corroboration: finding_id -> [supporting tool_call_ids]. A
+        # prefetch execution finding corroborated by a UserAssist registry entry
+        # records the registry tool_call_id here so the normalized timeline links
+        # both artifact classes to the finding (the >=2-class execution gate).
+        self.execution_corroboration: dict[str, list[str]] = {}
+        # (exe basename lower, finding dict) for prefetch suspicious-tool findings,
+        # used to corroborate execution against UserAssist after registry parsing.
+        self._prefetch_exec_findings: list[tuple[str, dict[str, Any]]] = []
         self.evtx_summary: dict[str, Any] | None = None
         self.disk_artifact_summary: dict[str, Any] | None = None
         self.malware_triage: dict[str, Any] | None = None
@@ -4195,13 +4742,19 @@ class Investigation:
         for row in rows[:500]:
             event_id = row.get("event_id")
             record_id = row.get("record_id")
+            entities = _extract_evtx_entities(row.get("data") or {}, event_id)
+            summary = entities.pop("summary", "") or (
+                f"event id {event_id} record {record_id}"
+            )
+            details = {"event_id": event_id, "record_id": record_id}
+            details.update(entities)
             self._timeline_add(
                 row.get("ts") or row.get("timestamp") or row.get("timestamp_iso"),
                 "evtx_query",
                 "evtx",
-                f"event id {event_id} record {record_id}",
+                summary,
                 tcid,
-                {"event_id": event_id, "record_id": record_id},
+                details,
             )
 
         self.evtx_summary = build_evtx_summary(rows, seen, pe)
@@ -4408,6 +4961,90 @@ class Investigation:
                 r"Software\Microsoft\Windows\CurrentVersion\RunOnce",
             ]
         return [""]
+
+    def _corroborate_execution_with_userassist(
+        self,
+        rust: SshMcpClient,
+        py: SshMcpClient,
+        by_class: dict[str, list[dict[str, Any]]],
+    ) -> None:
+        """Promote a prefetch execution lead to CONFIRMED when a UserAssist entry
+        (per-user GUI execution, in NTUSER.DAT) records the same binary. Prefetch
+        and UserAssist are two independent artifact classes, so together they clear
+        the SOUL.md >=2-artifact-class bar for an execution claim. The registry
+        tool_call_id is recorded in ``self.execution_corroboration`` so the
+        normalized timeline links both classes to the finding for report QA."""
+        if not self._prefetch_exec_findings:
+            return
+        ua_exes: dict[str, tuple[str, str | None]] = {}  # exe -> (tcid, ts)
+        for entry in by_class.get("registry", [])[:20]:
+            path = str(entry["path"])
+            if PurePosixPath(path.replace("\\", "/")).name.lower() != "ntuser.dat":
+                continue
+            ua_args = {
+                "case_id": self.handle["id"],
+                "hive_path": path,
+                "key_path": (
+                    r"Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist"
+                ),
+                "recursive": True,
+                "limit": 500,
+            }
+            ua_out = rust.call_tool("registry_query", ua_args)
+            ua_err = (
+                ua_out.get("_error", {}).get("message") if "_error" in ua_out else None
+            )
+            if ua_err:
+                ua_out = {"_error": {"message": ua_err}, "entries": []}
+            ua_entries = ua_out.get("entries", [])
+            ua_tcid = self._record_tool(
+                py,
+                "registry_query",
+                self._output_hash(ua_out),
+                {
+                    "artifact_path": path,
+                    "key_path": "UserAssist",
+                    "entries_returned": len(ua_entries),
+                    **({"error": ua_err} if ua_err else {}),
+                },
+                arguments=ua_args,
+            )
+            for e in ua_entries:
+                ts = e.get("last_write_time_iso")
+                for value in e.get("values", []):
+                    exe = _userassist_exe(str(value.get("name", "")))
+                    if exe:
+                        ua_exes.setdefault(exe, (ua_tcid, ts))
+
+        upgraded = 0
+        for exe_base, finding in self._prefetch_exec_findings:
+            hit = ua_exes.get(exe_base)
+            if not hit or finding.get("confidence") == "CONFIRMED":
+                continue
+            corr_tcid, ts = hit
+            fid = str(finding.get("finding_id"))
+            finding["confidence"] = "CONFIRMED"
+            finding["description"] = (
+                f"{exe_base} executed on this host: Windows Prefetch records its "
+                f"execution and the UserAssist key (per-user GUI execution) records "
+                f"the same binary. Two independent artifact classes (prefetch + "
+                f"registry/UserAssist) corroborate execution."
+            )
+            self.execution_corroboration.setdefault(fid, []).append(corr_tcid)
+            self._timeline_add(
+                ts or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "registry_query",
+                "registry",
+                f"UserAssist records execution of {exe_base}",
+                corr_tcid,
+                {"executable_name": exe_base},
+            )
+            upgraded += 1
+        if upgraded:
+            print(
+                f"  execution corroboration: {upgraded} prefetch finding(s) "
+                "promoted to CONFIRMED via UserAssist (prefetch + registry)"
+            )
 
     def investigate_extracted_disk_artifacts(
         self, rust: SshMcpClient, py: SshMcpClient, entries: list[dict[str, Any]]
@@ -4632,26 +5269,29 @@ class Investigation:
             if hint and out.get("run_count", 0):
                 tool_description, technique = hint
                 safe_exe = re.sub(r"[^a-z0-9]+", "-", str(exe).lower()).strip("-")
-                self.findings_pool_b.append(
-                    {
-                        "case_id": self.handle["id"],
-                        "finding_id": self._finding_id_for(
-                            f"f-B-prefetch-{safe_exe}", path
-                        ),
-                        "tool_call_id": tcid,
-                        "artifact_path": path,
-                        "description": (
-                            f"Windows Prefetch contains {exe} with run_count="
-                            f"{out.get('run_count', 0)}; {tool_description} is a "
-                            "NIST Hacking Case triage lead. Treat this as a "
-                            "disk-artifact lead that needs corroboration before any "
-                            "standalone activity claim."
-                        ),
-                        "confidence": "INFERRED",
-                        "pool_origin": "B",
-                        "mitre_technique": technique,
-                    }
-                )
+                prefetch_finding = {
+                    "case_id": self.handle["id"],
+                    "finding_id": self._finding_id_for(
+                        f"f-B-prefetch-{safe_exe}", path
+                    ),
+                    "tool_call_id": tcid,
+                    "artifact_path": path,
+                    "description": (
+                        f"Windows Prefetch contains {exe} with run_count="
+                        f"{out.get('run_count', 0)}; {tool_description} is a "
+                        "NIST Hacking Case triage lead. Treat this as a "
+                        "disk-artifact lead that needs corroboration before any "
+                        "standalone activity claim."
+                    ),
+                    "confidence": "INFERRED",
+                    "pool_origin": "B",
+                    "mitre_technique": technique,
+                }
+                self.findings_pool_b.append(prefetch_finding)
+                # Remember the executable so a later UserAssist match can promote
+                # this lead to a CONFIRMED, two-artifact-class execution finding.
+                exe_base = PurePosixPath(str(exe).replace("\\", "/")).name.lower()
+                self._prefetch_exec_findings.append((exe_base, prefetch_finding))
 
         registry_calls = 0
         for entry in by_class["registry"][:20]:
@@ -4726,6 +5366,8 @@ class Investigation:
                 print(
                     f"  registry_query: {path} {key_path or '<root>'} entries={len(rows)}"
                 )
+
+        self._corroborate_execution_with_userassist(rust, py, by_class)
 
         if DISK_YARA_RULES:
             for entry in by_class["yara_target"][:50]:
@@ -4984,6 +5626,11 @@ class Investigation:
                         "process_id": row.get("process_id"),
                         "user": row.get("user"),
                         "protocol": row.get("protocol"),
+                        "host": row.get("computer"),
+                        "source_ip": row.get("source_ip"),
+                        "source_port": row.get("source_port"),
+                        "destination_ip": row.get("destination_ip"),
+                        "destination_port": row.get("destination_port"),
                         "destination_hostname": row.get("destination_hostname"),
                         "record_id": row.get("record_id"),
                     },
@@ -5033,6 +5680,9 @@ class Investigation:
                     f"zeek connection: {row.get('src', '')}->{row.get('dst', '')}:{row.get('dst_port', '')}",
                     tcid,
                     {
+                        "source_ip": row.get("src"),
+                        "destination_ip": row.get("dst"),
+                        "destination_port": row.get("dst_port"),
                         "proto": row.get("proto"),
                         "service": row.get("service"),
                         "orig_bytes": row.get("orig_bytes"),
@@ -5080,6 +5730,9 @@ class Investigation:
                         f"pcap-derived connection: {row.get('src', '')}->{row.get('dst', '')}:{row.get('dst_port', '')}",
                         tcid,
                         {
+                            "source_ip": row.get("src"),
+                            "destination_ip": row.get("dst"),
+                            "destination_port": row.get("dst_port"),
                             "proto": row.get("proto"),
                             "service": row.get("service"),
                             "orig_bytes": row.get("orig_bytes"),
@@ -5498,8 +6151,15 @@ class Investigation:
             merged, attack_coverage, case_completeness, timeline
         )
         source_bibliography = build_source_bibliography()
-        normalized_timeline = build_normalized_timeline(timeline, merged)
+        normalized_timeline = build_normalized_timeline(
+            timeline, merged, self.execution_corroboration
+        )
         self.normalized_timeline = normalized_timeline
+        entity_index = build_entity_index(normalized_timeline["events"], merged)
+        indicators = build_indicators(
+            normalized_timeline["events"], merged, self.malware_triage
+        )
+        event_narratives = build_event_narratives(normalized_timeline["events"], merged)
         report_evidence_cards = build_report_evidence_cards(
             merged, normalized_timeline["events"], source_bibliography
         )
@@ -5533,6 +6193,7 @@ class Investigation:
             next_actions,
             self.analysis_limitations,
             report_evidence_cards,
+            event_narratives,
         )
         report_qa = build_report_qa_signoff(
             merged,
@@ -5565,6 +6226,9 @@ class Investigation:
             "next_actions": next_actions,
             "source_bibliography": source_bibliography,
             "normalized_timeline": normalized_timeline,
+            "entity_index": entity_index,
+            "indicators": indicators,
+            "event_narratives": event_narratives,
             "report_evidence_cards": report_evidence_cards,
             "expert_doctrine": expert_doctrine,
             "expert_miss_summary": expert_miss_summary,
@@ -5986,6 +6650,9 @@ class Investigation:
         next_actions = meta["next_actions"]
         source_bibliography = meta["source_bibliography"]
         normalized_timeline = meta["normalized_timeline"]
+        entity_index = meta.get("entity_index", {})
+        indicators = meta.get("indicators", {})
+        event_narratives = meta.get("event_narratives", [])
         report_evidence_cards = meta["report_evidence_cards"]
         report_qa = meta["report_qa"]
         release_gate = meta.get("release_gate") or self._build_release_gate(report_qa)
@@ -6072,6 +6739,9 @@ class Investigation:
             "attack_story": meta["attack_story"],
             "malware_triage": self.malware_triage,
             "normalized_timeline": normalized_timeline,
+            "entity_index": entity_index,
+            "indicators": indicators,
+            "event_narratives": event_narratives,
             "report_evidence_cards": report_evidence_cards,
             "source_bibliography": source_bibliography,
             "timeline_summary": {

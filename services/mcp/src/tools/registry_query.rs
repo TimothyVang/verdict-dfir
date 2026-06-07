@@ -21,13 +21,11 @@
 
 use std::path::{Path, PathBuf};
 
-use forensic_rs::prelude::StdVirtualFS;
-use forensic_rs::traits::registry::{RegHiveKey, RegValue, RegistryReader};
-use forensic_rs::traits::vfs::{VirtualFile, VirtualFileSystem};
-use frnsc_hive::reader::{HiveFiles, HiveRegistryReader};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use super::regf::{Hive, Key, RegfError};
 
 const DEFAULT_LIMIT: usize = 10_000;
 const MAX_RECURSION_DEPTH: usize = 16;
@@ -125,14 +123,11 @@ pub enum RegistryError {
         source: std::io::Error,
     },
 
-    /// Boxed because `forensic_rs::err::ForensicError` is large enough
-    /// to push our `Result<_, RegistryError>` over clippy's
-    /// `result_large_err` threshold.
     #[error("registry hive parse failed for {path}: {source}")]
     HiveOpen {
         path: PathBuf,
         #[source]
-        source: Box<forensic_rs::err::ForensicError>,
+        source: RegfError,
     },
 
     #[error("registry key not found: {0}")]
@@ -178,27 +173,23 @@ pub fn registry_query(input: &RegistryInput) -> Result<RegistryOutput, RegistryE
         return Err(RegistryError::HiveNotFound(path.clone()));
     }
 
-    let mut fs = StdVirtualFS::new();
-    let primary: Box<dyn VirtualFile> =
-        fs.open(path).map_err(|err| RegistryError::HiveUnreadable {
+    let hive = Hive::open(path).map_err(|err| match err {
+        RegfError::Io(source) => RegistryError::HiveUnreadable {
             path: path.clone(),
-            source: std::io::Error::other(err.to_string()),
-        })?;
-
-    let hive = HiveFiles::new(path.clone(), primary).map_err(|err| RegistryError::HiveOpen {
-        path: path.clone(),
-        source: Box::new(err),
+            source,
+        },
+        other => RegistryError::HiveOpen {
+            path: path.clone(),
+            source: other,
+        },
     })?;
-
-    let mut reader = HiveRegistryReader::new();
-    // The hive type doesn't change which file is read; we always use
-    // the same trait dispatch. set_software is an arbitrary choice —
-    // open_key with HkeyLocalMachine routes into our single mounted
-    // hive regardless of the hive's actual identity.
-    reader.set_software(hive);
 
     let normalized = normalize_key_path(&input.key_path);
     let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
+
+    let Some(key) = hive.find(&normalized) else {
+        return Err(RegistryError::KeyNotFound(normalized));
+    };
 
     let mut output = RegistryOutput {
         entries: Vec::new(),
@@ -206,78 +197,74 @@ pub fn registry_query(input: &RegistryInput) -> Result<RegistryOutput, RegistryE
         parse_errors: 0,
     };
 
-    walk(&reader, &normalized, input.recursive, limit, 0, &mut output)?;
+    walk(&hive, key, &normalized, input.recursive, limit, 0, &mut output);
 
     Ok(output)
 }
 
 fn walk(
-    reader: &HiveRegistryReader,
+    hive: &Hive,
+    key: Key,
     key_path: &str,
     recursive: bool,
     limit: usize,
     depth: usize,
     output: &mut RegistryOutput,
-) -> Result<(), RegistryError> {
+) {
     if output.entries.len() >= limit || depth > MAX_RECURSION_DEPTH {
-        return Ok(());
+        return;
     }
-
-    let Ok(hkey) = reader.open_key(RegHiveKey::HkeyLocalMachine, key_path) else {
-        // Top-level miss is a reportable error; deeper misses are
-        // a "subkey vanished mid-walk" race that we count and skip.
-        if depth == 0 {
-            return Err(RegistryError::KeyNotFound(key_path.to_string()));
-        }
-        output.parse_errors += 1;
-        return Ok(());
-    };
     output.keys_visited += 1;
 
-    let entry = build_entry(reader, hkey, key_path);
-    let subkey_names = entry.subkeys.clone();
-    output.entries.push(entry);
-    reader.close_key(hkey);
+    // Resolve children once so we can both report their names and recurse
+    // without re-finding each one from the root.
+    let children: Vec<(String, Key)> = hive
+        .subkeys(key)
+        .into_iter()
+        .map(|k| (hive.key_name(k), k))
+        .collect();
+
+    output
+        .entries
+        .push(build_entry(hive, key, key_path, &children));
 
     if recursive {
-        for sub in subkey_names {
+        for (name, child) in children {
             if output.entries.len() >= limit {
                 break;
             }
             let child_path = if key_path.is_empty() {
-                sub.clone()
+                name
             } else {
-                format!("{key_path}\\{sub}")
+                format!("{key_path}\\{name}")
             };
-            walk(reader, &child_path, recursive, limit, depth + 1, output)?;
+            walk(hive, child, &child_path, recursive, limit, depth + 1, output);
         }
     }
-
-    Ok(())
 }
 
-fn build_entry(reader: &HiveRegistryReader, hkey: RegHiveKey, key_path: &str) -> RegistryEntry {
-    let last_write_time_iso = reader
-        .key_info(hkey)
-        .ok()
-        .and_then(|info| filetime_to_iso(info.last_write_time.filetime()));
+fn build_entry(
+    hive: &Hive,
+    key: Key,
+    key_path: &str,
+    children: &[(String, Key)],
+) -> RegistryEntry {
+    let last_write_time_iso = filetime_to_iso(hive.key_timestamp(key));
 
-    let values: Vec<RegistryValue> = reader
-        .enumerate_values(hkey)
-        .unwrap_or_default()
+    let values: Vec<RegistryValue> = hive
+        .values(key)
         .into_iter()
-        .map(|name| {
-            let raw = reader.read_value(hkey, &name).ok();
-            let (value_type, data_str) = format_value(raw.as_ref());
+        .map(|v| {
+            let (value_type, data_str) = format_value(v.value_type, &v.data);
             RegistryValue {
-                name,
+                name: v.name,
                 value_type,
                 data_str,
             }
         })
         .collect();
 
-    let subkeys = reader.enumerate_keys(hkey).unwrap_or_default();
+    let subkeys = children.iter().map(|(name, _)| name.clone()).collect();
 
     RegistryEntry {
         key_path: key_path.to_string(),
@@ -287,25 +274,73 @@ fn build_entry(reader: &HiveRegistryReader, hkey: RegHiveKey, key_path: &str) ->
     }
 }
 
-fn format_value(value: Option<&RegValue>) -> (String, String) {
-    match value {
-        Some(RegValue::SZ(s)) => ("REG_SZ".into(), s.clone()),
-        Some(RegValue::ExpandSZ(s)) => ("REG_EXPAND_SZ".into(), s.clone()),
-        Some(RegValue::MultiSZ(parts)) => ("REG_MULTI_SZ".into(), parts.join("|")),
-        Some(RegValue::DWord(n)) => ("REG_DWORD".into(), n.to_string()),
-        Some(RegValue::QWord(n)) => ("REG_QWORD".into(), n.to_string()),
-        Some(RegValue::Binary(bytes)) => {
+// Windows registry value-type constants.
+const REG_SZ: u32 = 1;
+const REG_EXPAND_SZ: u32 = 2;
+const REG_DWORD: u32 = 4;
+const REG_DWORD_BIG_ENDIAN: u32 = 5;
+const REG_MULTI_SZ: u32 = 7;
+const REG_QWORD: u32 = 11;
+
+/// Decode a NUL-terminated UTF-16LE string from raw value data.
+fn utf16le_string(data: &[u8]) -> String {
+    let units: Vec<u16> = data
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .take_while(|&u| u != 0)
+        .collect();
+    String::from_utf16_lossy(&units)
+}
+
+/// Normalize raw (type, data) into a stable (type-label, string) shape so the
+/// agent can keyword-match without juggling a type-tagged union.
+fn format_value(value_type: u32, data: &[u8]) -> (String, String) {
+    match value_type {
+        REG_SZ => ("REG_SZ".into(), utf16le_string(data)),
+        REG_EXPAND_SZ => ("REG_EXPAND_SZ".into(), utf16le_string(data)),
+        REG_MULTI_SZ => {
+            let units: Vec<u16> = data
+                .chunks_exact(2)
+                .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                .collect();
+            let joined = String::from_utf16_lossy(&units)
+                .split('\0')
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join("|");
+            ("REG_MULTI_SZ".into(), joined)
+        }
+        REG_DWORD => {
+            let n = data
+                .get(0..4)
+                .map_or(0, |b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]));
+            ("REG_DWORD".into(), n.to_string())
+        }
+        REG_DWORD_BIG_ENDIAN => {
+            let n = data
+                .get(0..4)
+                .map_or(0, |b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]));
+            ("REG_DWORD".into(), n.to_string())
+        }
+        REG_QWORD => {
+            let n = data
+                .get(0..8)
+                .and_then(|b| b.try_into().ok())
+                .map_or(0, u64::from_le_bytes);
+            ("REG_QWORD".into(), n.to_string())
+        }
+        // REG_BINARY and any unknown type → hex (capped, like before).
+        _ => {
             const MAX_HEX: usize = 4096;
-            if bytes.len() <= MAX_HEX {
-                ("REG_BINARY".into(), hex::encode(bytes))
+            if data.len() <= MAX_HEX {
+                ("REG_BINARY".into(), hex::encode(data))
             } else {
-                let suffix = format!("…[truncated, full {} bytes]", bytes.len());
-                let mut out = hex::encode(&bytes[..MAX_HEX]);
+                let suffix = format!("…[truncated, full {} bytes]", data.len());
+                let mut out = hex::encode(&data[..MAX_HEX]);
                 out.push_str(&suffix);
                 ("REG_BINARY".into(), out)
             }
         }
-        None => ("REG_BINARY".into(), String::new()),
     }
 }
 

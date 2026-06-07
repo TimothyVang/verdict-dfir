@@ -25,6 +25,8 @@ import { InvestigationStreamPanel } from "@/components/investigation/Investigati
 import { LiveTimeline } from "@/components/investigation/LiveTimeline";
 import { ReportPanel } from "@/components/investigation/ReportPanel";
 import { StageRail } from "@/components/investigation/StageRail";
+import { VerdictSummary } from "@/components/investigation/VerdictSummary";
+import { N8nAccessCard } from "@/components/investigation/N8nAccessCard";
 import { deriveEvidenceMeta } from "@/lib/evidence-meta";
 import { deriveStageStates } from "@/lib/stage-state";
 import { BrandMark, Kicker, MONO, RuleLine, SerifHeadline, VERDICT } from "@/lib/verdict-ui";
@@ -47,6 +49,7 @@ const MAX_EVENTS = 500;
 
 export default function DashboardPage() {
   const [casePath, setCasePath] = useState("");
+  const [cases, setCases] = useState<{ path: string; name: string; mtime: number }[]>([]);
   const [events, setEvents] = useState<AuditLine[]>([]);
   const [conn, setConn] = useState<ConnState>("disconnected");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -126,6 +129,22 @@ export default function DashboardPage() {
         esRef.current.close();
         esRef.current = null;
       }
+    };
+  }, []);
+
+  // Populate the case picker from the allow-listed roots (newest-first).
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/cases")
+      .then((r) => r.json())
+      .then((d: { cases?: { path: string; name: string; mtime: number }[] }) => {
+        if (!cancelled) setCases(d.cases ?? []);
+      })
+      .catch(() => {
+        /* leave empty — picker shows the no-cases hint */
+      });
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -249,6 +268,15 @@ export default function DashboardPage() {
 
         <RuleLine style={{ marginBottom: 24 }} />
 
+        {/* The human-first headline: verdict + plain summary + tallies, above
+            the live machine stream. Renders once a case is connected. */}
+        <VerdictSummary
+          events={events}
+          caseDir={connectedCase}
+          manifestDone={manifestDone}
+          evidenceName={evidenceMeta?.name ?? undefined}
+        />
+
         {/* What's under investigation — sticky so it stays in view while the
             terminal stream scrolls. */}
         <EvidenceBanner meta={evidenceMeta} />
@@ -266,7 +294,7 @@ export default function DashboardPage() {
           }}
         >
           <label
-            htmlFor="case-path"
+            htmlFor="case-select"
             style={{
               display: "block",
               fontSize: 13,
@@ -274,17 +302,11 @@ export default function DashboardPage() {
               marginBottom: 8,
             }}
           >
-            Case directory (absolute path) — or append{" "}
-            <code style={{ color: VERDICT.accentPurpleLight }}>
-              ?case=&lt;dir&gt;
-            </code>{" "}
-            to deep-link
+            Case — pick an investigation to open ({cases.length} available)
           </label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-            <input
-              id="case-path"
-              type="text"
-              placeholder="absolute path to a case dir containing audit.jsonl"
+            <select
+              id="case-select"
               value={casePath}
               onChange={(e) => setCasePath(e.target.value)}
               disabled={conn !== "disconnected"}
@@ -298,8 +320,21 @@ export default function DashboardPage() {
                 fontFamily: MONO,
                 fontSize: 14,
                 outline: "none",
+                cursor: conn !== "disconnected" ? "default" : "pointer",
               }}
-            />
+            >
+              <option value="">— select a case —</option>
+              {casePath && !cases.some((c) => c.path === casePath) && (
+                <option value={casePath}>
+                  {casePath.split("/").filter(Boolean).pop()} (linked)
+                </option>
+              )}
+              {cases.map((c) => (
+                <option key={c.path} value={c.path}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
             {conn === "disconnected" ? (
               <button
                 type="button"
@@ -408,6 +443,7 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
             <AutomationPanel caseDir={connectedCase} manifestDone={manifestDone} />
+            <N8nAccessCard />
             <ReportPanel
               caseDir={connectedCase}
               manifestDone={manifestDone}

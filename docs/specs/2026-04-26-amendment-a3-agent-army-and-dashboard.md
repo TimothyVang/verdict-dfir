@@ -1,6 +1,6 @@
 # Amendment A3 — Agent-Army Bridge + Cross-Case Memory + NES.css Dashboard
 
-> **Status: SHIPPED (Phases 1-4 + role-state dashboard) / PARKED (pixel-art/chrome polish).** The three Python MCP tools (`memory_remember`, `memory_recall`, `pool_handoff`), the FTS5 memory store at `services/agent/findevil_agent/memory/store.py`, and the `apps/web/` SSE-audit-tail dashboard with role-state sprite containers all shipped. The pixel-art sprite swap and AuditBeadString/HashChainBadge/FindingChip chrome are gated on a Claude Design prototyping pass; see `docs/design-briefs/phase-5-6-sprite-design-brief.md`.
+> **Status: SHIPPED (Phases 1-4 + role-state dashboard) / PARKED (pixel-art/chrome polish).** The three Python MCP tools (`memory_remember`, `memory_recall`, `pool_handoff`), the FTS5 memory store at `services/agent/findevil_agent/memory/store.py`, and the `apps/web/` SSE-audit-tail dashboard with role-state sprite containers all shipped. The pixel-art sprite swap and AuditBeadString/HashChainBadge/FindingChip chrome are gated on a Claude Design prototyping pass.
 
 **Date:** 2026-04-26
 **Status:** Active — supersedes Amendment A2 §2.1 (the `apps/web/` deferral) and extends `services/agent_mcp/` with three new tools.

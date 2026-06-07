@@ -159,7 +159,8 @@ For the full doc map (every file with status badge + one-line purpose), see [`do
 - "What does the agent actually do?" → [`agent-config/PLAYBOOK.md`](agent-config/PLAYBOOK.md)
 - "What evidence is available?" → [`docs/DATASET.md`](docs/DATASET.md)
 - "What if a tool is missing?" → The agent returns `BinaryNotFound -32602`. Install the binary OR set the env var pointing at it (e.g. `VOLATILITY_BIN=/path/to/vol`).
-- "I changed something — how do I confirm L1 will be happy?" → `bash scripts/run-all-smokes.sh` on POSIX/Git Bash, or `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-all-smokes.ps1` on native Windows. The scripts print the current smoke tally; runtime depends on Rust cache and shell startup. If native Windows Git Bash startup is slow enough to trip launcher syntax-check timeouts, set `FINDEVIL_LAUNCHER_SMOKE_BASH_TIMEOUT_SECONDS` to a larger value before rerunning the smoke gate.
+- "I changed something — how do I prove the app still works?" → run a **live test**: `scripts/verdict evidence/<file>` (e.g. the staged `evidence/DE_1102_security_log_cleared.evtx`), then confirm `tmp/auto-runs/<case-id>/verdict.json` has a real Verdict with `tool_call_id`-cited Findings and `manifest_verify.json` `overall=true`. A live test — not a smoke run — is the verification standard.
+- "I changed something — how do I confirm L1 CI will be happy?" → `bash scripts/run-all-smokes.sh` on POSIX/Git Bash, or `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-all-smokes.ps1` on native Windows. These are CI-predictor smoke runners, not live tests: they predict what L1 runs but don't exercise a real investigation. The scripts print the current smoke tally; runtime depends on Rust cache and shell startup. If native Windows Git Bash startup is slow enough to trip launcher syntax-check timeouts, set `FINDEVIL_LAUNCHER_SMOKE_BASH_TIMEOUT_SECONDS` to a larger value before rerunning.
 - "How do I produce a review packet?" → `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -EvidencePath <path-inside-sift-vm> -RunL1Docker`. The gate writes `readiness-summary.json`, `readiness-packet-manifest.json`, and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`. Fixed `-RunId` reruns refresh generated packet contents and may create a fresh timestamped build child run. A passing gate prints `READY_FOR_EXPERT_REVIEW`, not customer-ready; a failing gate prints `READINESS_BLOCKED` and lists blockers in `readiness-summary.json`.
 
 ---
@@ -175,6 +176,7 @@ For the full doc map (every file with status badge + one-line purpose), see [`do
 
 ## End-of-investigation checklist
 
+0. [ ] Live test passed: `scripts/verdict` produced `verdict.json` and `manifest_verify.json` `overall=true`
 1. [ ] `manifest_verify.json` or the `manifest_verify` MCP/library result returns `overall=True`
 2. [ ] Findings table reviewed; CONFIRMED-tier findings traced back to their `tool_call_id` in `audit.jsonl`
 3. [ ] Contradictions resolved or explicitly flagged in the report

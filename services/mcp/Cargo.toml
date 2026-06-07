@@ -53,13 +53,12 @@ forensic-rs = "=0.13"
 # already forced 1.83 → 1.88; bumping again is a separate decision).
 mft = "=0.6.1"
 
-# frnsc-hive — MIT, ForensicRS Windows Registry hive parser. Same
-# author as frnsc-prefetch (above) and integrates with forensic-rs
-# (also already a dep). Used by `registry_query` for offline parsing
-# of NTUSER.DAT / SYSTEM / SOFTWARE / SECURITY / SAM hives.
-# notatin 1.0.1 was the first choice (Apache-2.0) but its transitive
-# nom parser breaks under rustc 1.88; frnsc-hive compiles cleanly.
-frnsc-hive = "=0.13.4"
+# Windows Registry hive parsing for `registry_query` is handled in-tree by
+# `src/tools/regf.rs` (no external crate). frnsc-hive only implemented the
+# modern `lh` subkey-list cell and panicked `unimplemented!()` on the
+# `lf`/`li`/`ri` cells used by Windows XP-era hives; notatin (the Apache-2.0
+# alternative) doesn't build under the pinned rustc 1.88. The in-tree reader
+# handles all four subkey-list types + resident/non-resident/`db` values.
 
 # yara-x — BSD-3-Clause, pure-Rust YARA implementation (VirusTotal).
 # Used by `yara_scan` for malware/IOC scanning. Pinned to 1.12.0 +

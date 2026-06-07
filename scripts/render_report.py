@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -53,15 +54,36 @@ CHROME: str | None = _resolve_tool(
     "chrome",
 )
 
+# VERDICT figure palette — recolored from the material defaults to the brand
+# accents (purple/green/amber/blue/red) so exhibits read on-brand. Figures are
+# presented as light "mounted exhibits" on the dark report (see img CSS), so they
+# keep a warm near-white background.
+V_PURPLE = "#9b59b6"
+V_GREEN = "#7fae6e"
+V_AMBER = "#c79a4a"
+V_BLUE = "#6f93b8"
+V_RED = "#d6452f"
+V_INK = "#2b2620"
+V_MUTED = "#544f48"
+
 plt.rcParams.update(
     {
         "font.family": "DejaVu Sans",
         "font.size": 10,
         "axes.titlesize": 12,
         "axes.titleweight": "bold",
-        "savefig.dpi": 140,
+        "savefig.dpi": 150,
         "savefig.bbox": "tight",
-        "figure.facecolor": "white",
+        "figure.facecolor": "#fbfaf6",
+        "axes.facecolor": "#fbfaf6",
+        "savefig.facecolor": "#fbfaf6",
+        "text.color": V_INK,
+        "axes.edgecolor": "#cfc8ba",
+        "axes.labelcolor": V_INK,
+        "axes.titlecolor": V_INK,
+        "xtick.color": V_MUTED,
+        "ytick.color": V_MUTED,
+        "grid.color": "#e6e0d4",
     }
 )
 
@@ -79,7 +101,7 @@ def fig_audit_chain(
     ax.set_xlim(0, 10)
     ax.set_ylim(0, 6)
 
-    def box(x, y, w, h, txt, color="#e3f2fd", border="#1565c0", fs=9):
+    def box(x, y, w, h, txt, color="#e3f2fd", border="#9b59b6", fs=9):
         p = FancyBboxPatch(
             (x, y),
             w,
@@ -107,7 +129,7 @@ def fig_audit_chain(
                 (x2, y2),
                 arrowstyle="-|>",
                 mutation_scale=12,
-                color="#1565c0",
+                color="#9b59b6",
                 linewidth=1.2,
             )
         )
@@ -127,7 +149,7 @@ def fig_audit_chain(
         "audit.jsonl (hash-chained)",
         fontsize=9,
         fontweight="bold",
-        color="#6a1b9a",
+        color="#9b59b6",
     )
     for i, rec in enumerate(audit[:5]):
         ph = rec.get("prev_hash", "") or "<genesis>"
@@ -138,7 +160,7 @@ def fig_audit_chain(
             0.45,
             f"seq={rec['seq']} kind={rec['kind'][:14]}\nprev_hash={ph[:14]}…",
             color="#f3e5f5",
-            border="#6a1b9a",
+            border="#9b59b6",
             fs=7,
         )
 
@@ -149,7 +171,7 @@ def fig_audit_chain(
         0.5,
         f"audit_log_final_hash:\n{manifest['audit_log_final_hash'][:32]}…",
         color="#fff3e0",
-        border="#ef6c00",
+        border="#c79a4a",
     )
 
     ax.text(
@@ -158,7 +180,7 @@ def fig_audit_chain(
         "Merkle leaves (per tool_call_output)",
         fontsize=9,
         fontweight="bold",
-        color="#1565c0",
+        color="#9b59b6",
     )
     for i in range(min(manifest["leaf_count"], 4)):
         box(
@@ -168,7 +190,7 @@ def fig_audit_chain(
             0.45,
             f"leaf {i}: tool_call output_hash digest",
             color="#e3f2fd",
-            border="#1565c0",
+            border="#9b59b6",
             fs=8,
         )
 
@@ -179,7 +201,7 @@ def fig_audit_chain(
         0.5,
         f"merkle_root_hex:\n{manifest['merkle_root_hex'][:32]}…",
         color="#fffde7",
-        border="#f9a825",
+        border="#c79a4a",
     )
 
     sig_sha = manifest["signature"]["payload_sha256"]
@@ -191,7 +213,7 @@ def fig_audit_chain(
         f"run.manifest.json (signed via sigstore StubSigner)\n"
         f"signature_payload_sha256: {sig_sha[:32]}…",
         color="#e8f5e9",
-        border="#2e7d32",
+        border="#7fae6e",
         fs=8,
     )
 
@@ -254,7 +276,7 @@ def fig_psscan_timeline(psscan: list[dict[str, Any]], out: Path) -> None:
     pids = [e["pid"] for e in events]
     sizes = [max(20, min(200, e["threads"] * 3)) for e in events]
     colors = [
-        "#c62828" if e["name"].lower() not in common else "#1565c0" for e in events
+        "#d6452f" if e["name"].lower() not in common else "#9b59b6" for e in events
     ]
     ax.scatter(
         times, pids, c=colors, s=sizes, alpha=0.7, edgecolors="black", linewidths=0.5
@@ -270,8 +292,8 @@ def fig_psscan_timeline(psscan: list[dict[str, Any]], out: Path) -> None:
     ax.grid(True, alpha=0.3)
     ax.legend(
         handles=[
-            mpatches.Patch(color="#1565c0", label="Standard Windows process"),
-            mpatches.Patch(color="#c62828", label="Uncommon image name"),
+            mpatches.Patch(color="#9b59b6", label="Standard Windows process"),
+            mpatches.Patch(color="#d6452f", label="Uncommon image name"),
         ],
         loc="upper left",
         fontsize=8,
@@ -318,7 +340,7 @@ def fig_findings_table(findings: list[dict[str, Any]], out: Path) -> None:
     table.scale(1, 1.4)
     for i in range(len(table_data[0])):
         cell = table[(0, i)]
-        cell.set_facecolor("#1565c0")
+        cell.set_facecolor("#9b59b6")
         cell.set_text_props(color="white", fontweight="bold")
     fig.savefig(out)
     plt.close(fig)
@@ -366,16 +388,16 @@ def fig_timeline_overview(events: list[dict[str, Any]], out: Path) -> bool:
     classes = sorted({row["artifact_class"] for row in parsed})
     class_to_y = {name: i for i, name in enumerate(classes)}
     colors = {
-        "context": "#1565c0",
-        "triage_lead": "#ef6c00",
-        "finding_support": "#c62828",
+        "context": "#9b59b6",
+        "triage_lead": "#c79a4a",
+        "finding_support": "#d6452f",
     }
     for row in parsed:
         ax.scatter(
             row["dt"],
             class_to_y[row["artifact_class"]],
             s=55,
-            color=colors.get(row["significance"], "#1565c0"),
+            color=colors.get(row["significance"], "#9b59b6"),
             edgecolor="black",
             linewidth=0.4,
             alpha=0.8,
@@ -388,9 +410,79 @@ def fig_timeline_overview(events: list[dict[str, Any]], out: Path) -> bool:
     ax.grid(True, axis="x", alpha=0.3)
     ax.legend(
         handles=[
-            mpatches.Patch(color="#1565c0", label="Context"),
-            mpatches.Patch(color="#ef6c00", label="Triage lead"),
-            mpatches.Patch(color="#c62828", label="Finding support"),
+            mpatches.Patch(color="#9b59b6", label="Context"),
+            mpatches.Patch(color="#c79a4a", label="Triage lead"),
+            mpatches.Patch(color="#d6452f", label="Finding support"),
+        ],
+        loc="upper left",
+        fontsize=8,
+    )
+    fig.tight_layout()
+    fig.savefig(out)
+    plt.close(fig)
+    return True
+
+
+def fig_entity_timeline(events: list[dict[str, Any]], out: Path) -> bool:
+    """Swimlane: events grouped by actor/host down the y-axis, time across x."""
+    rows = []
+    for event in events:
+        dt = _parse_event_time(event)
+        if dt is None:
+            continue
+        entities = event.get("entities") or {}
+        actor = (
+            _format_account_display(entities)
+            or entities.get("host")
+            or entities.get("workstation")
+            or entities.get("process")
+        )
+        if not actor:
+            continue
+        rows.append(
+            {
+                "dt": dt,
+                "actor": str(actor)[:34],
+                "significance": event.get("significance") or "context",
+            }
+        )
+    if not rows:
+        return False
+
+    counts: dict[str, int] = {}
+    for row in rows:
+        counts[row["actor"]] = counts.get(row["actor"], 0) + 1
+    top = set(sorted(counts, key=lambda a: (-counts[a], a))[:14])
+    rows = [row for row in rows if row["actor"] in top]
+    actors = sorted(top)
+    actor_to_y = {name: i for i, name in enumerate(actors)}
+    colors = {
+        "context": "#9b59b6",
+        "triage_lead": "#c79a4a",
+        "finding_support": "#d6452f",
+    }
+    fig, ax = plt.subplots(figsize=(12, 1.6 + 0.42 * len(actors)))
+    for row in rows:
+        ax.scatter(
+            row["dt"],
+            actor_to_y[row["actor"]],
+            s=60,
+            color=colors.get(row["significance"], "#9b59b6"),
+            edgecolor="black",
+            linewidth=0.4,
+            alpha=0.85,
+        )
+    ax.set_yticks(list(actor_to_y.values()), list(actor_to_y.keys()))
+    ax.set_xlabel("UTC time")
+    ax.set_title(f"Entity timeline — events by actor / host ({len(rows)} events)")
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d %H:%M"))
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
+    ax.grid(True, axis="x", alpha=0.3)
+    ax.legend(
+        handles=[
+            mpatches.Patch(color="#9b59b6", label="Context"),
+            mpatches.Patch(color="#c79a4a", label="Triage lead"),
+            mpatches.Patch(color="#d6452f", label="Finding support"),
         ],
         loc="upper left",
         fontsize=8,
@@ -422,14 +514,14 @@ def fig_attack_story_timeline(attack_story: dict[str, Any], out: Path) -> bool:
     ax.set_xlim(0, 10)
     ax.set_ylim(0, len(beats) + 1)
     colors = {
-        "CONFIRMED": "#c62828",
-        "INFERRED": "#ef6c00",
-        "HYPOTHESIS": "#6a1b9a",
+        "CONFIRMED": V_GREEN,
+        "INFERRED": V_AMBER,
+        "HYPOTHESIS": V_BLUE,
     }
     for idx, beat in enumerate(beats[:8], 1):
         y = len(beats[:8]) - idx + 0.6
         confidence = str(beat.get("confidence") or "HYPOTHESIS")
-        color = colors.get(confidence, "#1565c0")
+        color = colors.get(confidence, V_BLUE)
         ax.scatter(0.7, y, s=180, color=color, edgecolor="black", linewidth=0.6)
         ax.text(
             0.7,
@@ -441,7 +533,9 @@ def fig_attack_story_timeline(attack_story: dict[str, Any], out: Path) -> bool:
             fontsize=8,
             fontweight="bold",
         )
-        title = str(beat.get("title") or "Finding-backed story beat")[:85]
+        title = _short_title(
+            beat.get("title") or beat.get("summary") or "Finding-backed story beat"
+        )
         tcid = beat.get("tool_call_id") or "?"
         mitre = beat.get("mitre_technique") or "n/a"
         ts = beat.get("timestamp_utc") or "time not normalized"
@@ -481,11 +575,11 @@ def fig_practitioner_coverage(coverage: dict[str, Any], out: Path) -> bool:
         fig.savefig(out)
         plt.close(fig)
         return False
-    table_data = [["Lane", "Status", "Artifacts Seen", "Tools", "ATT&CK Data Sources"]]
+    table_data = [["Domain", "Status", "Artifacts Seen", "Tools", "ATT&CK Data Sources"]]
     for lane, row in lanes.items():
         table_data.append(
             [
-                lane.replace("_", " "),
+                _lane_label(lane, row),
                 row.get("status", "?"),
                 ", ".join(row.get("artifact_classes_seen") or []) or "none",
                 ", ".join(row.get("tools_run") or []) or "none",
@@ -503,7 +597,7 @@ def fig_practitioner_coverage(coverage: dict[str, Any], out: Path) -> bool:
     table.scale(1, 1.35)
     for i in range(len(table_data[0])):
         cell = table[(0, i)]
-        cell.set_facecolor("#1565c0")
+        cell.set_facecolor("#9b59b6")
         cell.set_text_props(color="white", fontweight="bold")
     fig.savefig(out)
     plt.close(fig)
@@ -528,7 +622,7 @@ def fig_process_view_comparison(tool_calls: list[dict[str, Any]], out: Path) -> 
     fig, ax = plt.subplots(figsize=(8.5, 4.5))
     tools = [row[0] for row in rows]
     counts = [row[1] for row in rows]
-    colors = ["#1565c0", "#ef6c00", "#c62828"][: len(rows)]
+    colors = ["#9b59b6", "#c79a4a", "#d6452f"][: len(rows)]
     ax.bar(tools, counts, color=colors, edgecolor="black", linewidth=0.6)
     for i, (_, count, tcid) in enumerate(rows):
         ax.text(i, count, f"{count}\n{tcid}", ha="center", va="bottom", fontsize=8)
@@ -563,6 +657,61 @@ def md_cell(value: Any) -> str:
     ):
         text = text.replace(old, new)
     return text
+
+
+def _short_title(description: Any, mitre: Any = None) -> str:
+    """A clean, word-boundary-safe title from a finding/event description.
+
+    Takes the leading clause (up to the first em-dash / colon / open-paren /
+    sentence end), trims to <=80 chars on a word boundary with an ellipsis, and
+    optionally prefixes the MITRE technique. Never cuts mid-word.
+    """
+    text = str(description or "").strip()
+    if not text:
+        return "Finding"
+    clause = re.split(r"\s*[—:(]\s*|\.\s", text, maxsplit=1)[0].strip() or text
+    if len(clause) > 80:
+        clause = clause[:77].rsplit(" ", 1)[0].rstrip() + "…"
+    technique = str(mitre or "").strip()
+    if technique and technique.lower() not in ("", "n/a", "none"):
+        return f"{technique}: {clause}"
+    return clause
+
+
+# Friendly display names for analysis-coverage domain lane keys (the lane row
+# also carries a "label", which takes precedence when present).
+_DOMAIN_LABELS: dict[str, str] = {
+    "endpoint_host": "Host & Endpoint Forensics",
+    "memory": "Memory Forensics",
+    "windows_event": "Windows Event & Account Analysis",
+    "network": "Network Forensics",
+    "malware": "Malware Analysis & Triage",
+    "live_response": "Endpoint Telemetry & Live Response",
+}
+
+
+def _lane_label(lane_key: str, row: dict[str, Any]) -> str:
+    return row.get("label") or _DOMAIN_LABELS.get(
+        lane_key, lane_key.replace("_", " ").title()
+    )
+
+
+def _format_account_display(entities: dict[str, Any]) -> str:
+    account = str(entities.get("account") or "").strip()
+    if not account:
+        return ""
+    domain = str(entities.get("domain") or "").strip()
+    if domain and domain not in ("-", account):
+        return f"{domain}\\{account}"
+    return account
+
+
+def _entity_cell(entities: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = entities.get(key)
+        if value not in (None, "", "-"):
+            return str(value)
+    return ""
 
 
 def safe_visual_asset(case_dir: Path, asset: Any) -> str | None:
@@ -753,6 +902,267 @@ def build_readiness_section(
     )
 
 
+def build_bluf_section(
+    attack_story: dict[str, Any] | None,
+    verdict: str,
+    merged: list[dict[str, Any]],
+) -> str:
+    """Bottom Line Up Front: verdict + one-line story + the top next step."""
+    story = attack_story or {}
+    counts = {"CONFIRMED": 0, "INFERRED": 0, "HYPOTHESIS": 0}
+    for finding in merged:
+        confidence = finding.get("confidence")
+        if confidence in counts:
+            counts[confidence] += 1
+    decisions = story.get("recommended_next_decisions") or []
+    top = decisions[0] if decisions else "Expert review before customer release."
+    return (
+        "\n## Bottom Line Up Front\n\n"
+        f"**Verdict: {md_cell(verdict)}.** {md_cell(story.get('headline', ''))}\n\n"
+        f"{md_cell(story.get('customer_summary', ''))}\n\n"
+        f"* Findings: {len(merged)} total — {counts['CONFIRMED']} confirmed, "
+        f"{counts['INFERRED']} inferred, {counts['HYPOTHESIS']} hypothesis.\n"
+        f"* Most important next step: {md_cell(top)}\n\n"
+    )
+
+
+def _select_key_events(
+    events: list[dict[str, Any]], cap: int = 12
+) -> list[dict[str, Any]]:
+    """Pick the pivotal, entity-bearing events for the Tier-1 timeline."""
+
+    def priority(event: dict[str, Any]) -> int:
+        entities = event.get("entities") or {}
+        if any(
+            entities.get(key)
+            for key in ("account", "source_ip", "service_name", "logon_type_label")
+        ):
+            return 0
+        if event.get("significance") == "triage_lead":
+            return 1
+        return 2
+
+    candidates: list[dict[str, Any]] = []
+    seen: set[Any] = set()
+    for event in events:
+        entities = event.get("entities") or {}
+        interesting = event.get("significance") in (
+            "finding_support",
+            "triage_lead",
+        ) or any(
+            entities.get(key)
+            for key in ("account", "source_ip", "service_name", "logon_type_label")
+        )
+        if not interesting:
+            continue
+        # Collapse repeated identical events so distinct ones surface.
+        key = event.get("summary")
+        if key in seen:
+            continue
+        seen.add(key)
+        candidates.append(event)
+    candidates.sort(key=lambda e: (priority(e), e.get("timestamp_utc") or ""))
+    selected = candidates[:cap]
+    selected.sort(key=lambda e: e.get("timestamp_utc") or "")
+    return selected
+
+
+def build_timeline_of_events_section(
+    normalized_timeline: dict[str, Any] | None,
+    event_narratives: list[dict[str, Any]] | None,
+    has_entity_fig: bool,
+    has_timeline_fig: bool,
+) -> str:
+    """Tier-1 narrative timeline: figures + per-event prose + a key-events table."""
+    events = (normalized_timeline or {}).get("events", []) or []
+    narratives = event_narratives or []
+    if not events and not narratives:
+        return ""
+    figs = ""
+    if has_timeline_fig:
+        figs += "![Normalized timeline overview](figures/timeline_overview.png)\n\n"
+    if has_entity_fig:
+        figs += "![Entity timeline](figures/entity_timeline.png)\n\n"
+    narrative_block = ""
+    if narratives:
+        narrative_block = (
+            "### What happened, in order\n\n"
+            + "\n".join(
+                f"{i}. {md_cell(item.get('text', ''))}"
+                for i, item in enumerate(narratives, 1)
+            )
+            + "\n\n"
+        )
+    table_block = ""
+    key_events = _select_key_events(events)
+    if key_events:
+        rows = [
+            "| UTC Time | Event | Account | Host | Source IP | Tool Call |",
+            "|---|---|---|---|---|---|",
+        ]
+        for event in key_events:
+            entities = event.get("entities") or {}
+            rows.append(
+                "| {ts} | {ev} | {acct} | {host} | {ip} | `{tcid}` |".format(
+                    ts=md_cell(event.get("timestamp_utc") or "?"),
+                    ev=md_cell((event.get("summary") or "")[:90]),
+                    acct=md_cell(_format_account_display(entities) or "—"),
+                    host=md_cell(_entity_cell(entities, "host", "workstation") or "—"),
+                    ip=md_cell(
+                        _entity_cell(entities, "source_ip", "destination_ip") or "—"
+                    ),
+                    tcid=md_cell(event.get("tool_call_id") or "?"),
+                )
+            )
+        table_block = "### Key events\n\n" + "\n".join(rows) + "\n\n"
+    return (
+        "\n## Timeline of Events\n\n"
+        "A chronological account of the pivotal events, traceable by account, host, "
+        "and address. Every entry cites the tool call that produced it; the full event "
+        "ledger is in the technical report below.\n\n"
+        + figs
+        + narrative_block
+        + table_block
+    )
+
+
+def build_detailed_event_timeline_section(
+    timeline: list[dict[str, Any]] | None,
+    timeline_csv_exists: bool,
+    has_timeline_fig: bool,
+) -> str:
+    """Tier-2 full event ledger with entity columns."""
+    if not timeline:
+        return ""
+    exports = "`timeline.json`"
+    if timeline_csv_exists:
+        exports += " and analyst-friendly `timeline.csv`"
+    rows = [
+        "| UTC Time | Artifact | Event | Account | Host | Source IP | Logon | "
+        "Process/PID | Conf. | Tool Call |",
+        "|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for event in timeline[:40]:
+        entities = event.get("entities") or {}
+        process = _entity_cell(entities, "process")
+        pid = _entity_cell(entities, "pid")
+        process_pid = f"{process} ({pid})" if process and pid else (process or pid or "")
+        rows.append(
+            "| {ts} | {ac} | {ev} | {acct} | {host} | {ip} | {logon} | {pp} | "
+            "{conf} | `{tcid}` |".format(
+                ts=md_cell(event.get("timestamp_utc") or event.get("ts") or "?"),
+                ac=md_cell(event.get("artifact_class", "?")),
+                ev=md_cell(
+                    (event.get("summary") or event.get("description") or "")[:80]
+                ),
+                acct=md_cell(_format_account_display(entities) or "—"),
+                host=md_cell(_entity_cell(entities, "host", "workstation") or "—"),
+                ip=md_cell(
+                    _entity_cell(entities, "source_ip", "destination_ip") or "—"
+                ),
+                logon=md_cell(
+                    _entity_cell(entities, "logon_type_label", "logon_type") or "—"
+                ),
+                pp=md_cell(process_pid or "—"),
+                conf=md_cell(event.get("confidence", "")),
+                tcid=md_cell(event.get("tool_call_id", "?")),
+            )
+        )
+    fig_block = (
+        "![Normalized timeline overview](figures/timeline_overview.png)\n\n"
+        if has_timeline_fig
+        else ""
+    )
+    return (
+        "\n## Detailed Event Timeline\n\n"
+        f"Normalized timeline events: {len(timeline)}. First 40 shown below; full "
+        f"data is in {exports}.\n\n"
+        + fig_block
+        + "\n".join(rows)
+        + "\n\n"
+    )
+
+
+def build_cast_of_characters_section(entity_index: dict[str, Any] | None) -> str:
+    """Tier-2 entity rollup: trace each account/host/IP/process across the case."""
+    if not entity_index:
+        return ""
+    buckets = [
+        ("accounts", "Accounts"),
+        ("hosts", "Hosts"),
+        ("workstations", "Workstations"),
+        ("source_ips", "Source IPs"),
+        ("destination_ips", "Destination IPs"),
+        ("processes", "Processes"),
+        ("services", "Services"),
+    ]
+    blocks: list[str] = []
+    for key, label in buckets:
+        rows = entity_index.get(key) or []
+        if not rows:
+            continue
+        lines = [
+            f"### {label}",
+            "",
+            "| Value | Events | First Seen | Last Seen | Findings |",
+            "|---|---:|---|---|---|",
+        ]
+        for row in rows[:20]:
+            lines.append(
+                "| {value} | {count} | {first} | {last} | {findings} |".format(
+                    value=md_cell(row.get("value", "")),
+                    count=row.get("event_count", 0),
+                    first=md_cell(row.get("first_seen") or "—"),
+                    last=md_cell(row.get("last_seen") or "—"),
+                    findings=md_cell(row.get("linked_finding_ids") or []) or "—",
+                )
+            )
+        blocks.append("\n".join(lines))
+    if not blocks:
+        return ""
+    return (
+        "\n## Cast of Characters\n\n"
+        "Every account, host, address, and process observed across the timeline, with "
+        "where it first and last appears and which findings cite it.\n\n"
+        + "\n\n".join(blocks)
+        + "\n\n"
+    )
+
+
+def build_indicators_section(indicators: dict[str, Any] | None) -> str:
+    """Tier-2 indicators appendix for detection engineering / threat hunting."""
+    if not indicators:
+        return ""
+    groups = [
+        ("accounts", "Accounts"),
+        ("hosts", "Hosts / Workstations"),
+        ("ip_addresses", "IP addresses"),
+        ("domains", "Domains"),
+        ("urls", "URLs"),
+        ("processes", "Processes"),
+        ("services", "Services"),
+        ("file_paths", "File paths"),
+        ("hashes", "Hashes"),
+    ]
+    rows = ["| Type | Values |", "|---|---|"]
+    has_values = False
+    for key, label in groups:
+        values = indicators.get(key) or []
+        if not values:
+            continue
+        has_values = True
+        rows.append(f"| {label} | {md_cell(values)} |")
+    if not has_values:
+        return ""
+    note = indicators.get("note", "")
+    return (
+        "\n## Indicators\n\n"
+        + (f"{md_cell(note)}\n\n" if note else "")
+        + "\n".join(rows)
+        + "\n\n"
+    )
+
+
 def write_markdown(
     case_dir: Path,
     manifest: dict[str, Any],
@@ -779,10 +1189,15 @@ def write_markdown(
     report_qa: dict[str, Any] | None = None,
     expert_doctrine: dict[str, Any] | None = None,
     release_gate: dict[str, Any] | None = None,
+    normalized_timeline: dict[str, Any] | None = None,
+    entity_index: dict[str, Any] | None = None,
+    indicators: dict[str, Any] | None = None,
+    event_narratives: list[dict[str, Any]] | None = None,
     has_timeline_fig: bool = False,
     has_attack_story_fig: bool = False,
     has_practitioner_fig: bool = False,
     has_process_view_fig: bool = False,
+    has_entity_timeline_fig: bool = False,
 ) -> Path:
     md = case_dir / "REPORT.md"
     fa = manifest["audit_log_final_hash"]
@@ -791,6 +1206,8 @@ def write_markdown(
     cf = manifest["signature"]["cert_fingerprint"]
 
     attack_story_section = ""
+    decisions_section = ""
+    beats_section = ""
     if attack_story:
         fig_block = (
             "![How they got hacked timeline](figures/attack_story_timeline.png)\n\n"
@@ -801,6 +1218,28 @@ def write_markdown(
         cannot_say = attack_story.get("what_we_cannot_say", []) or []
         decisions = attack_story.get("recommended_next_decisions", []) or []
         beats = attack_story.get("attack_chain", []) or []
+        attack_story_section = (
+            "\n## Executive Attack Story\n\n"
+            f"**Headline:** {md_cell(attack_story.get('headline', ''))}\n\n"
+            f"{md_cell(attack_story.get('customer_summary', ''))}\n\n"
+            f"**How they got in:** {md_cell(attack_story.get('how_they_got_in', ''))}\n\n"
+            f"**Root cause:** {md_cell(attack_story.get('root_cause', ''))}\n\n"
+            f"**Business impact:** {md_cell(attack_story.get('business_impact', ''))}\n\n"
+            + fig_block
+            + "### What We Can Say\n\n"
+            + "\n".join(f"* {md_cell(item)}" for item in can_say)
+            + "\n\n### What We Cannot Prove\n\n"
+            + "\n".join(f"* {md_cell(item)}" for item in cannot_say)
+            + "\n\n"
+        )
+        decisions_section = (
+            "\n## Recommended Next Decisions\n\n"
+            + (
+                "\n".join(f"* {md_cell(item)}" for item in decisions)
+                or "* Expert review before customer release."
+            )
+            + "\n\n"
+        )
         beat_lines = []
         for beat in beats[:8]:
             beat_lines.extend(
@@ -819,26 +1258,8 @@ def write_markdown(
             beat_lines.append(
                 "*No finding-backed attack-story beats were produced in this run.*\n"
             )
-        attack_story_section = (
-            "\n## Executive Attack Story\n\n"
-            f"**Headline:** {md_cell(attack_story.get('headline', ''))}\n\n"
-            f"{md_cell(attack_story.get('customer_summary', ''))}\n\n"
-            f"**How they got in:** {md_cell(attack_story.get('how_they_got_in', ''))}\n\n"
-            f"**Root cause:** {md_cell(attack_story.get('root_cause', ''))}\n\n"
-            f"**Business impact:** {md_cell(attack_story.get('business_impact', ''))}\n\n"
-            + fig_block
-            + "### What We Can Say\n\n"
-            + "\n".join(f"* {md_cell(item)}" for item in can_say)
-            + "\n\n### What We Cannot Prove\n\n"
-            + "\n".join(f"* {md_cell(item)}" for item in cannot_say)
-            + "\n\n### Recommended Next Decisions\n\n"
-            + (
-                "\n".join(f"* {md_cell(item)}" for item in decisions)
-                or "* Expert review before customer release."
-            )
-            + "\n\n### Finding-Backed Story Beats\n\n"
-            + "\n".join(beat_lines)
-            + "\n"
+        beats_section = (
+            "\n## Finding-Backed Story Beats\n\n" + "\n".join(beat_lines) + "\n"
         )
 
     qa_section = ""
@@ -1023,12 +1444,12 @@ def write_markdown(
     if practitioner_coverage:
         lanes = practitioner_coverage.get("lanes", {})
         rows = [
-            "| Lane | Status | Artifacts Seen | Tools Run | Data Sources | Gaps |",
+            "| Domain | Status | Artifacts Seen | Tools Run | Data Sources | Gaps |",
             "|---|---|---|---|---|---|",
         ]
         for lane, row in lanes.items():
             rows.append(
-                f"| {md_cell(lane.replace('_', ' '))} | "
+                f"| {md_cell(_lane_label(lane, row))} | "
                 f"{md_cell(row.get('status', ''))} | "
                 f"{md_cell(row.get('artifact_classes_seen', [])) or 'none'} | "
                 f"`{md_cell(row.get('tools_run', [])) or 'none'}` | "
@@ -1042,9 +1463,9 @@ def write_markdown(
             else ""
         )
         practitioner_section = (
-            "\n## Practitioner Coverage\n\n"
-            "GCFA, GNFA, and GREM are practitioner domains and certifications; "
-            "this table describes evidence-orchestration coverage only.\n\n"
+            "\n## Analysis Coverage by Domain\n\n"
+            "This table shows which DFIR analysis domains the typed tools "
+            "exercised on the supplied evidence. Coverage is scope, not assurance.\n\n"
             + fig_block
             + "\n".join(rows)
             + "\n\n"
@@ -1140,44 +1561,18 @@ def write_markdown(
             + "\n\n"
         )
 
-    timeline_section = ""
-    if timeline:
-        timeline_exports = "`timeline.json`"
-        if timeline_csv_exists:
-            timeline_exports += " and analyst-friendly `timeline.csv`"
-        rows = [
-            "| UTC Time | Artifact Class | Significance | Summary | Tool Call | Source Record |",
-            "|---|---|---|---|---|---|",
-        ]
-        for event in timeline[:25]:
-            ts = event.get("timestamp_utc") or event.get("ts") or "?"
-            summary = event.get("summary") or event.get("description") or ""
-            significance = event.get("significance") or "context"
-            rows.append(
-                "| {ts} | {artifact_class} | {significance} | {summary} | `{tcid}` | `{ref}` |".format(
-                    ts=md_cell(ts),
-                    artifact_class=md_cell(event.get("artifact_class", "?")),
-                    significance=md_cell(significance),
-                    summary=md_cell(summary[:120]),
-                    tcid=md_cell(event.get("tool_call_id", "?")),
-                    ref=md_cell(
-                        event.get("source_record_ref") or event.get("source") or "?"
-                    ),
-                )
-            )
-        fig_block = (
-            "![Normalized timeline overview](figures/timeline_overview.png)\n\n"
-            if has_timeline_fig
-            else ""
-        )
-        timeline_section = (
-            "\n## Timeline\n\n"
-            f"Normalized timeline events: {len(timeline)}. "
-            f"First 25 events shown below; full data is in {timeline_exports}.\n\n"
-            + fig_block
-            + "\n".join(rows)
-            + "\n\n"
-        )
+    bluf_section = build_bluf_section(attack_story, verdict, merged)
+    timeline_of_events_section = build_timeline_of_events_section(
+        normalized_timeline,
+        event_narratives,
+        has_entity_timeline_fig,
+        has_timeline_fig,
+    )
+    detailed_timeline_section = build_detailed_event_timeline_section(
+        timeline, timeline_csv_exists, has_timeline_fig
+    )
+    cast_section = build_cast_of_characters_section(entity_index)
+    indicators_section = build_indicators_section(indicators)
 
     visual_section = ""
     if evidence_cards:
@@ -1245,7 +1640,11 @@ def write_markdown(
     readiness_section = build_readiness_section(report_qa, release_gate)
 
     md.write_text(
-        f"""# Find Evil! — Forensic Breach Narrative and Evidence Report
+        f"""[VERDICT · DFIR Case File]{{.kicker}}
+
+# VERDICT — Forensic Investigation Report
+
+[DFIR at machine speed · sigstore-signed chain of custody]{{.tagline}}
 
 **Case ID:** `{manifest['case_id']}`
 **Run ID:** `{manifest['run_id']}`
@@ -1274,19 +1673,38 @@ def write_markdown(
 
 ---
 
+{bluf_section}
+
 {attack_story_section}
 
-{qa_section}
+{timeline_of_events_section}
 
-{release_gate_section}
+{decisions_section}
 
-{readiness_section}
-
-## Findings overview
+## Findings at a Glance
 
 ![Findings table](figures/findings_table.png)
 
-{actions_section}
+# Technical Report {{.tier-break}}
+
+The sections below are the full analyst-grade record: every finding with its
+`tool_call_id` and confidence, the complete event timeline, the entity rollup
+and indicators, coverage matrices, triage, sources, and the reproducibility and
+chain-of-custody appendices.
+
+## Findings detail
+
+{findings_section}
+
+{beats_section}
+
+{detailed_timeline_section}
+
+{cast_section}
+
+{indicators_section}
+
+{attack_section}
 
 {completeness_section}
 
@@ -1294,15 +1712,9 @@ def write_markdown(
 
 {practitioner_section}
 
-{attack_section}
+{malware_section}
 
 {evtx_section}
-
-{limitations_section}
-
-{timeline_section}
-
-{malware_section}
 
 {visual_section}
 
@@ -1312,9 +1724,9 @@ def write_markdown(
 
 {expert_section}
 
-## Findings detail
+{actions_section}
 
-{findings_section}
+{limitations_section}
 
 {replay_appendix}
 
@@ -1329,7 +1741,7 @@ def write_markdown(
 ## Verification
 
 This investigation produced a `run.manifest.json` that any third party can
-verify offline from the Find Evil repository using the manifest verification
+verify offline from the VERDICT repository using the manifest verification
 library or the `manifest_verify` MCP tool. There is no standalone
 `manifest_verify` shell command in this repo.
 
@@ -1355,9 +1767,20 @@ python -c "import json,pathlib;p=pathlib.Path('run.manifest.tamper.json');d=json
 uv run --directory services/agent python -c "from pathlib import Path; from findevil_agent.crypto.manifest import verify_manifest; print(verify_manifest(Path('PATH/TO/run.manifest.tamper.json'), audit_log_path=Path('PATH/TO/audit.jsonl')).model_dump_json(indent=2))"
 ```
 
+# Internal — QA & Release Gates (not customer narrative) {{.tier-break}}
+
+These sections are the automated expert-review packet's internal gates. They are
+not part of the customer narrative above.
+
+{qa_section}
+
+{release_gate_section}
+
+{readiness_section}
+
 ---
 
-*Produced by `find-evil-auto` (the Find Evil! automated investigation orchestrator).
+*Produced by `find-evil-auto` (the VERDICT automated investigation orchestrator).
 The cryptographic attestation values shown are the actual outputs of this run; every
 quantitative claim above is independently verifiable from the artifacts in this
 directory (`audit.jsonl`, `run.manifest.json`, `verdict.json`).*
@@ -1370,6 +1793,59 @@ directory (`audit.jsonl`, `run.manifest.json`, `verdict.json`).*
 # ---------------------------------------------------------------------------
 # Pandoc + Chrome render
 # ---------------------------------------------------------------------------
+
+
+_CONF_CLASS = {
+    "CONFIRMED": "conf-confirmed",
+    "INFERRED": "conf-inferred",
+    "HYPOTHESIS": "conf-hypothesis",
+}
+_VERDICT_CLASS = {
+    "SUSPICIOUS": "verdict-alert",
+    "INDETERMINATE": "verdict-inferred",
+    "NO_EVIL": "verdict-confirmed",
+}
+
+
+def _colorize_html(html_text: str) -> str:
+    """Wrap confidence + verdict keywords in semantic-colored spans, operating only
+    on text nodes inside <body> (never tag internals, <style>/<script>, or code)."""
+    lower = html_text.lower()
+    start = lower.find("<body")
+    end = lower.rfind("</body>")
+    if start == -1 or end == -1:
+        return html_text
+    body_open_end = html_text.find(">", start)
+    if body_open_end == -1:
+        return html_text
+    head = html_text[: body_open_end + 1]
+    body = html_text[body_open_end + 1 : end]
+    tail = html_text[end:]
+
+    mapping = {**_CONF_CLASS, **_VERDICT_CLASS}
+    pattern = re.compile(r"(?<![\w-])(" + "|".join(mapping) + r")(?![\w-])")
+    segments = re.split(r"(<[^>]+>)", body)
+    skip = False
+    out: list[str] = []
+    for i, seg in enumerate(segments):
+        if i % 2 == 1:  # an HTML tag
+            tag = seg.lower()
+            if tag.startswith(("<style", "<script", "<code", "<pre")):
+                skip = True
+            elif tag.startswith(("</style", "</script", "</code", "</pre")):
+                skip = False
+            out.append(seg)
+            continue
+        if skip or not seg:
+            out.append(seg)
+            continue
+        out.append(
+            pattern.sub(
+                lambda m: f'<span class="{mapping[m.group(1)]}">{m.group(1)}</span>',
+                seg,
+            )
+        )
+    return head + "".join(out) + tail
 
 
 def render_html_pdf(md_path: Path) -> tuple[Path, Path | None]:
@@ -1401,6 +1877,14 @@ def render_html_pdf(md_path: Path) -> tuple[Path, Path | None]:
         check=True,
         capture_output=True,
     )
+
+    # Color-code confidence + verdict keywords in the rendered HTML (best-effort).
+    try:
+        html.write_text(
+            _colorize_html(html.read_text(encoding="utf-8")), encoding="utf-8"
+        )
+    except Exception:
+        pass
 
     pdf_out: Path | None = None
     if CHROME is not None:
@@ -1443,26 +1927,63 @@ def render_html_pdf(md_path: Path) -> tuple[Path, Path | None]:
 
 
 _DEFAULT_CSS = """
-body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-       max-width: 980px; margin: 2em auto; padding: 0 2.5em; line-height: 1.65;
-       color: #222; background: #fafafa; }
-h1 { color: #1565c0; border-bottom: 3px solid #1565c0; padding-bottom: 0.4em; font-size: 2em; }
-h2 { color: #1565c0; border-bottom: 1px solid #ccc; padding-bottom: 0.25em; margin-top: 2.5em; font-size: 1.4em; }
-h3 { color: #6a1b9a; margin-top: 1.6em; font-size: 1.15em; }
-img { max-width: 100%; display: block; margin: 2em auto; border: 1px solid #ddd;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 4px;
-      background: white; padding: 8px; }
-code { background: #eef2f5; padding: 0.1em 0.4em; border-radius: 3px;
-       font-family: "Consolas", monospace; font-size: 0.92em; color: #c62828; }
-pre { background: #2c3e50; color: #ecf0f1; padding: 1em 1.4em; border-radius: 4px; overflow-x: auto; }
-pre code { background: none; padding: 0; color: inherit; }
-blockquote { border-left: 4px solid #1565c0; padding: 0.7em 1.2em; margin: 1.2em 0;
-             background: #e3f2fd; border-radius: 0 4px 4px 0; }
-table { border-collapse: collapse; margin: 1.2em 0; width: 100%; }
-th, td { padding: 0.55em 0.9em; border: 1px solid #ddd; text-align: left; }
-th { background: #1565c0; color: white; font-weight: 600; }
-tr:nth-child(even) td { background: #f5f7fa; }
-strong { color: #1565c0; }
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+:root { --paper:#0e0c10; --surface:#161318; --inset:#0b0a0d; --ink:#ece6da;
+  --muted:#8c8576; --faint:#544f48; --hairline:#2b2620; --accent:#9b59b6;
+  --accent-light:#b98fce; --alert:#d6452f; --confirmed:#7fae6e; --inferred:#c79a4a;
+  --hypothesis:#6f93b8; --mono:"JetBrains Mono","Courier New",monospace;
+  --serif:"Fraunces",Georgia,serif; --grotesk:"Archivo",system-ui,sans-serif; }
+@page { margin: 0; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { background:#0e0c10; color:var(--ink); font-family:var(--mono); font-size:13px;
+  line-height:1.7; max-width:1040px; margin:0 auto; padding:1.5cm 1.6cm 2cm;
+  -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  background-image:linear-gradient(rgba(236,230,218,0.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(236,230,218,0.022) 1px,transparent 1px);
+  background-size:56px 56px; }
+h1 { font-family:var(--serif); font-weight:600; color:var(--ink); font-size:2.5em;
+  letter-spacing:-0.5px; line-height:1.05; margin:0 0 0.35em; border:none; }
+h1.tier-break { page-break-before:always; font-family:var(--grotesk);
+  text-transform:uppercase; letter-spacing:4px; font-size:1.15em; font-weight:700;
+  color:var(--ink); background:linear-gradient(90deg,rgba(155,89,182,0.24),rgba(155,89,182,0.04));
+  border:none; border-left:3px solid var(--accent); border-radius:4px;
+  padding:0.65em 0.9em; margin:0 0 1.4em; }
+h2 { font-family:var(--grotesk); text-transform:uppercase; letter-spacing:2.5px;
+  font-size:1.02em; font-weight:600; color:var(--accent-light); margin:2.6em 0 1em;
+  padding-bottom:0.5em; border-bottom:1px solid var(--hairline); }
+h3 { font-family:var(--grotesk); text-transform:uppercase; letter-spacing:1.5px;
+  font-size:0.9em; font-weight:600; color:var(--muted); margin:1.8em 0 0.7em; }
+p, li { color:var(--ink); }
+a { color:var(--accent-light); text-decoration:none; border-bottom:1px solid rgba(155,89,182,0.4); }
+strong { color:var(--ink); font-weight:700; }
+em { color:var(--muted); }
+img { max-width:100%; display:block; margin:1.8em auto; background:#fbfaf6;
+  border:1px solid var(--hairline); border-radius:6px; padding:10px;
+  box-shadow:0 6px 26px rgba(0,0,0,0.5); }
+code { background:var(--inset); color:var(--accent-light); padding:0.12em 0.45em;
+  border-radius:4px; border:1px solid var(--hairline); font-family:var(--mono); font-size:0.9em; }
+pre { background:var(--inset); color:var(--ink); padding:1.1em 1.4em; border-radius:8px;
+  border:1px solid var(--hairline); overflow-x:auto; }
+pre code { background:none; border:none; padding:0; color:inherit; }
+blockquote { font-family:var(--mono); color:var(--ink); margin:1.4em 0;
+  background:rgba(155,89,182,0.1); border:1px solid rgba(155,89,182,0.45);
+  border-left:3px solid var(--accent); border-radius:0 6px 6px 0; padding:0.9em 1.3em; }
+blockquote strong { color:var(--accent-light); }
+table { border-collapse:collapse; margin:1.3em 0; width:100%; font-size:0.84em;
+  background:var(--surface); border:1px solid var(--hairline); }
+th { background:rgba(155,89,182,0.16); color:var(--accent-light); font-family:var(--grotesk);
+  text-transform:uppercase; letter-spacing:0.4px; font-weight:600; font-size:0.95em;
+  padding:0.55em 0.8em; border:1px solid var(--hairline); text-align:left; }
+td { padding:0.5em 0.8em; border:1px solid var(--hairline); color:var(--ink); vertical-align:top; }
+tr:nth-child(even) td { background:rgba(236,230,218,0.025); }
+hr { border:none; border-top:1px solid var(--hairline); margin:2.4em 0; }
+.kicker { font-family:var(--grotesk); text-transform:uppercase; letter-spacing:5px;
+  font-size:0.72em; font-weight:600; color:var(--accent); }
+.tagline { font-family:var(--mono); color:var(--muted); letter-spacing:1px; font-size:0.86em; }
+.conf-confirmed, .verdict-confirmed { color:var(--confirmed); font-weight:700; }
+.conf-inferred, .verdict-inferred { color:var(--inferred); font-weight:700; }
+.conf-hypothesis { color:var(--hypothesis); font-weight:700; }
+.verdict-alert { color:var(--alert); font-weight:700; }
 """
 
 
@@ -1536,10 +2057,24 @@ def render_report(
         fig_dir / "process_view_comparison.png",
     )
     attack_story = verdict_obj.get("attack_story", {})
+    # Clean any mid-word-truncated beat titles from the full description text.
+    for beat in attack_story.get("attack_chain", []) or []:
+        if isinstance(beat, dict):
+            beat["title"] = _short_title(
+                beat.get("summary") or beat.get("title"),
+                beat.get("mitre_technique"),
+            )
     has_attack_story_fig = fig_attack_story_timeline(
         attack_story,
         fig_dir / "attack_story_timeline.png",
     )
+    entity_index = verdict_obj.get("entity_index", {})
+    indicators = verdict_obj.get("indicators", {})
+    event_narratives = verdict_obj.get("event_narratives", [])
+    evidence_cards = verdict_obj.get("report_evidence_cards", []) or []
+    for card in evidence_cards:
+        if isinstance(card, dict):
+            card["title"] = _short_title(card.get("snippet") or card.get("title"))
 
     timeline = []
     normalized_timeline = verdict_obj.get("normalized_timeline", {})
@@ -1564,6 +2099,9 @@ def render_report(
     has_timeline_fig = fig_timeline_overview(
         timeline, fig_dir / "timeline_overview.png"
     )
+    has_entity_timeline_fig = fig_entity_timeline(
+        timeline, fig_dir / "entity_timeline.png"
+    )
 
     md = write_markdown(
         case_dir,
@@ -1585,16 +2123,21 @@ def render_report(
         practitioner_coverage=practitioner_coverage,
         malware_triage=verdict_obj.get("malware_triage"),
         analysis_limitations=verdict_obj.get("analysis_limitations", []),
-        evidence_cards=verdict_obj.get("report_evidence_cards", []),
+        evidence_cards=evidence_cards,
         bibliography=verdict_obj.get("source_bibliography", []),
         attack_story=attack_story,
         report_qa=verdict_obj.get("report_qa", {}),
         expert_doctrine=verdict_obj.get("expert_doctrine", {}),
         release_gate=final_release_gate or verdict_obj.get("release_gate", {}),
+        normalized_timeline={"events": timeline},
+        entity_index=entity_index,
+        indicators=indicators,
+        event_narratives=event_narratives,
         has_timeline_fig=has_timeline_fig,
         has_attack_story_fig=has_attack_story_fig,
         has_practitioner_fig=has_practitioner_fig,
         has_process_view_fig=has_process_view_fig,
+        has_entity_timeline_fig=has_entity_timeline_fig,
     )
     html, pdf = render_html_pdf(md)
     return pdf if pdf else html

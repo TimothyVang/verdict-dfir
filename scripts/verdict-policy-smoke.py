@@ -73,6 +73,10 @@ def main() -> int:
     build_malware_triage = fea.build_malware_triage
     build_normalized_timeline = fea.build_normalized_timeline
     build_report_evidence_cards = fea.build_report_evidence_cards
+    extract_evtx_entities = fea._extract_evtx_entities  # noqa: SLF001
+    build_entity_index = fea.build_entity_index
+    build_indicators = fea.build_indicators
+    build_event_narratives = fea.build_event_narratives
     build_executive_attack_story = fea.build_executive_attack_story
     build_expert_doctrine = fea.build_expert_doctrine
     build_expert_miss_summary = fea.build_expert_miss_summary
@@ -1227,38 +1231,41 @@ def main() -> int:
     )
     practitioner_cases = [
         (
-            "practitioner coverage keeps GCFA endpoint automated",
-            practitioner["lanes"]["GCFA_endpoint"].get("status"),
+            "analysis coverage keeps memory domain automated",
+            practitioner["lanes"]["memory"].get("status"),
             "automated",
         ),
         (
-            "practitioner coverage does not claim GNFA without network evidence",
-            practitioner["lanes"]["GNFA_network"].get("status"),
+            "analysis coverage does not claim network without network evidence",
+            practitioner["lanes"]["network"].get("status"),
             "not_covered",
         ),
         (
-            "practitioner coverage keeps GREM memory-only lane partial",
-            practitioner["lanes"]["GREM_malware"].get("status"),
+            "analysis coverage keeps memory-only malware lane partial",
+            practitioner["lanes"]["malware"].get("status"),
             "partial",
         ),
         (
-            "practitioner coverage maps memory process output to ATT&CK DS0009",
+            "analysis coverage maps memory process output to ATT&CK DS0009",
             "DS0009"
-            in practitioner["lanes"]["GCFA_endpoint"].get(
-                "attck_data_sources_seen", []
-            ),
+            in practitioner["lanes"]["memory"].get("attck_data_sources_seen", []),
             True,
         ),
         (
-            "practitioner coverage records overclaim guardrails",
+            "analysis coverage uses DFIR domain labels, not GIAC certs",
+            practitioner["lanes"]["memory"].get("label"),
+            "Memory Forensics",
+        ),
+        (
+            "analysis coverage records overclaim guardrails",
             bool(practitioner.get("overclaim_guardrails_applied")),
             True,
         ),
         (
-            "vel_collect alone does not claim GNFA without network artifact",
+            "vel_collect alone does not claim network without network artifact",
             build_attck_practitioner_coverage(
                 [{"tool": "vel_collect"}], [], completeness, coverage
-            )["lanes"]["GNFA_network"].get("status"),
+            )["lanes"]["network"].get("status"),
             "not_covered",
         ),
     ]
@@ -1267,6 +1274,117 @@ def main() -> int:
         ok = actual == expected
         marker = "OK  " if ok else "FAIL"
         print(f"  [{marker}] practitioner: {label}")
+        if not ok:
+            print(f"         expected: {expected!r}")
+            print(f"         actual  : {actual!r}")
+            failures += 1
+
+    # --- EVTX entity extraction + Cast of Characters + Indicators ---------
+    evtx_1102 = {
+        "Event": {
+            "System": {"EventID": 1102, "Channel": "Security", "Computer": "DC01"},
+            "UserData": {
+                "LogFileCleared": {
+                    "SubjectUserName": "Administrator",
+                    "SubjectDomainName": "CORP",
+                }
+            },
+        }
+    }
+    evtx_4624 = {
+        "Event": {
+            "System": {"EventID": 4624, "Channel": "Security", "Computer": "WS7"},
+            "EventData": {
+                "TargetUserName": "jsmith",
+                "TargetDomainName": "CORP",
+                "LogonType": "3",
+                "IpAddress": "10.0.0.55",
+                "WorkstationName": "KALI",
+            },
+        }
+    }
+    ent_1102 = extract_evtx_entities(evtx_1102, 1102)
+    ent_4624 = extract_evtx_entities(evtx_4624, 4624)
+    evtx_timeline_events = [
+        {
+            "ts": "2026-05-04T02:47:00Z",
+            "source": "evtx_query",
+            "artifact_class": "evtx",
+            "description": ent_4624.get("summary", ""),
+            "tool_call_id": "tc-evtx",
+            "details": {
+                "event_id": 4624,
+                **{k: v for k, v in ent_4624.items() if k != "summary"},
+            },
+        },
+        {
+            "ts": "2026-05-04T02:49:00Z",
+            "source": "evtx_query",
+            "artifact_class": "evtx",
+            "description": ent_1102.get("summary", ""),
+            "tool_call_id": "tc-evtx",
+            "details": {
+                "event_id": 1102,
+                **{k: v for k, v in ent_1102.items() if k != "summary"},
+            },
+        },
+    ]
+    evtx_findings = [
+        {
+            "finding_id": "f-clear",
+            "tool_call_id": "tc-evtx",
+            "confidence": "INFERRED",
+            "mitre_technique": "T1070.001",
+            "description": "security log cleared",
+        }
+    ]
+    evtx_norm = build_normalized_timeline(evtx_timeline_events, evtx_findings)
+    entity_index = build_entity_index(evtx_norm["events"], evtx_findings)
+    indicators = build_indicators(evtx_norm["events"], evtx_findings, None)
+    narratives = build_event_narratives(evtx_norm["events"], evtx_findings)
+    account_values = {row["value"] for row in entity_index.get("accounts", [])}
+    entity_cases = [
+        (
+            "1102 extraction names the account that cleared the log",
+            ent_1102.get("account"),
+            "Administrator",
+        ),
+        (
+            "4624 extraction surfaces source IP",
+            ent_4624.get("source_ip"),
+            "10.0.0.55",
+        ),
+        (
+            "4624 extraction labels logon type 3 as Network",
+            ent_4624.get("logon_type_label"),
+            "Network",
+        ),
+        (
+            "normalized timeline carries entities block",
+            evtx_norm["events"][0].get("entities", {}).get("source_ip"),
+            "10.0.0.55",
+        ),
+        (
+            "Cast of Characters indexes the acting accounts",
+            account_values == {"CORP\\Administrator", "CORP\\jsmith"},
+            True,
+        ),
+        (
+            "Indicators collect the observed source IP",
+            "10.0.0.55" in indicators.get("ip_addresses", []),
+            True,
+        ),
+        (
+            "event narratives are produced for pivotal events",
+            len(narratives) >= 1,
+            True,
+        ),
+    ]
+    for label, actual, expected in entity_cases:
+        process_checks += 1
+        ok = actual == expected
+        marker = "OK  " if ok else "FAIL"
+        print(f"  [{marker}] entity: {label}")
         if not ok:
             print(f"         expected: {expected!r}")
             print(f"         actual  : {actual!r}")

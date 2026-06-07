@@ -1171,7 +1171,6 @@ dependencies = [
  "chrono",
  "evtx",
  "forensic-rs",
- "frnsc-hive",
  "frnsc-prefetch",
  "hex",
  "mft",
@@ -1221,15 +1220,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b52fbf6df75a38f126edfb2b6bd8723f53d1af0d6dc09502f608839f0c1ff1a"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "frnsc-hive"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d09a2addf6cbea21722c89beeb79a84f70e37486361e1bd7d76f728282243c25"
-dependencies = [
- "forensic-rs",
 ]
 
 [[package]]

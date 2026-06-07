@@ -44,7 +44,7 @@ self-hosted internal use, but **not** an OSI permissive license. Therefore:
   #3) intentionally does **not** mention n8n — the submission surface is the 31-tool typed
   product. This runbook is the canonical home for n8n integration, the same way the Engram
   runbook is for Engram.
-- **Honors the anti-overbuild line.** `practical-sans-dfir-completion-prompt.md` says "do not add
+- **Honors the anti-overbuild line.** The project's anti-overbuild guidance is "do not add
   n8n … runtime work" — i.e. do not build n8n into the *product runtime*. This runbook keeps n8n
   strictly **outside** the product as optional operator automation, so the product runtime is
   unchanged.

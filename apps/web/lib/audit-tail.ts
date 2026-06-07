@@ -75,6 +75,58 @@ export function isAllowedCasePath(absPath: string): boolean {
   return false;
 }
 
+/** One selectable case in the dashboard picker. */
+export interface CaseEntry {
+  /** Absolute case directory. */
+  path: string;
+  /** Directory basename, shown in the picker. */
+  name: string;
+  /** audit.jsonl mtime (ms) — used to sort newest-first. */
+  mtime: number;
+}
+
+/**
+ * List case directories (immediate children of the allow-listed roots that
+ * contain an audit.jsonl), newest-first. Powers the dashboard case picker so
+ * an investigator selects a case instead of pasting an absolute path.
+ */
+export async function listCases(): Promise<CaseEntry[]> {
+  const base = repoRoot();
+  const extraRaw = process.env.FINDEVIL_DASHBOARD_EXTRA_ROOTS ?? "";
+  const extras = extraRaw
+    .split(path.delimiter)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  const roots = [...DEFAULT_ALLOWED_ROOTS, ...extras].map((r) =>
+    path.isAbsolute(r) ? r : path.resolve(base, r),
+  );
+
+  const out: CaseEntry[] = [];
+  const seen = new Set<string>();
+  for (const root of roots) {
+    let entries;
+    try {
+      entries = await fs.readdir(root, { withFileTypes: true });
+    } catch {
+      continue; // root doesn't exist on this host — skip
+    }
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const dir = path.join(root, e.name);
+      if (seen.has(dir)) continue;
+      try {
+        const s = await fs.stat(path.join(dir, "audit.jsonl"));
+        out.push({ path: dir, name: e.name, mtime: s.mtimeMs });
+        seen.add(dir);
+      } catch {
+        // no audit.jsonl → not a case dir
+      }
+    }
+  }
+  out.sort((a, b) => b.mtime - a.mtime);
+  return out;
+}
+
 /**
  * One yielded record. We surface the raw parsed JSON object plus a
  * `kind` tag because audit.jsonl carries lines OUTSIDE the

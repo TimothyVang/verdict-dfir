@@ -1,12 +1,11 @@
+// /debug stays reachable by URL (raw dev viewer) but is off the investigator nav.
 const DASHBOARD_LINKS = [
   { href: "/", label: "Audit" },
-  { href: "/codex", label: "Codex" },
-  { href: "/debug", label: "Debug" },
   { href: "/setup", label: "Setup" },
 ];
 
 interface DashboardNavProps {
-  active: "audit" | "codex" | "debug" | "setup";
+  active: "audit" | "debug" | "setup";
   variant?: "light" | "dark";
 }
 

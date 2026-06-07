@@ -132,7 +132,6 @@ ALLOWED_FILES = {
     "docs/specs/2026-04-25-the-product-design.md",
     "docs/specs/2026-04-26-amendment-a3-agent-army-and-dashboard.md",
     "docs/specs/2026-04-26-orchestration-glue-design.md",
-    "docs/archive/2026-04-27-amendment-a4-managed-agents-runtime.md",
     "docs/plans/2026-04-23-orchestration-glue-plan.md",
     "docs/plans/2026-04-23-product-plan.md",
     "docs/plans/2026-04-23-sandbox-plan.md",
@@ -257,9 +256,8 @@ DIVERGENCES = [
             "agent-config/AGENTS.md",
             "docs/architecture.md",
             "CLAUDE.md",
-            # Plan and braindump docs that document this task.
+            # Plan docs that document this task.
             "docs/plans",
-            "docs/braindumps",
         ),
         "remediation": (
             "CLAUDE_CODE_FORK_SUBAGENT=1 is a build-time internal and "

@@ -96,7 +96,12 @@ def ensure_reachable() -> bool:
             log("n8n not reachable — starting a docker container…")
             subprocess.run(
                 ["docker", "run", "-d", "--name", "n8n", "-p", "5678:5678",
-                 "-v", "n8n_data:/home/node/.n8n", "docker.n8n.io/n8nio/n8n"],
+                 "-v", "n8n_data:/home/node/.n8n",
+                 # n8n 2.x mandates an owner login (no no-auth mode); a long JWT
+                 # session means the investigator logs in once and stays in. The
+                 # dashboard surfaces these creds (see /api/n8n + N8nAccessCard).
+                 "-e", "N8N_USER_MANAGEMENT_JWT_DURATION_HOURS=8760",
+                 "docker.n8n.io/n8nio/n8n"],
                 check=False,
             )
             for _ in range(30):

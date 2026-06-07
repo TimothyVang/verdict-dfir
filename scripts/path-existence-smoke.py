@@ -64,9 +64,6 @@ GLOB_PATTERNS: tuple[str, ...] = (
     "docs/*.md",
     # Decision runbooks + ci-smoke-checklist.
     "docs/runbooks/*.md",
-    # Engineering-to-design handoff briefs (Phase 5/6 sprite work
-    # under Amendment A3 §1.2 and any future design passes).
-    "docs/design-briefs/*.md",
     # Runtime DFIR agent identity (loaded by Claude Code at session
     # start per CLAUDE.md "Agent investigation prompt").
     "agent-config/*.md",
@@ -115,6 +112,18 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # mount (`/mnt/hgfs/evidence/...`) referenced in README/QUICKSTART —
     # a guest-side runtime path, not a repo file.
     re.compile(r"^/(usr|etc|var|opt|dev|proc|sys|home|mnt)/"),
+    # Runtime temp output (e.g. `/tmp/find-evil-preview.mp4`, the
+    # Remotion preview path in CLAUDE.md §0.3) — generated at runtime,
+    # never a repo file.
+    re.compile(r"^/tmp/"),
+    # Evidence drop dir. evidence/*.evtx (etc.) are gitignored runtime
+    # inputs the user supplies (README/CLAUDE/QUICKSTART name
+    # `evidence/DE_1102_security_log_cleared.evtx`); docker-runner.md's
+    # `/evidence/case` is the in-container mount. Not repo files.
+    re.compile(r"^/?evidence/"),
+    # Cargo build artifacts (`target/release/findevil-mcp`) — produced
+    # by `cargo build`, gitignored, present only after a build.
+    re.compile(r"^(?:[\w./-]+/)?target/(debug|release)/"),
     # MCP wire-format identifiers (tools/list, tools/call) -
     # JSON-RPC method names, not file paths.
     re.compile(r"^tools/(list|call)$"),
@@ -129,12 +138,11 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # so broken apps/web references should fail this smoke.
     re.compile(r"^apps/mcp-widgets(/|$)"),
     # Future-deployment paths from Amendment A4 (Managed Agents
-    # production runtime).  A4 is purely additive future work,
-    # not on the hackathon critical path - the spec at
-    # docs/specs/2026-04-27-amendment-a4-managed-
-    # agents-runtime.md documents these as paths the implementation
+    # production runtime).  A4 is purely additive future work, not on
+    # the hackathon critical path; these are paths the implementation
     # WILL create when adopted by an organization wanting hosted
-    # durability.  See A4 §4.5 for the full file structure.
+    # durability.  (The A4 design doc was removed in the 2026-06-07
+    # docs cleanup; these allow-patterns remain for any lingering refs.)
     re.compile(r"^services/mcp_http(/|$)"),
     re.compile(r"^services/managed_agent(/|$)"),
     re.compile(r"^scripts/find-evil-managed$"),

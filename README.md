@@ -78,6 +78,12 @@ Velociraptor). Output lands in `tmp/auto-runs/<case-id>/`, and the dashboard
 **Prefer to drive it yourself?** Open Claude Code in the repo (`claude`) and prompt
 `investigate <path>` — same tools, interactive.
 
+**No evidence yet?** Evidence files are never committed (they're gitignored), so a fresh clone
+ships with none. Stage public test datasets with `bash scripts/fetch-fixtures.sh` (sources +
+SHA-256 in [docs/DATASET.md](docs/DATASET.md)), or drop your own image into `evidence/` and run
+`scripts/verdict --watch`. Every run is a **live test**: confirm `tmp/auto-runs/<case-id>/verdict.json`
+carries a real verdict and `manifest_verify.json` reports `overall: true`.
+
 Per-environment setup (local DFIR binaries vs. the SANS SIFT VM) and evidence placement live in
 [QUICKSTART.md](QUICKSTART.md). Trust-boundary diagrams are in [docs/architecture.md](docs/architecture.md).
 
@@ -90,7 +96,7 @@ Per-environment setup (local DFIR binaries vs. the SANS SIFT VM) and evidence pl
 ├── services/agent_mcp/  — Python MCP server (12 crypto / ACH / memory tools)
 ├── services/agent/      — findevil_agent package (crypto chain + ACH primitives)
 ├── apps/web/            — Next.js dashboard (live audit-stream viewer + design system)
-├── scripts/             — find-evil / find-evil-auto launchers, report renderer, smoke gate
+├── scripts/             — verdict launcher (find-evil/-auto shims), report renderer, CI smoke runners
 ├── docs/                — architecture, crypto attestation, verdict semantics, reports
 └── .mcp.json            — Claude Code auto-spawn registry for both MCP servers
 ```

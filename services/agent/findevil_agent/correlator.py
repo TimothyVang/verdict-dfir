@@ -41,7 +41,12 @@ _EXECUTION_RE = re.compile("|".join(_EXECUTION_TOKENS), re.IGNORECASE)
 # explicit caveat: Amcache LastModified is registration, not run.
 _AMCACHE_RE = re.compile(r"\bamcache\b", re.IGNORECASE)
 _PREFETCH_RE = re.compile(r"\bprefetch\b", re.IGNORECASE)
-_SHIMCACHE_RE = re.compile(r"\bshimcache\b", re.IGNORECASE)
+_SHIMCACHE_RE = re.compile(r"\b(?:shimcache|appcompatcache)\b", re.IGNORECASE)
+# UserAssist (HKCU\...\Explorer\UserAssist) is a per-user GUI-execution record
+# from a different subsystem than the OS prefetcher, so Prefetch + UserAssist is
+# an independent two-artifact-class execution corroboration (peer of Amcache /
+# ShimCache).
+_USERASSIST_RE = re.compile(r"\buserassist\b", re.IGNORECASE)
 _EDR_RE = re.compile(r"\b(?:sysmon|edr|carbon[\s-]?black|crowdstrike)\b", re.IGNORECASE)
 
 
@@ -82,13 +87,18 @@ def correlate(
         own_class = _classify_artifact(f)
         has_other_class = bool(classes_in_run - ({own_class} if own_class else set()))
 
-        # Strong corroboration: prefetch + amcache+shimcache pair on disk
-        # OR EDR-tier (Sysmon/Carbon Black) telemetry mentioned anywhere
-        # in this Finding's description.
+        # Strong corroboration: prefetch paired with a second execution registry
+        # artifact (Amcache / ShimCache / UserAssist) OR EDR-tier (Sysmon /
+        # Carbon Black / CrowdStrike) telemetry mentioned in this Finding's
+        # description.
         own_text = f.description.lower()
         has_strong_corroboration = (
             _PREFETCH_RE.search(own_text)
-            and (_AMCACHE_RE.search(own_text) or _SHIMCACHE_RE.search(own_text))
+            and (
+                _AMCACHE_RE.search(own_text)
+                or _SHIMCACHE_RE.search(own_text)
+                or _USERASSIST_RE.search(own_text)
+            )
         ) or _EDR_RE.search(own_text) is not None
 
         # Weak: only Amcache cited.

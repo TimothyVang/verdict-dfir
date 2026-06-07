@@ -11,7 +11,7 @@ Read this first when navigating the documentation tree. The root README is the j
 | Verify custody/manifest claims | [`cryptographic-attestation.md`](cryptographic-attestation.md) |
 | Interpret verdicts safely | [`verdict-semantics.md`](verdict-semantics.md) |
 | Review release evidence | [`release-evidence/README.md`](release-evidence/README.md) |
-| See historical plans/specs | `plans/`, `specs/`, and `archive/` |
+| See historical plans/specs | `plans/` and `specs/` |
 
 Status legend:
 
@@ -62,7 +62,8 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 - `scripts/verdict --run-summary <path>` (delegating to the internal `scripts/find-evil-auto` engine) writes a machine-readable run summary outside the normal case artifact set. It points to the local run directory and records artifact paths, report QA, release-gate/expert-signoff state, signer, readiness state, blockers, warnings, and final result/error.
 - `scripts/readiness-gate.ps1` is the packet-producing readiness flow. Full mode writes `readiness-summary.json`, `readiness-packet-manifest.json`, and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`; fixed `-RunId` reruns refresh generated packet contents and may use a timestamped local-build child run; passing states mean ready for human expert review, not customer release.
 - `scripts/readiness-gate.sh` is POSIX strict/check-only. It can print `SUBMISSION_READY` for its legacy checks, but it does not create the readiness packet ZIP.
-- Local smoke gates are `bash scripts/run-all-smokes.sh` for POSIX/Git Bash and `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-all-smokes.ps1` for native Windows. Do not copy old hard-coded smoke counts; the scripts print the current tally.
+- The dev "done" gate is a passing **live test**: run `scripts/verdict <evidence>` against real evidence and confirm a real verdict in `verdict.json` (each Finding citing a `tool_call_id`) plus `manifest_verify.json` `overall=true`. Per-evidence-type expectations and current gaps live in the live-test matrix in `CLAUDE.md` §5.
+- Local smoke runners (`bash scripts/run-all-smokes.sh` for POSIX/Git Bash, `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-all-smokes.ps1` for native Windows) are a **CI predictor** — they mirror what L1 runs, not a live test. Do not copy old hard-coded smoke counts; the scripts print the current tally.
 - `bash scripts/make-demo-video.sh` generates `docs/find-evil-demo.mp4` from `docs/demo-script-a2.md` using Remotion (React animated video, headless Chrome) + edge-tts TTS audio. Prerequisites: `pip install edge-tts` + `pnpm install --dir scripts/make-demo-video --ignore-workspace`. If `claude` is on PATH, narration is auto-enriched via `claude -p` before TTS.
 - `python3 scripts/make-demo-video-prep.py --dry-run` verifies beat parsing (9 beats, 300s) without invoking TTS or Remotion.
 
@@ -91,7 +92,6 @@ Status-banner-prefixed within each file. Read in CLAUDE.md "Document hierarchy" 
 | `2026-04-25-amendment-a2-claude-code-primary-interface.md` (**A2**) | **SHIPPED** | Drops the custom Python orchestrator; Claude Code IS the orchestrator. |
 | `2026-04-26-amendment-a3-agent-army-and-dashboard.md` (**A3**) | **SHIPPED** (Phases 1-4 + role-state dashboard) / **RESEARCH** (pixel-art/chrome polish) | Memory + ACP MCP tools + SSE dashboard with role-state sprite containers; pixel-art and bead/chip chrome remain parked. |
 | `2026-04-30-amendment-a5-ots-removal.md` (**A5**) | **SHIPPED** | Removes the OpenTimestamps/Bitcoin fourth tier; chain collapses to 3 tiers (audit prev_hash → rs_merkle → sigstore). |
-| `2026-04-27-amendment-a4-managed-agents-runtime.md` (**A4**) | **RESEARCH** | Archived under `docs/archive/`; future-deployment design for hosted Anthropic Managed Agents runtime. Not on the SANS critical path. |
 | `2026-04-23-layered-test-sandbox-design.md` (**Spec #3**) | **SHIPPED** | L0/L1/L2/L3 sandbox stack. L2 advisory only. |
 | `2026-04-25-the-product-design.md` (**Spec #2**) | **SHIPPED** (with A2 + A5 amendments) | The DFIR tool the judges run. |
 | `2026-04-26-orchestration-glue-design.md` (**Spec #4**) | **SHIPPED** | Thin GHA CI pipeline. |
@@ -122,9 +122,7 @@ The original five implementation plans shipped (the build-swarm plan was removed
 | `github-remote-bootstrap.md` | **ACTIVE** | Pre-submission ops doc for setting up the public GitHub repo URL Devpost requires. |
 | `local-smoke-gate.md` | **ACTIVE** | Prerequisites, per-smoke coverage map, and common failure → fix pairs for `bash scripts/run-all-smokes.sh`. |
 | `n8n-automation-integration.md` | **ACTIVE** | Optional: wire n8n as an operator-local harness *around* the product — repeatable runs + post-verdict finding-to-action (via `n8n-mcp`, user-scope). Not bundled, not the orchestrator, not in the audit chain. |
-| `practical-sans-dfir-completion-prompt.md` | **ACTIVE** | Strict copy/paste coding-agent prompt for finishing practical SANS DFIR investigation outputs without new crypto work. |
 | `readiness-packet-windows.md` | **ACTIVE** | Three invocation modes for `scripts/readiness-gate.ps1`, readiness-state meanings, and `READINESS_BLOCKED` unblocking guide. |
-| `researched-dfir-automation-improvement-prompt.md` | **RESEARCH** | Research-backed prompt for future DFIR automation improvement work. |
 
 ## `docs/release-evidence/`
 
@@ -132,30 +130,6 @@ The original five implementation plans shipped (the build-swarm plan was removed
 |---|---|---|
 | `README.md` | **ACTIVE** | Explains why release evidence summaries are committed and what they are not. |
 | `l3-local-sift.json` | **ACTIVE** | Validated local VMware/SIFT L3 fallback evidence for the `v-submit` release path. |
-
-## `docs/design-briefs/`
-
-| File | Status | Purpose |
-|---|---|---|
-| `phase-5-6-sprite-design-brief.md` | **RESEARCH** (parked) | Claude Design prototyping handoff for the 5 pixel-art sprites + AuditBeadString chrome. Gated on a separate prototyping pass. |
-
-(The earlier Judge Mode design briefs + 8-iteration screenshots were retired in commit `20013e4` along with the Judge Mode spec + plans.)
-
-## `docs/braindumps/`
-
-| File | Status | Purpose |
-|---|---|---|
-| `2026-04-26-agent-army-and-dashboard.md` | **RESEARCH** (origin doc) | Produced Amendment A3 — kept for original brainstorming context. |
-
-## `docs/archive/`
-
-| File | Status | Purpose |
-|---|---|---|
-| `README.md` | **ACTIVE** | Explains that archived notes are non-authoritative and maps current archive contents. |
-| `protocol-sift-integration-reference.md` | **RESEARCH** (external, NOT authoritative) | Where this disagrees with project specs, specs win — see CLAUDE.md "External 'Protocol SIFT' reference" for reconciled contradictions. |
-| `2026-04-27-amendment-a4-managed-agents-runtime.md` | **RESEARCH** | Future hosted-agent runtime design; not on the SANS critical path. |
-| `phase-5-6-sprite-design-brief.md` | **RESEARCH** | Archived copy of the parked sprite/chrome brief. |
-| `figures/` | **REFERENCE** | Embedded images for archived Protocol SIFT reference material. |
 
 ## `docs/templates/`
 

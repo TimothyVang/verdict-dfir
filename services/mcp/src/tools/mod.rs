@@ -23,6 +23,7 @@ pub mod hayabusa_scan;
 pub mod mft_timeline;
 pub mod pcap_triage;
 pub mod prefetch_parse;
+pub mod regf;
 pub mod registry_query;
 pub mod sysmon_network_query;
 pub mod usnjrnl_query;
