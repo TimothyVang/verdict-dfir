@@ -51,6 +51,20 @@ from pathlib import Path, PurePosixPath
 from queue import Empty, Queue
 from typing import Any
 
+try:
+    from findevil_agent.playbook import (
+        MEMORY_EXTS as _PLAYBOOK_MEMORY_EXTS,
+        RAW_DISK_EXTS as _PLAYBOOK_RAW_DISK_EXTS,
+        REGISTRY_HIVE_NAMES as _PLAYBOOK_REGISTRY_HIVE_NAMES,
+        YARA_TARGET_EXTS as _PLAYBOOK_YARA_TARGET_EXTS,
+        JUDGE_SELFSCORE_CRITERIA as _PLAYBOOK_JUDGE_SELFSCORE_CRITERIA,
+        classify_artifact_path as _playbook_classify,
+        detect_evidence_type as _playbook_detect,
+    )
+    _PLAYBOOK_AVAILABLE = True
+except ImportError:
+    _PLAYBOOK_AVAILABLE = False
+
 # ---------------------------------------------------------------------------
 # Configuration (env-overridable)
 # ---------------------------------------------------------------------------
@@ -208,9 +222,9 @@ class SshMcpClient:
 # Evidence-type detection
 # ---------------------------------------------------------------------------
 
-
-MEMORY_EXTS = (".mem", ".raw", ".vmem", ".dmp", ".img", ".lime")
-RAW_DISK_EXTS = (".e01", ".dd", ".aff", ".aff4", ".001")
+# Canonical constants: sourced from findevil_agent.playbook when available.
+MEMORY_EXTS = _PLAYBOOK_MEMORY_EXTS if _PLAYBOOK_AVAILABLE else (".mem", ".raw", ".vmem", ".dmp", ".img", ".lime")
+RAW_DISK_EXTS = _PLAYBOOK_RAW_DISK_EXTS if _PLAYBOOK_AVAILABLE else (".e01", ".dd", ".aff", ".aff4", ".001")
 EXTRACTED_DISK_CLASSES = {"mft", "prefetch", "registry", "usnjrnl"}
 YARA_TARGET_EXTS = (
     ".bat",
@@ -247,15 +261,9 @@ SUSPICIOUS_PREFETCH_TOOL_HINTS = (
 MAX_VELOCIRAPTOR_ZIP_MEMBER_BYTES = int(
     os.environ.get("FINDEVIL_VELOCIRAPTOR_ZIP_MAX_MEMBER_BYTES", str(512 * 1024 * 1024))
 )
-REGISTRY_HIVE_NAMES = {
-    "software",
-    "system",
-    "security",
-    "sam",
-    "default",
-    "ntuser.dat",
-    "usrclass.dat",
-    "amcache.hve",
+REGISTRY_HIVE_NAMES = _PLAYBOOK_REGISTRY_HIVE_NAMES if _PLAYBOOK_AVAILABLE else {
+    "software", "system", "security", "sam", "default",
+    "ntuser.dat", "usrclass.dat", "amcache.hve",
 }
 
 
@@ -266,6 +274,8 @@ def detect_evidence_type(path: str) -> str:
             return "directory"
     except OSError:
         pass
+    if _PLAYBOOK_AVAILABLE:
+        return _playbook_detect(path)
     p = Path(path).name.lower()
     if p.endswith(MEMORY_EXTS):
         return "memory"
@@ -292,6 +302,8 @@ def suspicious_prefetch_tool_hint(executable_name: str) -> tuple[str, str] | Non
 
 def classify_artifact_path(path: str) -> dict[str, str | None]:
     """Classify a file path into a supported evidence/artifact lane."""
+    if _PLAYBOOK_AVAILABLE:
+        return _playbook_classify(path)
     posix = PurePosixPath(str(path).replace("\\", "/"))
     name = posix.name
     lower_name = name.lower()
