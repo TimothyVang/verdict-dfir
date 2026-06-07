@@ -1,13 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/draft/schema.json",
-  "_comment": "SSH-transport variant. Activate with `scripts/find-evil-sift` or `cp .mcp.json.sift .mcp.json`. Requires the SIFT VM running with port-forwarding 2222 \u2192 22 and an SSH key at ~/.ssh/sift_key whose pubkey is in the VM's authorized_keys. Repo path inside VM is assumed at /home/sansforensics/find-evil \u2014 change SIFT_REPO_PATH below if you put it elsewhere.",
+  "_comment": "SSH-transport variant. Activate with scripts/find-evil-sift, which rewrites IP/key/repo at runtime from env vars (SIFT_SSH_KEY, SIFT_VM_IP, GUEST_USER, GUEST_REPO_PATH). Default key: ~/.ssh/sift_key. Do not hand-edit the IP or key path here; they are populated automatically.",
   "mcpServers": {
     "findevil-mcp": {
       "type": "stdio",
       "command": "ssh",
       "args": [
         "-i",
-        "C:/Users/newbi/.ssh/sift_key",
+        "~/.ssh/sift_key",
         "-T",
         "-o",
         "StrictHostKeyChecking=accept-new",
@@ -15,7 +15,7 @@
         "ServerAliveInterval=30",
         "-o",
         "ServerAliveCountMax=3",
-        "sansforensics@192.168.197.143",
+        "sansforensics@127.0.0.1",
         "VOLATILITY_BIN=/home/sansforensics/.local/bin/vol HAYABUSA_BIN=/home/sansforensics/.local/bin/hayabusa VELOCIRAPTOR_BIN=/home/sansforensics/.local/bin/velociraptor exec /home/sansforensics/find-evil/target/release/findevil-mcp"
       ]
     },
@@ -24,7 +24,7 @@
       "command": "ssh",
       "args": [
         "-i",
-        "C:/Users/newbi/.ssh/sift_key",
+        "~/.ssh/sift_key",
         "-T",
         "-o",
         "StrictHostKeyChecking=accept-new",
@@ -32,7 +32,7 @@
         "ServerAliveInterval=30",
         "-o",
         "ServerAliveCountMax=3",
-        "sansforensics@192.168.197.143",
+        "sansforensics@127.0.0.1",
         "cd /home/sansforensics/find-evil/services/agent_mcp && exec /home/sansforensics/.local/bin/uv run python -m findevil_agent_mcp.server"
       ]
     }
