@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DashboardNav } from "@/components/DashboardNav";
 import { AutomationPanel } from "@/components/investigation/AutomationPanel";
 import { EvidenceBanner } from "@/components/investigation/EvidenceBanner";
+import { GroundingPanel } from "@/components/investigation/GroundingPanel";
 import { InvestigationStreamPanel } from "@/components/investigation/InvestigationStreamPanel";
 import { LiveTimeline } from "@/components/investigation/LiveTimeline";
 import { ReportPanel } from "@/components/investigation/ReportPanel";
@@ -449,6 +450,7 @@ export default function DashboardPage() {
               manifestDone={manifestDone}
               onReadyChange={setReportReady}
             />
+            <GroundingPanel caseDir={connectedCase} />
           </div>
         </div>
       </div>

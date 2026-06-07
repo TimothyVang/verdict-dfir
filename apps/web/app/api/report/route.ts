@@ -33,6 +33,7 @@ const ALLOWED_FILES = new Set([
   "timeline.json",
   "timeline.csv",
   "automation.json",
+  "grounding.json", // post-verdict grounding sidecar (operator aid; not evidence)
 ]);
 
 const CONTENT_TYPES: Record<string, string> = {
