@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# scripts/verdict-docker — run a VERDICT investigation inside the reproducible
+# runner container (docker/verdict-runner.Dockerfile). Evidence goes in
+# read-only; the signed run + audit.jsonl persist to ./out/ on the host.
+#
+#   bash scripts/verdict-docker <evidence-path> [--build]
+#
+# Credentials (one of, auto-detected): CLAUDE_CODE_OAUTH_TOKEN, ANTHROPIC_API_KEY,
+# or a populated ~/.claude (mounted read-only). Fails closed if none are present.
+# Set ANTHROPIC_MODEL to pin the Claude model id for run-to-run consistency.
+#
+# See docs/runbooks/docker-runner.md for the full story (and the determinism
+# caveat: containers pin the ENVIRONMENT, not the LLM's wording).
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+IMAGE="verdict-runner:local"
+DOCKERFILE="${REPO}/docker/verdict-runner.Dockerfile"
+
+usage() {
+  echo "usage: bash scripts/verdict-docker <evidence-path> [--build]" >&2
+  exit 2
+}
+
+EVIDENCE=""
+FORCE_BUILD=0
+for arg in "$@"; do
+  case "${arg}" in
+    --build)   FORCE_BUILD=1 ;;
+    -h|--help) usage ;;
+    -*)        echo "unknown flag: ${arg}" >&2; usage ;;
+    *)         EVIDENCE="${arg}" ;;
+  esac
+done
+[ -n "${EVIDENCE}" ] || usage
+[ -e "${EVIDENCE}" ] || { echo "[verdict-docker] evidence not found: ${EVIDENCE}" >&2; exit 1; }
+
+command -v docker >/dev/null 2>&1 || {
+  echo "[verdict-docker] docker is not installed or not on PATH." >&2
+  exit 1
+}
+
+# Build the image if it is missing or a rebuild was requested.
+if [ "${FORCE_BUILD}" -eq 1 ] || ! docker image inspect "${IMAGE}" >/dev/null 2>&1; then
+  echo "[verdict-docker] building ${IMAGE} (first build downloads the DFIR toolchain — several minutes)..."
+  docker build -f "${DOCKERFILE}" -t "${IMAGE}" "${REPO}"
+fi
+
+# Credential auto-detection (CLAUDE.md sec 8). Fail closed if none.
+run_args=()
+if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+  run_args+=(-e CLAUDE_CODE_OAUTH_TOKEN)
+elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  run_args+=(-e ANTHROPIC_API_KEY)
+elif [ -d "${HOME}/.claude" ]; then
+  run_args+=(-v "${HOME}/.claude:/home/verdict/.claude:ro")
+else
+  echo "[verdict-docker] no credentials found. Set CLAUDE_CODE_OAUTH_TOKEN or" >&2
+  echo "  ANTHROPIC_API_KEY, or run 'claude auth login' to populate ~/.claude." >&2
+  exit 1
+fi
+[ -n "${ANTHROPIC_MODEL:-}" ] && run_args+=(-e ANTHROPIC_MODEL)
+
+# Output dir must exist and be owned by the host user so the in-image uid-1000
+# `verdict` user can write the run there.
+mkdir -p "${REPO}/out"
+
+# Absolute evidence path for the read-only bind mount.
+ev_dir="$(cd "$(dirname "${EVIDENCE}")" && pwd)"
+ev_abs="${ev_dir}/$(basename "${EVIDENCE}")"
+
+echo "[verdict-docker] evidence (ro): ${ev_abs}"
+echo "[verdict-docker] output  (rw): ${REPO}/out"
+
+exec docker run --rm -it \
+  -v "${ev_abs}:/evidence/case:ro" \
+  -v "${REPO}/out:/workspace/tmp:rw" \
+  "${run_args[@]}" \
+  "${IMAGE}" \
+  bash -lc 'printf "\n  VERDICT runner ready.\n  Evidence mounted read-only at /evidence/case\n  Output persists to ./out/ on your host.\n\n  Starting Claude Code — then type:  investigate /evidence/case\n\n"; exec claude'
