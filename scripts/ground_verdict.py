@@ -182,6 +182,41 @@ def merge_bundle(
     return merged
 
 
+# Typed IOC buckets we can reputation-enrich (from malware_triage.aggregate_iocs).
+ENRICHABLE_IOC_TYPES = ("hashes", "domains", "ips", "urls")
+
+
+def extract_iocs(verdict: dict[str, Any]) -> dict[str, list[str]]:
+    """Pull typed IOCs from malware_triage.aggregate_iocs only.
+
+    Deliberately NOT a regex over the verdict: every tool output is SHA-256'd
+    into the crypto chain, so a blind hash regex would scoop up custody hashes
+    and manufacture bogus IOCs. Only the engine's typed observables enrich.
+    """
+    agg = (verdict.get("malware_triage") or {}).get("aggregate_iocs") or {}
+    return {k: [v for v in (agg.get(k) or []) if v] for k in ENRICHABLE_IOC_TYPES}
+
+
+def run_ioc_enrichment(iocs: dict[str, list[str]]) -> dict[str, Any] | None:
+    """Host-side reputation enrichment (VirusTotal). Key never enters n8n.
+
+    Returns None when there are no IOCs to enrich; otherwise the enrichment
+    block (results + availability note) for the research bundle.
+    """
+    if not any(iocs.values()):
+        return None
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import ioc_enrich
+    except Exception as e:  # ioc_enrich is optional; never break technique grounding
+        return {
+            "results": [],
+            "available": False,
+            "note": f"ioc_enrich unavailable: {e}",
+        }
+    return ioc_enrich.enrich(iocs)
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 1:
         print(__doc__)
@@ -208,6 +243,12 @@ def main(argv: list[str]) -> int:
     response = call_workflow(case_id, techs)
     merged = merge_bundle(techs, response.get("technique_research") or [])
 
+    iocs = extract_iocs(verdict)
+    ioc_total = sum(len(v) for v in iocs.values())
+    if ioc_total:
+        print(f"enriching {ioc_total} IOC(s) host-side via VirusTotal…")
+    ioc_block = run_ioc_enrichment(iocs)
+
     bundle = {
         "case_id": case_id,
         "verdict": verdict.get("verdict"),
@@ -219,6 +260,8 @@ def main(argv: list[str]) -> int:
         "grounding.json. No technique is 'supported' without a quoted excerpt.",
         "techniques": merged,
     }
+    if ioc_block is not None:
+        bundle["ioc_enrichment"] = ioc_block
     out_path = case_dir / RESEARCH_FILENAME
     out_path.write_text(json.dumps(bundle, indent=2))
 
@@ -232,6 +275,17 @@ def main(argv: list[str]) -> int:
         else:
             mark, name = "ok   ", (m["mitre_name"] or "-")
         print(f"  [{tag}] {mark} {m['technique_id']:<12} {name}")
+    if ioc_block is not None:
+        if not ioc_block.get("available"):
+            print(f"  [ioc] skipped — {ioc_block.get('note')}")
+        else:
+            for r in ioc_block.get("results", []):
+                mk = "ok  " if r.get("found") else "MISS"
+                det = f"mal={r.get('malicious')}/{r.get('total_engines')}"
+                label = (r.get("names") or [r.get("error") or ""])[0]
+                print(
+                    f"  [ioc] {mk} {r.get('type'):<6} {det:<12} {label} {r.get('ioc')[:44]}"
+                )
     print(f"\nwrote {out_path}")
     print(
         "next: Claude Code judges this bundle per agent-config/GROUNDING.md "
