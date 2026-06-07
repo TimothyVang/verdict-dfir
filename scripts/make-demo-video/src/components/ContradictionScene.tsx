@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { ChipBadge } from "./shared/ChipBadge";
+import { spread } from "./shared/pacing";
 import { Watermark } from "./shared/Watermark";
 
 const MONO = "'JetBrains Mono', 'Courier New', monospace";
@@ -34,21 +35,31 @@ export function ContradictionScene() {
 
   const titleOp = interpolate(frame, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-  // Pool A slides in from left at frame 15
-  const poolAX = interpolate(frame - 15, [0, 20], [-500, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const poolAOp = interpolate(frame - 15, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // Spread the ACH beats (pools in → contradiction → reconciliation) across the
+  // full 60s runtime so the disagreement and the judge merge land with the
+  // narration instead of all resolving in the first ~3s.
+  const sd = (d: number) => spread(d, 15, 80, durationInFrames, 24, 230);
+  const poolAD = sd(15);
+  const poolBD = sd(22);
+  const contD = sd(50);
+  const arrowD = sd(65);
+  const judgeD = sd(80);
 
-  // Pool B slides in from right at frame 22
-  const poolBX = interpolate(frame - 22, [0, 20], [500, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const poolBOp = interpolate(frame - 22, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // Pool A slides in from left
+  const poolAX = interpolate(frame - poolAD, [0, 20], [-500, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const poolAOp = interpolate(frame - poolAD, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-  // Contradiction record pulses in at frame 50
-  const contPulse = spring({ frame: frame - 50, fps, config: { damping: 10, stiffness: 120 } });
-  const contOp = interpolate(frame - 50, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // Pool B slides in from right
+  const poolBX = interpolate(frame - poolBD, [0, 20], [500, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const poolBOp = interpolate(frame - poolBD, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-  // Judge merges at frame 80
-  const judgeOp = interpolate(frame - 80, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const judgeScale = spring({ frame: frame - 80, fps, config: { damping: 14, stiffness: 100 } });
+  // Contradiction record pulses in
+  const contPulse = spring({ frame: frame - contD, fps, config: { damping: 10, stiffness: 120 } });
+  const contOp = interpolate(frame - contD, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
+  // Judge merges
+  const judgeOp = interpolate(frame - judgeD, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const judgeScale = spring({ frame: frame - judgeD, fps, config: { damping: 14, stiffness: 100 } });
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
@@ -105,12 +116,12 @@ export function ContradictionScene() {
           </div>
 
           {/* Arrow down */}
-          {frame > 65 && (
-            <div style={{ color: "#30363d", fontSize: 28 }}>↓</div>
+          {frame > arrowD && (
+            <div style={{ color: "#6e7681", fontSize: 28 }}>↓</div>
           )}
 
           {/* Judge verdict */}
-          {frame > 80 && (
+          {frame > judgeD && (
             <div style={{
               opacity: judgeOp,
               transform: `scale(${0.6 + judgeScale * 0.4})`,

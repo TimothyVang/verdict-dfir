@@ -1,5 +1,6 @@
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { spread } from "./shared/pacing";
 import { Watermark } from "./shared/Watermark";
 
 const MONO = "'JetBrains Mono', 'Courier New', monospace";
@@ -21,6 +22,12 @@ export function ArchDiagram() {
 
   // Title
   const titleOp = interpolate(frame, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
+  // Spread the box + arrow build across the beat instead of finishing in ~2s.
+  const sd = (d: number) => spread(d, 10, 66, durationInFrames, 24, 200);
+  // Each box's reveal frame; arrows fire just AFTER their target box lands so a
+  // connector never points into empty space mid-build.
+  const boxDelay = (i: number) => sd(10 + i * 14);
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
@@ -45,21 +52,23 @@ export function ArchDiagram() {
 
       {/* SVG diagram */}
       <svg style={{ position: "absolute", inset: 0 }} width="1920" height="1080">
-        {/* Arrows between layers */}
-        {/* Vault → SIFT */}
-        <Arrow x1={960} y1={220} x2={960} y2={265} frame={frame} fps={fps} delay={LAYERS[0].y / 10} color="#8b949e"/>
-        {/* SIFT → Rust MCP */}
-        <Arrow x1={900} y1={340} x2={720} y2={395} frame={frame} fps={fps} delay={32} color="#f39c12"/>
-        {/* SIFT → Python MCP */}
-        <Arrow x1={1020} y1={340} x2={1200} y2={395} frame={frame} fps={fps} delay={36} color="#f39c12"/>
-        {/* Rust → Orchestrator */}
-        <Arrow x1={700} y1={465} x2={880} y2={545} frame={frame} fps={fps} delay={44} color="#3498db"/>
-        {/* Python → Orchestrator */}
-        <Arrow x1={1220} y1={465} x2={1040} y2={545} frame={frame} fps={fps} delay={48} color="#9b59b6"/>
+        {/* Arrows between layers. y1 sits at each source box's BOTTOM edge
+            (boxes span [y, y+90]) so the dashed line never crosses the box's
+            own subtitle text. */}
+        {/* Vault (bottom 260) → SIFT (top 290) — fires after SIFT (box 1) */}
+        <Arrow x1={960} y1={262} x2={960} y2={286} frame={frame} fps={fps} delay={boxDelay(1) + 8} color="#8b949e"/>
+        {/* SIFT (bottom 380) → Rust MCP (top 420) — after Rust (box 2) */}
+        <Arrow x1={900} y1={384} x2={720} y2={414} frame={frame} fps={fps} delay={boxDelay(2) + 8} color="#f39c12"/>
+        {/* SIFT (bottom 380) → Python MCP (top 420) — after Python (box 3) */}
+        <Arrow x1={1020} y1={384} x2={1200} y2={414} frame={frame} fps={fps} delay={boxDelay(3) + 8} color="#f39c12"/>
+        {/* Rust (bottom 510) → Orchestrator (top 570) — after Orchestrator (box 4) */}
+        <Arrow x1={700} y1={514} x2={880} y2={566} frame={frame} fps={fps} delay={boxDelay(4) + 8} color="#3498db"/>
+        {/* Python (bottom 510) → Orchestrator (top 570) — after Orchestrator (box 4) */}
+        <Arrow x1={1220} y1={514} x2={1040} y2={566} frame={frame} fps={fps} delay={boxDelay(4) + 12} color="#9b59b6"/>
 
         {/* Layer boxes */}
         {LAYERS.map((layer, i) => {
-          const delay = 10 + i * 14;
+          const delay = boxDelay(i);
           const s = spring({ frame: frame - delay, fps, config: { damping: 13, stiffness: 90 } });
           const op = interpolate(frame - delay, [0, 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
           const W = i === 4 ? 540 : 380;

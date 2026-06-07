@@ -1,5 +1,6 @@
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { spread } from "./shared/pacing";
 import { Watermark } from "./shared/Watermark";
 
 const MONO = "'JetBrains Mono', 'Courier New', monospace";
@@ -33,16 +34,23 @@ export function FleetScene() {
 
   const titleOp = interpolate(frame, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-  // Progress bar at bottom
+  // Spread the host fan-out across the full 50s beat so the grid fills in step
+  // with the narration instead of completing in the first ~4s.
+  const hostDelay = (id: number) => spread(20 + id * 4, 24, 108, durationInFrames, 30, 200);
+  const rollupD = spread(95, 24, 108, durationInFrames, 30, 200);
+
+  // Progress = hosts whose investigation has finished. Both clean ("done") and
+  // flagged hosts are investigated — flagged just have findings — so the
+  // counter must include them or it under-reports against the visible grid.
   const doneCount = HOSTS.filter((h) => {
-    const delay = 20 + h.id * 4;
-    return h.status === "done" && frame > delay;
+    const investigated = h.status === "done" || h.status === "flagged";
+    return investigated && frame > hostDelay(h.id);
   }).length;
   const progressWidth = (doneCount / 22) * 100;
 
-  // Fleet rollup slides in at frame 95
-  const rollupOp = interpolate(frame - 95, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const rollupX = interpolate(frame - 95, [0, 16], [60, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // Fleet rollup slides in near the end of the fan-out.
+  const rollupOp = interpolate(frame - rollupD, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const rollupX = interpolate(frame - rollupD, [0, 16], [60, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
@@ -70,7 +78,7 @@ export function FleetScene() {
         gap: 14,
       }}>
         {HOSTS.map((host) => {
-          const delay = 20 + host.id * 4;
+          const delay = hostDelay(host.id);
           const s = spring({ frame: frame - delay, fps, config: { damping: 14, stiffness: 110 } });
           const op = interpolate(frame - delay, [0, 10], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
           const color = STATUS_COLOR[host.status];

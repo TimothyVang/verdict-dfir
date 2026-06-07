@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { AuditLine } from "./shared/AuditLine";
+import { spread } from "./shared/pacing";
 import { Watermark } from "./shared/Watermark";
 
 const MONO = "'JetBrains Mono', 'Courier New', monospace";
@@ -23,16 +24,24 @@ export function HashChainScene() {
 
   const titleOp = interpolate(frame, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-  // Merkle root appears at frame 65
-  const merkleOp = interpolate(frame - 65, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const merkleS = spring({ frame: frame - 65, fps, config: { damping: 12, stiffness: 100 } });
+  // Spread the chain build across the whole beat: records type down the left
+  // while the merkle/sigstore/FRE panels resolve on the right, ending just
+  // before the cross-fade instead of all completing in the first ~4s.
+  const sd = (d: number) => spread(d, 15, 110, durationInFrames, 24, 210);
+  const merkleD = sd(65);
+  const sigD = sd(90);
+  const freD = sd(110);
 
-  // Sigstore badge appears at frame 90
-  const sigOp = interpolate(frame - 90, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const sigS = spring({ frame: frame - 90, fps, config: { damping: 12, stiffness: 90 } });
+  // Merkle root
+  const merkleOp = interpolate(frame - merkleD, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const merkleS = spring({ frame: frame - merkleD, fps, config: { damping: 12, stiffness: 100 } });
 
-  // FRE label at frame 110
-  const freOp = interpolate(frame - 110, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // Sigstore badge
+  const sigOp = interpolate(frame - sigD, [0, 16], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const sigS = spring({ frame: frame - sigD, fps, config: { damping: 12, stiffness: 90 } });
+
+  // FRE label + CLI block
+  const freOp = interpolate(frame - freD, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
@@ -55,7 +64,7 @@ export function HashChainScene() {
       {/* Audit records column */}
       <div style={{ position: "absolute", top: 180, left: 140, width: 820, display: "flex", flexDirection: "column", gap: 10 }}>
         {AUDIT_RECORDS.map((rec, i) => {
-          const delay = 15 + i * 12;
+          const delay = sd(15 + i * 12);
           const op = interpolate(frame - delay, [0, 10], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
           return (
             <div key={i} style={{ opacity: op }}>
@@ -67,7 +76,7 @@ export function HashChainScene() {
                 highlight={rec.kind === "manifest_finalize"}
               />
               {i < AUDIT_RECORDS.length - 1 && frame > delay + 8 && (
-                <div style={{ marginLeft: 24, color: "#30363d", fontSize: 14, fontFamily: MONO }}>↓ links to next</div>
+                <div style={{ marginLeft: 24, color: "#6e7681", fontSize: 14, fontFamily: MONO }}>↓ links to next</div>
               )}
             </div>
           );

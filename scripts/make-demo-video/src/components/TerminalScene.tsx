@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { ChipBadge } from "./shared/ChipBadge";
+import { spread } from "./shared/pacing";
 import { Watermark } from "./shared/Watermark";
 
 const MONO = "'JetBrains Mono', 'Courier New', monospace";
@@ -14,8 +15,8 @@ const TERMINAL_LINES = [
   { text: "[vol_psscan]  35 processes found — 3 DIVERGE from pslist !", color: "#e74c3c", delay: 66 },
   { text: "[vol_psxview] cross-referencing 6 process views...", color: "#8b949e", delay: 76 },
   { text: "", color: "#8b949e", delay: 84 },
-  { text: "  PID    NAME              PPID   OFFSET       STATUS", color: "#30363d", delay: 86 },
-  { text: "  ----   ----------------  ----   ----------   ----------------------", color: "#30363d", delay: 88 },
+  { text: "  PID    NAME              PPID   OFFSET       STATUS", color: "#6e7681", delay: 86 },
+  { text: "  ----   ----------------  ----   ----------   ----------------------", color: "#6e7681", delay: 88 },
   { text: "  1492   svchost.exe        604   0x8212a020   pslist ONLY", color: "#f39c12", delay: 92 },
   { text: "  1492   svchost.exe        604   0x83f4e060   psscan ONLY  ← DKOM", color: "#e74c3c", delay: 98 },
   { text: "  3044   explorer.exe      1232   0x81f8d040   psscan ONLY  ← hidden", color: "#e74c3c", delay: 104 },
@@ -25,7 +26,7 @@ const TERMINAL_LINES = [
   { text: "  tool_call_id: tci_psscan_00a7f3c841e609", color: "#3498db", delay: 126 },
   { text: "[verify_finding] replaying tci_psscan_00a7f3c841e609...", color: "#8b949e", delay: 132 },
   { text: "[verify_finding] hash match ✓  INFERRED → CONFIRMED", color: "#2ecc71", delay: 142 },
-  { text: "[audit_append]   e3b0c44298fc1c14 → prev: 9b57a2f3c841e609", color: "#30363d", delay: 150 },
+  { text: "[audit_append]   e3b0c44298fc1c14 → prev: 9b57a2f3c841e609", color: "#6e7681", delay: 150 },
 ];
 
 interface TerminalSceneProps {
@@ -43,12 +44,15 @@ export function TerminalScene({ title, subtitle, accentColor }: TerminalScenePro
   });
   const titleOp = interpolate(frame, [0, 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
+  // Spread the line reveals across the whole beat so the terminal types out
+  // in step with the narration instead of finishing in the first ~5s.
+  const sd = (d: number) => spread(d, 5, 150, durationInFrames, 24, 230);
+
   // Cursor blink
   const cursorVisible = Math.floor(frame / 15) % 2 === 0;
 
-  // Which lines are visible
-  const lastVisibleDelay = Math.max(...TERMINAL_LINES.filter((l) => l.delay <= frame).map((l) => l.delay));
-  const isTyping = frame < lastVisibleDelay + 30;
+  // Keep the cursor on the last typed line until the final hold begins.
+  const isTyping = frame < durationInFrames - 60;
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0d1117", opacity: fadeOut }}>
@@ -102,8 +106,8 @@ export function TerminalScene({ title, subtitle, accentColor }: TerminalScenePro
         {/* Content */}
         <div style={{ padding: "20px 24px", fontFamily: MONO, fontSize: 16, lineHeight: 1.7 }}>
           {TERMINAL_LINES.map((line, i) => {
-            if (frame < line.delay) return null;
-            const isLast = i === TERMINAL_LINES.length - 1 || frame < TERMINAL_LINES[i + 1].delay;
+            if (frame < sd(line.delay)) return null;
+            const isLast = i === TERMINAL_LINES.length - 1 || frame < sd(TERMINAL_LINES[i + 1].delay);
             return (
               <div key={i} style={{ color: line.color, minHeight: line.text ? "auto" : 8 }}>
                 {line.text}

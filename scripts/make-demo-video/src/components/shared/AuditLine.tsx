@@ -31,9 +31,9 @@ export function AuditLine({ kind, hash, prevHash, confidence, dim, highlight }: 
       fontSize: 14,
     }}>
       <span style={{ color: "#9b59b6", minWidth: 160 }}>{kind}</span>
-      <span style={{ color: "#30363d", fontSize: 11 }}>prev:</span>
-      <span style={{ color: "#30363d", fontFamily: "monospace", fontSize: 11 }}>{prevHash}</span>
-      <span style={{ color: "#30363d", fontSize: 11 }}>→</span>
+      <span style={{ color: "#6e7681", fontSize: 11 }}>prev:</span>
+      <span style={{ color: "#6e7681", fontFamily: "monospace", fontSize: 11 }}>{prevHash}</span>
+      <span style={{ color: "#6e7681", fontSize: 11 }}>→</span>
       <span style={{ color: "#8b949e", fontFamily: "monospace", fontSize: 11 }}>{hash}</span>
       {confidence && (
         <span style={{ marginLeft: "auto", color, fontWeight: 700, fontSize: 12 }}>{confidence}</span>
