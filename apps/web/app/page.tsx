@@ -61,8 +61,9 @@ export default function DashboardPage() {
     setConn("disconnected");
   }, []);
 
-  const connect = useCallback(() => {
-    if (!casePath.trim()) {
+  const connect = useCallback((pathArg?: string) => {
+    const target = (pathArg ?? casePath).trim();
+    if (!target) {
       setErrorMsg("Enter an absolute case directory path first.");
       return;
     }
@@ -73,7 +74,7 @@ export default function DashboardPage() {
     setErrorMsg(null);
     setConn("connecting");
 
-    const url = `/api/audit?case=${encodeURIComponent(casePath.trim())}`;
+    const url = `/api/audit?case=${encodeURIComponent(target)}`;
     const es = new EventSource(url);
     esRef.current = es;
 
@@ -129,13 +130,19 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // On first mount, if the URL carries `?case=...`, auto-populate
-  // the input box so judges can deep-link to a case.
+  // On first mount, if the URL carries `?case=...`, auto-populate the input
+  // AND start streaming — so a deep link is "open and watch", no typing.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const c = params.get("case");
-    if (c) setCasePath(c);
+    if (c) {
+      setCasePath(c);
+      connect(c);
+    }
+    // Mount-only: the deep-link connect should fire once, not on every
+    // connect-identity change (connect is re-memoized when casePath updates).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const dotColor =
