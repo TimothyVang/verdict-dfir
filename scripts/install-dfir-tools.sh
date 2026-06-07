@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# scripts/install-dfir-tools.sh — install the host-side DFIR binaries the Rust
+# MCP server shells out to, for LOCAL-host mode (the default; the SIFT VM and the
+# Docker runner image already bundle these).
+#
+# User-space only: everything lands in ~/.local/bin (no sudo). Idempotent (skips
+# anything already resolvable) and best-effort (a failed download warns and
+# continues — a missing tool degrades to a clean BinaryNotFound the agent pivots
+# on, never a crash). Versions match docker/verdict-runner.Dockerfile so the host
+# and the container agree.
+#
+# pcap tooling (tshark) needs a system package; it is reported as an apt hint
+# rather than installed, to avoid a sudo prompt. Override any version via env
+# (e.g. HAYABUSA_VERSION=2.20.0 bash scripts/install-dfir-tools.sh).
+#
+# Run standalone or via scripts/install.sh. Safe to re-run any time to top up.
+
+set -uo pipefail
+
+c_grn=$'\033[0;32m'; c_yel=$'\033[0;33m'; c_blu=$'\033[0;34m'; c_off=$'\033[0m'
+ok()   { echo "${c_grn}[OK]${c_off}    $*"; }
+info() { echo "${c_blu}[INFO]${c_off}  $*"; }
+warn() { echo "${c_yel}[WARN]${c_off}  $*"; }
+
+LOCAL_BIN="${HOME}/.local/bin"
+mkdir -p "${LOCAL_BIN}"
+# Remember whether ~/.local/bin was already reachable, then make it reachable for
+# the resolves below.
+case ":${PATH}:" in *":${LOCAL_BIN}:"*) BIN_ON_PATH=1 ;; *) BIN_ON_PATH=0 ;; esac
+export PATH="${LOCAL_BIN}:${PATH}"
+
+HAYABUSA_VERSION="${HAYABUSA_VERSION:-2.19.0}"
+CHAINSAW_VERSION="${CHAINSAW_VERSION:-2.13.0}"
+VOLATILITY_VERSION="${VOLATILITY_VERSION:-2.11.0}"
+VELOCIRAPTOR_VERSION="${VELOCIRAPTOR_VERSION:-0.74.6}"
+VELOCIRAPTOR_RELEASE="${VELOCIRAPTOR_RELEASE:-0.74}"
+PANDOC_VERSION="${PANDOC_VERSION:-3.1.11.1}"
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# --- volatility3 (memory analysis) — pip --user ---
+if have vol || have vol.py || have volatility3; then
+  ok "volatility3 present ($(command -v vol vol.py volatility3 2>/dev/null | head -1))."
+else
+  info "Installing volatility3 ${VOLATILITY_VERSION} (pip --user)..."
+  if pip3 install --user --quiet "volatility3==${VOLATILITY_VERSION}"; then
+    ok "volatility3 installed."
+  else
+    warn "volatility3 install failed — try: uv tool install volatility3"
+  fi
+fi
+
+# --- hayabusa (EVTX / Sigma) — release zip; unzip drops the exec bit ---
+if have hayabusa || [ -x "${LOCAL_BIN}/hayabusa" ]; then
+  ok "hayabusa present."
+else
+  info "Installing hayabusa ${HAYABUSA_VERSION}..."
+  t="$(mktemp -d)"
+  if curl -fsSL "https://github.com/Yamato-Security/hayabusa/releases/download/v${HAYABUSA_VERSION}/hayabusa-${HAYABUSA_VERSION}-lin-x64-gnu.zip" -o "${t}/h.zip" \
+     && unzip -q "${t}/h.zip" -d "${t}"; then
+    hb="$(find "${t}" -maxdepth 2 -name 'hayabusa-*-lin-x64-gnu' -type f | head -1)"
+    if [ -n "${hb}" ]; then install -Dm755 "${hb}" "${LOCAL_BIN}/hayabusa" && ok "hayabusa -> ${LOCAL_BIN}/hayabusa"
+    else warn "hayabusa binary not found in archive."; fi
+  else
+    warn "hayabusa download/extract failed (optional; EVTX/Sigma scans will BinaryNotFound)."
+  fi
+  rm -rf "${t}"
+fi
+
+# --- chainsaw (EVTX hunting) — release zip ---
+if have chainsaw || [ -x "${LOCAL_BIN}/chainsaw" ]; then
+  ok "chainsaw present."
+else
+  info "Installing chainsaw ${CHAINSAW_VERSION}..."
+  t="$(mktemp -d)"
+  if curl -fsSL "https://github.com/WithSecureLabs/chainsaw/releases/download/v${CHAINSAW_VERSION}/chainsaw_all_platforms+rules.zip" -o "${t}/c.zip" \
+     && unzip -q "${t}/c.zip" -d "${t}"; then
+    cs="$(find "${t}" -name 'chainsaw_x86_64-unknown-linux-gnu' -type f | head -1)"
+    if [ -n "${cs}" ]; then install -Dm755 "${cs}" "${LOCAL_BIN}/chainsaw" && ok "chainsaw -> ${LOCAL_BIN}/chainsaw"
+    else warn "chainsaw binary not found in archive."; fi
+  else
+    warn "chainsaw download/extract failed (optional; EVTX hunting will BinaryNotFound)."
+  fi
+  rm -rf "${t}"
+fi
+
+# --- velociraptor (collection) — single static binary ---
+if have velociraptor || [ -x "${LOCAL_BIN}/velociraptor" ]; then
+  ok "velociraptor present."
+else
+  info "Installing velociraptor ${VELOCIRAPTOR_VERSION}..."
+  if curl -fsSL "https://github.com/Velocidex/velociraptor/releases/download/v${VELOCIRAPTOR_RELEASE}/velociraptor-v${VELOCIRAPTOR_VERSION}-linux-amd64-musl" -o "${LOCAL_BIN}/velociraptor"; then
+    chmod +x "${LOCAL_BIN}/velociraptor"; ok "velociraptor -> ${LOCAL_BIN}/velociraptor"
+  else
+    rm -f "${LOCAL_BIN}/velociraptor"; warn "velociraptor download failed (optional; vel_collect will BinaryNotFound)."
+  fi
+fi
+
+# --- pandoc (report HTML/PDF render) — static tarball ---
+if have pandoc || [ -x "${LOCAL_BIN}/pandoc" ]; then
+  ok "pandoc present."
+else
+  info "Installing pandoc ${PANDOC_VERSION}..."
+  t="$(mktemp -d)"
+  if curl -fsSL "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-linux-amd64.tar.gz" -o "${t}/p.tgz" \
+     && tar -xzf "${t}/p.tgz" -C "${t}"; then
+    pd="$(find "${t}" -type f -name pandoc -path '*/bin/*' | head -1)"
+    if [ -n "${pd}" ]; then install -Dm755 "${pd}" "${LOCAL_BIN}/pandoc" && ok "pandoc -> ${LOCAL_BIN}/pandoc"
+    else warn "pandoc binary not found in archive."; fi
+  else
+    warn "pandoc download/extract failed (optional; report HTML render skipped)."
+  fi
+  rm -rf "${t}"
+fi
+
+# --- tshark (pcap_triage) — system package; not user-space installable ---
+if have tshark; then
+  ok "tshark present."
+else
+  warn "tshark absent (pcap_triage only). System package: sudo apt-get install -y tshark"
+fi
+
+echo
+if [ "${BIN_ON_PATH}" -eq 0 ]; then
+  warn "${LOCAL_BIN} is not on your PATH — claude/doctor won't find these tools."
+  echo "    Add to your shell rc:  export PATH=\"\$HOME/.local/bin:\$PATH\""
+else
+  ok "DFIR tool install pass complete (${LOCAL_BIN} on PATH)."
+fi

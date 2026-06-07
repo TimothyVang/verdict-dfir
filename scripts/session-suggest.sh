@@ -12,12 +12,27 @@ export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EVIDENCE_DIR="${REPO_ROOT}/evidence"
-MCP_BIN="${REPO_ROOT}/services/mcp/target/release/findevil-mcp"
+# findevil-mcp is a cargo *workspace* member, so the release binary lands in the
+# workspace-root target/, not services/mcp/target/. Checking the per-crate path
+# made a built binary read as "not built".
+MCP_BIN="${REPO_ROOT}/target/release/findevil-mcp"
 
-# newest non-placeholder entry (file OR case folder) in evidence/; empty if none.
-# Same filter as scripts/verdict:104-108 so "evidence present" means one thing.
+# Extensions that mark a real evidence image. Mirrors scripts/install.sh; case /
+# Velociraptor .zip is excluded so dependency archives don't get surfaced.
+EVIDENCE_EXTS='E01|dd|raw|img|mem|vmem|aff4|aff|evtx|pcap|pcapng|vhd|vhdx'
+
+# newest non-placeholder evidence entry (file OR case folder); empty if none.
+#   1. canonical evidence/ — anything dropped there counts; same README/.gitkeep
+#      filter as scripts/verdict:104-108 so "evidence present" means one thing.
+#   2. fallback: tmp/evidence/ (a download or prior-run working dir) filtered to
+#      real image extensions, so an image there isn't read as "no evidence".
 newest_evidence() {
-  ls -dt "${EVIDENCE_DIR}"/* 2>/dev/null | grep -vE '/(README\.md|\.gitkeep)$' | head -1 || true
+  local hit
+  hit="$(ls -dt "${EVIDENCE_DIR}"/* 2>/dev/null | grep -vE '/(README\.md|\.gitkeep)$' | head -1 || true)"
+  if [[ -z "${hit}" && -d "${REPO_ROOT}/tmp/evidence" ]]; then
+    hit="$(ls -dt "${REPO_ROOT}/tmp/evidence"/* 2>/dev/null | grep -iE "\.(${EVIDENCE_EXTS})\$" | head -1 || true)"
+  fi
+  printf '%s\n' "${hit}"
 }
 
 EVIDENCE="$(newest_evidence)"

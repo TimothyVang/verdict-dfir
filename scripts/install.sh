@@ -186,6 +186,36 @@ info "Syncing services/agent_mcp/ Python venv..."
 ok "services/agent_mcp/.venv ready."
 
 # ---------------------------------------------------------------------------
+# 4b. Verify BOTH MCP servers are actually ready to spawn.
+# ---------------------------------------------------------------------------
+# The Rust binary was built in §3; the Python venv was synced in §4. Confirm the
+# Python MCP module imports (not just that the venv exists) and that the stdio
+# launch wrappers .mcp.json execs are present, so a fresh session's auto-spawn
+# of both servers can't silently fail.
+
+info "Verifying MCP servers (findevil-mcp + findevil-agent-mcp)..."
+
+if [ -x "target/release/findevil-mcp" ] || [ -x "target/release/findevil-mcp.exe" ]; then
+    ok "findevil-mcp (Rust, 19 DFIR tools) binary present."
+else
+    fail "findevil-mcp binary missing after build — cannot continue."
+    exit 1
+fi
+
+if (cd services/agent_mcp && uv run --frozen python -c "import findevil_agent_mcp" >/dev/null 2>&1); then
+    ok "findevil-agent-mcp (Python, 12 crypto/ACH/memory tools) imports cleanly."
+else
+    warn "findevil-agent-mcp import check failed — the Python MCP server may not start; re-run: uv sync --directory services/agent_mcp"
+fi
+
+if [ -f scripts/run-mcp-rust.sh ] && [ -f scripts/run-mcp-python.sh ]; then
+    ok "MCP launch wrappers present (run-mcp-rust.sh + run-mcp-python.sh)."
+else
+    fail "MCP launch wrappers missing — .mcp.json auto-spawn will fail."
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5. Confirm .mcp.json registration.
 # ---------------------------------------------------------------------------
 
@@ -204,7 +234,80 @@ fi
 ok ".mcp.json registers both MCP servers."
 
 # ---------------------------------------------------------------------------
-# 6. Optional: visible launch-banner alias.
+# 5b. Optional: provision the n8n automation layer.
+# ---------------------------------------------------------------------------
+#
+# n8n is the optional post-verdict automation (route findings -> Slack/ticket).
+# Best-effort and NEVER fatal: scripts/setup-n8n.py self-skips when no n8n is
+# reachable at N8N_BASE (default http://localhost:5678). When one is up it
+# provisions an owner + REST API key (saved to gitignored tmp/n8n-*.txt) and
+# deploys + activates the findevil-finding-to-action workflow, so the dashboard
+# AutomationPanel and scripts/n8n_post.py route live verdicts out of the box.
+# Set FINDEVIL_SKIP_N8N=1 to skip; N8N_AUTO_DOCKER=1 to start a container when
+# none is running. See docs/runbooks/n8n-automation-integration.md.
+
+if [ "${FINDEVIL_SKIP_N8N:-}" = "1" ]; then
+    info "Skipping n8n setup (FINDEVIL_SKIP_N8N=1)."
+else
+    info "Provisioning optional n8n automation layer (best-effort)..."
+    python3 "${REPO}/scripts/setup-n8n.py" || warn "n8n setup skipped/failed (optional, non-fatal)."
+fi
+
+# ---------------------------------------------------------------------------
+# 6. Evidence discovery — surface any evidence already on disk.
+# ---------------------------------------------------------------------------
+#
+# The canonical drop location is evidence/, but evidence frequently lands
+# elsewhere (tmp/evidence/, a prior run, an absolute case path). The
+# SessionStart banner only scans evidence/, so a real image sitting in
+# tmp/evidence/ reads as "no evidence". Scan the common locations here and
+# print ready-to-run `investigate` pointers so nothing gets missed.
+
+info "Scanning for evidence images..."
+
+# Real evidence extensions. Case/Velociraptor .zip is intentionally excluded:
+# matching *.zip would surface the dozens of dependency archives under
+# .venv/ and node_modules/. Point `investigate` at a .zip by hand if needed.
+evidence_exts=(E01 dd raw img mem vmem aff4 aff evtx pcap pcapng vhd vhdx)
+find_args=()
+for ext in "${evidence_exts[@]}"; do
+    find_args+=(-iname "*.${ext}" -o)
+done
+unset 'find_args[${#find_args[@]}-1]'  # drop the trailing -o
+
+# Scan only the roots that hold evidence, skipping vendored trees. The 1 KiB
+# floor drops zero-byte placeholders and the 103-byte rust-smoke mock fixture.
+evidence_roots=()
+for root in evidence tmp/evidence goldens; do
+    [ -d "${root}" ] && evidence_roots+=("${root}")
+done
+
+evidence_hits=""
+if [ "${#evidence_roots[@]}" -gt 0 ]; then
+    evidence_hits=$(
+        find "${evidence_roots[@]}" -type f \( "${find_args[@]}" \) \
+            -not -path "*/node_modules/*" \
+            -not -path "*/.venv/*" \
+            -size +1024c \
+            2>/dev/null | sort -u || true
+    )
+fi
+
+if [ -n "${evidence_hits}" ]; then
+    ok "Evidence found — run any of these in Claude Code:"
+    while IFS= read -r ev; do
+        [ -z "${ev}" ] && continue
+        sz=$(du -h "${ev}" 2>/dev/null | cut -f1)
+        printf '      %sinvestigate %s%s   (%s)\n' "${c_grn}" "${ev}" "${c_off}" "${sz}"
+    done <<< "${evidence_hits}"
+else
+    info "No evidence images found in evidence/, tmp/evidence/, or goldens/."
+    info "  Drop a file (.E01/.img/.mem/.evtx/.pcap/...) into evidence/, or run:"
+    echo "      bash scripts/verdict --watch     # waits for a drop, then investigates"
+fi
+
+# ---------------------------------------------------------------------------
+# 7. Optional: visible launch-banner alias.
 # ---------------------------------------------------------------------------
 #
 # The SessionStart hook (.claude/settings.json -> scripts/session-suggest.sh)
@@ -255,7 +358,93 @@ setup_banner_alias() {
 setup_banner_alias
 
 # ---------------------------------------------------------------------------
-# 7. Next steps.
+# 8. Connect to SIFT VM (optional, non-blocking).
+# ---------------------------------------------------------------------------
+#
+# SIFT mode runs the DFIR tools inside the SANS SIFT VM over SSH; local host is
+# the default. This step is opt-in and NEVER fails the installer — on any problem
+# it prints guidance and continues. Set FINDEVIL_SKIP_SIFT=1 to skip entirely.
+
+connect_sift_vm() {
+    # Honor every env var name the two SIFT entrypoints use, then the canonical
+    # defaults from scripts/find_evil_auto.py:68-71. (find-evil-sift reads
+    # SIFT_SSH_KEY/GUEST_USER/GUEST_REPO_PATH/SIFT_VM_IP; find_evil_auto.py reads
+    # FIND_EVIL_GUEST_IP/_USER/_SSH_KEY/_GUEST_REPO.)
+    local guest_ip="${FIND_EVIL_GUEST_IP:-${SIFT_VM_IP:-192.168.197.143}}"
+    local guest_user="${FIND_EVIL_GUEST_USER:-${GUEST_USER:-sansforensics}}"
+    local ssh_key="${FIND_EVIL_SSH_KEY:-${SIFT_SSH_KEY:-${HOME}/.ssh/sift_key}}"
+    local guest_repo="${FIND_EVIL_GUEST_REPO:-${GUEST_REPO_PATH:-/home/sansforensics/find-evil}}"
+
+    if [ "${FINDEVIL_SKIP_SIFT:-}" = "1" ]; then
+        info "Skipping SIFT VM connect (FINDEVIL_SKIP_SIFT=1)."
+        return 0
+    fi
+
+    # No key yet -> first-time VM creation must go through the bootstrap.
+    if [ ! -f "${ssh_key}" ]; then
+        info "SIFT VM is optional (local host is the default). No SSH key at:"
+        echo "    ${ssh_key}"
+        info "To create the SIFT VM + key, run:  bash scripts/sift-vm-bootstrap.sh"
+        return 0
+    fi
+
+    # Non-interactive shell: don't reach out over the network; print the hint.
+    if [ ! -t 0 ]; then
+        info "Non-interactive shell — skipping SIFT reachability probe."
+        info "  To use SIFT mode later:  scripts/find-evil-sift   (or  bash scripts/verdict --sift)"
+        return 0
+    fi
+
+    # Key exists -> short, timeout-bounded, BatchMode probe. Same idiom as
+    # scripts/find-evil-sift; guarded so a failed ssh can't kill the script.
+    info "Probing SIFT VM at ${guest_user}@${guest_ip} (5s timeout)..."
+    if ssh -i "${ssh_key}" -o BatchMode=yes -o ConnectTimeout=5 \
+        -o StrictHostKeyChecking=accept-new \
+        "${guest_user}@${guest_ip}" \
+        "test -x ${guest_repo}/target/release/findevil-mcp" >/dev/null 2>&1; then
+        ok "SIFT VM reachable; findevil-mcp is built inside the guest."
+        if [ -f .mcp.json.sift ]; then
+            ok ".mcp.json.sift template is present."
+        else
+            warn ".mcp.json.sift missing — run scripts/sift-vm-bootstrap.sh to regenerate it."
+        fi
+        info "To run in SIFT mode:  scripts/find-evil-sift   (or  bash scripts/verdict --sift)"
+    else
+        warn "SIFT VM not reachable at ${guest_ip} (or findevil-mcp not built in the guest)."
+        info "  Optional — local host mode still works. The VM uses DHCP, so if it's"
+        info "  running, set FIND_EVIL_GUEST_IP=<ip> (or SIFT_VM_IP=<ip>) and re-run."
+        info "  To create/repair the VM:  bash scripts/sift-vm-bootstrap.sh"
+    fi
+    return 0
+}
+
+connect_sift_vm || true
+
+# ---------------------------------------------------------------------------
+# 9. DFIR tools — install any missing (host / local mode), then verify.
+# ---------------------------------------------------------------------------
+#
+# Local-host mode (the default; SIFT VM and Docker bundle their own) runs the
+# DFIR tools on this machine. scripts/install-dfir-tools.sh installs the ones the
+# Rust MCP server shells out to — volatility3, hayabusa, chainsaw, velociraptor,
+# plus pandoc for report rendering — user-space into ~/.local/bin (no sudo),
+# pinned to the verdict-runner image versions, idempotent and best-effort. Then
+# scripts/doctor.sh (the canonical checker, resolving binaries the SAME way the
+# server does) re-verifies them and prints a remedy for any still absent. Never
+# fatal: a missing DFIR binary degrades to a clean BinaryNotFound at run time.
+
+echo ""
+info "Installing host DFIR tools (user-space, ~/.local/bin)..."
+bash "${REPO}/scripts/install-dfir-tools.sh" || warn "some DFIR tools did not install (non-fatal)."
+# Make fresh ~/.local/bin installs visible to the doctor check below.
+export PATH="${HOME}/.local/bin:${PATH}"
+
+echo ""
+info "Verifying DFIR tools + environment (scripts/doctor.sh)..."
+bash "${REPO}/scripts/doctor.sh" || true
+
+# ---------------------------------------------------------------------------
+# 10. Next steps.
 # ---------------------------------------------------------------------------
 
 echo ""
