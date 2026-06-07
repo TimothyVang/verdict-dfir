@@ -110,25 +110,24 @@ Steps:
    (non-blocking).
 
 3. If `gated` contains an entry with `present:false`, run the browser fallback. Look it up in
-   `scripts/gated-tools.json`, then:
-   - Drive the Puppeteer MCP (`mcp__puppeteer__puppeteer_*`) to navigate `landing_url`. These
-     tools are not pre-approved, so the user will be prompted to allow them on first use; that
-     is expected. If `login_required`, use the `credentials_env` vars when present; otherwise
-     pause and let the user log in in the visible browser, then continue. Never invent or store
-     credentials; never log them.
-   - The seeded `browser.steps` are marked NEEDS-LIVE-CONFIRMATION. On a first run, do a
-     human-supervised recon pass (navigate + screenshot) to capture the real form fields, EULA
-     control, and resolved `.ova` href before trusting any automated steps.
-   - Complete the form/EULA, then `puppeteer_evaluate` to resolve the download URL.
-   - Fetch with `curl -fL -C -` to the destination (resumable). If the URL needs the session,
-     export cookies from the browser and pass via `curl --cookie`.
-   - Verify (`verify.min_bytes`, reject HTML error pages, record sha256), then place as
+   `scripts/gated-tools.json` and follow its `browser.steps` (recon-verified — see `recon`).
+   For the SANS SIFT OVA specifically (verified 2026-06-07, `login_required:false`):
+   - Drive the browser MCP (Playwright `browser_*`, or Puppeteer `mcp__puppeteer__puppeteer_*`
+     which are not pre-approved and will prompt on first use — expected). No SANS login is
+     needed; never invent or store credentials.
+   - Navigate `landing_url` and read the `Download` anchor's href (it matches
+     `sansorg.egnyte.com/dl/`). Never hardcode the token — it rotates when SANS updates the OVA.
+   - Navigate that Egnyte share URL (public) and click its `Download` button. Note: the `/dl/`
+     URL returns `text/html`, so plain `curl` on it does NOT work — the file is served only
+     after the click via a dynamic signed URL. Prefer a browser-download to a controlled
+     directory (then move the file); the curl-with-captured-signed-URL path is the alternative.
+   - Verify (`verify.min_bytes` ~8 GB, reject HTML error pages, record sha256), then place as
      `sift-<version>.ova` at the repo root (or set `OVA_PATH`).
    - Re-run `bash scripts/setup` to confirm the asset is now detected.
-   - On ANY failure (site changed, login wall, blocked, no file, checksum/HTML mismatch,
-     offline): delete any partial file, report the exact failing step with a screenshot, and
-     fall back to the registry `manual_fallback` (open the page, user downloads manually). A
-     "could not fetch" must never block the rest of setup — local-host mode works without the OVA.
+   - On ANY failure (site changed, blocked, no file, checksum/HTML mismatch, offline): delete
+     any partial file, report the exact failing step with a screenshot, and fall back to the
+     registry `manual_fallback` (open the page, user downloads manually). A "could not fetch"
+     must never block the rest of setup — local-host mode works without the OVA.
 
 4. When setup is green, offer the next action: `scripts/verdict <path>` (hands-free) or
    `investigate <path>` (interactive). Offer to open the dashboard at `http://localhost:3000`

@@ -1,6 +1,6 @@
 {
   "schema": "verdict.gated-tools/v1",
-  "_comment": "Assets a plain shell cannot fetch (registration form / EULA / login). scripts/setup checks presence and lists missing ones in tmp/setup-state.json; the Claude path (docs/onboarding.md) drives the browser MCP to fetch them. Every GitHub-release DFIR binary is curl-able and handled by scripts/install-dfir-tools.sh instead, so it does NOT belong here. To add a binary later, use kind:binary with destination.dir ~/.local/bin and env_var $<TOOL>_BIN.",
+  "_comment": "Assets a plain shell cannot fetch (registration form / EULA / login / JS-driven download). scripts/setup checks presence and lists missing ones in tmp/setup-state.json; the Claude path (docs/onboarding.md) drives the browser MCP to fetch them. Every GitHub-release DFIR binary is curl-able and handled by scripts/install-dfir-tools.sh instead, so it does NOT belong here. To add a binary later, use kind:binary with destination.dir ~/.local/bin and env_var $<TOOL>_BIN.",
   "tools": [
     {
       "id": "sift-ova",
@@ -16,20 +16,37 @@
         "env_var": "OVA_PATH"
       },
       "browser": {
-        "engine": "puppeteer",
-        "login_required": true,
-        "credentials_env": ["SANS_PORTAL_USER", "SANS_PORTAL_PASS"],
-        "steps": "NEEDS-LIVE-CONFIRMATION: capture the real SANS form fields, EULA control, login wall, and resolved .ova href in a human-supervised recon dry-run before trusting these steps. Until then, default to manual_fallback.",
-        "extract": "puppeteer_evaluate(): resolve the .ova download href (direct or signed CDN URL)"
+        "engine": "playwright",
+        "login_required": false,
+        "steps": [
+          "navigate landing_url, then read the href of the anchor whose accessible name is 'Download' near the 'SIFT Workstation' heading (href matches sansorg.egnyte.com/dl/). Never hardcode the token — it rotates when SANS updates the OVA.",
+          "navigate that Egnyte share URL (a public file share — no login).",
+          "click the 'Download' button (button accessible name 'Download') to start the file download."
+        ],
+        "extract": "The /dl/<token> URL itself returns text/html (the Egnyte share UI), not the file. The actual file is served only after the Download button click, via a dynamic, time-limited signed URL bound to the page session/cookies — so it cannot be captured once and stored; resolve it at download time."
       },
       "fetch": {
-        "method": "curl",
-        "flags": "-fL -C -",
-        "resume": true,
-        "pass_cookies_if_needed": true
+        "preferred": "browser-download",
+        "browser_download": "click Download with the browser's download directory set to a controlled path (CDP Page.setDownloadBehavior, or the MCP browser's download dir), wait until the .ova file size is stable (no .crdownload), then move it to destination.dir.",
+        "curl_alt": "intercept the file-stream request triggered by the Download click (the signed URL) and run curl -fL --cookie <session-cookies> immediately; the URL is time-limited so resume across expiry is not guaranteed. Plain curl on the /dl/ URL returns HTML and will NOT work.",
+        "notes": "no SANS credentials required (verified public share)."
       },
-      "verify": { "min_bytes": 5000000000, "reject_html": true, "sha256": null },
-      "manual_fallback": "Open the landing_url, complete the SANS form/login/EULA, download the OVA, and save it as sift-<version>.ova at the repo root (or set OVA_PATH=/path/to/your.ova). Then re-run: bash scripts/setup."
+      "verify": { "min_bytes": 8000000000, "reject_html": true, "filename_glob": "sift-*.ova", "sha256": null },
+      "recon": {
+        "verified": true,
+        "date": "2026-06-07",
+        "method": "Playwright MCP navigate + accessibility snapshot of the SANS page and the Egnyte share; curl HEAD/1-byte probe of the /dl/ URL.",
+        "observed": {
+          "sans_download_href": "https://sansorg.egnyte.com/dl/<token> (public anchor; token rotates per OVA update)",
+          "egnyte_filename": "sift-2026-04-22.ova",
+          "egnyte_size": "8.8 GB",
+          "egnyte_shared_by": "Jared Olson",
+          "egnyte_accessible_until": "May 23, 3000",
+          "login_required": false,
+          "dl_url_content_type": "text/html (share UI, not the file)"
+        }
+      },
+      "manual_fallback": "Open the landing_url, click Download (it leads to a public Egnyte share — no login), save the OVA as sift-<version>.ova at the repo root (or set OVA_PATH=/path/to/your.ova). Then re-run: bash scripts/setup."
     }
   ]
 }
