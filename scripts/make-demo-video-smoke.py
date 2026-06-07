@@ -13,6 +13,23 @@ PREP_SCRIPT = REPO_ROOT / "scripts" / "make-demo-video-prep.py"
 REMOTION_DIR = REPO_ROOT / "scripts" / "make-demo-video"
 ROOT_TSX = REMOTION_DIR / "src" / "Root.tsx"
 PKG_JSON = REMOTION_DIR / "package.json"
+BEAT_TSX = REMOTION_DIR / "src" / "beats" / "Beat.tsx"
+COMPONENTS_DIR = REMOTION_DIR / "src" / "components"
+
+EXPECTED_COMPONENTS = [
+    "LogoIntro.tsx",
+    "ArchDiagram.tsx",
+    "TerminalScene.tsx",
+    "ContradictionScene.tsx",
+    "HashChainScene.tsx",
+    "FleetScene.tsx",
+    "ClusterScene.tsx",
+    "SelfScoreScene.tsx",
+    "OutroScene.tsx",
+    "shared/ChipBadge.tsx",
+    "shared/AuditLine.tsx",
+    "shared/Watermark.tsx",
+]
 
 
 def test_prep_script_syntax() -> None:
@@ -32,6 +49,28 @@ def test_root_tsx_has_register_root() -> None:
     assert "registerRoot" in src, "Root.tsx must call registerRoot()"
 
 
+def test_beat_components_exist() -> None:
+    missing = []
+    for name in EXPECTED_COMPONENTS:
+        path = COMPONENTS_DIR / name
+        if not path.exists():
+            missing.append(name)
+    assert not missing, f"Missing components: {missing}"
+
+
+def test_beat_dispatch_covers_all_nine() -> None:
+    src = BEAT_TSX.read_text(encoding="utf-8")
+    for n in range(1, 10):
+        assert f"case {n}:" in src, f"Beat.tsx missing dispatch for beat {n}"
+
+
+def test_logo_assets_exist() -> None:
+    logo = REPO_ROOT / "assets" / "logo" / "logo.svg"
+    mark = REPO_ROOT / "assets" / "logo" / "logo-mark.svg"
+    assert logo.exists(), f"Missing: {logo}"
+    assert mark.exists(), f"Missing: {mark}"
+
+
 def test_dry_run_shows_nine_beats_and_300s() -> None:
     result = subprocess.run(
         [sys.executable, str(PREP_SCRIPT), "--dry-run"],
@@ -48,6 +87,9 @@ def main() -> int:
         ("prep_script_syntax", test_prep_script_syntax),
         ("remotion_package_has_remotion_dep", test_remotion_package_has_remotion_dep),
         ("root_tsx_has_register_root", test_root_tsx_has_register_root),
+        ("beat_components_exist", test_beat_components_exist),
+        ("beat_dispatch_covers_all_nine", test_beat_dispatch_covers_all_nine),
+        ("logo_assets_exist", test_logo_assets_exist),
         ("dry_run_shows_nine_beats_and_300s", test_dry_run_shows_nine_beats_and_300s),
     ]
     passed = failed = 0

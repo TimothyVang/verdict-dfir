@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80" role="img" aria-label="VERDICT logo mark">
+  <defs>
+    <linearGradient id="mg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9b59b6"/>
+      <stop offset="100%" stop-color="#6c3483"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="40" cy="40" r="38" fill="#0d1117" stroke="#9b59b6" stroke-width="2"/>
+  <!-- Gavel head -->
+  <rect x="14" y="18" width="38" height="17" rx="4" fill="url(#mg)"/>
+  <!-- Gavel handle -->
+  <rect x="31" y="29" width="5" height="30" rx="2.5" fill="#30363d" transform="rotate(-30 33 44)"/>
+  <!-- Chain links -->
+  <ellipse cx="20" cy="58" rx="8" ry="5" fill="none" stroke="#8b949e" stroke-width="2.5"/>
+  <ellipse cx="36" cy="58" rx="8" ry="5" fill="none" stroke="#8b949e" stroke-width="2.5"/>
+  <!-- Sigstore check -->
+  <circle cx="56" cy="58" r="8" fill="#2ecc71" opacity="0.9"/>
+  <polyline points="52,58 55,61 61,54" fill="none" stroke="#0d1117" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

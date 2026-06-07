@@ -9,8 +9,17 @@ import {
   useVideoConfig,
 } from "remotion";
 import { type Beat } from "./beats-data";
+import { LogoIntro } from "../components/LogoIntro";
+import { ArchDiagram } from "../components/ArchDiagram";
+import { TerminalScene } from "../components/TerminalScene";
+import { ContradictionScene } from "../components/ContradictionScene";
+import { HashChainScene } from "../components/HashChainScene";
+import { FleetScene } from "../components/FleetScene";
+import { ClusterScene } from "../components/ClusterScene";
+import { SelfScoreScene } from "../components/SelfScoreScene";
+import { OutroScene } from "../components/OutroScene";
 
-const CHAR_DELAY = 1.5; // frames per character for typewriter effect
+const CHAR_DELAY = 1.5; // frames per character for typewriter fallback
 
 function useSpring(frame: number, delay: number = 0) {
   const { fps } = useVideoConfig();
@@ -99,8 +108,39 @@ function BackgroundGradient({ accentColor, frame }: { accentColor: string; frame
 function ProgressBar({ beat, totalBeats, accentColor }: { beat: number; totalBeats: number; accentColor: string }) {
   return (
     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 4, backgroundColor: "#1e2530" }}>
-      <div style={{ height: "100%", width: `${(beat / totalBeats) * 100}%`, backgroundColor: accentColor, transition: "width 0.3s" }} />
+      <div style={{ height: "100%", width: `${(beat / totalBeats) * 100}%`, backgroundColor: accentColor }} />
     </div>
+  );
+}
+
+// Generic fallback title card — used when no purpose-built component exists
+function TitleCard({ beat, totalBeats }: { beat: Beat; totalBeats: number }) {
+  const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
+  const fadeIn = interpolate(frame, [0, 20], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const fadeOut = interpolate(frame, [durationInFrames - 15, durationInFrames], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const masterOpacity = Math.min(fadeIn, fadeOut);
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: "#0d1117", fontFamily: "'JetBrains Mono', 'Segoe UI', system-ui, sans-serif", opacity: masterOpacity }}>
+      <BackgroundGradient accentColor={beat.accentColor} frame={frame} />
+      <div style={{ position: "absolute", inset: 0, opacity: 0.03, backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 140px" }}>
+        <BeatNumber num={beat.number} accentColor={beat.accentColor} frame={frame} />
+        <div style={{ fontSize: 72, fontWeight: 800, color: "#e6edf3", lineHeight: 1.15, marginBottom: 32 }}>
+          <TitleLine text={beat.title} frame={frame} delay={6} />
+        </div>
+        <RubricBadge text={beat.rubric} frame={frame} accentColor={beat.accentColor} />
+        <div style={{ fontSize: 34, color: "#8b949e", lineHeight: 1.6, maxWidth: 1400, fontWeight: 400 }}>
+          <TypewriterText text={beat.narration} frame={frame} startFrame={30} />
+        </div>
+      </div>
+      <div style={{ position: "absolute", bottom: 24, left: 140, right: 140, display: "flex", justifyContent: "space-between", alignItems: "center", color: "#30363d", fontSize: 22 }}>
+        <span>VERDICT — SANS Hackathon 2026</span>
+        <span style={{ color: beat.accentColor }}>{beat.startS}s – {beat.endS}s</span>
+      </div>
+      <ProgressBar beat={beat.number} totalBeats={totalBeats} accentColor={beat.accentColor} />
+    </AbsoluteFill>
   );
 }
 
@@ -110,62 +150,29 @@ interface BeatProps {
   audioFile: string | null;
 }
 
+// Dispatch to purpose-built components by beat number
+function BeatContent({ beat, totalBeats }: { beat: Beat; totalBeats: number }) {
+  switch (beat.number) {
+    case 1: return <LogoIntro />;
+    case 2: return <ArchDiagram />;
+    case 3: return <TerminalScene title={beat.title} subtitle={beat.rubric} accentColor={beat.accentColor} />;
+    case 4: return <ContradictionScene />;
+    case 5: return <HashChainScene />;
+    case 6: return <FleetScene />;
+    case 7: return <ClusterScene />;
+    case 8: return <SelfScoreScene />;
+    case 9: return <OutroScene />;
+    default: return <TitleCard beat={beat} totalBeats={totalBeats} />;
+  }
+}
+
 export function BeatScene({ beat, totalBeats, audioFile }: BeatProps) {
-  const frame = useCurrentFrame();
-  const { durationInFrames } = useVideoConfig();
-
-  // Fade in at start, fade out last 15 frames
-  const fadeIn = interpolate(frame, [0, 20], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const fadeOut = interpolate(frame, [durationInFrames - 15, durationInFrames], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const masterOpacity = Math.min(fadeIn, fadeOut);
-
   return (
-    <AbsoluteFill style={{
-      backgroundColor: "#0d1117",
-      fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
-      opacity: masterOpacity,
-    }}>
-      <BackgroundGradient accentColor={beat.accentColor} frame={frame} />
-
-      {/* Subtle grid overlay */}
-      <div style={{
-        position: "absolute", inset: 0, opacity: 0.03,
-        backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
-        backgroundSize: "60px 60px",
-      }} />
-
-      {/* Content area */}
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 140px" }}>
-        <BeatNumber num={beat.number} accentColor={beat.accentColor} frame={frame} />
-
-        {/* Title */}
-        <div style={{ fontSize: 72, fontWeight: 800, color: "#e6edf3", lineHeight: 1.15, marginBottom: 32 }}>
-          <TitleLine text={beat.title} frame={frame} delay={6} />
-        </div>
-
-        <RubricBadge text={beat.rubric} frame={frame} accentColor={beat.accentColor} />
-
-        {/* Narration typewriter */}
-        <div style={{ fontSize: 34, color: "#8b949e", lineHeight: 1.6, maxWidth: 1400, fontWeight: 400 }}>
-          <TypewriterText text={beat.narration} frame={frame} startFrame={30} />
-        </div>
-      </div>
-
-      {/* Bottom bar */}
-      <div style={{
-        position: "absolute", bottom: 24, left: 140, right: 140,
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        color: "#30363d", fontSize: 22,
-      }}>
-        <span>Find Evil! — SANS Hackathon 2026</span>
-        <span style={{ color: beat.accentColor }}>{beat.startS}s – {beat.endS}s</span>
-      </div>
-
-      <ProgressBar beat={beat.number} totalBeats={totalBeats} accentColor={beat.accentColor} />
-
+    <>
+      <BeatContent beat={beat} totalBeats={totalBeats} />
       {audioFile && (
         <Audio src={staticFile(audioFile)} volume={1} />
       )}
-    </AbsoluteFill>
+    </>
   );
 }
