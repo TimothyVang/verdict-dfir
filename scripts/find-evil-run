@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# find-evil-run — one-command operator entry point.
+#
+# Chains: doctor → (build if needed) → fixtures-check → find-evil-auto
+#
+# Knobs:
+#   --dry-run        Print each stage but do not execute any inference.
+#   --skip-build     Skip cargo build; assume target/release/findevil-mcp exists.
+#   --evidence PATH  Path to evidence file / directory (required unless --dry-run).
+#   --run-summary F  Forward to find-evil-auto --run-summary.
+#
+# All other arguments after -- are forwarded to find-evil-auto.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${REPO_ROOT}"
+
+DRY_RUN=0
+SKIP_BUILD=0
+EVIDENCE_PATH=""
+RUN_SUMMARY=""
+PASSTHROUGH_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)      DRY_RUN=1; shift ;;
+    --skip-build)   SKIP_BUILD=1; shift ;;
+    --evidence)     EVIDENCE_PATH="$2"; shift 2 ;;
+    --run-summary)  RUN_SUMMARY="$2"; shift 2 ;;
+    --)             shift; PASSTHROUGH_ARGS+=("$@"); break ;;
+    *)              PASSTHROUGH_ARGS+=("$1"); shift ;;
+  esac
+done
+
+log()  { printf '[find-evil-run] %s\n' "$*" >&2; }
+fail() { printf '[find-evil-run] FAIL: %s\n' "$*" >&2; exit 1; }
+run()  {
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    log "DRY-RUN: $*"
+  else
+    "$@"
+  fi
+}
+
+# ------------------------------------------------------------------
+# Stage 1: doctor pre-flight
+# ------------------------------------------------------------------
+log "Stage 1/4: doctor pre-flight"
+if [[ -f scripts/doctor.sh ]]; then
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    log "DRY-RUN: bash scripts/doctor.sh"
+  else
+    bash scripts/doctor.sh || fail "doctor.sh reported missing dependencies — fix them before running find-evil-run"
+  fi
+else
+  log "WARN: scripts/doctor.sh not found; skipping pre-flight"
+fi
+
+# ------------------------------------------------------------------
+# Stage 2: build (unless --skip-build or binary already present)
+# ------------------------------------------------------------------
+log "Stage 2/4: build check"
+MCP_BIN="target/release/findevil-mcp"
+if [[ "${SKIP_BUILD}" == "1" ]]; then
+  log "  --skip-build: skipping cargo build"
+elif [[ -f "${MCP_BIN}" ]]; then
+  log "  ${MCP_BIN} present; skipping build (use --skip-build to suppress this check)"
+else
+  log "  building findevil-mcp..."
+  run cargo build --workspace --release --locked
+fi
+
+# ------------------------------------------------------------------
+# Stage 3: fixtures check (advisory — warn, don't block)
+# ------------------------------------------------------------------
+log "Stage 3/4: fixtures check"
+if [[ "${DRY_RUN}" == "0" ]]; then
+  FIXTURES="${FIXTURES:-${REPO_ROOT}/fixtures}"
+  if [[ ! -d "${FIXTURES}" ]]; then
+    log "WARN: fixtures dir not found at ${FIXTURES}; consider running bash scripts/fetch-fixtures.sh"
+  fi
+fi
+
+# ------------------------------------------------------------------
+# Stage 4: find-evil-auto
+# ------------------------------------------------------------------
+log "Stage 4/4: launching find-evil-auto"
+if [[ -z "${EVIDENCE_PATH}" && "${DRY_RUN}" == "0" ]]; then
+  fail "No evidence path supplied. Use --evidence <path> or pass it as a positional argument."
+fi
+
+AUTO_CMD=(python3 scripts/find_evil_auto.py)
+if [[ -n "${EVIDENCE_PATH}" ]]; then
+  AUTO_CMD+=("${EVIDENCE_PATH}")
+fi
+if [[ -n "${RUN_SUMMARY}" ]]; then
+  AUTO_CMD+=(--run-summary "${RUN_SUMMARY}")
+fi
+AUTO_CMD+=("${PASSTHROUGH_ARGS[@]+"${PASSTHROUGH_ARGS[@]}"}")
+
+run "${AUTO_CMD[@]}"
