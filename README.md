@@ -79,7 +79,7 @@ Codex operator support is documented in [docs/codex-compatibility.md](docs/codex
 
 ## Required downloads & install files
 
-Large binaries (the SIFT VM, evidence images) are **not** committed — they are SANS-licensed and/or far larger than GitHub's file limit. Download them from the links below. `bash scripts/install.sh` handles the toolchain (Rust + Python) automatically; the table marks what you still fetch by hand.
+Large binaries (the SIFT VM, evidence images) are **not** committed — they are SANS-licensed and/or far larger than GitHub's file limit. Download them from the links below. `bash scripts/install.sh` handles the toolchain (Rust + Python) automatically; the table marks what you still fetch by hand. A machine-readable companion to these tables lives in [`requirements.txt`](requirements.txt) — `pip install -r requirements.txt` installs the host DFIR Python tooling (Volatility 3), and the comments enumerate every non-pip download (starting with the SANS SIFT OVA).
 
 ### Core (every mode)
 
