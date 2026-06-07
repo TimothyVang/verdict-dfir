@@ -37,6 +37,7 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 | `QUICKSTART.md` | **ACTIVE** | Three-step quickstart for impatient users. |
 | `STARTUP.md` | **RESEARCH** | Team onboarding notes retained for hackathon context. |
 | `CHANGELOG.md` | **ACTIVE** | Chronological project changelog. |
+| `SUBMISSION_COMPLIANCE.md` | **REQUIRED** | 10-item Devpost compliance checklist — maps every required submission component to an exact file path/URL. First thing judges should read. |
 
 ## `docs/` top level (analyst + judge facing)
 
@@ -61,6 +62,8 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 - `scripts/readiness-gate.ps1` is the packet-producing readiness flow. Full mode writes `readiness-summary.json`, `readiness-packet-manifest.json`, and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`; fixed `-RunId` reruns refresh generated packet contents and may use a timestamped local-build child run; passing states mean ready for human expert review, not customer release.
 - `scripts/readiness-gate.sh` is POSIX strict/check-only. It can print `SUBMISSION_READY` for its legacy checks, but it does not create the readiness packet ZIP.
 - Local smoke gates are `bash scripts/run-all-smokes.sh` for POSIX/Git Bash and `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-all-smokes.ps1` for native Windows. Do not copy old hard-coded smoke counts; the scripts print the current tally.
+- `bash scripts/make-demo-video.sh` generates `docs/find-evil-demo.mp4` from `docs/demo-script-a2.md` using Remotion (React animated video, headless Chrome) + edge-tts TTS audio. Prerequisites: `pip install edge-tts` + `pnpm install --dir scripts/make-demo-video --ignore-workspace`. If `claude` is on PATH, narration is auto-enriched via `claude -p` before TTS.
+- `python3 scripts/make-demo-video-prep.py --dry-run` verifies beat parsing (9 beats, 300s) without invoking TTS or Remotion.
 
 ## `agent-config/` (runtime DFIR agent identity)
 
@@ -101,6 +104,8 @@ The original five implementation plans shipped. Each carries a RETIRED banner na
 
 | File | Status | Where it lives now |
 |---|---|---|
+| `FINISH-PROMPT.md` | **ACTIVE** | Reusable finishing prompt for the autonomous loop and fresh sessions. Reflects current state: Phases 0–3 + F1–F2 shipped; F3 (smoke gate + PR) and F5 (video render + upload) remain. |
+| `2026-06-06-seamless-integration-and-submission-plan.md` | **SHIPPED** | Phases 0–3 + F1–F2 all landed (commits `ed03182`–`b2dbc71`). F3 smoke gate, F5 video upload, and F6–F7 Devpost remain as human steps. |
 | `2026-05-20-finish-to-v-submit-plan.md` | **SHIPPED** | Release-history checklist for commits, readiness refresh, GitHub visibility, L3 evidence, demo URL, `v-submit`, and Devpost upload |
 | `2026-04-23-build-swarm-plan.md` | **RETIRED** | `services/swarm/`, `scripts/swarm-*.sh` |
 | `2026-04-23-orchestration-glue-plan.md` | **RETIRED** | `.github/workflows/`, `scripts/package-devpost.sh` |

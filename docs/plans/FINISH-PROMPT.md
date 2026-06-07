@@ -2,131 +2,187 @@
 
 > Reusable finishing prompt. Paste the block below into a fresh `claude` session
 > from the repo root, or queue it into `scripts/autonomous-loop.py` via
-> `memory/project_autonomous_queue.md`. It executes every engineering task in
-> `docs/plans/2026-06-06-seamless-integration-and-submission-plan.md` (Phases 0–3 +
-> Finish F1–F4), then stops and hands off the human-only steps (F5–F7).
+> `memory/project_autonomous_queue.md`.
+
+**Last updated: 2026-06-07.** Phases 0–3 and Finish F1–F2 are **SHIPPED** (see
+`CHANGELOG.md [v-submit]`). This prompt now starts at the remaining open work: F3
+(smoke gate), F5 (demo video render + upload), and the human-only F6–F7 (Devpost).
 
 ---
 
-You are the SANS Find Evil! build agent working in `/home/analyst/Desktop/PUG-Projects/sans-hackathon`. Your goal: drive the project to a green, re-cuttable `v-submit` by executing every engineering task in `docs/plans/2026-06-06-seamless-integration-and-submission-plan.md`, then stop and hand off the human-only steps.
+You are the SANS Find Evil! build agent working in
+`/home/analyst/Desktop/PUG-Projects/sans-hackathon`. The project is in its final
+submission phase. Phases 0–3 and F1–F2 are fully shipped on `master` (commit
+`7989d77`, tag `v-submit`). Your job is to complete the remaining open tasks, then
+stop and hand off the human-only steps.
+
+## Current state (as of 2026-06-07, commit 7989d77)
+
+### DONE — do not re-execute
+- Phase 0: L1 esperanto offline fix — shipped `ed03182`
+- Phase 1.1–1.5: playbook.py, config.py, sprite-state.ts, CLAUDE_CODE_FORK_SUBAGENT docs — shipped
+- Phase 2.1–2.7: cross-platform render, SIFT config, libvirt, starter data, find-evil-run, doctor/install, smoke registration — shipped
+- Phase 3.1–3.4: Protocol SIFT positioning in architecture + README + divergence-smoke + codex-compat — shipped
+- F1: CHANGELOG settled to 31-tool surface, `[v-submit]` section opened — shipped `823b16d`
+- F2: 2026-05-20 plan marked superseded, README badges refreshed — shipped (part of `b2dbc71`)
+- SUBMISSION_COMPLIANCE.md — 10-item Devpost compliance checklist — shipped `c6af41a`
+- Remotion demo video pipeline — `scripts/make-demo-video/` + `scripts/make-demo-video.sh` — shipped `7289cad`
+- `claude -p` narration enrichment — shipped `7989d77`
+
+### OPEN — execute in this order
+
+**F3 — Smoke gate + verify**
+**F5 — Generate demo video + upload**
+**F6 (human only) — Tag re-cut + Devpost**
+
+---
+
+## Preflight (run ONCE at session start)
+
+1. `git status` — confirm clean tree on `master`. If dirty, stop and ask.
+2. `git log --oneline -5` — confirm `7989d77` (or a later commit) is HEAD.
+3. Derive remaining open work from `git log` + file presence. Never trust this
+   file's task list blindly — verify each item is actually missing before executing.
+
+---
+
+## F3 — Smoke gate (automated)
+
+Run the full local smoke gate and confirm exit 0:
+
+```bash
+bash scripts/run-all-smokes.sh
+```
+
+Expected: 17+ smokes, 0 failed. If any fail, fix root cause — do not skip.
+
+Then create the draft PR (if one does not already exist):
+
+```bash
+gh pr create --draft --fill --base master
+```
+
+Gate: `gh pr list --state open --base master` shows an open draft PR.
+
+---
+
+## F5 — Demo video generation (automated, then human upload)
+
+### F5a — Generate the MP4 (automated)
+
+Prerequisites (one-time install):
+```bash
+pip install edge-tts
+pnpm install --dir scripts/make-demo-video --ignore-workspace
+```
+
+Dry-run to verify beat parsing (no TTS/Remotion needed):
+```bash
+python3 scripts/make-demo-video-prep.py --dry-run
+# Expected: 9 beats, total 300s
+```
+
+Full render (TTS + Remotion animated video → `docs/find-evil-demo.mp4`):
+```bash
+bash scripts/make-demo-video.sh
+```
+
+- If `claude` is on PATH, narrations are auto-enriched via `claude -p` before TTS.
+- Uses `en-US-AriaNeural` Microsoft neural TTS (no API key).
+- Remotion renders 1920×1080 animated title cards (fade-in, typewriter, spring transitions).
+- Output replaces the 385 KB placeholder at `docs/find-evil-demo.mp4`.
+
+Commit the generated video:
+```bash
+git add docs/find-evil-demo.mp4
+git commit -m "feat(submission): generate demo video via Remotion + TTS"
+git push origin master
+```
+
+### F5b — Host video (human only — cannot be automated)
+
+1. Upload `docs/find-evil-demo.mp4` to YouTube or Vimeo.
+2. Register the URL:
+   ```bash
+   gh variable set DEMO_VIDEO_URL --body 'https://youtu.be/<id>'
+   ```
+3. Update `SUBMISSION_COMPLIANCE.md` item #6 — change `SEE §6` to `SATISFIED` and
+   paste the hosted URL.
+
+---
+
+## F6 — Re-cut `v-submit` tag (human only)
+
+After F5b is confirmed green:
+
+```bash
+git tag -f v-submit HEAD
+git push origin v-submit --force
+```
+
+This triggers `devpost-submit.yml` CI, which gates on `release.yml` (L3 green) and
+produces the `find-evil-submission.zip` release artifact.
+
+---
+
+## F7 — Devpost upload (human only)
+
+1. Download `find-evil-submission.zip` from the GitHub Release for `v-submit`.
+2. Verify the zip contains `REPORT.html`, `audit.jsonl`, `run.manifest.json`, and
+   `manifest_verify.json`.
+3. On the Devpost submission form, fill in:
+   - **Project URL:** `https://github.com/TimothyVang/sans-hackathon`
+   - **Demo video URL:** the hosted YouTube/Vimeo URL from F5b
+   - Upload the `find-evil-submission.zip` bundle
+4. Confirm submission before the 2026-06-15 22:45 CDT deadline.
+
+---
 
 ## Definition of done (the whole run is complete only when ALL hold)
-- Every task in `docs/plans/2026-06-06-seamless-integration-and-submission-plan.md` for Phases 0–3 and Finish F1–F4 has landed as its own conventional commit (the plan gives the exact message per task).
-- `docker compose -f docker/l1-compose.yml up --build --exit-code-from l1` exits 0 (Phase 0 gate).
-- `bash scripts/run-all-smokes.sh` exits 0 (no new failures vs. baseline).
-- `bash scripts/readiness-gate.sh` prints `SUBMISSION_READY` (or documents why it can't locally).
-- A draft PR exists against `master` (`gh pr create --draft --fill`).
-- Plan **Appendix B (End-to-end verification checklist)** passes.
-- A handoff summary for F5–F7 is printed.
+
+- `bash scripts/run-all-smokes.sh` exits 0
+- A draft PR exists against `master`
+- `docs/find-evil-demo.mp4` is > 10 MB (full Remotion render, not the 385 KB placeholder)
+- `SUBMISSION_COMPLIANCE.md` item #6 is `SATISFIED` with a hosted URL
+- `v-submit` tag points to the commit with the rendered MP4
+- Devpost form submitted before 2026-06-15 22:45 CDT
+
 If any cannot be met, STOP and report exactly which and why — do not fake completion.
 
-## Preflight (run ONCE at session start, before any edits)
-1. `git status` and `git log --oneline -25` — confirm clean tree on `fix/dfir-claim-corrections` (or branch from `master`). If the tree is dirty with unrelated changes, stop and ask.
-2. Read `docs/plans/2026-06-06-seamless-integration-and-submission-plan.md` IN FULL. **The plan is the source of truth** (this file is a navigation aid). Note it has NO checkboxes — it uses per-task tables with RED-test / Impl-files / Commit-message / Gate fields, a per-phase **Verify** line, plus **Appendix A** (exact ordered command sequence) and **Appendix B** (verification checklist). Follow the plan's own fields verbatim; where this file disagrees with the plan, the plan wins.
-3. **Determine what's already done by `git log`, not by this file** — for each task, grep the log for its exact commit message (`git log --oneline | grep -F '<commit msg>'`) and confirm the code/file it describes is present. Skip done tasks; execute only the genuinely-open ones.
-4. Build a TodoWrite list from the still-open tasks in the dependency order below. Mark each `in_progress` when you start it and `completed` only after its commit lands.
-5. This prompt is **idempotent and resumable** — safe to re-run via `scripts/autonomous-loop.py`. Always re-derive remaining work from `git log` + code presence, never from memory of a prior pass.
-
-## Ground rules (from CLAUDE.md — non-negotiable)
-- Read `docs/plans/2026-06-06-seamless-integration-and-submission-plan.md` in full first; it is authoritative. Where spec and code disagree, **shipped code + pin files win** (CLAUDE.md §11).
-- **TDD per task:** failing test (RED) → implement (GREEN) → one commit per task using the **exact commit message** the plan specifies. Never batch tasks. Never use `--no-verify`, `--no-gpg-sign`, or `--amend`.
-- Conventional Commits; scopes already in use: `mcp`, `swarm`, `sandbox`, `ci`, `plan`, `agent`, `report`, `architecture`, `readme`, `changelog`, `divergence`, `codex-compat`.
-- **Surgical changes** — touch only what each task requires; match existing style; don't refactor adjacent code.
-- DFIR vocabulary (Case/Observable/Task/Finding/Verdict/Confidence). All timestamps UTC ISO-8601 `Z`.
-- Stay on branch `fix/dfir-claim-corrections` (or branch from `master` if asked); **draft PRs only**, never push/merge `master`.
-- Preserve invariants: no `execute_shell` tool; every Finding cites a `tool_call_id`; audit JSONL append-only; AGPL/GPL tools subprocess-only; 19+12=31 tool surface.
-
-> NOTE: the task list below is a **navigation map** (titles + commit messages), not the spec.
-> For each task, read the matching section in the plan and follow its RED / Impl / Commit / Gate
-> fields exactly. The plan's **Appendix A** is the canonical ordered command sequence and **Appendix B**
-> is the canonical verification checklist — prefer those over this summary if they ever differ.
-
-## Execution order (sequential phases; respect intra-phase dependencies)
-
-### Phase 0 — Unblock L1 (DO FIRST; hard blocker)
-Make the esperanto LLM factory test pass offline in the L1 devbase (no live provider/network); pin/relax the dep so `uv` resolves it, skip cleanly when no provider configured.
-- Commit: `fix(agent): make esperanto LLM factory test pass offline in L1 devbase`
-- Fast inner loop (no Docker; the plan's RED command): `uv run --directory services/agent pytest -xvs tests/test_llm.py` must pass offline first.
-- Authoritative gate: `docker compose -f docker/l1-compose.yml up --build --exit-code-from l1` exits 0. If Docker is unavailable in this environment, run the fast loop, say so explicitly in your report, and let CI (L1 workflow) be the final arbiter. Do not proceed to Phase 1 until the fast loop is green.
-
-### Phase 1 — Unify the two run paths (1.1→1.2→1.3→1.4 sequential; 1.5 independent)
-1.1 New `services/agent/findevil_agent/playbook.py` (`EVIDENCE_TYPE_RULES`, `ARTIFACT_CLASS_RULES`, `TOOL_SEQUENCES` as frozen `PlaybookStep`, `JUDGE_SELFSCORE_CRITERIA`); `find_evil_auto.py` imports it; delete the 3 duplicate Python tables; feed in-VM script the rules as JSON arg.
-  - `refactor(plan): unify evidence-type + tool-sequence detection in findevil_agent.playbook`
-1.2 Add `resolve_memory_store_path()` to `config.py` (mirror `resolve_case_home:160-175`); auto path calls `memory_recall` before drafting a Finding and `memory_remember` after judge, **CONFIRMED-only**.
-  - `feat(agent): add resolve_memory_store_path and wire cross-case memory into headless path`
-1.3 Share the 6 self-score criteria via `playbook.JUDGE_SELFSCORE_CRITERIA`; JUDGING.md/PLAYBOOK.md cite identical text.
-  - `feat(plan): record contradiction resolution + share self-score criteria across paths`
-1.4 Extend `apps/web/lib/sprite-state.ts` `deriveRoleStates` to read `judge_selfscore`, `contradiction_resolved`, `manifest_finalize`, real `pool_origin`/`pool`.
-  - `feat(plan): derive dashboard role-state from real audit kinds across both paths`
-1.5 Correct `CLAUDE_CODE_FORK_SUBAGENT` docs — real in the **swarm**; in the **product** Claude Code forks Pool A/B via native Task mechanism (no env var).
-  - `docs(plan): correct CLAUDE_CODE_FORK_SUBAGENT to native subagent mechanism in product docs`
-
-### Phase 2 — One frictionless operator path (2.1–2.7)
-2.1 Cross-platform report renderer: resolve `PANDOC`/`CHROME` via `$PANDOC_BIN`/`$CHROME_BIN`→`shutil.which`; `render_html_pdf` degrades to `(html, None)` instead of raising; fix `file://` via `Path(html).as_uri()`.
-  - `fix(report): resolve pandoc/chrome via PATH for cross-platform render`
-2.2 De-hardcode `.mcp.json.sift` (portable defaults `~/.ssh/sift_key`, env host/user, keep guest `~/.local/bin/...`); `find-evil-sift:28` `VMRUN="${SIFT_VMRUN:-...}"`.
-  - `fix(sandbox): derive SIFT MCP key/host/binaries from env, drop hardcoded operator paths`
-2.3 Linux hypervisor path: libvirt IP discovery (`virsh -q domifaddr "$VM_NAME"`) + `HYPERVISOR` knob; clear exit when none resolves.
-  - `feat(sandbox): add libvirt IP discovery and graceful hypervisor gate to find-evil-sift`
-2.4 Document `SANS_STARTER_URL=file://<staged>.zip` + `SANS_STARTER_SHA256` contract; create `goldens/sans-starter/expected-findings.json` stub.
-  - `feat(plan): add SANS starter staging hook and goldens stub`
-2.5 New `scripts/find-evil-run` (extensionless bash) chaining doctor → install[skip if built] → fixtures present-or-staged → `find-evil-auto`.
-  - `feat(plan): add find-evil-run one-command operator path`
-2.6 `doctor.sh` adds `unzip`+`python3` checks (stays read-only); `install.sh:28` sources `~/.cargo/env` before cargo check.
-  - `fix(plan): cover unzip/python deps in doctor and source cargo env in install`
-2.7 Register the new Phase 2 smokes in `run_smoke` lines.
-  - `test(ci): register Phase 2 cross-platform smokes in local gate`
-
-### Phase 3 — Protocol SIFT positioning (3.1–3.4 independent, docs)
-3.1 `docs/architecture.md` "Relationship to Protocol SIFT" (2 typed servers / 31 tools / no execute_shell vs 200+ shell-backed).
-  - `docs(architecture): position narrow typed surface relative to Protocol SIFT`
-3.2 README coexistence block (same SIFT VM after `protocol-sift install`, neither requires nor conflicts).
-  - `docs(readme): explain Protocol SIFT coexistence and divergence`
-3.3 `divergence-smoke.py` asserts `.mcp.json` mcpServers == exactly `{findevil-mcp, findevil-agent-mcp}` and no command/args contain `protocol-sift`/`sift-gateway`/`execute_shell`/`bash -c`.
-  - `test(divergence): lock .mcp.json to two typed servers, no gateway/shell drift`
-3.4 `docs/codex-compatibility.md`: one bullet — gateway welcome as common base, NOT a product-default MCP.
-  - `docs(codex-compat): name Protocol SIFT gateway as non-default, coexisting`
-
-### Finish F1–F5 (code/doc + PR + verify + demo video)
-F1 Settle `CHANGELOG.md [Unreleased]` to the current **31-tool** surface (19 Rust + 12 Python) and open a `## [v-submit] - 2026-06-<dd>` section. Read the plan's F1 entry and the existing CHANGELOG narrative first — the count history is nuanced (25→23 pre/post-A5, 31 after the June doc audit), so reconcile rather than blindly find/replace.
-  - `docs(changelog): settle Unreleased to current 31-tool surface and open v-submit`
-F2 Mark `docs/plans/2026-05-20-finish-to-v-submit-plan.md` superseded → 2026-06-06 plan; refresh README badge/release links.
-  - `docs(plans): supersede 2026-05-20 finish plan; refresh release links`
-F3 `bash scripts/run-all-smokes.sh` exit 0; then `gh pr create --draft --fill --base master`.
-F4 (read-only) Verify L1 + l3-nightly green on the exact commit to be tagged; l3-weekly-goldens artifact non-empty.
-F5 **Automated demo video** — generate `docs/find-evil-demo.mp4` using TTS + ffmpeg:
-  ```bash
-  # Prerequisites (one-time):
-  pip install edge-tts                                        # TTS, no API key
-  pnpm install --dir scripts/make-demo-video --ignore-workspace  # Remotion deps
-
-  # Optional: enrich narration via GitHub Models API
-  # export GITHUB_TOKEN=$(gh auth token)
-
-  # Dry-run (no TTS/render — verify beat parsing):
-  python3 scripts/make-demo-video-prep.py --dry-run
-
-  # Full generate (TTS + Remotion animated render → docs/find-evil-demo.mp4):
-  bash scripts/make-demo-video.sh
-  ```
-  Uses **[Remotion](https://github.com/remotion-dev/remotion)** (React-based video,
-  headless Chrome render) for animated title cards with motion graphics (fade-in,
-  typewriter narration, spring transitions). TTS audio (`edge-tts`, `en-US-AriaNeural`)
-  is layered as an `<Audio>` track. Optional GitHub Models API rewrites narration before
-  TTS if `GITHUB_TOKEN` is set.
-  Commit the resulting MP4:
-  - `feat(submission): generate demo video via Remotion + TTS`
-
-Then run the plan's **Appendix A** ordered command sequence and confirm **Appendix B** verification checklist passes end-to-end.
-
-## Stop condition + handoff
-After F5, STOP. Print a handoff summary listing the **human-only** steps you must NOT perform:
-- **F6** Upload `docs/find-evil-demo.mp4` to YouTube or Vimeo, then register the URL:
-  `gh variable set DEMO_VIDEO_URL --body 'https://youtu.be/<id>'`. Then re-cut:
-  `git tag -f v-submit && git push -f origin v-submit` at the green HEAD.
-- **F7** Download the refreshed `find-evil-submission.zip` from the GitHub Release, validate, upload zip + public repo URL + hosted demo URL to the Devpost form.
-
-Report, per task: commit SHA + message, test status, and any deviation from the plan (log deviations, don't silently diverge). If any gate fails, stop and surface the failure with output — do not proceed to the next phase.
+---
 
 ## Headless execution note (autonomous-loop)
-When run via `scripts/autonomous-loop.py` (`claude -p --permission-mode acceptEdits`), file edits auto-apply but `docker`, `gh`, and network commands may still prompt or be unavailable. In that mode: complete all file/test/commit work, run the fast (non-Docker) gates, and defer the Docker L1 gate, `gh pr create`, and CI verification (F3 PR-create, F4) to a human/interactive pass — list them in the handoff instead of failing the run.
+
+When run via `scripts/autonomous-loop.py` (`claude -p --permission-mode acceptEdits`),
+F3 smoke gate and F5a video generation are automatable. F5b (upload), F6 (tag re-cut),
+and F7 (Devpost form) require human action — list them in the handoff instead of failing.
+The `docker` L1 gate and `gh pr create` may also require interactive prompts; defer to
+human if they fail.
+
+---
+
+## Reference: what shipped in Phases 0–3 + F1–F2
+
+| Commit | Task |
+|--------|------|
+| `ed03182` | Phase 0: esperanto offline fix |
+| `ed03182` | Phase 1.1: playbook.py unified detection rules |
+| `47c4501` | Phase 1.2: resolve_memory_store_path + cross-case memory |
+| `9e619e6` | Phase 1.3: contradiction resolution + self-score criteria |
+| `057866a` | Phase 1.4: dashboard role-state from real audit kinds |
+| `6e2bef7` | Phase 1.5: CLAUDE_CODE_FORK_SUBAGENT docs corrected |
+| `a7adaae` | Phase 2.1: cross-platform pandoc/chrome resolver |
+| `423514a` | Phase 2.2: SIFT MCP portable defaults |
+| `1228e2a` | Phase 2.3: libvirt hypervisor path |
+| `8df9259` | Phase 2.4: SANS starter staging hook + goldens stub |
+| `83aeb84` | Phase 2.5: find-evil-run one-command entry |
+| `7ee3006` | Phase 2.6: doctor.sh + install.sh deps |
+| `f64f1f7` | Phase 2.7: smoke registration |
+| `6bddfcc` | Phase 3.3: .mcp.json surface lock (divergence #10) |
+| `779d42e` | Phase 3.4: codex-compat Protocol SIFT coexistence |
+| `b2dbc71` | Phase 3.1+3.2 + F2: architecture + README + plan supersede |
+| `823b16d` | F1: CHANGELOG settled to 31-tool surface |
+| `c6af41a` | SUBMISSION_COMPLIANCE.md |
+| `7289cad` | Remotion demo video pipeline (scripts/make-demo-video/) |
+| `0e80ae0` | make-demo-video.py (legacy static-slide, superseded by Remotion) |
+| `7989d77` | claude -p narration enrichment |

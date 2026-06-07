@@ -920,7 +920,7 @@ once the first `v0.x` is cut on the `v-submit` tag.
 
 ## [v-submit] - 2026-06-07
 
-Snapshot of the current shipped state before final submission (updated 2026-06-07 with Phase 1–3 integration work).
+Snapshot of the current shipped state before final submission (updated 2026-06-07 with Phase 1–3 integration work + submission packaging + Remotion demo video automation).
 
 ### Summary
 
@@ -949,6 +949,16 @@ The current `master` HEAD (commit 8fc18a2 onwards) ships a **31-tool MCP surface
 - **doctor.sh / install.sh** — python3, git, unzip added to pre-flight; `source ~/.cargo/env` added to install.
 - **divergence-smoke #10** — `.mcp.json` surface locked to exactly two typed servers, no gateway/shell tokens.
 - **Protocol SIFT coexistence** — positioned in `docs/codex-compatibility.md` and `docs/architecture.md`.
+
+### Submission Packaging + Demo Video Automation (2026-06-07, commits c6af41a–7989d77)
+
+- **SUBMISSION_COMPLIANCE.md** — top-level 10-item checklist mapping every required Devpost component to an exact file path/URL. Linked from the first line of `README.md`.
+- **Remotion demo video pipeline** — `scripts/make-demo-video/` is a Remotion 4.0 (React, headless Chrome) project that generates `docs/find-evil-demo.mp4` from the 9-beat structure in `docs/demo-script-a2.md`. Animations: spring-animated rubric badges, typewriter narration, per-beat accent-color gradients, fade-in/out, progress bar.
+- **edge-tts TTS layer** — `scripts/make-demo-video-prep.py` generates per-beat MP3 audio using Microsoft Azure neural TTS (`en-US-AriaNeural`, no API key) layered as Remotion `<Audio>` tracks.
+- **`claude -p` narration enrichment** — prep script auto-detects the `claude` CLI on PATH and calls `claude -p` per beat to rewrite raw narration into a tighter voiceover script before TTS. Uses the existing Claude Code session token — no `GITHUB_TOKEN` or separate API key required.
+- **`scripts/make-demo-video.sh`** — one-command orchestrator: TTS prep → Remotion install (idempotent) → `remotion render` → `docs/find-evil-demo.mp4`.
+- **`scripts/make-demo-video-smoke.py`** — 4 smoke tests (prep syntax, Remotion dep, `registerRoot` presence, dry-run beat count/duration). Registered in `run-all-smokes.sh` + `.ps1`.
+- All 10 compositions verified: `FindEvilDemo` (9000 frames / 300.00s) + `Beat01`–`Beat09` at correct individual durations.
 
 ### Note on Tool-Count Documentation
 
