@@ -12,10 +12,14 @@
 *.aff4
 *.vhd
 *.vhdx
+*.7z
 # Windows event logs — fixture-only; never commit (real EVTX contains
 # logon history, hostnames, GUIDs and other user-identifying data).
 *.evtx
 *.EVTX
+# Memory-image evidence dropped in the repo root for local investigation
+# (e.g. Rocba-Memory.zip wraps a ~5.6 GB .7z). Evidence never enters git.
+/Rocba-Memory.zip
 
 # Rust
 target/
@@ -94,6 +98,13 @@ coverage/
 /Linear-Coding-Agent-Harness/
 /.playwright-mcp/
 /obsidian-mind/
+# n8n research clones (8 repos: n8n-io/n8n, n8n-docs, czlonkowski/n8n-mcp +
+# n8n-skills, Zie619/n8n-workflows, enescingoz/awesome-n8n-templates,
+# nusquama/n8nworkflows.xyz, djeknet/n8n-master-workflows); see
+# n8n-references/README.md for the per-clone purpose table. Wired as
+# OPTIONAL operator tooling per docs/runbooks/n8n-automation-integration.md;
+# never bundled in the Find Evil! submission.
+/n8n-references/
 # The same reference clones, now relocated under ref-folders/ or
 # git-hub-references/ — also research-only, also never shipped, and
 # ruff should not scan them. The git-hub-references/ tree currently
@@ -102,6 +113,19 @@ coverage/
 # git-hub-references/CLAUDE.md for the per-clone purpose table.
 /ref-folders/
 /git-hub-references/
+
+# Engram — the operator's standalone knowledge/memory MCP server
+# (Apache-2.0; its own git repo + release lifecycle). Wired into Claude
+# Code over MCP as an OPTIONAL, locally-run tool; never bundled in the
+# Find Evil! submission. See docs/runbooks/engram-memory-integration.md.
+/engram-vang/
+
+# Default evidence drop directory. The directory ships (README + .gitkeep)
+# so `find-evil-auto` has a documented default location, but actual
+# evidence dropped here never enters git. See evidence/README.md.
+/evidence/*
+!/evidence/README.md
+!/evidence/.gitkeep
 
 # Smoke test working dir (Amendment A2) — produces audit logs +
 # manifests under tmp/smoke/ that should never be committed.

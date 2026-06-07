@@ -8,9 +8,15 @@ Three things to get you investigating evidence with the agent. For the project p
 
 ### Path A — SIFT VM (recommended; matches the SANS judging environment)
 
+**Step 0 — download the SIFT VM (one-time, ~9.3 GB).** The SANS SIFT Workstation OVA is **not** shipped in this repo (it is SANS-licensed, gitignored as `*.ova`, and far larger than GitHub's file limit). Download it yourself:
+
+1. Go to **<https://www.sans.org/tools/sift-workstation/>**
+2. Scroll to the **VM** option and download the OVA (~9.3 GB).
+3. Save it to the repo root as `sift-2026.03.24.ova` (or point `OVA_PATH` at wherever you saved it).
+
 ```bash
 # From the repo root, on Windows with VMware Workstation installed
-# and the OVA at sift-2026.03.24.ova in the repo root:
+# and the OVA saved as sift-2026.03.24.ova in the repo root:
 bash scripts/sift-vm-bootstrap.sh
 ```
 

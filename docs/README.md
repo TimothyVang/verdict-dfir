@@ -43,12 +43,15 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 | File | Status | Purpose |
 |---|---|---|
 | `architecture.md` | **REQUIRED** | Devpost Required Component #3. Trust-boundary diagram + runtime architecture. The single page judges reach first. |
+| `artifact-semantics.md` | **ACTIVE** | Analyst reference: what each artifact type (Prefetch, Amcache, ShimCache, MFT, EVTX, memory, YARA, etc.) proves and doesn't prove, plus the ≥2 artifact-class corroboration table. |
 | `codex-compatibility.md` | **ACTIVE** | Operator guide for using Codex with the same two product MCP servers, without broad external MCP defaults. |
 | `cryptographic-attestation.md` | **REQUIRED** | Three-link chain-of-custody story (rubric criterion #5). How `manifest_verify` produces FRE 902(14) self-authenticating evidence post-A5. |
 | `DATASET.md` | **REQUIRED** | Devpost Required Component #5. Every fixture the agent was tested against, with SHA-256 + license + expected findings. |
 | `demo-script-a2.md` | **ACTIVE** | 5-minute Devpost demo video script (A2 flow). Pre-flight checklist + per-beat narration + rubric mapping. |
 | `divergences-resolved.md` | **ACTIVE** | Ledger of settled spec/code divergences moved out of `CLAUDE.md`. |
 | `false-positives.md` | **ACTIVE** | Operator's guide. Three architectural FP layers + four operational habits + per-tool FP risk table. |
+| `finding-to-action.md` | **ACTIVE** | Per-MITRE-technique IR playbook: from a SUSPICIOUS/CONFIRMED finding to analyst next steps (T1014, T1055, T1547, T1543, T1053, T1070, T1041/T1048). |
+| `investigation-phases.md` | **ACTIVE** | Phase-by-phase walkthrough: case_open → Pool A/B → contradictions → verify → judge → correlate → self-score → finalize. What each phase produces in audit.jsonl and verdict.json. |
 | `replay-determinism.md` | **ACTIVE** | Replay determinism notes for stable verifier behavior. |
 | `verdict-semantics.md` | **ACTIVE** | Analyst-facing meaning of `SUSPICIOUS` / `INDETERMINATE` / `NO_EVIL`; mirrors `compute_verdict` in `scripts/find_evil_auto.py`. |
 
@@ -83,13 +86,14 @@ Status-banner-prefixed within each file. Read in CLAUDE.md "Document hierarchy" 
 | `2026-04-23-amendment-option-b-claude-code-mode.md` (**A1**) | **SHIPPED** | Subscription-mode credentials for the swarm; LiteLLM proxy never built. |
 | `2026-04-25-amendment-a2-claude-code-primary-interface.md` (**A2**) | **SHIPPED** | Drops the custom Python orchestrator; Claude Code IS the orchestrator. |
 | `2026-04-26-amendment-a3-agent-army-and-dashboard.md` (**A3**) | **SHIPPED** (Phases 1-4 + role-state dashboard) / **RESEARCH** (pixel-art/chrome polish) | Memory + ACP MCP tools + SSE dashboard with role-state sprite containers; pixel-art and bead/chip chrome remain parked. |
+| `2026-04-30-amendment-a5-ots-removal.md` (**A5**) | **SHIPPED** | Removes the OpenTimestamps/Bitcoin fourth tier; chain collapses to 3 tiers (audit prev_hash → rs_merkle → sigstore). |
 | `2026-04-27-amendment-a4-managed-agents-runtime.md` (**A4**) | **RESEARCH** | Archived under `docs/archive/`; future-deployment design for hosted Anthropic Managed Agents runtime. Not on the SANS critical path. |
 | `2026-04-23-layered-test-sandbox-design.md` (**Spec #3**) | **SHIPPED** | L0/L1/L2/L3 sandbox stack. L2 advisory only. |
 | `2026-04-24-autonomous-build-swarm-design.md` (**Spec #1**) | **ACTIVE** | Build swarm architecture (still authoritative reference for swarm extension). |
 | `2026-04-25-the-product-design.md` (**Spec #2**) | **SHIPPED** (with A2 + A5 amendments) | The DFIR tool the judges run. |
 | `2026-04-26-orchestration-glue-design.md` (**Spec #4**) | **SHIPPED** | Thin GHA CI pipeline. |
 
-(There is no Amendment A5 spec doc — A5 was a code-only amendment + this Phase-1 doc-amendment pass.)
+(Amendment A5 spec: `2026-04-30-amendment-a5-ots-removal.md` — code-only removal of the OTS/Bitcoin tier; written as a standalone doc to complete the amendment lineage.)
 
 ## `docs/plans/` (plans and launch checklist)
 
@@ -110,9 +114,14 @@ The original five implementation plans shipped. Each carries a RETIRED banner na
 |---|---|---|
 | `ci-smoke-checklist.md` | **ACTIVE** | End-to-end pipeline verification before submission. |
 | `dockerfile-a2-decision.md` | **RESEARCH** (decision archive) | Cut the in-container `find-evil` wrapper + `.deb` packaging (PR #4, 2026-04-27, "Option B"). Body retained as decision record. |
+| `engram-memory-integration.md` | **ACTIVE** | Optional: wire Engram (standalone Apache-2.0 knowledge/memory MCP server) as a third, locally-run MCP server. Not bundled, not in the investigation flow, not in the audit chain. |
 | `github-remote-bootstrap.md` | **ACTIVE** | Pre-submission ops doc for setting up the public GitHub repo URL Devpost requires. |
+| `local-smoke-gate.md` | **ACTIVE** | Prerequisites, per-smoke coverage map, and common failure → fix pairs for `bash scripts/run-all-smokes.sh`. |
+| `n8n-automation-integration.md` | **ACTIVE** | Optional: wire n8n as an operator-local harness *around* the product — repeatable runs + post-verdict finding-to-action (via `n8n-mcp`, user-scope). Not bundled, not the orchestrator, not in the audit chain. |
 | `practical-sans-dfir-completion-prompt.md` | **ACTIVE** | Strict copy/paste coding-agent prompt for finishing practical SANS DFIR investigation outputs without new crypto work. |
+| `readiness-packet-windows.md` | **ACTIVE** | Three invocation modes for `scripts/readiness-gate.ps1`, readiness-state meanings, and `READINESS_BLOCKED` unblocking guide. |
 | `researched-dfir-automation-improvement-prompt.md` | **RESEARCH** | Research-backed prompt for future DFIR automation improvement work. |
+| `swarm-operations.md` | **ACTIVE** | Swarm startup, morning triage, resume-from-checkpoint, Postgres DAG inspection, and orphan-worktree cleanup. |
 
 ## `docs/release-evidence/`
 

@@ -477,8 +477,9 @@ def synthetic_flow(client: StdioClient) -> int:
         # ---- 4e. memory_recall (warm): same key now returns the hit ---
         # The cold/warm transition is what makes this a "cross-case
         # memory" tool — a future case investigating evil.example.com
-        # gets this hit back as a prior_observations entry, which counts
-        # toward the SOUL.md ≥2-artifact-class rule.
+        # gets this hit back as prior context. Memory recall is
+        # context only; it does NOT count toward the SOUL.md
+        # ≥2-artifact-class corroboration rule.
         log("memory_recall (warm): expect 1 hit with confidence > 0...")
         rc_warm = client.call_tool(
             "memory_recall",

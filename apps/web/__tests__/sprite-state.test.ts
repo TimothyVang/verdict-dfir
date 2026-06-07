@@ -114,12 +114,10 @@ describe("deriveRoleStates", () => {
     expect(states.pool_a).toBe("verdict");
   });
 
-  it("ignores bookkeeping kinds (judge_selfscore, chain_update, …)", () => {
+  it("ignores bookkeeping kinds (chain_update, …)", () => {
     const states = deriveRoleStates([
-      line(0, "judge_selfscore", { criterion: "audit_trail", score: 5 }),
       line(1, "chain_update", { merkle_root: "abc", leaf_count: 3 }),
     ]);
-    // Nothing in this stream drives a transition; everyone stays idle.
     expect(states).toEqual({
       pool_a: "idle",
       pool_b: "idle",
@@ -127,5 +125,48 @@ describe("deriveRoleStates", () => {
       judge: "idle",
       correlator: "idle",
     });
+  });
+
+  it("derives judge stage from judge_selfscore", () => {
+    const states = deriveRoleStates([
+      line(0, "judge_selfscore", { criterion: 1, question: "Did any tool call fail?" }),
+    ]);
+    expect(states.judge).toBe("working");
+  });
+
+  it("flips verifier on contradiction_resolved", () => {
+    const states = deriveRoleStates([
+      line(0, "contradiction_resolved", {
+        contradiction_id: "c-1",
+        resolution: "auto_higher_credibility",
+        approved_by: "auto",
+      }),
+    ]);
+    expect(states.verifier).toBe("verdict");
+  });
+
+  it("settles on manifest_finalize: correlator=verdict, others idle", () => {
+    const states = deriveRoleStates([
+      line(0, "tool_call_start", { tool_name: "evtx_query", pool: "A" }),
+      line(1, "tool_call_start", { tool_name: "pcap_triage", pool: "B" }),
+      line(2, "manifest_finalize", { run_id: "r-1", manifest_hash: "abc" }),
+    ]);
+    expect(states.correlator).toBe("verdict");
+    expect(states.pool_a).toBe("idle");
+    expect(states.pool_b).toBe("idle");
+    expect(states.verifier).toBe("idle");
+    expect(states.judge).toBe("idle");
+  });
+
+  it("reads pool_origin from finding_approved payloads", () => {
+    const states = deriveRoleStates([
+      line(0, "finding_approved", {
+        finding_id: "f-1",
+        pool_origin: "B",
+        confidence: "CONFIRMED",
+      }),
+    ]);
+    expect(states.pool_b).toBe("verdict");
+    expect(states.pool_a).toBe("idle");
   });
 });

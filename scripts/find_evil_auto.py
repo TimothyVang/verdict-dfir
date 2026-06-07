@@ -51,6 +51,20 @@ from pathlib import Path, PurePosixPath
 from queue import Empty, Queue
 from typing import Any
 
+try:
+    from findevil_agent.playbook import (
+        MEMORY_EXTS as _PLAYBOOK_MEMORY_EXTS,
+        RAW_DISK_EXTS as _PLAYBOOK_RAW_DISK_EXTS,
+        REGISTRY_HIVE_NAMES as _PLAYBOOK_REGISTRY_HIVE_NAMES,
+        YARA_TARGET_EXTS as _PLAYBOOK_YARA_TARGET_EXTS,
+        JUDGE_SELFSCORE_CRITERIA as _PLAYBOOK_JUDGE_SELFSCORE_CRITERIA,
+        classify_artifact_path as _playbook_classify,
+        detect_evidence_type as _playbook_detect,
+    )
+    _PLAYBOOK_AVAILABLE = True
+except ImportError:
+    _PLAYBOOK_AVAILABLE = False
+
 # ---------------------------------------------------------------------------
 # Configuration (env-overridable)
 # ---------------------------------------------------------------------------
@@ -60,6 +74,9 @@ GUEST_USER = os.environ.get("FIND_EVIL_GUEST_USER", "sansforensics")
 SSH_KEY = os.environ.get("FIND_EVIL_SSH_KEY", str(Path.home() / ".ssh" / "sift_key"))
 GUEST_REPO = os.environ.get("FIND_EVIL_GUEST_REPO", "/home/sansforensics/find-evil")
 REPO_ROOT = Path(__file__).resolve().parent.parent
+# Default evidence drop directory. `find-evil-auto` with no positional path
+# falls back to $FINDEVIL_EVIDENCE_ROOT, else this repo-local `evidence/` dir.
+DEFAULT_EVIDENCE_DIR = REPO_ROOT / "evidence"
 RUST_BIN = f"{GUEST_REPO}/target/release/findevil-mcp"
 RUST_BIN_Q = shlex.quote(RUST_BIN)
 AGENT_MCP_DIR_Q = shlex.quote(f"{GUEST_REPO}/services/agent_mcp")
@@ -205,9 +222,9 @@ class SshMcpClient:
 # Evidence-type detection
 # ---------------------------------------------------------------------------
 
-
-MEMORY_EXTS = (".mem", ".raw", ".vmem", ".dmp", ".img", ".lime")
-RAW_DISK_EXTS = (".e01", ".dd", ".aff", ".aff4", ".001")
+# Canonical constants: sourced from findevil_agent.playbook when available.
+MEMORY_EXTS = _PLAYBOOK_MEMORY_EXTS if _PLAYBOOK_AVAILABLE else (".mem", ".raw", ".vmem", ".dmp", ".img", ".lime")
+RAW_DISK_EXTS = _PLAYBOOK_RAW_DISK_EXTS if _PLAYBOOK_AVAILABLE else (".e01", ".dd", ".aff", ".aff4", ".001")
 EXTRACTED_DISK_CLASSES = {"mft", "prefetch", "registry", "usnjrnl"}
 YARA_TARGET_EXTS = (
     ".bat",
@@ -244,15 +261,9 @@ SUSPICIOUS_PREFETCH_TOOL_HINTS = (
 MAX_VELOCIRAPTOR_ZIP_MEMBER_BYTES = int(
     os.environ.get("FINDEVIL_VELOCIRAPTOR_ZIP_MAX_MEMBER_BYTES", str(512 * 1024 * 1024))
 )
-REGISTRY_HIVE_NAMES = {
-    "software",
-    "system",
-    "security",
-    "sam",
-    "default",
-    "ntuser.dat",
-    "usrclass.dat",
-    "amcache.hve",
+REGISTRY_HIVE_NAMES = _PLAYBOOK_REGISTRY_HIVE_NAMES if _PLAYBOOK_AVAILABLE else {
+    "software", "system", "security", "sam", "default",
+    "ntuser.dat", "usrclass.dat", "amcache.hve",
 }
 
 
@@ -263,6 +274,8 @@ def detect_evidence_type(path: str) -> str:
             return "directory"
     except OSError:
         pass
+    if _PLAYBOOK_AVAILABLE:
+        return _playbook_detect(path)
     p = Path(path).name.lower()
     if p.endswith(MEMORY_EXTS):
         return "memory"
@@ -289,6 +302,8 @@ def suspicious_prefetch_tool_hint(executable_name: str) -> tuple[str, str] | Non
 
 def classify_artifact_path(path: str) -> dict[str, str | None]:
     """Classify a file path into a supported evidence/artifact lane."""
+    if _PLAYBOOK_AVAILABLE:
+        return _playbook_classify(path)
     posix = PurePosixPath(str(path).replace("\\", "/"))
     name = posix.name
     lower_name = name.lower()
@@ -1192,6 +1207,20 @@ SOURCE_BIBLIOGRAPHY: tuple[dict[str, Any], ...] = (
 
 def build_source_bibliography() -> list[dict[str, Any]]:
     return [dict(row) for row in SOURCE_BIBLIOGRAPHY]
+
+
+def build_contradiction_resolution_record(
+    contradiction_id: str,
+    resolution: str,
+    approved_by: str,
+) -> dict[str, Any]:
+    """Pure factory for a kind='contradiction_resolved' audit record payload."""
+    return {
+        "kind": "contradiction_resolved",
+        "contradiction_id": contradiction_id,
+        "resolution": resolution,
+        "approved_by": approved_by,
+    }
 
 
 def build_attack_coverage(
@@ -5198,6 +5227,13 @@ class Investigation:
         )
         contras = cs.get("contradictions", []) if "_error" not in cs else []
         print(f"  contradictions: {len(contras)}")
+        for contra in contras:
+            record = build_contradiction_resolution_record(
+                contradiction_id=str(contra.get("id", "unknown")),
+                resolution=str(contra.get("resolution", "auto_higher_credibility")),
+                approved_by="auto" if self.unattended else "analyst",
+            )
+            self._audit(py, record["kind"], {k: v for k, v in record.items() if k != "kind"})
 
         # verify_finding before judge_findings. The verifier re-runs the
         # cited typed tool call and approves, downgrades, or rejects each
@@ -5325,38 +5361,30 @@ class Investigation:
         all_have_hashes = all(tc.get("output_hash") for tc in self.tool_calls)
         reproducible = "yes" if all_have_hashes and self.tool_calls else "no"
 
-        records = [
-            (
-                1,
+        answers = [
+            f"failures={failures} corrections=0",
+            f"C={c_count * 100 // n}% I={i_count * 100 // n}% "
+            f"H={h_count * 100 // n}% (n={len(scored_findings)})",
+            f"classes={classes_touched} crossed={cross_class_findings}",
+            f"rejected={rejected} reasons=[]",
+            f"cited={cited}/{len(scored_findings)}",
+            f"reproducible={reproducible}",
+        ]
+        criteria_source = (
+            _PLAYBOOK_JUDGE_SELFSCORE_CRITERIA
+            if _PLAYBOOK_AVAILABLE
+            else [{"criterion": i, "question": q} for i, q in enumerate([
                 "Did any tool call fail this run?",
-                f"failures={failures} corrections=0",
-            ),
-            (
-                2,
                 "Confidence distribution",
-                f"C={c_count * 100 // n}% I={i_count * 100 // n}% "
-                f"H={h_count * 100 // n}% (n={len(scored_findings)})",
-            ),
-            (
-                3,
                 "Artifact classes touched + cross-class corroboration",
-                f"classes={classes_touched} crossed={cross_class_findings}",
-            ),
-            (
-                4,
                 "Typed-surface rejections",
-                f"rejected={rejected} reasons=[]",
-            ),
-            (
-                5,
                 "tool_call_id citation rate",
-                f"cited={cited}/{len(scored_findings)}",
-            ),
-            (
-                6,
                 "Reproducible from manifest alone?",
-                f"reproducible={reproducible}",
-            ),
+            ], 1)]
+        )
+        records = [
+            (c["criterion"], c["question"], answers[c["criterion"] - 1])
+            for c in criteria_source
         ]
         print("\n=== judge self-score ===")
         for criterion, question, answer in records:
@@ -6470,6 +6498,45 @@ def write_run_summary(path: str, summary: dict[str, Any]) -> None:
     tmp.replace(target)
 
 
+def resolve_evidence_path(
+    cli_path: str | None,
+    *,
+    env: dict[str, str] | None = None,
+    default_dir: Path = DEFAULT_EVIDENCE_DIR,
+) -> str:
+    """Resolve the evidence path for a run.
+
+    Precedence: explicit CLI path > ``$FINDEVIL_EVIDENCE_ROOT`` > the repo's
+    default ``evidence/`` directory. An explicit CLI path is returned
+    verbatim and NOT host-validated — in SIFT-VM mode it lives inside the
+    guest (e.g. ``/mnt/hgfs/evidence/...``); ``case_open`` validates it.
+    When falling back to a directory, the directory must exist and hold at
+    least one evidence entry (anything other than the tracked ``README.md``
+    / ``.gitkeep`` placeholders), else raise ``ValueError`` with guidance.
+    """
+    if cli_path:
+        return cli_path
+    env_src = dict(os.environ if env is None else env)
+    override = env_src.get("FINDEVIL_EVIDENCE_ROOT", "").strip()
+    root = Path(override) if override else default_dir
+    label = "FINDEVIL_EVIDENCE_ROOT" if override else "the default evidence/ directory"
+    if not root.exists():
+        raise ValueError(
+            f"no evidence path given and {label} does not exist: {root}\n"
+            f"Drop evidence there (or set FINDEVIL_EVIDENCE_ROOT), or pass an "
+            f"explicit path: find-evil-auto <evidence-path>"
+        )
+    placeholders = {"README.md", ".gitkeep"}
+    contents = [child for child in root.iterdir() if child.name not in placeholders]
+    if not contents:
+        raise ValueError(
+            f"no evidence path given and {label} is empty: {root}\n"
+            f"Drop a memory image / EVTX / disk image / case folder there, or "
+            f"pass an explicit path: find-evil-auto <evidence-path>"
+        )
+    return str(root)
+
+
 def main() -> int:
     p = argparse.ArgumentParser(
         prog="find-evil-auto",
@@ -6477,8 +6544,12 @@ def main() -> int:
     )
     p.add_argument(
         "evidence_path",
-        help="Path INSIDE the SIFT VM to the evidence file "
-        "(e.g., /mnt/hgfs/evidence/extracted/.../base-dc-memory.img)",
+        nargs="?",
+        default=None,
+        help="Path to the evidence file/case dir (INSIDE the SIFT VM in "
+        "SIFT mode, e.g. /mnt/hgfs/evidence/.../base-dc-memory.img). If "
+        "omitted, falls back to $FINDEVIL_EVIDENCE_ROOT, else the repo's "
+        "evidence/ directory.",
     )
     p.add_argument(
         "--unattended",
@@ -6516,11 +6587,17 @@ def main() -> int:
     )
     args = p.parse_args()
 
+    try:
+        evidence_path = resolve_evidence_path(args.evidence_path)
+    except ValueError as exc:
+        print(f"find-evil-auto: {exc}", file=sys.stderr)
+        return 2
+
     # Make sibling scripts importable (render_report.py)
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
     inv = Investigation(
-        args.evidence_path,
+        evidence_path,
         unattended=args.unattended,
         with_report=not args.no_report,
         signer=args.signer,

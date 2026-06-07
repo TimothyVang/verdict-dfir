@@ -59,6 +59,8 @@ EXCLUDED_PATH_PARTS = (
     # legitimate-but-unrelated patterns from upstream code (e.g.
     # Archon ships the `ws` npm dep, which trips divergence #8).
     "git-hub-references",
+    # n8n automation reference clones - .gitignore'd, never ship.
+    "n8n-references",
     # Build / venv / cache.
     "target",
     "node_modules",
@@ -264,6 +266,33 @@ DIVERGENCES = [
             "'Spec/code divergences' SSE-not-WebSocket entry."
         ),
     },
+    {
+        "id": "#9",
+        "label": "Product forks Pool A/B via native Task, not CLAUDE_CODE_FORK_SUBAGENT",
+        "regex": re.compile(r"CLAUDE_CODE_FORK_SUBAGENT"),
+        "allowed_in_path": (
+            # The env var IS real in the build swarm's critic.py.
+            "services/swarm",
+            # The divergence check itself must name the pattern.
+            "scripts/divergence-smoke.py",
+            # Docs that EXPLAIN the divergence necessarily quote the env var.
+            "agent-config/PLAYBOOK.md",
+            "agent-config/AGENTS.md",
+            "docs/architecture.md",
+            "CLAUDE.md",
+            # Plan and braindump docs that document this task.
+            "docs/plans",
+            "docs/braindumps",
+        ),
+        "remediation": (
+            "CLAUDE_CODE_FORK_SUBAGENT=1 is a build-swarm internal "
+            "(services/swarm/findevil_swarm/critic.py). In the product "
+            "(what judges run), Claude Code forks Pool A/B via its "
+            "native Task mechanism — no env var is set. Docs that "
+            "claim the product uses this env var mislead judges. "
+            "Use 'native Task mechanism' instead."
+        ),
+    },
 ]
 
 
@@ -308,6 +337,59 @@ def _list_active_files() -> list[Path]:
 def _path_is_allowed(rel_posix: str, allowed: tuple[str, ...]) -> bool:
     """True if rel_posix matches any entry in allowed (exact or prefix)."""
     return any(rel_posix == a or rel_posix.startswith(a + "/") for a in allowed)
+
+
+_MCP_JSON_FORBIDDEN_TOKENS = (
+    "protocol-sift",
+    "sift-gateway",
+    "execute_shell",
+    "bash -c",
+    "fetch",
+    "browser",
+)
+_MCP_JSON_REQUIRED_SERVERS = frozenset({"findevil-mcp", "findevil-agent-mcp"})
+
+
+def _check_mcp_json_surface() -> list[str]:
+    """Assert .mcp.json has exactly the two typed servers and no gateway/shell tokens."""
+    import json
+
+    mcp_path = REPO / ".mcp.json"
+    if not mcp_path.exists():
+        return [".mcp.json not found — required for Find Evil! agent session"]
+
+    try:
+        data = json.loads(mcp_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [f".mcp.json is not valid JSON: {exc}"]
+
+    servers = data.get("mcpServers", {})
+    server_names = frozenset(servers.keys())
+    issues = []
+
+    extra = server_names - _MCP_JSON_REQUIRED_SERVERS
+    if extra:
+        issues.append(
+            f".mcp.json has unexpected server(s): {sorted(extra)} — "
+            "only findevil-mcp and findevil-agent-mcp are permitted"
+        )
+    missing = _MCP_JSON_REQUIRED_SERVERS - server_names
+    if missing:
+        issues.append(
+            f".mcp.json is missing required server(s): {sorted(missing)}"
+        )
+
+    for name, server in servers.items():
+        args = server.get("args", [])
+        cmd = server.get("command", "")
+        combined = " ".join([cmd] + args).lower()
+        for token in _MCP_JSON_FORBIDDEN_TOKENS:
+            if token in combined:
+                issues.append(
+                    f".mcp.json server '{name}' contains forbidden token '{token}' "
+                    f"in command/args — gateway/shell pass-through is not permitted"
+                )
+    return issues
 
 
 def main() -> int:
@@ -355,6 +437,22 @@ def main() -> int:
             failed += 1
         else:
             print(_ascii_safe(f"[OK  ] {div['id']}  {div['label']}"))
+
+    # Structural check: .mcp.json surface lock
+    total_checks += 1
+    mcp_issues = _check_mcp_json_surface()
+    if mcp_issues:
+        print("[FAIL] #10  .mcp.json locked to two typed servers, no gateway/shell drift")
+        for issue in mcp_issues:
+            print(f"         {issue}")
+        print(
+            "         remediation: .mcp.json must contain exactly findevil-mcp and "
+            "findevil-agent-mcp with no protocol-sift, sift-gateway, execute_shell, "
+            "bash -c, fetch, or browser tokens in command/args."
+        )
+        failed += 1
+    else:
+        print("[OK  ] #10  .mcp.json locked to two typed servers, no gateway/shell drift")
 
     print()
     print("=" * 60)

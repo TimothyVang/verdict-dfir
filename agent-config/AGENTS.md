@@ -1,8 +1,9 @@
 # AGENTS.md — Roles and Routing
 
 Under Amendment A2 the agent runtime is Claude Code itself; the
-roles below are spawned as forked subagents (`CLAUDE_CODE_FORK_SUBAGENT=1`)
-from a single supervisor session. They are conceptual roles, not
+roles below are spawned as subagents via Claude Code's native Task
+mechanism from a single supervisor session. (`CLAUDE_CODE_FORK_SUBAGENT=1`
+is used only in the build swarm's `critic.py` — not in this product.) They are conceptual roles, not
 separate processes — each one runs the same Claude with a
 narrowly-scoped system prompt.
 

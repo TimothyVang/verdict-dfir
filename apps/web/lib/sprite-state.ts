@@ -130,9 +130,31 @@ export function deriveRoleStates(
         break;
       }
 
+      case "judge_selfscore": {
+        // Judge is actively emitting self-score criteria — mark it working.
+        states.judge = "working";
+        break;
+      }
+
+      case "contradiction_resolved": {
+        // Verifier resolved a contradiction between pools — flip to verdict.
+        states.verifier = "verdict";
+        break;
+      }
+
+      case "manifest_finalize": {
+        // Investigation complete — correlator settles to verdict, others idle.
+        states.correlator = "verdict";
+        states.pool_a = "idle";
+        states.pool_b = "idle";
+        states.verifier = "idle";
+        states.judge = "idle";
+        break;
+      }
+
       default:
-        // Bookkeeping records (`audit_append`, `judge_selfscore`,
-        // `chain_update`, etc.) don't drive sprite visuals.
+        // Bookkeeping records (`audit_append`, `chain_update`, etc.)
+        // don't drive sprite visuals.
         break;
     }
   }

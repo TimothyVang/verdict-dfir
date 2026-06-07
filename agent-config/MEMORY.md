@@ -2,9 +2,9 @@
 
 ## Artifact semantics (common misreads)
 - Amcache `LastModified` is catalog-registration time, NOT execution time.
-- ShimCache order is LRU-ish on <Win8, insertion-order on >=Win8.1; presence != execution on modern Windows.
+- ShimCache (AppCompatCache) is insertion/append-ordered, NOT LRU — position is not recency of use (Mandiant "Caching Out"). Presence != execution; the recorded timestamp is the file's $SI mod-time, and the exec/insert flag was removed on Win10/Server2016+.
 - Prefetch disabled on SSDs by some builds/GPOs — absence is not evidence of absence.
-- `$MFT` $SI timestamps are trivially stompable; prefer $FN for tamper detection.
+- `$MFT` $SI timestamps are trivially stompable (NtSetInformationFile); prefer $FN for tamper detection, but $FN is harder-not-immune (SetMACE chains $SI edits with moves) — cross-validate with $LogFile/$UsnJrnl/Prefetch/LNK.
 - UsnJrnl wraps; gaps are normal, not suspicious by themselves.
 - EVTX EID 4624 Type 3 = network logon; Type 10 = RemoteInteractive (RDP).
 - Sysmon EID 1 ProcessGuid is the correlation key, not PID.

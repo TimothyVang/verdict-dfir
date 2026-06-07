@@ -76,6 +76,10 @@ fi
 
 info "Checking toolchain prerequisites..."
 
+# Source rustup env in case this is a fresh shell where ~/.cargo/bin isn't on PATH yet.
+# doctor.sh does the same at line 30.
+[ -f "${HOME}/.cargo/env" ] && source "${HOME}/.cargo/env"
+
 if ! command -v cargo &> /dev/null; then
     fail "cargo not on PATH. Install Rust: https://rustup.rs/"
     exit 1

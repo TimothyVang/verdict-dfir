@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -30,8 +32,26 @@ import matplotlib.patches as mpatches  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch  # noqa: E402
 
-PANDOC = r"C:\Program Files\Pandoc\pandoc.exe"
-CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+def _resolve_tool(env_var: str, *fallback_names: str) -> str | None:
+    override = os.environ.get(env_var, "").strip()
+    if override and Path(override).exists():
+        return override
+    for name in fallback_names:
+        found = shutil.which(name)
+        if found:
+            return found
+    return None
+
+
+PANDOC: str | None = _resolve_tool("PANDOC_BIN", "pandoc")
+CHROME: str | None = _resolve_tool(
+    "CHROME_BIN",
+    "google-chrome",
+    "google-chrome-stable",
+    "chromium",
+    "chromium-browser",
+    "chrome",
+)
 
 plt.rcParams.update(
     {
@@ -1389,6 +1409,10 @@ def render_html_pdf(md_path: Path) -> tuple[Path, Path | None]:
     if not style_path.exists():
         style_path.write_text(_DEFAULT_CSS, encoding="utf-8")
 
+    if PANDOC is None:
+        print("  WARN: pandoc not found (set PANDOC_BIN or install pandoc); skipping HTML render")
+        return html, None
+
     subprocess.run(
         [
             PANDOC,
@@ -1407,14 +1431,14 @@ def render_html_pdf(md_path: Path) -> tuple[Path, Path | None]:
     )
 
     pdf_out: Path | None = None
-    if Path(CHROME).exists():
+    if CHROME is not None:
         # Chrome can't overwrite a PDF that's open in a viewer (Windows
         # locks the file). Render to a sibling .new.pdf first; if the
         # final rename fails, the rendered output still survives and
         # the user gets a clear message naming both paths.
         pdf_tmp = pdf.with_suffix(".new.pdf")
         try:
-            html_url = "file:///" + str(html).replace("\\", "/").replace("C:/", "C:/")
+            html_url = html.resolve().as_uri()
             subprocess.run(
                 [
                     CHROME,

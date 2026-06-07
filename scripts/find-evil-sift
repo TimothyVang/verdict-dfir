@@ -25,7 +25,7 @@ SSH_KEY="${SIFT_SSH_KEY:-$HOME/.ssh/sift_key}"
 GUEST_USER="${GUEST_USER:-sansforensics}"
 GUEST_REPO_PATH="${GUEST_REPO_PATH:-/home/sansforensics/find-evil}"
 
-VMRUN="/c/Program Files (x86)/VMware/VMware Workstation/vmrun.exe"
+VMRUN_WIN="/c/Program Files (x86)/VMware/VMware Workstation/vmrun.exe"
 
 RESTORE_ON_EXIT=1
 for arg in "$@"; do
@@ -51,39 +51,83 @@ to_winpath() {
 }
 
 # ---------------------------------------------------------------------
+# Detect hypervisor: VMware Workstation (Windows/WSL) or libvirt (Linux)
+# ---------------------------------------------------------------------
+HYPERVISOR=""
+if [[ -f "$VMRUN_WIN" ]]; then
+  HYPERVISOR="vmware"
+  VMRUN="$VMRUN_WIN"
+elif command -v virsh &>/dev/null; then
+  HYPERVISOR="libvirt"
+else
+  fail "No supported hypervisor found. Expected VMware Workstation (vmrun.exe) or libvirt (virsh). Set VM_NAME to the libvirt domain name or ensure vmrun.exe is on PATH."
+fi
+log "hypervisor: $HYPERVISOR"
+
+# ---------------------------------------------------------------------
 # 1. Pre-flight: VM exists?
 # ---------------------------------------------------------------------
-[[ -f "$VM_VMX" ]] || fail "VM not converted yet at: $VM_VMX
+if [[ "$HYPERVISOR" == "vmware" ]]; then
+  [[ -f "$VM_VMX" ]] || fail "VM not converted yet at: $VM_VMX
   Run: bash scripts/sift-vm-bootstrap.sh"
-[[ -f "$VMRUN" ]] || fail "VMware Workstation vmrun.exe not found at $VMRUN"
-[[ -f "$SSH_KEY" ]] || fail "SSH key missing at $SSH_KEY — run sift-vm-bootstrap.sh"
+  [[ -f "$SSH_KEY" ]] || fail "SSH key missing at $SSH_KEY — run sift-vm-bootstrap.sh"
+else
+  # libvirt: domain must already exist (operator imports OVA via virt-manager or virsh define)
+  virsh dominfo "$VM_NAME" &>/dev/null \
+    || fail "libvirt domain '$VM_NAME' not found. Import the OVA with virt-manager or virsh define. Set VM_NAME env var if the domain has a different name."
+  [[ -f "$SSH_KEY" ]] || fail "SSH key missing at $SSH_KEY"
+fi
 
 # ---------------------------------------------------------------------
 # 2. Boot if not running
 # ---------------------------------------------------------------------
-VMX_WIN=$(to_winpath "$VM_VMX")
-if "$VMRUN" -T ws list | grep -qF "$VMX_WIN"; then
-  log "VM already running"
+if [[ "$HYPERVISOR" == "vmware" ]]; then
+  VMX_WIN=$(to_winpath "$VM_VMX")
+  if "$VMRUN" -T ws list | grep -qF "$VMX_WIN"; then
+    log "VM already running"
+  else
+    log "VM not running; starting headless..."
+    "$VMRUN" -T ws start "$VMX_WIN" nogui
+  fi
 else
-  log "VM not running; starting headless..."
-  "$VMRUN" -T ws start "$VMX_WIN" nogui
+  DOMAIN_STATE=$(virsh domstate "$VM_NAME" 2>/dev/null || echo "unknown")
+  if [[ "$DOMAIN_STATE" == "running" ]]; then
+    log "VM already running"
+  else
+    log "VM not running (state: $DOMAIN_STATE); starting..."
+    virsh start "$VM_NAME" \
+      || fail "virsh start '$VM_NAME' failed — check 'virsh dominfo $VM_NAME' for details"
+  fi
 fi
 
 # ---------------------------------------------------------------------
-# 3. Discover guest IP from VMware Tools
+# 3. Discover guest IP
 # ---------------------------------------------------------------------
-log "waiting for VMware Tools to report guest IP (up to 90s)..."
+log "waiting for guest IP (up to 90s)..."
 GUEST_IP=""
 for i in $(seq 1 45); do
-  if GUEST_IP=$("$VMRUN" -T ws getGuestIPAddress "$VMX_WIN" 2>/dev/null); then
-    if [[ -n "$GUEST_IP" && "$GUEST_IP" != "unknown" && "$GUEST_IP" != *error* ]]; then
-      log "  guest IP: $GUEST_IP"
-      break
+  if [[ "$HYPERVISOR" == "vmware" ]]; then
+    if GUEST_IP=$("$VMRUN" -T ws getGuestIPAddress "$VMX_WIN" 2>/dev/null); then
+      if [[ -n "$GUEST_IP" && "$GUEST_IP" != "unknown" && "$GUEST_IP" != *error* ]]; then
+        log "  guest IP (VMware Tools): $GUEST_IP"; break
+      fi
+    fi
+  else
+    # libvirt: try virsh domifaddr first (requires guest agent or arp)
+    GUESS=$(virsh domifaddr "$VM_NAME" 2>/dev/null \
+      | awk '/ipv4/{gsub(/\/[0-9]+/,"",$4); print $4}' \
+      | head -1)
+    if [[ -n "$GUESS" ]]; then
+      GUEST_IP="$GUESS"; log "  guest IP (virsh domifaddr): $GUEST_IP"; break
+    fi
+    # fallback: arp-scan / hostname resolution if operator sets SIFT_VM_IP
+    if [[ -n "${SIFT_VM_IP:-}" ]]; then
+      GUEST_IP="$SIFT_VM_IP"; log "  guest IP (SIFT_VM_IP env): $GUEST_IP"; break
     fi
   fi
   sleep 2
 done
-[[ -n "$GUEST_IP" && "$GUEST_IP" != "unknown" ]] || fail "VM didn't report a usable IP within 90s"
+[[ -n "$GUEST_IP" && "$GUEST_IP" != "unknown" ]] || fail "VM didn't report a usable IP within 90s. Set SIFT_VM_IP=<ip> to override."
 
 # ---------------------------------------------------------------------
 # 4. Verify SSH actually reaches the VM

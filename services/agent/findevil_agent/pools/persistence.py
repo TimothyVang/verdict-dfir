@@ -48,11 +48,13 @@ Key DFIR caveats from ``MEMORY.md``:
 
 - Amcache `LastModified` is **catalog-registration time, not execution
   time**. Do NOT cite Amcache alone as execution evidence.
-- ShimCache order is LRU-ish on <Win8, insertion-order on >=Win8.1.
-  Presence ≠ execution on modern Windows.
+- ShimCache (AppCompatCache) is insertion/append-ordered, NOT LRU —
+  position is not recency of use. Presence ≠ execution; the recorded
+  timestamp is the file's `$SI` mod-time.
 - Prefetch can be disabled on SSDs. Absence is not evidence of absence.
 - `$MFT` `$SI` timestamps are trivially stompable. Prefer `$FN` for
-  tamper detection.
+  tamper detection, but `$FN` is harder-not-immune (SetMACE) —
+  cross-validate with `$LogFile`/`$UsnJrnl`/Prefetch/LNK.
 
 Tradecraft priors:
 - LOLBins to flag fast: `rundll32`, `regsvr32`, `mshta`, `wmic`,

@@ -19,6 +19,8 @@ Expected total: 31 tools.
 
 These are the only product-default MCP servers. Do not add generic filesystem, browser, Docker, Kubernetes, GitHub, fetch, or shell MCPs as defaults.
 
+The Protocol SIFT gateway (`teamdfir/protocol-sift`) is a welcome common base that installs independently via `protocol-sift install` on the same SIFT VM. It is **not** a product-default MCP for Find Evil!: its broad shell-backed surface (200+ tools, `execute_shell`) is architecturally distinct from our 31-typed-tool surface. If Protocol SIFT is installed, both gateways coexist under separate MCP server names; neither requires nor conflicts with the other. See [`docs/architecture.md#relationship-to-protocol-sift`](architecture.md#relationship-to-protocol-sift).
+
 ## Local Codex MCP Config
 
 If your Codex build supports a user-level `config.toml` with `mcp_servers` entries, add equivalent stdio servers outside this repo. Do not commit user-level config or secrets.

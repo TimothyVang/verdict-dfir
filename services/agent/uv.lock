@@ -370,6 +370,19 @@ wheels = [
 ]
 
 [[package]]
+name = "esperanto"
+version = "2.22.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5a/42/5a8c26a8381d60f9c066824a1478c710dbf14d408bef599c86e5072153b5/esperanto-2.22.0.tar.gz", hash = "sha256:463b058aaa5d1c506600dc330151c80afd3ee2277bb2896a4fe020e4b5c3aab7", size = 682384, upload-time = "2026-05-21T23:24:44.399Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/01/6c/680161c808f05ce393830d7ec99eb3df5fa70417916417ab58c652290d0e/esperanto-2.22.0-py3-none-any.whl", hash = "sha256:fb7db5ef3811e1fa6cd7af254679d9238c6e2359770dc038af4460c090e9022b", size = 225129, upload-time = "2026-05-21T23:24:46.167Z" },
+]
+
+[[package]]
 name = "et-xmlfile"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -385,6 +398,7 @@ source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
     { name = "duckdb" },
+    { name = "esperanto" },
     { name = "httpx" },
     { name = "mitreattack-python" },
     { name = "pydantic" },
@@ -407,6 +421,7 @@ dev = [
 requires-dist = [
     { name = "anthropic", specifier = ">=0.45,<1.0" },
     { name = "duckdb", specifier = ">=0.10" },
+    { name = "esperanto", specifier = ">=2.0,<3.0" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "mitreattack-python", specifier = ">=5.4,<6.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },

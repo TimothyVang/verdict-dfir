@@ -68,7 +68,56 @@ bash scripts/find-evil-auto /mnt/hgfs/evidence/cases/<host>/ --unattended --run-
 
 Per-mode walkthrough + SIFT-VM setup recipe lives in [QUICKSTART.md](QUICKSTART.md). Trust-boundary diagrams in [docs/architecture.md](docs/architecture.md). Pre-emptive judge Q&A is the [Anticipated questions](#anticipated-questions) section below.
 
+**Protocol SIFT coexistence:** Find Evil! runs on the same SIFT VM after `protocol-sift install`, with a deliberately narrow MCP surface (31 typed tools, no `execute_shell`) that coexists alongside Protocol SIFT's broader gateway. Neither requires nor conflicts with the other; judges choose which interface to use per investigation. See [docs/architecture.md](docs/architecture.md#relationship-to-protocol-sift) for the full positioning.
+
 Codex operator support is documented in [docs/codex-compatibility.md](docs/codex-compatibility.md). The web dashboard also has a local Codex prompt cockpit at `/codex`; it is an operator aid, not a new product-default MCP surface.
+
+---
+
+## Required downloads & install files
+
+Large binaries (the SIFT VM, evidence images) are **not** committed — they are SANS-licensed and/or far larger than GitHub's file limit. Download them from the links below. `bash scripts/install.sh` handles the toolchain (Rust + Python) automatically; the table marks what you still fetch by hand.
+
+### Core (every mode)
+
+| Item | Link | Notes |
+|---|---|---|
+| Claude Code CLI | <https://docs.anthropic.com/en/docs/claude-code/install> | The agent runtime. `claude` must be on PATH. |
+| Rust 1.88 (rustup) | <https://rustup.rs> | Pinned in `rust-toolchain.toml`. `install.sh` builds the Rust MCP server. |
+| uv (Python tool) | <https://docs.astral.sh/uv/getting-started/installation/> | Python env/lockfile manager. Python 3.11. |
+
+### SIFT-VM mode (Path A — matches the SANS judging environment)
+
+| Item | Link | Notes |
+|---|---|---|
+| SANS SIFT Workstation OVA | <https://www.sans.org/tools/sift-workstation/> | ~9.3 GB. Save as `sift-2026.03.24.ova` in the repo root. Gitignored (`*.ova`); never committed. |
+| VMware Workstation | <https://www.vmware.com/products/desktop-hypervisor.html> | Provides `vmrun` + `ovftool` used by `scripts/sift-vm-bootstrap.sh`. VMware-only today. |
+
+Then run `bash scripts/sift-vm-bootstrap.sh` (see [QUICKSTART.md](QUICKSTART.md#path-a--sift-vm-recommended-matches-the-sans-judging-environment)).
+
+### Local-host mode (Path B — DFIR binaries on the host)
+
+| Item | Link | Notes |
+|---|---|---|
+| Volatility 3 | <https://github.com/volatilityfoundation/volatility3> | `pip install volatility3`. Powers `vol_*`. |
+| Hayabusa | <https://github.com/Yamato-Security/hayabusa/releases> | Sigma engine over EVTX (`hayabusa_scan`). |
+| Velociraptor | <https://github.com/Velocidex/velociraptor/releases> | Artifact collection (`vel_collect`). |
+| YARA-X | bundled | Ships in the Rust crate; no separate install. |
+
+### Evidence to investigate
+
+| Item | Link | Notes |
+|---|---|---|
+| SANS Find Evil! starter case data | <https://findevil.devpost.com/resources> | The primary golden the judges test against. Drop into `evidence/` (local) or `/mnt/hgfs/evidence/` (SIFT). |
+| Fixture corpora (NIST CFReDS / OTRF) | see [docs/DATASET.md](docs/DATASET.md) | Pulled by the L3 scripts at CI time; per-fixture links + SHA-256 in the dataset doc. |
+
+Local-mode evidence goes in the repo's [`evidence/`](evidence/README.md) directory by default — `bash scripts/find-evil-auto` with no path argument investigates whatever is there (override with `$FINDEVIL_EVIDENCE_ROOT`).
+
+### Optional
+
+| Item | Link | Notes |
+|---|---|---|
+| Engram memory MCP server | [docs/runbooks/engram-memory-integration.md](docs/runbooks/engram-memory-integration.md) | Standalone Apache-2.0 knowledge/memory tool, wired in optionally; not bundled. |
 
 ---
 
