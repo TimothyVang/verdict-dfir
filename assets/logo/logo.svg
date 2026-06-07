@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" width="480" height="320" role="img" aria-label="VERDICT — DFIR at machine speed.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 320" width="580" height="320" role="img" aria-label="VERDICT — DFIR at machine speed.">
   <defs>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&amp;display=swap');
@@ -16,8 +16,8 @@
   </defs>
 
   <!-- Background -->
-  <rect width="480" height="320" rx="16" fill="#0d1117"/>
-  <rect width="480" height="320" rx="16" fill="none" stroke="#9b59b6" stroke-width="1.5" opacity="0.6"/>
+  <rect width="580" height="320" rx="16" fill="#0d1117"/>
+  <rect width="580" height="320" rx="16" fill="none" stroke="#9b59b6" stroke-width="1.5" opacity="0.6"/>
 
   <!-- Gavel head -->
   <g transform="translate(52, 48)">
@@ -63,10 +63,10 @@
     DFIR at machine speed.
   </text>
 
-  <!-- Powered by badge -->
+  <!-- Brand sub-line -->
   <text x="200" y="174" font-family="'JetBrains Mono', 'Courier New', monospace"
-        font-size="14" font-weight="400" fill="#30363d" letter-spacing="1">
-    Find Evil! — SANS Hackathon 2026
+        font-size="14" font-weight="400" fill="#6e7681" letter-spacing="2">
+    Investigate · Verify · Prove
   </text>
 
   <!-- Confidence chips row -->
@@ -95,5 +95,5 @@
   </g>
 
   <!-- Bottom border accent -->
-  <rect x="0" y="306" width="480" height="4" rx="0 0 16 16" fill="#9b59b6" opacity="0.8"/>
+  <rect x="0" y="306" width="580" height="4" rx="0 0 16 16" fill="#9b59b6" opacity="0.8"/>
 </svg>
