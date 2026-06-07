@@ -1,7 +1,17 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
 
-  "_comment": "Protocol SIFT §2 adapted for the SANS Find Evil! stack. Differences vs the upstream Protocol SIFT pattern: (1) we do NOT deny curl/wget — fetch-fixtures.sh, fetch-nist-fixture.sh, and competitor-watch.sh need them; (2) DFIR tool binaries (Volatility, Hayabusa, Velociraptor, YARA) are NOT in the Bash allow-list — they are invoked by the typed Rust MCP server, not by Claude Code directly. This is an architectural guardrail per CLAUDE.md non-negotiable invariant 'No execute_shell MCP tool, ever' — the MCP surface is the only legal path to those tools; (3) audit logging is handled by the audit_append MCP tool (M2 hash-chained JSONL with prev_hash linking), not by a Stop hook — adding a parallel hook log would create an unverified second trail.",
+  "_comment": "Protocol SIFT §2 adapted for the SANS Find Evil! stack. Differences vs the upstream Protocol SIFT pattern: (1) we do NOT deny curl/wget — fetch-fixtures.sh, fetch-nist-fixture.sh, and competitor-watch.sh need them; (2) DFIR tool binaries (Volatility, Hayabusa, Velociraptor, YARA) are NOT in the Bash allow-list — they are invoked by the typed Rust MCP server, not by Claude Code directly. This is an architectural guardrail per CLAUDE.md non-negotiable invariant 'No execute_shell MCP tool, ever' — the MCP surface is the only legal path to those tools; (3) audit logging is handled by the audit_append MCP tool (M2 hash-chained JSONL with prev_hash linking), not by a Stop hook — adding a parallel hook log would create an unverified second trail. The SessionStart hook below is intentionally allowed: it only inspects evidence/ and injects onboarding suggestions as additionalContext — it writes nothing to the evidence or audit trail, so it creates no second unverified trail.",
+
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash scripts/session-suggest.sh" }
+        ]
+      }
+    ]
+  },
 
   "permissions": {
     "defaultMode": "acceptEdits",
