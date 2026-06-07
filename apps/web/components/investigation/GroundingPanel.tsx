@@ -46,6 +46,17 @@ interface GroundingClaim {
   rationale?: string;
 }
 
+interface IocGrounding {
+  ioc: string;
+  type: string; // hash | domain | ip | url
+  status: string; // malicious | clean | unknown
+  possible_overclaim?: boolean;
+  detections?: string;
+  names?: string[];
+  sources?: GroundingSource[];
+  rationale?: string;
+}
+
 interface CoverageTargets {
   validated?: number;
   on_mitre?: number;
@@ -63,6 +74,10 @@ interface GroundingSummary {
   unknown?: number;
   possible_hallucinations?: number;
   renumbered_ids?: number;
+  iocs_judged?: number;
+  iocs_malicious?: number;
+  iocs_clean?: number;
+  iocs_unknown?: number;
 }
 
 interface GroundingData {
@@ -72,6 +87,7 @@ interface GroundingData {
   source?: string;
   judged_by?: string;
   grounding?: GroundingClaim[];
+  ioc_grounding?: IocGrounding[];
   coverage_targets?: CoverageTargets;
   summary?: GroundingSummary;
 }
@@ -236,6 +252,65 @@ function ClaimCard({ claim }: { claim: GroundingClaim }) {
   );
 }
 
+const IOC_STATUS_COLOR: Record<string, string> = {
+  malicious: VERDICT.alertRed,
+  clean: VERDICT.confirmed,
+  unknown: VERDICT.muted,
+};
+
+function IocRow({ ioc }: { ioc: IocGrounding }) {
+  const color = IOC_STATUS_COLOR[ioc.status] ?? VERDICT.muted;
+  return (
+    <div style={{ padding: "10px 0", borderTop: `1px solid ${VERDICT.borderSubtle}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <Chip label={ioc.status} color={color} />
+        <span
+          style={{
+            fontFamily: GROTESK,
+            fontSize: 10.5,
+            letterSpacing: 1.2,
+            textTransform: "uppercase",
+            color: VERDICT.mutedDark,
+          }}
+        >
+          {ioc.type}
+        </span>
+        {ioc.detections ? (
+          <span style={{ fontFamily: MONO, fontSize: 12, color }}>{ioc.detections}</span>
+        ) : null}
+        {ioc.possible_overclaim ? (
+          <Chip label="possible over-claim" color={VERDICT.inferred} />
+        ) : null}
+      </div>
+      <code
+        style={{
+          display: "block",
+          marginTop: 4,
+          fontFamily: MONO,
+          fontSize: 12,
+          color: VERDICT.text,
+          wordBreak: "break-all",
+        }}
+      >
+        {ioc.ioc}
+      </code>
+      {ioc.names && ioc.names.length ? (
+        <div style={{ marginTop: 2, fontFamily: GROTESK, fontSize: 11, color: VERDICT.muted }}>
+          {ioc.names.join(", ")}
+        </div>
+      ) : null}
+      {ioc.rationale ? (
+        <p style={{ margin: "6px 0 0", fontFamily: MONO, fontSize: 12, lineHeight: 1.55, color: VERDICT.text }}>
+          {ioc.rationale}
+        </p>
+      ) : null}
+      {(ioc.sources ?? []).map((src, i) => (
+        <SourceQuote key={`${ioc.ioc}-src-${i}`} src={src} />
+      ))}
+    </div>
+  );
+}
+
 export function GroundingPanel({ caseDir }: { caseDir: string }) {
   const [data, setData] = useState<GroundingData | null>(null);
 
@@ -382,6 +457,37 @@ export function GroundingPanel({ caseDir }: { caseDir: string }) {
               );
             })}
           </div>
+        </div>
+      ) : null}
+
+      {(data.ioc_grounding?.length ?? 0) > 0 ? (
+        <div
+          style={{
+            marginTop: 14,
+            paddingTop: 12,
+            borderTop: `1px solid ${VERDICT.borderSubtle}`,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: GROTESK,
+              fontSize: 11,
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+              color: VERDICT.muted,
+            }}
+          >
+            IOC reputation
+            {typeof s.iocs_malicious === "number" ? (
+              <span style={{ color: VERDICT.alertRed }}>
+                {" "}· {s.iocs_malicious} malicious
+              </span>
+            ) : null}
+            <span style={{ color: VERDICT.mutedDark }}> (VirusTotal · operator aid)</span>
+          </div>
+          {(data.ioc_grounding ?? []).map((ioc, i) => (
+            <IocRow key={`${ioc.ioc}-${i}`} ioc={ioc} />
+          ))}
         </div>
       ) : null}
 
