@@ -175,6 +175,19 @@ def resolve_case_home(*, env: os._Environ[str] | dict[str, str] | None = None) -
     return Path(home) / ".findevil"
 
 
+def resolve_memory_store_path(*, env: os._Environ[str] | dict[str, str] | None = None) -> Path:
+    """Return the path to the Hermes cross-case memory SQLite database.
+
+    Mirrors resolve_case_home precedence: ``FINDEVIL_MEMORY_STORE`` env var
+    takes priority; otherwise ``<case_home>/memory/memory.sqlite``.
+    """
+    env_src: dict[str, str] = dict(env) if env is not None else dict(os.environ)
+    override = env_src.get("FINDEVIL_MEMORY_STORE", "").strip()
+    if override:
+        return Path(override)
+    return resolve_case_home(env=env_src) / "memory" / "memory.sqlite"
+
+
 __all__ = [
     "ACH_MAX_ROUNDS",
     "EMBEDDING_MODEL",
@@ -188,4 +201,5 @@ __all__ = [
     "CredentialsNotAvailableError",
     "resolve_case_home",
     "resolve_credentials",
+    "resolve_memory_store_path",
 ]

@@ -19,6 +19,7 @@ from findevil_agent.config import (
     CredentialsNotAvailableError,
     resolve_case_home,
     resolve_credentials,
+    resolve_memory_store_path,
 )
 
 
@@ -124,3 +125,22 @@ class TestConstants:
     def test_judge_budget_is_two_minutes(self) -> None:
         # Spec #2 §8.1 — judge commits a decision within 2 min wall clock.
         assert JUDGE_WALL_CLOCK_BUDGET_SECONDS == 120
+
+
+class TestResolveMemoryStorePath:
+    def test_resolve_memory_store_path_precedence(self, tmp_path: pytest.TemporaryDirectory) -> None:
+        override = tmp_path / "custom_memory.sqlite"
+        env = {"FINDEVIL_MEMORY_STORE": str(override), "HOME": str(tmp_path)}
+        result = resolve_memory_store_path(env=env)
+        assert result == override
+
+    def test_defaults_under_case_home(self, tmp_path: pytest.TemporaryDirectory) -> None:
+        env = {"HOME": str(tmp_path)}
+        result = resolve_memory_store_path(env=env)
+        assert result == tmp_path / ".findevil" / "memory" / "memory.sqlite"
+
+    def test_respects_findevil_home_override(self, tmp_path: pytest.TemporaryDirectory) -> None:
+        custom_home = tmp_path / "custom_findevil"
+        env = {"FINDEVIL_HOME": str(custom_home), "HOME": str(tmp_path)}
+        result = resolve_memory_store_path(env=env)
+        assert result == custom_home / "memory" / "memory.sqlite"
