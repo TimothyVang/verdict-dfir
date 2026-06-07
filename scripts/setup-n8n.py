@@ -26,6 +26,7 @@ Env overrides:
     N8N_AUTO_DOCKER=1   start a docker n8n if none is reachable (needs Docker)
     SLACK_WEBHOOK_URL   optional; adds the Slack notify node when present
 """
+
 from __future__ import annotations
 
 import json
@@ -94,14 +95,34 @@ def ensure_reachable() -> bool:
             return True
         if os.environ.get("N8N_AUTO_DOCKER") == "1" and shutil.which("docker"):
             log("n8n not reachable — starting a docker container…")
+            # Shared network so n8n resolves `browserless` by name (grounding
+            # workflow). Idempotent: `network create` no-ops if it exists.
             subprocess.run(
-                ["docker", "run", "-d", "--name", "n8n", "-p", "5678:5678",
-                 "-v", "n8n_data:/home/node/.n8n",
-                 # n8n 2.x mandates an owner login (no no-auth mode); a long JWT
-                 # session means the investigator logs in once and stays in. The
-                 # dashboard surfaces these creds (see /api/n8n + N8nAccessCard).
-                 "-e", "N8N_USER_MANAGEMENT_JWT_DURATION_HOURS=8760",
-                 "docker.n8n.io/n8nio/n8n"],
+                ["docker", "network", "create", "findevil-net"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            subprocess.run(
+                [
+                    "docker",
+                    "run",
+                    "-d",
+                    "--name",
+                    "n8n",
+                    "--network",
+                    "findevil-net",
+                    "-p",
+                    "5678:5678",
+                    "-v",
+                    "n8n_data:/home/node/.n8n",
+                    # n8n 2.x mandates an owner login (no no-auth mode); a long JWT
+                    # session means the investigator logs in once and stays in. The
+                    # dashboard surfaces these creds (see /api/n8n + N8nAccessCard).
+                    "-e",
+                    "N8N_USER_MANAGEMENT_JWT_DURATION_HOURS=8760",
+                    "docker.n8n.io/n8nio/n8n",
+                ],
                 check=False,
             )
             for _ in range(30):
@@ -121,9 +142,11 @@ def _gen_password() -> str:
 def ensure_owner_session() -> bool:
     """Create the owner on a fresh instance, else log in. Returns True on a
     usable authenticated session (cookie in _jar)."""
-    password = os.environ.get("N8N_OWNER_PASSWORD") or (
-        _read_cred("password") if CRED_FILE.exists() else ""
-    ) or _gen_password()
+    password = (
+        os.environ.get("N8N_OWNER_PASSWORD")
+        or (_read_cred("password") if CRED_FILE.exists() else "")
+        or _gen_password()
+    )
 
     status, settings = _req("GET", f"{BASE}/rest/settings")
     needs_setup = bool(
@@ -131,23 +154,37 @@ def ensure_owner_session() -> bool:
     )
 
     if needs_setup:
-        status, _ = _req("POST", f"{BASE}/rest/owner/setup", {
-            "email": EMAIL, "firstName": "Find", "lastName": "Evil", "password": password,
-        })
+        status, _ = _req(
+            "POST",
+            f"{BASE}/rest/owner/setup",
+            {
+                "email": EMAIL,
+                "firstName": "Find",
+                "lastName": "Evil",
+                "password": password,
+            },
+        )
         if status in (200, 201):
             log(f"created owner {EMAIL}")
             _write_creds(password)
             return True
         log(f"owner setup failed ({status}) — trying login")
 
-    status, _ = _req("POST", f"{BASE}/rest/login", {
-        "emailOrLdapLoginId": EMAIL, "password": password,
-    })
+    status, _ = _req(
+        "POST",
+        f"{BASE}/rest/login",
+        {
+            "emailOrLdapLoginId": EMAIL,
+            "password": password,
+        },
+    )
     if status == 200:
         log(f"logged in as {EMAIL}")
         _write_creds(password)
         return True
-    log(f"login failed ({status}); set N8N_OWNER_PASSWORD to the existing owner password")
+    log(
+        f"login failed ({status}); set N8N_OWNER_PASSWORD to the existing owner password"
+    )
     return False
 
 
@@ -168,8 +205,10 @@ def ensure_api_key() -> str | None:
             KEY_FILE.write_text(key + "\n")
             log("minted API key -> tmp/n8n-apikey.txt")
             return key
-    log(f"could not mint API key ({status}). Create one in n8n → Settings → API "
-        f"and save it to {KEY_FILE.relative_to(ROOT)}")
+    log(
+        f"could not mint API key ({status}). Create one in n8n → Settings → API "
+        f"and save it to {KEY_FILE.relative_to(ROOT)}"
+    )
     return None
 
 
@@ -184,7 +223,9 @@ def _read_cred(field: str) -> str:
 
 def _write_creds(password: str) -> None:
     TMP.mkdir(exist_ok=True)
-    CRED_FILE.write_text(f"n8n instance: {BASE}\nemail: {EMAIL}\npassword: {password}\n")
+    CRED_FILE.write_text(
+        f"n8n instance: {BASE}\nemail: {EMAIL}\npassword: {password}\n"
+    )
 
 
 # --- workflow definition (webhook -> route -> ticket -> [slack] -> respond) ---
@@ -248,21 +289,61 @@ return [{ json: { ...j, ticket_file: `tmp/findevil-tickets/${safe}.json`, ticket
 
 def build_workflow() -> dict:
     nodes = [
-        {"id": "wh", "name": "Verdict webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2,
-         "parameters": {"httpMethod": "POST", "path": WEBHOOK_PATH, "responseMode": "responseNode"}},
-        {"id": "code", "name": "Route + map to actions", "type": "n8n-nodes-base.code", "typeVersion": 2,
-         "parameters": {"language": "javaScript", "jsCode": JS_CODE}},
-        {"id": "ticket", "name": "Write ticket file", "type": "n8n-nodes-base.code", "typeVersion": 2,
-         "parameters": {"language": "javaScript", "jsCode": WRITE_JS}},
+        {
+            "id": "wh",
+            "name": "Verdict webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "parameters": {
+                "httpMethod": "POST",
+                "path": WEBHOOK_PATH,
+                "responseMode": "responseNode",
+            },
+        },
+        {
+            "id": "code",
+            "name": "Route + map to actions",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "parameters": {"language": "javaScript", "jsCode": JS_CODE},
+        },
+        {
+            "id": "ticket",
+            "name": "Write ticket file",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "parameters": {"language": "javaScript", "jsCode": WRITE_JS},
+        },
     ]
     if SLACK_WEBHOOK:
-        nodes.append({"id": "slack", "name": "Notify Slack", "type": "n8n-nodes-base.httpRequest",
-                      "typeVersion": 4.2, "parameters": {"method": "POST", "url": SLACK_WEBHOOK,
-                      "sendBody": True, "specifyBody": "json",
-                      "jsonBody": "={{ JSON.stringify({ text: $json.slack_text }) }}", "options": {}}})
-    nodes.append({"id": "resp", "name": "Respond", "type": "n8n-nodes-base.respondToWebhook",
-                  "typeVersion": 1.1, "parameters": {"respondWith": "json",
-                  "responseBody": "={{ $('Write ticket file').item.json }}"}})
+        nodes.append(
+            {
+                "id": "slack",
+                "name": "Notify Slack",
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.2,
+                "parameters": {
+                    "method": "POST",
+                    "url": SLACK_WEBHOOK,
+                    "sendBody": True,
+                    "specifyBody": "json",
+                    "jsonBody": "={{ JSON.stringify({ text: $json.slack_text }) }}",
+                    "options": {},
+                },
+            }
+        )
+    nodes.append(
+        {
+            "id": "resp",
+            "name": "Respond",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ $('Write ticket file').item.json }}",
+            },
+        }
+    )
     for i, n in enumerate(nodes):
         n["position"] = [i * 240, 0]
     conns = {}
@@ -289,9 +370,11 @@ def deploy_workflow(key: str) -> bool:
 
 def main() -> int:
     if not ensure_reachable():
-        log(f"no n8n at {BASE} (optional). Start one: "
+        log(
+            f"no n8n at {BASE} (optional). Start one: "
             f"docker run -d --name n8n -p 5678:5678 -v n8n_data:/home/node/.n8n "
-            f"docker.n8n.io/n8nio/n8n  — or set N8N_AUTO_DOCKER=1. Skipping.")
+            f"docker.n8n.io/n8nio/n8n  — or set N8N_AUTO_DOCKER=1. Skipping."
+        )
         return 0  # optional component — never fail the install
     if not ensure_owner_session():
         return 0
@@ -299,7 +382,9 @@ def main() -> int:
     if not key:
         return 0
     deploy_workflow(key)
-    log(f"done. creds -> {CRED_FILE.relative_to(ROOT)}, key -> {KEY_FILE.relative_to(ROOT)}")
+    log(
+        f"done. creds -> {CRED_FILE.relative_to(ROOT)}, key -> {KEY_FILE.relative_to(ROOT)}"
+    )
     log("dashboard AutomationPanel + scripts/n8n_post.py will now route live verdicts.")
     return 0
 
