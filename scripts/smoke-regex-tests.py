@@ -212,6 +212,26 @@ PATH_EXISTENCE_ALLOW_CASES = [
         "services/foo/…/bar",
         True,
     ),
+    (
+        "Gitignored n8n-references clone is allow-listed",
+        "n8n-references/n8n/LICENSE.md",
+        True,
+    ),
+    (
+        "Docker runner host output dir ./out/ is allow-listed",
+        "./out/",
+        True,
+    ),
+    (
+        "Docker runner host output dir ./out is allow-listed",
+        "./out",
+        True,
+    ),
+    (
+        "Lookalike ./output IS still checked (not allow-listed)",
+        "./output/foo",
+        False,
+    ),
 ]
 
 

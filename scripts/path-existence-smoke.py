@@ -207,11 +207,22 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # quoted in README.md + docs/demo-script-a2.md as conventional
     # locations.  tmp/ is gitignored.
     re.compile(r"^tmp/"),
+    # Host output dir for the docker runner (`./out/`, `./out`) quoted in
+    # docs/runbooks/docker-runner.md — scripts/verdict-docker bind-mounts it to
+    # receive the run dir + signed manifest.  `out/` is gitignored and created
+    # at runtime, so it exists only after a docker run, never in the CI checkout.
+    re.compile(r"^\./out(/|$)"),
     # Research-only repo-root dir for external SDK / OpenClaw / Hermes
     # / Pixel-Agents reference clones (CLAUDE.md "External reference
     # clones" + Amendment A3 §1.3).  /git-hub-references/ is gitignored
     # so it never enters the submission tree.
     re.compile(r"^git-hub-references(/|$)"),
+    # n8n automation reference clones (`n8n-references/n8n/LICENSE.md`, etc.)
+    # quoted in docs/runbooks/n8n-automation-integration.md.  /n8n-references/
+    # is gitignored (optional, never bundled — n8n is fair-code and not part of
+    # the audit chain), so its paths exist on a developer's disk but not in the
+    # CI checkout.  Same shape as the git-hub-references/ external-clone allowance.
+    re.compile(r"^n8n-references(/|$)"),
     # Engram — the operator's standalone Apache-2.0 knowledge/memory MCP
     # server, wired in optionally per docs/runbooks/engram-memory-
     # integration.md.  /engram-vang/ is gitignored (its own repo + release
