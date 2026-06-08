@@ -505,6 +505,32 @@ def offline_actions_checks() -> None:
     )
 
 
+def offline_boundary_checks() -> None:
+    print("[offline] submission boundary (judge-clean + keys/n8n excluded)")
+
+    def read(rel: str) -> str:
+        p = ROOT / rel
+        return p.read_text() if p.is_file() else ""
+
+    for doc in ("docs/architecture.md", "SUBMISSION_COMPLIANCE.md"):
+        text = read(doc).lower()
+        check(
+            "n8n" not in text and "grounding" not in text,
+            f"{doc} stays judge-clean (no n8n/grounding mention)",
+        )
+    gi = read(".gitignore")
+    check(
+        "/tmp/" in gi, ".gitignore excludes /tmp/ (keys, searxng, grounding artifacts)"
+    )
+    check("/n8n-references/" in gi, ".gitignore excludes /n8n-references/")
+    pkg = read("scripts/package-devpost.sh").lower()
+    if pkg:
+        check(
+            not any(t in pkg for t in ("api-keys", "grounding", "searxng")),
+            "package-devpost.sh never bundles keys / grounding / searxng",
+        )
+
+
 def webhook_up() -> bool:
     try:
         with urllib.request.urlopen(N8N_HEALTH, timeout=4) as r:
@@ -574,6 +600,7 @@ def main() -> int:
     offline_cve_checks(gv)
     offline_firstpass_checks(gv)
     offline_actions_checks()
+    offline_boundary_checks()
     if webhook_up():
         live_checks()
     else:
