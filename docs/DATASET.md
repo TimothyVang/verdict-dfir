@@ -184,9 +184,115 @@ Storage policy:
 
 ---
 
+## Public DFIR benchmark suite (one scenario per artifact class)
+
+Ten verified public datasets (Anna Tchijova's ranked list) onboarded so we can do live
+runs against every DFIR artifact class. Each has a ground-truth answer key at
+`goldens/<case-id>/expected-findings.json`, is fetched by `scripts/fetch-fixtures.sh`
+(§6), and is scored offline by `scripts/score-recall.py` (recall vs `min_recall_percent`
+plus honest verdict consistency). Run + score loop:
+
+```sh
+bash scripts/fetch-fixtures.sh                       # stage evidence (env vars below)
+bash scripts/verdict fixtures/<case-id>/<evidence>   # or --sift for disk classes
+python scripts/score-recall.py tmp/auto-runs/<case-id>   # recall vs golden
+```
+
+**Tier** is the thread's data-quality ranking, recorded as a *caveat only* — per project
+decision it is NOT a scoring gate (training-data contamination is not modeled). Tiers:
+🟢 score against (trustworthy) · 🟡 build/test, score with care (answers gated) ·
+🟠 practice only (solutions public — likely in model training data) · 🔴 not ready.
+
+| # | Case id | Class | Tier | Fetch | Expected verdict | Recall target |
+|---|---|---|---|---|---|---|
+| 1 | `nitroba` | network (pcap) | 🟢 | `NITROBA_URL` (default digitalcorpora) | CONFIRMED_EVIL | 60% |
+| 2 | `nist-data-leakage` | disk (insider exfil) | 🟢 | `DATA_LEAKAGE_URL` | CONFIRMED_EVIL | 60% |
+| 3 | `nist-hacking-case` | disk (XP) | 🟢 | default cfreds URL (already wired) | CONFIRMED_EVIL | 71% |
+| 4 | `alihadi-09-encrypt` | disk (crypto) | 🟡 | `ALIHADI09_URL` | **INDETERMINATE** (false-positive control) | 50% |
+| 5 | `alihadi-01-webserver` | disk + memory | 🟡 | `ALIHADI01_URL` | CONFIRMED_EVIL | 60% |
+| 6 | `dfrws-2008-linux` | memory+disk+network | 🟡 | git clone | CONFIRMED_EVIL | 50% |
+| 7 | `m57-jean` | disk/email | 🟠 | `M57_JEAN_URL` (default digitalcorpora) | CONFIRMED_EVIL | 60% |
+| 8 | `alihadi-07-sysinternals` | disk (E01) | 🟠 | `ALIHADI07_URL` | CONFIRMED_EVIL | 50% |
+| 9 | `dfrws-2011-android` | mobile/disk | 🔴 | `DFRWS2011_URL` | UNKNOWN (stub) | 40% |
+| 10 | `volatility-cridex` | memory | 🔴 (sourcing) | `CRIDEX_URL` (canonical link dead) | CONFIRMED_EVIL | 50% |
+
+**Notable cases**
+- **`alihadi-09-encrypt` is the false-positive control.** Encryption tooling is present
+  but its presence is not proof of malice. The golden verdict is `INDETERMINATE`; a run
+  that escalates to `SUSPICIOUS`/`CONFIRMED_EVIL` FAILS the asymmetric verdict-match check
+  in `score-recall.py`. Findings are intentionally `INFERRED`/`HYPOTHESIS`.
+- **`dfrws-2011-android` TRAP:** the upstream README hashes are labeled MD5 but are
+  actually **SHA1** — do not chase a phantom mismatch. Evidence is on a personal Dropbox
+  that may vanish; mirror and recompute MD5+SHA256 before relying on it. The golden is a
+  stub (verdict `UNKNOWN`) pending a verified mirror + manual walkthrough.
+- **`volatility-cridex` sourcing is dead:** the canonical
+  `downloads.volatilityfoundation.org` link no longer serves the image. Set `CRIDEX_URL`
+  to a verified mirror (a SANS-hosted copy with published hashes was requested in the
+  thread). The IOCs themselves are canonical (`reader_sl.exe` ← `explorer.exe`, malfind
+  injection, C2).
+- **Disk classes need `--sift`.** Locally, raw `.dd/.E01` runs return `INDETERMINATE`
+  (custody-only) because host-side disk-content tooling is a known gap; real disk verdicts
+  come from `scripts/verdict --sift`. `INDETERMINATE` is an honest PASS of the live-test
+  gate but will score below the recall target until run under SIFT.
+
+### Run results (recall against golden)
+
+*(Populated as each obtainable dataset is run + scored. No fabricated numbers — gated/
+unfetchable-on-host datasets are marked "staged, run pending evidence".)*
+
+| Case id | Run? | Verdict | Recall | Notes |
+|---|---|---|---|---|
+| `nitroba` | yes (local, tshark) | INDETERMINATE | **5/5 (100%) — PASS** (bar=80%) | Network-playbook gaps fixed (see below). Surfaces all five: anonymous-email contact, source host (192.168.15.4), Gmail-cookie attribution, authenticated Facebook login, and the send-vs-browsing timeline correlation. |
+| `nist-data-leakage` | staged, run pending evidence | — | — | needs `--sift` (disk) |
+| `nist-hacking-case` | yes (local, partial) | INDETERMINATE | 3/14 (21%) | local custody-only; needs `--sift` for full recall |
+| `alihadi-09-encrypt` | staged, run pending evidence | — | — | false-positive control; expect INDETERMINATE |
+| `alihadi-01-webserver` | staged, run pending evidence | — | — | disk+memory correlation |
+| `dfrws-2008-linux` | staged, run pending evidence | — | — | Linux memory+disk+network |
+| `m57-jean` | staged, run pending evidence | — | — | practice only |
+| `alihadi-07-sysinternals` | staged, run pending evidence | — | — | practice only |
+| `dfrws-2011-android` | not ready | — | — | source unreliable; golden is a stub |
+| `volatility-cridex` | staged, run pending evidence | — | — | source mirror needed |
+
+### Network-playbook fix (driven by the Nitroba false negative)
+
+The first Nitroba run returned `NO_EVIL` with 0 findings. Root cause was three
+compounding bugs, now fixed:
+
+1. **Packet cap.** `pcap_triage` read only the first 10,000 of 83,153 packets; the
+   harassment traffic sits at packets ~79,800–83,100. Raised the cap
+   (`services/mcp/src/tools/pcap_triage.rs`) and the engine call
+   (`scripts/find_evil_auto.py`) to read the whole capture.
+2. **Truncated-pcap intolerance.** Reading to the end hit a truncated final packet;
+   tshark exits non-zero on that but still emits every readable packet first. The
+   tool now triages the packets it got instead of discarding all output when stdout
+   is non-empty.
+3. **No anonymous-email recognition + judge over-collapse.** Added extraction of HTTP
+   requests (src→host, method, cookie) plus an anonymous/disposable/self-destruct
+   email-service host category, cookie-based attribution for both webmail and
+   social-media logins, and a send-vs-browsing timeline correlation (per-request
+   timestamps added to `pcap_triage`) (`scripts/find_evil_auto.py`). The judge's
+   `_group_key` collapsed *all* findings
+   from one tool call into one (it keyed on `(tool_call_id, artifact_path)` despite a
+   docstring claiming otherwise); it now keys on the claim
+   (`services/agent/findevil_agent/judge.py`), so a single `pcap_triage` call can yield
+   multiple distinct findings.
+
+The recall scorer's matcher was also hardened (`scripts/score-recall.py`): from
+symmetric Jaccard to expected-coverage (recall asks whether the run *surfaced* each
+ground-truth claim, so a verbose-but-correct finding should match a concise expected
+one), then to **maximum bipartite matching** with a coverage floor of 0.5 and no
+MITRE-technique shortcut. This enforces a 1:1 assignment (one run finding can't
+satisfy two claims), requires the claim's *distinctive* tokens rather than generic
+DFIR vocabulary, and finds the optimal assignment rather than a greedy one — so the
+recall count can neither be inflated by a single broad finding nor under-counted by
+match order. Controls were re-validated (synthetic-benign PASS, alihadi-09
+over-confident FAIL, nist-hacking-case partial still below target).
+
+---
+
 ## Findings corpus (what the agent found)
 
-*(Populated incrementally as Week 5 acceptance criteria (AC-01 through AC-10) are verified against each fixture. Each subdirectory contains the full agent run manifest, audit.jsonl, and OTS receipt.)*
+*(Populated incrementally as Week 5 acceptance criteria (AC-01 through AC-10) are verified against each fixture. Each subdirectory contains the full agent run manifest and audit.jsonl (post-A5 signed manifest; no OTS receipt).)*
 
 ```
 goldens/
@@ -220,5 +326,9 @@ Each `run.manifest.json` is verifiable offline by any third party — under Amen
 | Synthetic benign | MIT (our script) | Yes |
 | DFIR-Metric | Permissive (verified Week 6) | Yes, by URL reference |
 | DFRWS Rodeo | Public domain | Yes |
+| Digital Corpora (Nitroba, M57-Jean) | Freely redistributable (research/education) | Yes, by URL reference |
+| NIST Data Leakage | Public domain (17 USC 105) | Yes, by URL reference |
+| Ali Hadi challenges (#1/#7/#9) | Free for research/education (answers gated) | By URL reference |
+| DFRWS 2008/2011 | Public for research/education | By URL reference |
 
 None of these licenses contaminate our MIT-licensed submission repo because we redistribute only URLs and SHA-256 hashes, not the fixtures themselves.

@@ -39,8 +39,17 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Jaccard token-overlap above this counts as a description/hint match.
-MATCH_THRESHOLD = 0.18
+# A run finding matches an expected one when it COVERS this fraction of the
+# expected finding's distinctive tokens. Recall asks "did the run surface this
+# ground-truth claim?" — so we normalize the overlap by the expected token set,
+# not by the union (symmetric Jaccard unfairly penalizes verbose run findings
+# that fully state the claim and then add caveats). Set at 0.5 so a match needs the
+# *distinctive* tokens of the claim, not just shared generic DFIR vocabulary
+# (email/host/http) that a semantically-unrelated finding can accumulate to ~0.4.
+MATCH_COVERAGE = 0.5
+# Floor on absolute shared tokens so a tiny expected set can't match on one or
+# two generic words that survived stopword removal.
+MATCH_MIN_SHARED = 3
 
 # Tokens with no discriminating power for DFIR finding descriptions.
 _STOPWORDS = frozenset(
@@ -61,10 +70,17 @@ def _tokens(*parts: str | None) -> set[str]:
     return {t for t in re.findall(r"[a-z0-9]+", text) if t not in _STOPWORDS and len(t) > 2}
 
 
-def _jaccard(a: set[str], b: set[str]) -> float:
-    if not a or not b:
-        return 0.0
-    return len(a & b) / len(a | b)
+def _coverage(expected: set[str], candidate: set[str]) -> tuple[float, int]:
+    """How much of the expected token set the candidate covers.
+
+    Returns (coverage_fraction, shared_count). Normalizing by the expected set
+    (not the union) makes a verbose-but-correct run finding match a concise
+    ground-truth claim.
+    """
+    if not expected or not candidate:
+        return 0.0, 0
+    shared = len(expected & candidate)
+    return shared / len(expected), shared
 
 
 def _newest_case_dir() -> Path | None:
@@ -137,20 +153,47 @@ def _verdict_consistent(run_verdict: str | None, golden_verdict: str | None) -> 
     return rv == gv
 
 
-def _match(expected: dict[str, Any], run_findings: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Return the best-matching run finding for an expected finding, or None."""
-    exp_mitre = expected.get("mitre_technique")
-    exp_tokens = _tokens(expected.get("description"), expected.get("artifact_hint"))
+def _is_eligible(expected: dict[str, Any], rf: dict[str, Any]) -> bool:
+    """Can this run finding satisfy this expected finding?
 
-    best: dict[str, Any] | None = None
-    best_score = 0.0
-    for rf in run_findings:
-        if exp_mitre and rf.get("mitre_technique") == exp_mitre:
-            return rf  # exact technique match is decisive
-        score = _jaccard(exp_tokens, _tokens(rf.get("description"), rf.get("artifact_path")))
-        if score > best_score:
-            best_score, best = score, rf
-    return best if best_score >= MATCH_THRESHOLD else None
+    Eligibility is purely description-content overlap: the run finding must cover
+    enough of the expected finding's distinctive tokens. MITRE technique is
+    deliberately NOT a shortcut here — in cases where every finding shares one
+    technique (e.g. all T1071.001), a MITRE match would make any finding eligible
+    for any claim and inflate recall. Content overlap is the honest signal.
+    """
+    exp_tokens = _tokens(expected.get("description"), expected.get("artifact_hint"))
+    cov, shared = _coverage(exp_tokens, _tokens(rf.get("description"), rf.get("artifact_path")))
+    return shared >= MATCH_MIN_SHARED and cov >= MATCH_COVERAGE
+
+
+def _max_matching(
+    expected: list[dict[str, Any]], run_findings: list[dict[str, Any]]
+) -> dict[int, int]:
+    """Maximum bipartite matching (Kuhn's algorithm): expected_idx -> run_idx.
+
+    A run finding may back at most one expected claim (no double-counting), and we
+    find the assignment that covers the *most* expected claims — so neither greedy
+    order nor a shared MITRE technique can under- or over-count recall.
+    """
+    adj: list[list[int]] = [
+        [j for j, rf in enumerate(run_findings) if _is_eligible(exp, rf)] for exp in expected
+    ]
+    run_to_exp: dict[int, int] = {}
+
+    def _augment(i: int, seen: set[int]) -> bool:
+        for j in adj[i]:
+            if j in seen:
+                continue
+            seen.add(j)
+            if j not in run_to_exp or _augment(run_to_exp[j], seen):
+                run_to_exp[j] = i
+                return True
+        return False
+
+    for i in range(len(expected)):
+        _augment(i, set())
+    return {i: j for j, i in run_to_exp.items()}
 
 
 def score(case_dir: Path, golden_path: Path) -> dict[str, Any]:
@@ -160,17 +203,17 @@ def score(case_dir: Path, golden_path: Path) -> dict[str, Any]:
     run_findings: list[dict[str, Any]] = verdict_doc.get("findings") or []
     expected: list[dict[str, Any]] = golden.get("findings") or []
 
+    assignment = _max_matching(expected, run_findings)  # expected_idx -> run_idx (1:1)
     matched: list[dict[str, Any]] = []
     unmatched: list[dict[str, Any]] = []
-    for exp in expected:
-        hit = _match(exp, run_findings)
+    for i, exp in enumerate(expected):
         record = {
             "finding_id": exp.get("finding_id"),
             "description": exp.get("description"),
             "mitre_technique": exp.get("mitre_technique"),
         }
-        if hit:
-            record["matched_run_finding_id"] = hit.get("finding_id")
+        if i in assignment:
+            record["matched_run_finding_id"] = run_findings[assignment[i]].get("finding_id")
             matched.append(record)
         else:
             unmatched.append(record)

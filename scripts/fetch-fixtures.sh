@@ -144,4 +144,90 @@ EOF
   log "ok: synthetic-benign placeholder written"
 fi
 
+# ---------------------------------------------------------------------
+# 6. Public DFIR benchmark datasets (Anna Tchijova's verified/ranked list).
+#    One scenario per artifact class so we can do live runs against each
+#    DFIR artifact type. Ground truth for each lives in
+#    goldens/<case-id>/expected-findings.json and is scored offline by
+#    scripts/score-recall.py. None are committed to git.
+#
+#    Two idioms below:
+#      - Direct sources (digitalcorpora, NIST CFReDS) have a default URL
+#        that env overrides; a failed pull WARNs (does not abort the rest).
+#      - Gated sources (archive.org, Dropbox) require an explicit env URL
+#        because filenames vary per item; absent -> SKIP with instructions.
+#    SHA is recorded on first pull; pin it via <NAME>_SHA256 to enforce.
+# ---------------------------------------------------------------------
+
+# 6a. Nitroba University Harassment — network (pcap). GREEN: score against.
+NITROBA_URL="${NITROBA_URL:-https://downloads.digitalcorpora.org/corpora/scenarios/2008-nitroba/nitroba.pcap}"
+if ! ( fetch_fixture "${NITROBA_URL}" "nitroba/nitroba.pcap" "${NITROBA_SHA256:-}" ); then
+  log "WARN: nitroba fetch failed; override with NITROBA_URL=<mirror of https://digitalcorpora.org/corpora/scenarios/nitroba-university-harassment-scenario/>"
+fi
+
+# 6b. NIST Data Leakage — disk (insider exfil + anti-forensics). GREEN.
+if [[ -n "${DATA_LEAKAGE_URL:-}" ]]; then
+  fetch_fixture "${DATA_LEAKAGE_URL}" "nist-data-leakage/data-leakage.zip" \
+    "${DATA_LEAKAGE_SHA256:-}"
+  if [[ -f "${FIXTURES}/nist-data-leakage/data-leakage.zip" ]]; then
+    (cd "${FIXTURES}/nist-data-leakage" && unzip -qo data-leakage.zip || true)
+  fi
+else
+  log "SKIP nist-data-leakage: set DATA_LEAKAGE_URL=<archive of https://cfreds.nist.gov/all/NIST/DataLeakageCase> (multi-file case; stage the packaged image)"
+fi
+
+# 6c. M57-Jean — disk/email (CFO spear-phish). ORANGE: practice only.
+M57_JEAN_URL="${M57_JEAN_URL:-https://downloads.digitalcorpora.org/corpora/scenarios/m57-jean/jean.aff}"
+if ! ( fetch_fixture "${M57_JEAN_URL}" "m57-jean/jean.aff" "${M57_JEAN_SHA256:-}" ); then
+  log "WARN: m57-jean fetch failed; override with M57_JEAN_URL=<mirror of https://digitalcorpora.org/corpora/scenarios/m57-jean/>"
+fi
+
+# 6d. DFRWS 2008 Linux — memory+disk+network. YELLOW. Shallow git clone.
+if [[ ! -d "${FIXTURES}/dfrws-2008-linux/.git" ]]; then
+  log "cloning DFRWS 2008 challenge..."
+  rm -rf "${FIXTURES}/dfrws-2008-linux"
+  git clone --depth 1 https://github.com/dfrws/dfrws2008-challenge.git \
+    "${FIXTURES}/dfrws-2008-linux" || log "WARN: dfrws-2008 clone failed"
+else
+  log "ok: dfrws-2008-linux already cloned"
+fi
+
+# 6e-g. Ali Hadi challenges — gated (archive.org item filenames vary per case).
+#       Point each <NAME>_URL at the specific archive.org download link.
+for spec in \
+  "ALIHADI01_URL:alihadi-01-webserver:https://archive.org/details/dfir-case1" \
+  "ALIHADI07_URL:alihadi-07-sysinternals:https://archive.org/download/sysinternals-case" \
+  "ALIHADI09_URL:alihadi-09-encrypt:https://archive.org/details/anti-forensics-case-2"; do
+  var="${spec%%:*}"; rest="${spec#*:}"; name="${rest%%:*}"; page="${rest#*:}"
+  url="${!var:-}"
+  if [[ -n "${url}" ]]; then
+    fetch_fixture "${url}" "${name}/$(basename "${url}")" ""
+  else
+    log "SKIP ${name}: set ${var}=<direct file link from ${page}>"
+  fi
+done
+
+# 6h. DFRWS 2011 Android — RED (Dropbox may vanish). Env-gated.
+#     TRAP: upstream README hashes are labeled MD5 but are actually SHA1.
+#     Recompute MD5+SHA256 on a clean copy; pin via DFRWS2011_SHA256.
+if [[ -n "${DFRWS2011_URL:-}" ]]; then
+  fetch_fixture "${DFRWS2011_URL}" "dfrws-2011-android/$(basename "${DFRWS2011_URL}")" \
+    "${DFRWS2011_SHA256:-}"
+else
+  log "SKIP dfrws-2011-android: set DFRWS2011_URL=<mirror; upstream Dropbox at https://github.com/dfrws/dfrws2011-challenge> (note: README 'MD5' values are SHA1)"
+fi
+
+# 6i. Volatility Cridex — memory. RED for sourcing: canonical link is dead.
+#     §4 above already attempts cridex.vmem at fixtures/volatility/. Mirror
+#     it into the case-id path so score-recall.py can resolve the golden.
+if [[ -n "${CRIDEX_URL:-}" ]]; then
+  fetch_fixture "${CRIDEX_URL}" "volatility-cridex/cridex.vmem" "${CRIDEX_SHA256:-}"
+elif [[ -f "${FIXTURES}/volatility/cridex.vmem" ]]; then
+  mkdir -p "${FIXTURES}/volatility-cridex"
+  cp -n "${FIXTURES}/volatility/cridex.vmem" "${FIXTURES}/volatility-cridex/cridex.vmem"
+  log "ok: volatility-cridex linked from fixtures/volatility/cridex.vmem"
+else
+  log "SKIP volatility-cridex: canonical download is dead; set CRIDEX_URL=<verified mirror>"
+fi
+
 log "done. See ${SHA_FILE} for checksums."

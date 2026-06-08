@@ -132,7 +132,7 @@ def judge_findings(
     cred_a = _credibility(pool_a)
     cred_b = _credibility(pool_b)
 
-    grouped: dict[tuple[str, str], list[tuple[Finding, str]]] = {}
+    grouped: dict[tuple[str, str, str], list[tuple[Finding, str]]] = {}
     for f in pool_a.findings:
         grouped.setdefault(_group_key(f), []).append((f, "A"))
     for f in pool_b.findings:
@@ -239,17 +239,20 @@ def _prior_accuracy(actions: Iterable[VerifierAction]) -> float:
     return approved / len(actions_list)
 
 
-def _group_key(f: Finding) -> tuple[str, str]:
+def _group_key(f: Finding) -> tuple[str, str, str]:
     """Group findings that should merge.
 
-    ``tool_call_id`` alone is too narrow (different MITRE techniques
-    on the same tool output should still merge if they're about the
-    same artifact). Including ``artifact_path`` in the key catches
-    that case while still letting two Pool-A findings on the same
-    artifact remain separate (different mitre_technique → different
-    descriptions → different group keys via the description hash).
+    Only findings making the *same claim* should collapse: same cited
+    tool call, same artifact, same MITRE technique, same description.
+    Keying on ``(tool_call_id, artifact_path)`` alone is too coarse — a
+    single tool call that yields many independent findings (e.g.
+    ``pcap_triage`` surfacing several distinct hosts) would collapse all
+    of them into one. Including a description/technique discriminator
+    keeps genuinely different claims separate while still letting a
+    Pool-A and Pool-B finding about the *same* observation corroborate.
     """
-    return (f.tool_call_id or "", f.artifact_path or "")
+    discriminator = f"{f.mitre_technique or ''}|{' '.join((f.description or '').lower().split())}"
+    return (f.tool_call_id or "", f.artifact_path or "", discriminator)
 
 
 def _classify_artifact(f: Finding) -> str | None:

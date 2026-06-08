@@ -34,6 +34,15 @@ FIXTURES=(
   "nist-hacking-case"
   "sans-starter"
   "synthetic-benign"
+  "nitroba"
+  "nist-data-leakage"
+  "m57-jean"
+  "dfrws-2008-linux"
+  "alihadi-01-webserver"
+  "alihadi-07-sysinternals"
+  "alihadi-09-encrypt"
+  "dfrws-2011-android"
+  "volatility-cridex"
 )
 
 mkdir -p "${LOG_DIR}"
@@ -164,18 +173,22 @@ for fixture in "${FIXTURES[@]}"; do
   jq '.' "${run_log}" > "${verdict_json}" 2>/dev/null \
     || cp "${run_log}" "${verdict_json}"
 
-  # Diff against golden expected-findings.
+  # Score against golden expected-findings via the recall scorer. Real run
+  # findings never byte-match a hand-authored golden, so we score recall
+  # (MITRE + description token overlap) and honest verdict consistency
+  # instead of an exact diff. score-recall.py reads <case_dir>/verdict.json,
+  # so stage the captured verdict under a per-fixture case dir.
   expected="${golden_dir}/expected-findings.json"
   if [[ -f "${expected}" ]]; then
-    log "diffing vs ${expected}"
-    if ! diff -u \
-           <(jq -S '.findings // []' "${expected}") \
-           <(jq -S '.findings // []' "${verdict_json}") \
-           > "${LOG_DIR}/${fixture}-diff.txt"; then
-      log "FAIL ${fixture}: findings diverged; see ${LOG_DIR}/${fixture}-diff.txt"
-      OVERALL_EXIT=1
+    run_case_dir="${LOG_DIR}/${fixture}-case"
+    mkdir -p "${run_case_dir}"
+    cp "${verdict_json}" "${run_case_dir}/verdict.json"
+    log "scoring recall vs ${expected}"
+    if python3 scripts/score-recall.py "${run_case_dir}" --golden "${golden_dir}"; then
+      log "PASS ${fixture}: recall >= target and verdict consistent"
     else
-      log "PASS ${fixture}: findings match"
+      log "FAIL ${fixture}: recall below target or verdict mismatch (see ${run_case_dir}/recall-score.json)"
+      OVERALL_EXIT=1
     fi
   fi
 done

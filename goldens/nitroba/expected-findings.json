@@ -14,7 +14,7 @@
   "source_url": "https://digitalcorpora.org/corpora/scenarios/nitroba-university-harassment-scenario/",
   "license": "Digital Corpora — freely redistributable for research/education",
   "verdict": "CONFIRMED_EVIL",
-  "min_recall_percent": 60,
+  "min_recall_percent": 80,
   "findings": [
     {
       "finding_id": "nit-001",
