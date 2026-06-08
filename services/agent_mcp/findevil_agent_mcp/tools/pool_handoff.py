@@ -71,4 +71,4 @@ SPEC = ToolSpec(
     handler=_handle,
 )
 
-__all__ = ["PoolHandoffInput", "PoolHandoffOutput", "SPEC"]
+__all__ = ["SPEC", "PoolHandoffInput", "PoolHandoffOutput"]

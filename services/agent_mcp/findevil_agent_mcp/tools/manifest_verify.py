@@ -88,4 +88,4 @@ SPEC = ToolSpec(
     handler=_handle,
 )
 
-__all__ = ["ManifestVerifyInput", "ManifestVerifyOutput", "SPEC"]
+__all__ = ["SPEC", "ManifestVerifyInput", "ManifestVerifyOutput"]

@@ -84,8 +84,8 @@ SPEC = ToolSpec(
 )
 
 __all__ = [
+    "SPEC",
     "CorrelateFindingsInput",
     "CorrelateFindingsOutput",
     "CorrelationRecord",
-    "SPEC",
 ]

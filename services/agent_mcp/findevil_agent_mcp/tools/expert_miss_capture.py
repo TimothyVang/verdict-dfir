@@ -133,7 +133,7 @@ SPEC = ToolSpec(
 )
 
 __all__ = [
+    "SPEC",
     "ExpertMissCaptureInput",
     "ExpertMissCaptureOutput",
-    "SPEC",
 ]

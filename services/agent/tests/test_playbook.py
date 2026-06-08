@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pytest
 
 from findevil_agent.playbook import (
     JUDGE_SELFSCORE_CRITERIA,
-    MEMORY_EXTS,
-    RAW_DISK_EXTS,
     TOOL_SEQUENCES,
     classify_artifact_path,
     detect_evidence_type,

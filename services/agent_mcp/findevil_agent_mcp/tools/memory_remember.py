@@ -69,4 +69,4 @@ SPEC = ToolSpec(
     handler=_handle,
 )
 
-__all__ = ["MemoryRememberInput", "MemoryRememberOutput", "SPEC"]
+__all__ = ["SPEC", "MemoryRememberInput", "MemoryRememberOutput"]

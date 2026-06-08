@@ -107,8 +107,8 @@ SPEC = ToolSpec(
 )
 
 __all__ = [
+    "SPEC",
     "ContradictionRecord",
     "DetectContradictionsInput",
     "DetectContradictionsOutput",
-    "SPEC",
 ]

@@ -15,8 +15,6 @@ rules serialised as a JSON argument instead.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
-
 
 # ---------------------------------------------------------------------------
 # File-extension / name constants

@@ -128,8 +128,8 @@ SPEC = ToolSpec(
 )
 
 __all__ = [
+    "SPEC",
     "JudgeFindingsInput",
     "JudgeFindingsOutput",
     "MergedFindingRecord",
-    "SPEC",
 ]

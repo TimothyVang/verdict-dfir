@@ -83,4 +83,4 @@ SPEC = ToolSpec(
     handler=_handle,
 )
 
-__all__ = ["AuditAppendInput", "AuditAppendOutput", "SPEC"]
+__all__ = ["SPEC", "AuditAppendInput", "AuditAppendOutput"]

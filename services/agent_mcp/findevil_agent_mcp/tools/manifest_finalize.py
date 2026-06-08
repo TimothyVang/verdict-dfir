@@ -120,4 +120,4 @@ SPEC = ToolSpec(
     handler=_handle,
 )
 
-__all__ = ["ManifestFinalizeInput", "ManifestFinalizeOutput", "SPEC"]
+__all__ = ["SPEC", "ManifestFinalizeInput", "ManifestFinalizeOutput"]
