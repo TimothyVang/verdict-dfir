@@ -1,6 +1,12 @@
 # Obsidian Mind
 
-Personal Obsidian vault -- an external brain for work notes, decisions, performance tracking, and Claude context.
+Personal Obsidian vault -- an external brain for work notes, decisions, and Claude context.
+
+> **Trimmed for VERDICT (DFIR project memory).** This vault was pared down to project-memory use:
+> the upstream **performance-review, org/people, 1:1, meeting, and Slack** modules were removed
+> (`perf/`, `org/`, `work/1-1`, `work/meetings`, the `/om-{review-*,self-review,peer-scan,prep-1on1,capture-1on1,slack-scan,incident-capture,meeting,intake}` commands, the brag/people/review/Slack subagents, and their Bases/templates). Sections below that reference those modules are
+> historical — the live command/agent/folder set is in [[Skills]]. Memory boundary: this vault is
+> dev/operator memory only — never evidence, never in a case audit chain, never a Finding.
 
 ## Skills & Capabilities
 

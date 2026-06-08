@@ -28,7 +28,6 @@
     "obsidian-mind-logo.png",
     "obsidian-mind-demo.gif",
     "brain/Skills.md",
-    "perf/competencies/README.md",
     "thinking/README.md",
     ".shardmind/**",
     ".shardmindignore"
@@ -39,21 +38,12 @@
     "brain/Key Decisions.md": "Decision log — replace if non-empty",
     "brain/Patterns.md": "Observed patterns — replace if non-empty",
     "brain/Gotchas.md": "Known gotchas — replace if non-empty",
-    "work/Index.md": "Work notes MOC — replace if has real entries",
-    "org/People & Context.md": "People MOC — replace if has real entries",
-    "perf/Brag Doc.md": "Brag doc index — replace if has entries"
+    "work/Index.md": "Work notes MOC — replace if has real entries"
   },
   "user_content_roots": [
     "work/active/",
     "work/archive/",
     "work/incidents/",
-    "work/1-1/",
-    "org/people/",
-    "org/teams/",
-    "perf/brag/",
-    "perf/evidence/",
-    "perf/h*-*/",
-    "perf/competencies/*.md",
     "brain/*.md",
     "reference/"
   ],
