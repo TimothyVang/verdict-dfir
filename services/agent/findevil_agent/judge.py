@@ -243,16 +243,20 @@ def _group_key(f: Finding) -> tuple[str, str, str]:
     """Group findings that should merge.
 
     Only findings making the *same claim* should collapse: same cited
-    tool call, same artifact, same MITRE technique, same description.
-    Keying on ``(tool_call_id, artifact_path)`` alone is too coarse — a
-    single tool call that yields many independent findings (e.g.
-    ``pcap_triage`` surfacing several distinct hosts) would collapse all
-    of them into one. Including a description/technique discriminator
-    keeps genuinely different claims separate while still letting a
-    Pool-A and Pool-B finding about the *same* observation corroborate.
+    tool call, same artifact, same MITRE technique. Keying on
+    ``(tool_call_id, artifact_path)`` alone is too coarse — a single tool
+    call that yields many independent findings (e.g. ``pcap_triage``
+    surfacing several distinct hosts) would collapse all of them into one,
+    so the MITRE technique discriminates genuinely different claims.
+
+    The free-text *description* is deliberately NOT part of the key. Pool A
+    and Pool B describe the same observation in different words ("Service
+    binary executed from temp directory" vs "Same tool output observed from
+    exfil-pool"), so keying on description would split a corroborated
+    finding into two and defeat the cross-pool merge — the entire point of
+    the A+B judge. See ``test_corroborated_finding_gets_bonus``.
     """
-    discriminator = f"{f.mitre_technique or ''}|{' '.join((f.description or '').lower().split())}"
-    return (f.tool_call_id or "", f.artifact_path or "", discriminator)
+    return (f.tool_call_id or "", f.artifact_path or "", f.mitre_technique or "")
 
 
 def _classify_artifact(f: Finding) -> str | None:
