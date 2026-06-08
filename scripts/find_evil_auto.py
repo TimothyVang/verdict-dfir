@@ -62,18 +62,96 @@ try:
 except ImportError:
     _PLAYBOOK_AVAILABLE = False
 
-try:
-    from findevil_agent.config import resolve_memory_store_path
-    from findevil_agent.memory.hooks import (
-        attach_prior_observations,
-        confirmed_findings_for_remember,
-        recall_terms_for_finding,
-        remember_payload_for_finding,
-    )
+# ---------------------------------------------------------------------------
+# Hermes memory glue (inline). The host engine runs under bare ``python3``
+# (3.10 here), which cannot import the 3.11+ ``findevil_agent`` package — the
+# same reason the playbook import above is guarded. So these mirror
+# ``findevil_agent.memory.hooks`` + ``config.resolve_memory_store_path``: pure,
+# stdlib-only, and unit-tested by importing this module under the 3.11 agent
+# venv (see services/agent/tests/test_memory_hooks.py). They keep the "memory is
+# never evidence" invariant at the data-shape layer (no tool_call_id ever moves).
+# ---------------------------------------------------------------------------
 
-    _MEMORY_HOOKS_AVAILABLE = True
-except ImportError:
-    _MEMORY_HOOKS_AVAILABLE = False
+_MEM_IOC_PATTERNS = (
+    re.compile(r"\b[a-fA-F0-9]{64}\b"),
+    re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
+    re.compile(r"\b[\w-]+\.(?:exe|dll|sys|ps1|bat|scr|vbs)\b", re.IGNORECASE),
+)
+
+
+def mem_recall_terms(finding: dict[str, Any]) -> list[str]:
+    """Distinctive terms (MITRE technique + IOC tokens) to recall on; deduped."""
+    terms: list[str] = []
+    technique = finding.get("mitre_technique")
+    if isinstance(technique, str) and technique:
+        terms.append(technique)
+    description = finding.get("description")
+    if isinstance(description, str):
+        for pattern in _MEM_IOC_PATTERNS:
+            terms.extend(m.group(0) for m in pattern.finditer(description))
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for term in terms:
+        if term not in seen:
+            seen.add(term)
+            ordered.append(term)
+    return ordered
+
+
+def mem_hits_to_prior_observations(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Project recall hits to NON-evidentiary context (case_id, ts, confidence) only."""
+    return [
+        {"case_id": h["case_id"], "ts": h["ts"], "confidence": h["confidence"]}
+        for h in hits
+    ]
+
+
+def mem_attach_prior_observations(
+    finding: dict[str, Any], hits: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Return a NEW finding with prior_observations; tool_call_id untouched (G1)."""
+    return {**finding, "prior_observations": mem_hits_to_prior_observations(hits)}
+
+
+def mem_confirmed_for_remember(merged: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep only CONFIRMED findings — the only ones worth remembering (G5)."""
+    return [f for f in merged if f.get("confidence") == "CONFIRMED"]
+
+
+def mem_remember_payload(finding: dict[str, Any]) -> dict[str, Any] | None:
+    """Build a memory_remember payload for a CONFIRMED finding, else None."""
+    if finding.get("confidence") != "CONFIRMED":
+        return None
+    description = finding.get("description") or ""
+    key = finding.get("mitre_technique") or finding.get("finding_id") or ""
+    if not key or not description:
+        return None
+    digest = hashlib.sha256(f"{key}\n{description}".encode()).hexdigest()
+    return {
+        "kind": "finding_summary",
+        "key": str(key),
+        "value": str(description),
+        "sha256": f"sha256:{digest}",
+    }
+
+
+def mem_store_path() -> str:
+    """Mirror findevil_agent.config.resolve_memory_store_path (host engine is 3.10).
+
+    Precedence: FINDEVIL_MEMORY_STORE, else <case_home>/memory/memory.sqlite where
+    case_home is FINDEVIL_HOME, else $HOME/$USERPROFILE + '.findevil'.
+    """
+    override = os.environ.get("FINDEVIL_MEMORY_STORE", "").strip()
+    if override:
+        return override
+    case_home = os.environ.get("FINDEVIL_HOME", "").strip()
+    if case_home:
+        base = Path(case_home)
+    else:
+        home = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+        base = (Path(home) if home else Path.home()) / ".findevil"
+    return str(base / "memory" / "memory.sqlite")
+
 
 # ---------------------------------------------------------------------------
 # Configuration (env-overridable)
@@ -7231,11 +7309,9 @@ class Investigation:
         return verified
 
     def _memory_store_path(self) -> str | None:
-        """Host path to the Hermes cross-case memory store, or None if unavailable."""
-        if not _MEMORY_HOOKS_AVAILABLE:
-            return None
+        """Host path to the Hermes cross-case memory store, or None on error."""
         try:
-            return str(resolve_memory_store_path())
+            return mem_store_path()
         except Exception:
             return None
 
@@ -7272,12 +7348,12 @@ class Investigation:
         recalls = 0
         for pool in (self.findings_pool_a, self.findings_pool_b):
             for idx, finding in enumerate(pool):
-                terms = recall_terms_for_finding(finding)
+                terms = mem_recall_terms(finding)
                 if not terms:
                     continue
                 hits = self._memory_recall(py, store_path, terms[0])
                 if hits:
-                    pool[idx] = attach_prior_observations(finding, hits)
+                    pool[idx] = mem_attach_prior_observations(finding, hits)
                     recalls += 1
         if recalls:
             print(f"  memory: attached prior-case context to {recalls} finding(s)")
@@ -7296,8 +7372,8 @@ class Investigation:
         if store_path is None:
             return
         remembered = 0
-        for finding in confirmed_findings_for_remember(merged):
-            payload = remember_payload_for_finding(finding)
+        for finding in mem_confirmed_for_remember(merged):
+            payload = mem_remember_payload(finding)
             if payload is None:
                 continue
             out = py.call_tool(
