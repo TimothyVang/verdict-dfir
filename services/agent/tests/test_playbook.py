@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 
@@ -21,7 +22,7 @@ PLAYBOOK_MD = REPO_ROOT / "agent-config" / "PLAYBOOK.md"
 class TestDetectEvidenceType:
     """detect_evidence_type must match the legacy behaviour in find_evil_auto.py."""
 
-    CASES: list[tuple[str, str]] = [
+    CASES: ClassVar[list[tuple[str, str]]] = [
         # memory
         ("memdump.mem", "memory"),
         ("win10.raw", "memory"),

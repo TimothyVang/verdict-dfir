@@ -80,7 +80,7 @@ def test_dry_run_shows_nine_beats_and_300s() -> None:
         timeout=15,
     )
     assert result.returncode == 0, f"--dry-run failed:\n{result.stderr[:300]}"
-    lines = [l for l in result.stdout.splitlines() if "Beat" in l and "s " in l]
+    lines = [ln for ln in result.stdout.splitlines() if "Beat" in ln and "s " in ln]
     assert len(lines) == 9, f"Expected 9 beat lines, got {len(lines)}:\n{result.stdout}"
     assert "300s" in result.stdout, f"Expected 300s total:\n{result.stdout}"
 
