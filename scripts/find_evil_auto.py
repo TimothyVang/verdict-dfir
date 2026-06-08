@@ -54,7 +54,6 @@ try:
         MEMORY_EXTS as _PLAYBOOK_MEMORY_EXTS,
         RAW_DISK_EXTS as _PLAYBOOK_RAW_DISK_EXTS,
         REGISTRY_HIVE_NAMES as _PLAYBOOK_REGISTRY_HIVE_NAMES,
-        YARA_TARGET_EXTS as _PLAYBOOK_YARA_TARGET_EXTS,
         classify_artifact_path as _playbook_classify,
         detect_evidence_type as _playbook_detect,
     )
@@ -1096,6 +1095,18 @@ WEBMAIL_HOST_TOKENS = (
     "mail.aol.com",
     "mail.proton.me",
     "webmail",
+)
+# Social-media providers. A cookie-bearing request to one ties the source host to
+# a named social-media account — corroborating identity (same role as webmail
+# attribution, different provider class).
+SOCIAL_MEDIA_HOST_TOKENS = (
+    "facebook.com",
+    "myspace.com",
+    "twitter.com",
+    "linkedin.com",
+    "instagram.com",
+    "hi5.com",
+    "friendster.com",
 )
 COMMON_CLIENT_PORTS = {53, 80, 123, 443, 465, 587, 993, 995}
 COMMON_BROWSER_IMAGES = {
@@ -2287,14 +2298,14 @@ def build_report_evidence_cards(
                 "still needs disk, driver, or log corroboration before execution claims."
             )
         elif technique == "T1055":
-            visual_asset = "figures/findings_table.png"
+            visual_asset = None
             why = (
                 f"T1055 process-injection relevance: `{tcid}` reported suspicious "
                 "memory state. Treat this as a high-priority malware lead until bytes, "
                 "process ancestry, and disk or network artifacts corroborate it."
             )
         else:
-            visual_asset = "figures/findings_table.png"
+            visual_asset = None
             why = (
                 f"This observable is relevant because finding `{_finding_id(finding, i)}` "
                 f"is backed by parsed tool output `{tcid}` and should be interpreted "
@@ -4076,6 +4087,19 @@ def _host_anonymous_email(host: str) -> tuple[bool, str]:
 def _host_is_webmail(host: str) -> bool:
     clean = host.strip().strip(".").lower()
     return any(token in clean for token in WEBMAIL_HOST_TOKENS)
+
+
+def _host_social_media(host: str) -> tuple[bool, str]:
+    clean = host.strip().strip(".").lower()
+    for token in SOCIAL_MEDIA_HOST_TOKENS:
+        if token in clean:
+            return True, token.split(".")[0]
+    return False, ""
+
+
+def _epoch_to_iso(epoch: float) -> str:
+    """Format epoch seconds as a UTC ISO-8601 string with trailing Z."""
+    return datetime.fromtimestamp(epoch, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _host_is_suspicious(host: str) -> tuple[bool, str]:
@@ -6277,11 +6301,15 @@ class Investigation:
         outside the top-N (e.g. a handful of requests to an anonymous-email
         service). This consumes pcap_triage's `http_requests` to (a) flag contact
         with anonymous/disposable email services and identify the originating
-        internal host, and (b) attribute authenticated webmail sessions.
+        internal host, (b) attribute authenticated webmail sessions, (c)
+        attribute authenticated social-media sessions, and (d) correlate the
+        anonymous-email send times with the source host's browsing window.
         """
         requests = out.get("http_requests") or []
+        self._add_pcap_timeline_correlation_finding(requests, tcid, artifact_path)
         anon_seen: set[tuple[str, str]] = set()
         webmail_seen: set[tuple[str, str]] = set()
+        social_seen: set[tuple[str, str]] = set()
         emitted = 0
         for row in requests:
             if not isinstance(row, dict) or emitted >= 12:
@@ -6339,6 +6367,108 @@ class Investigation:
                     confidence="INFERRED",
                 )
                 emitted += 1
+                continue
+            social, platform = _host_social_media(host)
+            if (
+                row.get("has_cookie")
+                and social
+                and (src, platform) not in social_seen
+            ):
+                social_seen.add((src, platform))
+                self._network_finding(
+                    "B",
+                    self._finding_id_for(f"f-B-pcap-social-{platform}", artifact_path),
+                    tcid,
+                    artifact_path,
+                    (
+                        f"Authenticated social-media login to {platform} (`{host}`) from "
+                        f"internal host {src} (HTTP session cookie present) — ties the "
+                        f"activity on {src} to a named social-media account and corroborates "
+                        "the suspect's identity. Account ownership still requires provider "
+                        "records; do not name a person from network metadata alone."
+                    ),
+                    "T1071.001",
+                    confidence="INFERRED",
+                )
+                emitted += 1
+
+    def _add_pcap_timeline_correlation_finding(
+        self, requests: list[dict[str, Any]], tcid: str, artifact_path: str
+    ) -> None:
+        """Correlate anonymous-email send times with the host's browsing window.
+
+        For each source host, compare *when* it sent to an anonymous-email service
+        against the time span of its other (browsing) HTTP activity. When the
+        sends fall inside that window, the harassing-email sends and the suspect
+        host's browsing are the same session — a real cross-flow timeline link,
+        not just two unrelated facts about one host.
+        """
+
+        def _ts(row: dict[str, Any], key: str) -> float:
+            try:
+                return float(row.get(key) or 0.0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        # Per source host: anonymous-email send times + the browsing time span.
+        anon_sends: dict[str, list[float]] = {}
+        browse_first: dict[str, float] = {}
+        browse_last: dict[str, float] = {}
+        for row in requests:
+            if not isinstance(row, dict):
+                continue
+            src = str(row.get("src") or "").strip()
+            host = str(row.get("host") or "").strip()
+            if not src or not host:
+                continue
+            first = _ts(row, "first_ts")
+            last = _ts(row, "last_ts") or first
+            anon, _token = _host_anonymous_email(host)
+            if anon:
+                if first > 0.0:
+                    anon_sends.setdefault(src, []).append(first)
+            else:
+                # Browsing context (anything that isn't the anonymous-email send).
+                if first > 0.0:
+                    cur = browse_first.get(src)
+                    browse_first[src] = first if cur is None else min(cur, first)
+                    browse_last[src] = max(browse_last.get(src, 0.0), last)
+
+        emitted = 0
+        for src, sends in anon_sends.items():
+            if emitted >= 3:
+                break
+            start = browse_first.get(src)
+            end = browse_last.get(src)
+            if start is None or end is None:
+                continue
+            # A small grace window so a send moments after the last sampled
+            # browsing packet still counts as the same session.
+            grace = 600.0
+            in_window = [t for t in sends if start - grace <= t <= end + grace]
+            if not in_window:
+                continue
+            send_iso = _epoch_to_iso(min(in_window))
+            start_iso = _epoch_to_iso(start)
+            end_iso = _epoch_to_iso(end)
+            self._network_finding(
+                "A",
+                self._finding_id_for(f"f-A-pcap-timeline-{src}", artifact_path),
+                tcid,
+                artifact_path,
+                (
+                    f"Timeline correlation: the anonymous/harassing-email sends from "
+                    f"internal host {src} (first at {send_iso}) fall within the same "
+                    f"browsing session as that host's authenticated web activity "
+                    f"({start_iso} to {end_iso}) — the harassing-email send times "
+                    f"correlate in time with the suspect host's browsing activity. "
+                    "Cross-flow timing link only; do not name a person from network "
+                    "metadata alone."
+                ),
+                "T1071.001",
+                confidence="INFERRED",
+            )
+            emitted += 1
 
     def _add_sysmon_network_findings(
         self, rows: list[dict[str, Any]], tcid: str, artifact_path: str
