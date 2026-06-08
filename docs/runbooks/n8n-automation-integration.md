@@ -10,9 +10,8 @@ IOC-enrich / fleet-sweep). It runs **downstream of the scored investigation** �
 become the investigation orchestrator, touch the typed evidence-tool surface, or enter the
 audit/crypto chain. Claude Code remains the product orchestrator (Amendment A2).
 
-This is the n8n sibling of [`engram-memory-integration.md`](engram-memory-integration.md); the
-two compose — Engram grounds DFIR claims while triaging, n8n automates what happens after the
-verdict.
+This runbook is the canonical home for the optional post-verdict automation: n8n automates what
+happens after the verdict is signed.
 
 ---
 
@@ -23,7 +22,7 @@ verdict.
 | Role | **Operator harness around the product** | n8n orchestrates repeatable runs + finding-to-action; it is **not** wired into Pool A/Pool B and is **not** the A2 orchestrator. Claude Code still starts everything. |
 | Where it sits in the flow | **Downstream of `verdict.json`** | n8n consumes the *output* of a finished, audited investigation (`manifest_finalize` → `verdict.json`). It never feeds the scored path. |
 | Integration surface | **`n8n-mcp` (MIT), user-scope MCP server** | Claude Code uses `n8n-mcp` to build/validate/deploy n8n workflows and trigger runs. The 31-tool product surface is untouched. |
-| Submission posture | **Optional, not bundled** | Treated like the SIFT DFIR binaries and Engram: operator wires it in; `n8n-references/` is `.gitignore`'d and never enters the Devpost zip. |
+| Submission posture | **Optional, not bundled** | Treated like the SIFT DFIR binaries: operator wires it in; `n8n-references/` is `.gitignore`'d and never enters the Devpost zip. |
 | Where it runs | **Local host only** | The operator's own n8n instance + `n8n-mcp` run on the host. SIFT-VM mode still reaches DFIR tools over SSH; n8n stays local. |
 | License | **n8n core = fair-code (Sustainable Use), `n8n-mcp`/`n8n-skills` = MIT** | n8n core is **not** OSI MIT/Apache, so it must **never** be bundled or linked into the Apache-2.0 submission. Keeping it optional/operator-run/standalone is what makes this compliant. |
 
@@ -42,8 +41,7 @@ self-hosted internal use, but **not** an OSI permissive license. Therefore:
   `n8n-references/n8n-skills/LICENSE`) — safe to reference, still kept optional/standalone.
 - **Not in the judge-facing required docs.** `docs/architecture.md` (Devpost Required Component
   #3) intentionally does **not** mention n8n — the submission surface is the 31-tool typed
-  product. This runbook is the canonical home for n8n integration, the same way the Engram
-  runbook is for Engram.
+  product. This runbook is the canonical home for n8n integration.
 - **Honors the anti-overbuild line.** The project's anti-overbuild guidance is "do not add
   n8n … runtime work" — i.e. do not build n8n into the *product runtime*. This runbook keeps n8n
   strictly **outside** the product as optional operator automation, so the product runtime is
@@ -329,9 +327,6 @@ trip: ask the agent to build a trivial "read verdict.json → print summary" wor
   fan-out above — all started from Claude Code.
 - **Finding-to-action fan-out.** On `SUSPICIOUS` verdicts, auto-notify, open the ticket, and
   enrich IOCs; on `INDETERMINATE`, route to an analyst queue; on `NO_EVIL`, file the scope note.
-- **Pair with Engram.** Engram grounds your tradecraft against `docs/references/` while you triage
-  (see the Engram runbook's "Grounding against `docs/references/`" section); n8n executes the
-  downstream actions once the verdict is signed.
 
 ---
 

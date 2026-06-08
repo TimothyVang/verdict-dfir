@@ -145,7 +145,6 @@ The original five implementation plans shipped (the build-swarm plan was removed
 |---|---|---|
 | `ci-smoke-checklist.md` | **ACTIVE** | End-to-end pipeline verification before submission. |
 | `dockerfile-a2-decision.md` | **RESEARCH** (decision archive) | Cut the in-container `find-evil` wrapper + `.deb` packaging (PR #4, 2026-04-27, "Option B"). Body retained as decision record. |
-| `engram-memory-integration.md` | **ACTIVE** | Optional: wire Engram (standalone Apache-2.0 knowledge/memory MCP server) as a third, locally-run MCP server. Not bundled, not in the investigation flow, not in the audit chain. |
 | `obsidian-mind-memory.md` | **ACTIVE** | The dev/operator **memory layer**: the obsidian-mind vault (QMD semantic recall + `brain/` notes) as VERDICT's project memory. Optional, gitignored, **never evidence, never in the audit chain**. Pairs with CLAUDE.md §8.5. |
 | `github-remote-bootstrap.md` | **ACTIVE** | Pre-submission ops doc for setting up the public GitHub repo URL Devpost requires. |
 | `local-smoke-gate.md` | **ACTIVE** | Prerequisites, per-smoke coverage map, and common failure → fix pairs for `bash scripts/run-all-smokes.sh`. |
@@ -183,4 +182,4 @@ Investigation reports + their figures. Currently:
 
 - Memory: the **obsidian-mind vault** (`obsidian-mind/`, gitignored) is now the dev/operator memory layer — see [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md) + CLAUDE.md §8.5. The user-level `~/.claude/.../memory/MEMORY.md` is a thin index pointing into it.
 - Source code (`services/`, `apps/`, `scripts/`) — see `repo-guide.md` "Repository layout" + per-service `README.md`.
-- External clones (`obsidian-mind/`, `engram-vang/`, `n8n-references/`) — gitignored; see `repo-guide.md` "External clones (gitignored…)".
+- External clones (`obsidian-mind/`, `n8n-references/`) — gitignored; see `repo-guide.md` "External clones (gitignored…)".

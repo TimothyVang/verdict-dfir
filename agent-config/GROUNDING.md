@@ -3,8 +3,8 @@
 **When this applies:** AFTER a Case is finalized (`verdict.json` present). Grounding is an
 operator aid that checks the verdict's MITRE-technique claims (and, in Phase 2, its IOCs)
 against authoritative external sources, then flags claims that the sources do **not** support —
-the likely-hallucination surface. It is the n8n/`findevil-grounding` sibling of `memory_recall`
-and Engram: context for the analyst, never part of the proof.
+the likely-hallucination surface. It is the n8n/`findevil-grounding` sibling of `memory_recall`:
+context for the analyst, never part of the proof.
 
 This file tells **you (Claude Code)** how to judge the research bundle the n8n workflow returns.
 The workflow contains **no LLM** — it only fetches and structures public sources. You are the

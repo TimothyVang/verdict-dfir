@@ -2,7 +2,7 @@
 
 > **Status: ACTIVE.** How the `obsidian-mind/` vault works as VERDICT's dev/operator memory,
 > how it's wired in, and the hard boundary it must keep. Optional, like
-> [Engram](engram-memory-integration.md) and [n8n](n8n-automation-integration.md) — never part
+> [n8n](n8n-automation-integration.md) — never part
 > of the DFIR product or the audit chain.
 
 ## What it is
@@ -22,18 +22,17 @@ The VERDICT-specific content lives in `obsidian-mind/brain/` (`North Star`, `Key
 
 The vault is **never evidence, never in a case `audit.jsonl`/`run.manifest.json`, never
 Merkle-hashed, and never emits a Finding.** It never produces a `tool_call_id` and never changes a
-Finding's Confidence or the Verdict. This is the same boundary Engram and the n8n grounding
+Finding's Confidence or the Verdict. This is the same boundary the n8n grounding
 sidecars keep. The only **in-flow** memory is the audit-chained Hermes FTS5 pair
 (`memory_remember`/`memory_recall`) — a different system; see
 [`../reference/mcp-and-tools.md`](../reference/mcp-and-tools.md).
 
-## The three memory systems, side by side
+## The two memory systems, side by side
 
 | System | Where | Scope | In audit chain? |
 |---|---|---|---|
 | **obsidian-mind** (this) | `obsidian-mind/` vault, QMD store in `~/.cache/qmd/verdict-memory.sqlite` | dev/operator project knowledge | **No** |
 | **Hermes FTS5** | `memory_remember`/`memory_recall` tools, `~/.local/state/findevil/…` | in-flow cross-case investigation memory | **Yes** |
-| **Engram** (optional) | `engram-vang/`, `~/.engram/` | operator knowledge base | No |
 
 ## Install (one-time)
 

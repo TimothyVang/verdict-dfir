@@ -41,11 +41,10 @@ see `docs/architecture.md`; for commands and the live-test gate see
 │
 │   # ── EXTERNAL CLONES (gitignored; never ship, never import) ──
 ├── obsidian-mind/                                  # DEV/OPERATOR MEMORY VAULT (MIT, own .git) — see docs/runbooks/obsidian-mind-memory.md. NEVER evidence, NEVER in the audit chain.
-├── engram-vang/                                    # Engram knowledge MCP (Apache-2.0) — optional operator memory, not bundled
 └── n8n-references/                                 # n8n docs/templates/workflows for the optional finding-to-action automation
 ```
 
-> **External clones (`obsidian-mind/`, `engram-vang/`, `n8n-references/`) are gitignored** — they
+> **External clones (`obsidian-mind/`, `n8n-references/`) are gitignored** — they
 > do not ship in the Devpost zip. `obsidian-mind/` is the dev/operator **memory layer** (see
 > CLAUDE.md §8.5 and `docs/runbooks/obsidian-mind-memory.md`); it is held strictly outside the
 > investigation and the audit chain.
@@ -167,7 +166,6 @@ zip (produced by `scripts/package-devpost.sh`):
   to VERDICT's memory layer: `brain/` notes + QMD semantic search, queried via the local-scope
   `qmd` MCP. Held strictly outside the investigation and the audit chain. See
   `docs/runbooks/obsidian-mind-memory.md`.
-- **`engram-vang/`** — Engram knowledge-platform MCP (Apache-2.0); optional operator memory.
 - **`n8n-references/`** — n8n docs/templates/workflows backing the optional post-verdict
   finding-to-action automation (`docs/runbooks/n8n-automation-integration.md`).
 - **`.playwright-mcp/`** — Playwright MCP scratch state.

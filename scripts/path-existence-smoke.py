@@ -223,12 +223,11 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # the audit chain), so its paths exist on a developer's disk but not in the
     # CI checkout.  Same shape as the git-hub-references/ external-clone allowance.
     re.compile(r"^n8n-references(/|$)"),
-    # Engram — the operator's standalone Apache-2.0 knowledge/memory MCP
-    # server, wired in optionally per docs/runbooks/engram-memory-
-    # integration.md.  /engram-vang/ is gitignored (its own repo + release
-    # lifecycle; never bundled in the submission), so its paths exist on a
-    # developer's disk but not in the CI checkout.  Same shape as the
-    # git-hub-references/ external-clone allowance above.
+    # Engram — an external sibling clone with its own git repo that may sit
+    # in this tree on a developer's disk.  /engram-vang/ is gitignored (never
+    # bundled in the submission), so its paths exist on a developer's disk
+    # but not in the CI checkout.  Same shape as the git-hub-references/
+    # external-clone allowance above.
     re.compile(r"^(?:\.\./)*engram-vang(/|$)"),
     # User-level Claude Code auto-memory dir.  CLAUDE.md references
     # `memory/project_autonomous_queue.md` which actually lives at

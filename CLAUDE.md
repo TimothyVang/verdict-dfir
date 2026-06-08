@@ -54,7 +54,7 @@ Run these silently, once per session, before the first tool call. Full text in
 - **Fresh clone** — if `target/release/findevil-mcp` does NOT exist, run `bash scripts/install.sh` automatically; on failure report the exact error line and stop.
 - **Greeting / `help`** — show the welcome block ONLY when the user's first message is `help`, `hello`, `hi`, or "what can you do" / "how do I use this" / "what is this". Print the quick-reference block only on `help`. Both blocks live in `docs/onboarding.md`.
 - **First-run setup** — if the user's first message is `setup`, `i'm new`, `im new`, or `new`, run `bash scripts/setup`, read `tmp/setup-state.json`, and complete any browser-only gated downloads (the SANS SIFT OVA) via the Puppeteer MCP. Full steps in `docs/onboarding.md`.
-- **Browser links** — a Chrome DevTools MCP server is registered. Always *offer* to open relevant URLs (localhost dashboard, GitHub, generated `REPORT.html`, Remotion preview) via `mcp__cloakbrowser__navigate` instead of just printing them. Auto-open `http://localhost:3000` once the dashboard dev server is listening.
+- **Browser links** — a browser MCP server (Playwright/Puppeteer) is registered. Always *offer* to open relevant URLs (localhost dashboard, GitHub, generated `REPORT.html`, Remotion preview) via `mcp__playwright__browser_navigate` instead of just printing them. Auto-open `http://localhost:3000` once the dashboard dev server is listening.
 
 ---
 
@@ -215,7 +215,7 @@ references in legacy specs; replay-evidence-as-blocker) are in `docs/repo-guide.
 
 ## 8.5 Memory (dev/operator knowledge layer)
 
-VERDICT has **three memory systems**; keep them straight, and keep the dev/operator ones out of
+VERDICT has **two memory systems**; keep them straight, and keep the dev/operator one out of
 the audit chain.
 
 1. **obsidian-mind vault** (`obsidian-mind/`) — the **primary project/operator memory**: DFIR
@@ -223,11 +223,10 @@ the audit chain.
    (`brain/`) with semantic recall via QMD (`mcp__qmd__query`, registered at local scope), curated
    with `/om-*` commands. It is the better successor to the flat `~/.claude/.../memory/` index, but
    it is **never evidence, never in a case `audit.jsonl`, never Merkle-hashed, never a Finding** —
-   the same boundary Engram and the n8n grounding feature keep. How-to + the hard boundary:
+   the same boundary the n8n grounding feature keeps. How-to + the hard boundary:
    `docs/runbooks/obsidian-mind-memory.md`.
 2. **Hermes FTS5** — the in-flow **investigation** memory: `memory_remember`/`memory_recall`,
    audit-chained, part of the product (§4). This is the *only* memory inside the investigation.
-3. **Engram** (`engram-vang/`) — optional operator knowledge base; not bundled, not in the chain.
 
 `CLAUDE.md` stays the instruction core; the vault is where evolving knowledge lives.
 
