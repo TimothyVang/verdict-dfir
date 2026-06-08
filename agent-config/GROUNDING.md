@@ -139,6 +139,28 @@ clearly the lowest-trust tier.
 
 ---
 
+## Judging CVE grounding (Phase 6)
+
+The verdict engine tags findings with CVE ids that **literally appear** in their text
+(`finding.cves[]` — additive, no inference). The bundle's `cve_research` block validates each id
+against the keyless **NVD** JSON API → `{cve_id, found, description, cvss, severity, claimed_by}`.
+
+| status | when | quote to cite |
+|---|---|---|
+| `supported` | NVD lists the CVE **and** its description matches the finding's claim | the NVD description + CVSS, + the NVD permalink |
+| `unsupported` | NVD has the CVE but its description does not fit the finding's context | the NVD description (showing the mismatch) |
+| `unknown` | NVD lookup failed (rate-limited / offline) | (none) |
+
+- A finding citing a CVE id NVD does **not** recognize (`found: false`) → likely a typo or a
+  fabricated id: mark `unsupported`, set `possible_hallucination: true`, recommend the analyst fix
+  the id. Do not rewrite the finding (the verdict is frozen).
+- **CVSS is severity context, not proof.** A `supported` CVE confirms the vulnerability *exists* —
+  not that it was *exploited on this host*. That requires tool-cited artifacts, not an NVD page.
+- Record results in `grounding.json` as `cve_grounding[]`
+  (`{cve_id, status, possible_hallucination, cvss, severity, sources:[{url,excerpt}], rationale}`).
+
+---
+
 ## Output: `grounding.json` (write into the case dir)
 
 After judging, write `<case-dir>/grounding.json`:

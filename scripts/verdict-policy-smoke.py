@@ -800,6 +800,138 @@ def main() -> int:
     scheduled_task_findings = evtx_rows_to_findings(
         scheduled_task_rows, "tc-evtx", "case-evtx", "Security.evtx"
     )
+    # 4688 process creation: child resolved to a WmiPrvSE.exe parent by PID
+    # correlation (these records carry only ProcessId, not ParentProcessName).
+    wmi_rows = [
+        {
+            "event_id": 4688,
+            "ts": "2026-05-04T00:04:00Z",
+            "channel": "Security",
+            "record_id": 1,
+            "data": {
+                "Event": {
+                    "System": {"EventID": 4688, "Computer": "WIN7"},
+                    "EventData": {
+                        "SubjectUserName": "WIN7$",
+                        "SubjectDomainName": "CORP",
+                        "NewProcessName": "C:\\Windows\\System32\\wbem\\WmiPrvSE.exe",
+                        "NewProcessId": "0xae8",
+                        "ProcessId": "0x248",
+                    },
+                }
+            },
+        },
+        {
+            "event_id": 4688,
+            "ts": "2026-05-04T00:04:01Z",
+            "channel": "Security",
+            "record_id": 2,
+            "data": {
+                "Event": {
+                    "System": {"EventID": 4688, "Computer": "WIN7"},
+                    "EventData": {
+                        "SubjectUserName": "Administrator",
+                        "SubjectDomainName": "CORP",
+                        "NewProcessName": "C:\\Windows\\System32\\calc.exe",
+                        "NewProcessId": "0xb10",
+                        "ProcessId": "0xae8",
+                    },
+                }
+            },
+        },
+    ]
+    wmi_findings = evtx_rows_to_findings(
+        wmi_rows, "tc-evtx", "case-evtx", "Security.evtx"
+    )
+    # 7045 service install with a cmd.exe image path.
+    service_rows = [
+        {
+            "event_id": 7045,
+            "ts": "2026-05-04T00:05:00Z",
+            "channel": "System",
+            "record_id": 1,
+            "data": {
+                "Event": {
+                    "System": {"EventID": 7045},
+                    "EventData": {
+                        "ServiceName": "spoolfool",
+                        "ImagePath": "C:\\Windows\\System32\\cmd.exe /c whoami",
+                    },
+                }
+            },
+        }
+    ]
+    service_findings = evtx_rows_to_findings(
+        service_rows, "tc-evtx", "case-evtx", "Security.evtx"
+    )
+    # 4624 Type 10 = Remote Desktop logon.
+    rdp_rows = [
+        {
+            "event_id": 4624,
+            "ts": "2026-05-04T00:06:00Z",
+            "channel": "Security",
+            "record_id": 1,
+            "data": {
+                "Event": {
+                    "System": {"EventID": 4624},
+                    "EventData": {
+                        "TargetUserName": "jadmin",
+                        "TargetDomainName": "CORP",
+                        "LogonType": "10",
+                        "IpAddress": "203.0.113.9",
+                    },
+                }
+            },
+        }
+    ]
+    rdp_findings = evtx_rows_to_findings(
+        rdp_rows, "tc-evtx", "case-evtx", "Security.evtx"
+    )
+    # Five 4625 failures = brute-force / password-spray lead.
+    brute_rows = [
+        {
+            "event_id": 4625,
+            "ts": f"2026-05-04T00:07:0{i}Z",
+            "channel": "Security",
+            "record_id": 10 + i,
+            "data": {
+                "Event": {
+                    "System": {"EventID": 4625},
+                    "EventData": {
+                        "TargetUserName": "admin",
+                        "TargetDomainName": "CORP",
+                        "IpAddress": "203.0.113.9",
+                    },
+                }
+            },
+        }
+        for i in range(5)
+    ]
+    brute_findings = evtx_rows_to_findings(
+        brute_rows, "tc-evtx", "case-evtx", "Security.evtx"
+    )
+    # A single ordinary Type 3 network logon must NOT create a finding.
+    benign_logon_rows = [
+        {
+            "event_id": 4624,
+            "ts": "2026-05-04T00:08:00Z",
+            "channel": "Security",
+            "record_id": 1,
+            "data": {
+                "Event": {
+                    "System": {"EventID": 4624},
+                    "EventData": {
+                        "TargetUserName": "svc",
+                        "LogonType": "3",
+                        "IpAddress": "10.0.0.5",
+                    },
+                }
+            },
+        }
+    ]
+    benign_logon_findings = evtx_rows_to_findings(
+        benign_logon_rows, "tc-evtx", "case-evtx", "Security.evtx"
+    )
     evtx_cases = [
         (
             "benign EVTX summary counts records",
@@ -854,6 +986,56 @@ def main() -> int:
             "scheduled-task EVTX summary counts suspicious event",
             scheduled_task_summary.get("suspicious_event_count"),
             1,
+        ),
+        (
+            "WMI-spawned 4688 child creates one finding (PID-correlated parent)",
+            len(wmi_findings),
+            1,
+        ),
+        (
+            "WMI 4688 finding maps to T1047",
+            wmi_findings[0].get("mitre_technique") if wmi_findings else None,
+            "T1047",
+        ),
+        (
+            "WMI 4688 lead stays HYPOTHESIS",
+            wmi_findings[0].get("confidence") if wmi_findings else None,
+            "HYPOTHESIS",
+        ),
+        (
+            "7045 service install creates one finding",
+            len(service_findings),
+            1,
+        ),
+        (
+            "service install maps to T1543.003",
+            service_findings[0].get("mitre_technique") if service_findings else None,
+            "T1543.003",
+        ),
+        (
+            "RDP Type 10 logon creates one finding",
+            len(rdp_findings),
+            1,
+        ),
+        (
+            "RDP logon maps to T1021.001",
+            rdp_findings[0].get("mitre_technique") if rdp_findings else None,
+            "T1021.001",
+        ),
+        (
+            "five 4625 failures create one brute-force finding",
+            len(brute_findings),
+            1,
+        ),
+        (
+            "brute-force lead maps to T1110",
+            brute_findings[0].get("mitre_technique") if brute_findings else None,
+            "T1110",
+        ),
+        (
+            "single Type 3 network logon creates no finding",
+            len(benign_logon_findings),
+            0,
         ),
     ]
     for label, actual, expected in evtx_cases:
@@ -1411,7 +1593,11 @@ def main() -> int:
                 "significance": "finding_support",
                 "linked_finding_ids": ["f-clear"],
                 "confidence": "CONFIRMED",
-                "entities": {"account": "Administrator", "domain": "CORP", "host": "DC01"},
+                "entities": {
+                    "account": "Administrator",
+                    "domain": "CORP",
+                    "host": "DC01",
+                },
                 "source_record_ref": "evtx_query:event_id=1102;record_id=1",
             }
         ]
@@ -1469,7 +1655,10 @@ def main() -> int:
         ),
         (
             "what-we-can-say states the cited fact",
-            any("T1070.001" in item and "tc-evtx" in item for item in story["what_we_can_say"]),
+            any(
+                "T1070.001" in item and "tc-evtx" in item
+                for item in story["what_we_can_say"]
+            ),
             True,
         ),
     ]
@@ -2549,11 +2738,30 @@ def main() -> int:
         and contra_record.get("approved_by") == "auto"
     )
     marker = "OK  " if contra_ok else "FAIL"
-    print(f"  [{marker}] check_contradiction_resolution_record: kind + required fields present")
+    print(
+        f"  [{marker}] check_contradiction_resolution_record: kind + required fields present"
+    )
     if not contra_ok:
         print(f"         actual: {contra_record!r}")
         failures += 1
     contradiction_checks = 1
+
+    # CVE tagging (Phase 6): _extract_cve_ids surfaces literal CVE ids from finding
+    # text — additive only, no verdict impact. Grounding validates ids vs NVD later.
+    extract = getattr(fea, "_extract_cve_ids", None)
+    cve_ok = (
+        callable(extract)
+        and extract("exploited CVE-2021-34527 then cve-2017-0144 again CVE-2021-34527")
+        == ["CVE-2017-0144", "CVE-2021-34527"]
+        and extract("no cve here") == []
+    )
+    marker = "OK  " if cve_ok else "FAIL"
+    print(
+        f"  [{marker}] _extract_cve_ids: dedupes + uppercases literal CVE ids, [] when none"
+    )
+    if not cve_ok:
+        failures += 1
+    cve_checks = 1
 
     print()
     print("=" * 60)
@@ -2566,6 +2774,7 @@ def main() -> int:
         + process_checks
         + matrix_checks
         + contradiction_checks
+        + cve_checks
     )
     if failures == 0:
         print(f"OK - all {total} verdict + evidence/process cases pass.")

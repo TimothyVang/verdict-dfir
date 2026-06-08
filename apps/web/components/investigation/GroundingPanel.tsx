@@ -57,6 +57,16 @@ interface IocGrounding {
   rationale?: string;
 }
 
+interface CveGrounding {
+  cve_id: string;
+  status: string; // supported | unsupported | unknown
+  possible_hallucination?: boolean;
+  cvss?: number | null;
+  severity?: string | null;
+  sources?: GroundingSource[];
+  rationale?: string;
+}
+
 interface ActionItem {
   action: string;
   based_on?: string;
@@ -103,6 +113,7 @@ interface GroundingData {
   judged_by?: string;
   grounding?: GroundingClaim[];
   ioc_grounding?: IocGrounding[];
+  cve_grounding?: CveGrounding[];
   open_web?: OpenWebItem[];
   actions?: ActionItem[];
   coverage_targets?: CoverageTargets;
@@ -264,6 +275,43 @@ function ClaimCard({ claim }: { claim: GroundingClaim }) {
 
       {(claim.sources ?? []).map((src, i) => (
         <SourceQuote key={`${claim.technique_id}-src-${i}`} src={src} />
+      ))}
+    </div>
+  );
+}
+
+const CVE_STATUS_COLOR: Record<string, string> = {
+  supported: VERDICT.confirmed,
+  unsupported: VERDICT.alertRed,
+  unknown: VERDICT.muted,
+};
+
+function CveRow({ item }: { item: CveGrounding }) {
+  const color = CVE_STATUS_COLOR[item.status] ?? VERDICT.muted;
+  return (
+    <div style={{ padding: "10px 0", borderTop: `1px solid ${VERDICT.borderSubtle}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <code style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: VERDICT.text }}>
+          {item.cve_id}
+        </code>
+        <Chip label={item.status} color={color} />
+        {typeof item.cvss === "number" ? (
+          <span style={{ fontFamily: MONO, fontSize: 12, color }}>
+            CVSS {item.cvss}
+            {item.severity ? ` ${item.severity}` : ""}
+          </span>
+        ) : null}
+        {item.possible_hallucination ? (
+          <Chip label="possible hallucination" color={VERDICT.alertRed} />
+        ) : null}
+      </div>
+      {item.rationale ? (
+        <p style={{ margin: "6px 0 0", fontFamily: MONO, fontSize: 12, lineHeight: 1.55, color: VERDICT.text }}>
+          {item.rationale}
+        </p>
+      ) : null}
+      {(item.sources ?? []).map((src, i) => (
+        <SourceQuote key={`${item.cve_id}-src-${i}`} src={src} />
       ))}
     </div>
   );
@@ -585,6 +633,32 @@ export function GroundingPanel({ caseDir }: { caseDir: string }) {
           </div>
           {(data.ioc_grounding ?? []).map((ioc, i) => (
             <IocRow key={`${ioc.ioc}-${i}`} ioc={ioc} />
+          ))}
+        </div>
+      ) : null}
+
+      {(data.cve_grounding?.length ?? 0) > 0 ? (
+        <div
+          style={{
+            marginTop: 14,
+            paddingTop: 12,
+            borderTop: `1px solid ${VERDICT.borderSubtle}`,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: GROTESK,
+              fontSize: 11,
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+              color: VERDICT.muted,
+            }}
+          >
+            CVE grounding
+            <span style={{ color: VERDICT.mutedDark }}> (NVD · severity context, not proof)</span>
+          </div>
+          {(data.cve_grounding ?? []).map((cve, i) => (
+            <CveRow key={`${cve.cve_id}-${i}`} item={cve} />
           ))}
         </div>
       ) : null}

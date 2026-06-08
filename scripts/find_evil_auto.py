@@ -58,6 +58,7 @@ try:
         classify_artifact_path as _playbook_classify,
         detect_evidence_type as _playbook_detect,
     )
+
     _PLAYBOOK_AVAILABLE = True
 except ImportError:
     _PLAYBOOK_AVAILABLE = False
@@ -160,7 +161,11 @@ def rust_replay_command() -> list[str]:
     replay. Mode-aware: host binary + host env locally, guest paths in VM
     mode (the immutable ``RUST_REPLAY_COMMAND``)."""
     if LOCAL_MODE:
-        return ["env", *(f"{k}={v}" for k, v in _local_rust_env().items()), LOCAL_RUST_BIN]
+        return [
+            "env",
+            *(f"{k}={v}" for k, v in _local_rust_env().items()),
+            LOCAL_RUST_BIN,
+        ]
     return RUST_REPLAY_COMMAND
 
 
@@ -300,8 +305,16 @@ class StdioMcpClient(SshMcpClient):
 # ---------------------------------------------------------------------------
 
 # Canonical constants: sourced from findevil_agent.playbook when available.
-MEMORY_EXTS = _PLAYBOOK_MEMORY_EXTS if _PLAYBOOK_AVAILABLE else (".mem", ".raw", ".vmem", ".dmp", ".img", ".lime")
-RAW_DISK_EXTS = _PLAYBOOK_RAW_DISK_EXTS if _PLAYBOOK_AVAILABLE else (".e01", ".dd", ".aff", ".aff4", ".001")
+MEMORY_EXTS = (
+    _PLAYBOOK_MEMORY_EXTS
+    if _PLAYBOOK_AVAILABLE
+    else (".mem", ".raw", ".vmem", ".dmp", ".img", ".lime")
+)
+RAW_DISK_EXTS = (
+    _PLAYBOOK_RAW_DISK_EXTS
+    if _PLAYBOOK_AVAILABLE
+    else (".e01", ".dd", ".aff", ".aff4", ".001")
+)
 EXTRACTED_DISK_CLASSES = {"mft", "prefetch", "registry", "usnjrnl"}
 YARA_TARGET_EXTS = (
     ".bat",
@@ -338,10 +351,20 @@ SUSPICIOUS_PREFETCH_TOOL_HINTS = (
 MAX_VELOCIRAPTOR_ZIP_MEMBER_BYTES = int(
     os.environ.get("FINDEVIL_VELOCIRAPTOR_ZIP_MAX_MEMBER_BYTES", str(512 * 1024 * 1024))
 )
-REGISTRY_HIVE_NAMES = _PLAYBOOK_REGISTRY_HIVE_NAMES if _PLAYBOOK_AVAILABLE else {
-    "software", "system", "security", "sam", "default",
-    "ntuser.dat", "usrclass.dat", "amcache.hve",
-}
+REGISTRY_HIVE_NAMES = (
+    _PLAYBOOK_REGISTRY_HIVE_NAMES
+    if _PLAYBOOK_AVAILABLE
+    else {
+        "software",
+        "system",
+        "security",
+        "sam",
+        "default",
+        "ntuser.dat",
+        "usrclass.dat",
+        "amcache.hve",
+    }
+)
 
 
 def detect_evidence_type(path: str) -> str:
@@ -1042,6 +1065,38 @@ SUSPICIOUS_NETWORK_HOST_TOKENS = (
     "telegram",
 )
 SUSPICIOUS_NETWORK_TLDS = {"top", "xyz", "tk", "ml", "ga", "cf", "gq", "pw", "su"}
+# Anonymous / disposable / self-destructing email + remailer services. Contact
+# with these from an internal host is a legitimate DFIR signal: they exist to send
+# untraceable messages (harassment, exfil, threats). Substring match on the host.
+ANONYMOUS_EMAIL_HOST_TOKENS = (
+    "willselfdestruct",
+    "sendanonymousemail",
+    "anonymousemail",
+    "anonymouse",
+    "guerrillamail",
+    "mailinator",
+    "10minutemail",
+    "tenminutemail",
+    "getnada",
+    "sharklasers",
+    "yopmail",
+    "mintemail",
+    "temp-mail",
+    "tempmail",
+    "trashmail",
+    "privnote",
+)
+# Webmail providers. A request to one carrying a session cookie attributes the
+# source host's activity to a specific account (identity corroboration).
+WEBMAIL_HOST_TOKENS = (
+    "mail.google.com",
+    "mail.yahoo.com",
+    "outlook.live.com",
+    "mail.live.com",
+    "mail.aol.com",
+    "mail.proton.me",
+    "webmail",
+)
 COMMON_CLIENT_PORTS = {53, 80, 123, 443, 465, 587, 993, 995}
 COMMON_BROWSER_IMAGES = {
     "chrome.exe",
@@ -1271,6 +1326,7 @@ _EVTX_FIELD_MAP: tuple[tuple[str, str], ...] = (
     ("ProcessName", "process"),
     ("NewProcessId", "pid"),
     ("ProcessId", "pid"),
+    ("ProcessId", "parent_pid"),
     ("CommandLine", "command_line"),
     ("ParentProcessName", "parent_process"),
     ("ServiceName", "service_name"),
@@ -2303,6 +2359,18 @@ def build_expert_doctrine(expert_rules: dict[str, Any] | None = None) -> dict[st
     }
 
 
+_CVE_RE = re.compile(r"CVE-\d{4}-\d{4,7}", re.IGNORECASE)
+
+
+def _extract_cve_ids(text: str) -> list[str]:
+    """Sorted, de-duplicated, upper-cased CVE ids that LITERALLY appear in text.
+
+    Purely lexical — surfaces CVE ids already present in finding text; it does not
+    infer a CVE from behavior. Grounding validates each id against NVD post-verdict.
+    """
+    return sorted({m.upper() for m in _CVE_RE.findall(text or "")})
+
+
 def _finding_text(finding: dict[str, Any]) -> str:
     return " ".join(
         str(finding.get(key) or "")
@@ -2880,6 +2948,94 @@ TECHNIQUE_PROFILE: dict[str, dict[str, Any]] = {
             ),
         ],
     },
+    "T1110": {
+        "name": "Brute Force",
+        "category": "credential access",
+        "action": "repeated failed logons (password-spray / brute-force)",
+        "evil": "A burst of failed logons indicates credential guessing against an account.",
+        "honest_caveat": "Failed logons also come from expired passwords, mistyped credentials, "
+        "or stale services; a burst is a lead, not proof of compromise.",
+        "severity": "medium",
+        "cannot": [
+            (
+                "Whether any attempt succeeded and the account is compromised",
+                "Event 4625 records the failures, not the outcome",
+                "correlate the failures with a following 4624 success for the same account/source, "
+                "and review the account's logon history and EDR",
+            ),
+        ],
+    },
+    "T1021.001": {
+        "name": "Remote Services: Remote Desktop Protocol",
+        "category": "lateral movement",
+        "action": "a Remote Desktop (RDP) logon",
+        "evil": "An interactive RDP (Type 10) session is a common lateral-movement and "
+        "hands-on-keyboard access vector.",
+        "honest_caveat": "RDP is also normal admin access; a single logon is a lead, not "
+        "evidence of intrusion.",
+        "severity": "medium",
+        "cannot": [
+            (
+                "Whether the RDP session was malicious or authorized admin access",
+                "the logon record carries no intent and may be legitimate",
+                "check the source host/IP reputation, time-of-day, the account's role, and "
+                "in-session process/EDR activity",
+            ),
+        ],
+    },
+    "T1047": {
+        "name": "Windows Management Instrumentation",
+        "category": "execution / lateral movement",
+        "action": "remote WMI process execution",
+        "evil": "A process spawned by WmiPrvSE.exe is the signature of remote WMI command "
+        "execution — a common lateral-movement technique.",
+        "honest_caveat": "WMI also runs legitimate management tasks; the child process and "
+        "source host determine intent.",
+        "severity": "medium",
+        "cannot": [
+            (
+                "Which host initiated the WMI call and whether it was authorized",
+                "the target's 4688 does not record the calling host",
+                "correlate with 4624 Type 3 network logons at the same time, the source host's "
+                "WMI-Activity logs, and EDR",
+            ),
+        ],
+    },
+    "T1543.003": {
+        "name": "Create or Modify System Process: Windows Service",
+        "category": "persistence / execution",
+        "action": "a Windows service installation",
+        "evil": "Installing a service grants durable, SYSTEM-level execution and is a common "
+        "persistence and lateral-movement (e.g. PsExec) mechanism.",
+        "honest_caveat": "Most service installs are legitimate software; the image path and "
+        "origin determine intent.",
+        "severity": "medium",
+        "cannot": [
+            (
+                "Whether the installed service is malicious",
+                "the install record points to a binary it does not analyze",
+                "extract and analyze the service binary (signature, prevalence) and check for a "
+                "paired remote logon (PsExec/lateral movement)",
+            ),
+        ],
+    },
+    "T1059": {
+        "name": "Command and Scripting Interpreter",
+        "category": "execution",
+        "action": "living-off-the-land binary execution",
+        "evil": "A LOLBin (rundll32 / regsvr32 / mshta / etc.) run with a download or encoded "
+        "command line is a common way to execute code while blending in.",
+        "honest_caveat": "These binaries also have legitimate uses; the command line is the signal.",
+        "severity": "medium",
+        "cannot": [
+            (
+                "What the command actually did",
+                "the process record shows invocation, not effect or the downloaded payload",
+                "recover the payload (network/proxy logs, disk) and corroborate with child "
+                "processes and EDR",
+            ),
+        ],
+    },
 }
 
 _GENERIC_PROFILE: dict[str, Any] = {
@@ -3134,7 +3290,9 @@ def build_executive_attack_story(
         "That this single-evidence run covers the whole environment.",
     ]
     for question, reason, recovery in profile.get("cannot", []):
-        cannot_say.append(f"Undetermined: {question}. Reason: {reason}. To resolve: {recovery}.")
+        cannot_say.append(
+            f"Undetermined: {question}. Reason: {reason}. To resolve: {recovery}."
+        )
     checks = {c.get("artifact_class"): c for c in case_completeness.get("checks", [])}
     gaps_added = 0
     for cls in _GAP_PRIORITY:
@@ -3907,6 +4065,19 @@ def _network_bytes(value: Any) -> int:
         return 0
 
 
+def _host_anonymous_email(host: str) -> tuple[bool, str]:
+    clean = host.strip().strip(".").lower()
+    for token in ANONYMOUS_EMAIL_HOST_TOKENS:
+        if token in clean:
+            return True, token
+    return False, ""
+
+
+def _host_is_webmail(host: str) -> bool:
+    clean = host.strip().strip(".").lower()
+    return any(token in clean for token in WEBMAIL_HOST_TOKENS)
+
+
 def _host_is_suspicious(host: str) -> tuple[bool, str]:
     clean = host.strip().strip(".").lower()
     if not clean or clean in {"-", "(empty)"}:
@@ -3916,6 +4087,9 @@ def _host_is_suspicious(host: str) -> tuple[bool, str]:
     for token in SUSPICIOUS_NETWORK_HOST_TOKENS:
         if token in clean:
             return True, f"contains {token}"
+    anon, anon_token = _host_anonymous_email(clean)
+    if anon:
+        return True, f"anonymous/disposable email service ({anon_token})"
     labels = [part for part in clean.split(".") if part]
     if labels and labels[-1] in SUSPICIOUS_NETWORK_TLDS:
         return True, f"uses high-abuse TLD .{labels[-1]}"
@@ -3969,11 +4143,82 @@ def _event_id_value(value: Any) -> int | None:
         return None
 
 
+LOLBINS = {
+    "rundll32.exe",
+    "regsvr32.exe",
+    "mshta.exe",
+    "wmic.exe",
+    "certutil.exe",
+    "bitsadmin.exe",
+    "cscript.exe",
+    "wscript.exe",
+    "powershell.exe",
+    "msbuild.exe",
+    "installutil.exe",
+    "regasm.exe",
+    "cmstp.exe",
+    "mavinject.exe",
+}
+_LOLBIN_CMD_TOKENS = (
+    "http://",
+    "https://",
+    "-enc",
+    "-encodedcommand",
+    "frombase64",
+    "downloadstring",
+    "javascript:",
+    "scrobj.dll",
+    "\\temp\\",
+    "%temp%",
+)
+_SUSPICIOUS_SVC_PATH_TOKENS = (
+    "cmd",
+    "powershell",
+    "\\temp\\",
+    "%temp%",
+    "rundll32",
+    "mshta",
+)
+
+
+def _win_basename(path: Any) -> str:
+    return str(path or "").replace("/", "\\").split("\\")[-1].lower()
+
+
+def _norm_pid(value: Any) -> str:
+    """Normalize a Windows PID to a canonical decimal string.
+
+    EVTX 4688 renders PIDs as hex (``0xae8``); other sources use decimal. Both
+    collapse to the same key so a child's parent PID can be matched against a
+    parent's NewProcessId regardless of formatting.
+    """
+    text = str(value or "").strip().lower()
+    if not text:
+        return ""
+    try:
+        return str(int(text, 16) if text.startswith("0x") else int(text))
+    except ValueError:
+        return text
+
+
 def evtx_rows_to_findings(
     rows: list[dict[str, Any]], tool_call_id: str, case_id: str, artifact_path: str
 ) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     seen_kinds: set[str] = set()
+    failed_logons = 0
+    failed_logon_ctx: dict[str, Any] = {}
+    # Pre-pass: map each spawned process PID -> its image basename so a child's
+    # parent PID can be resolved to a name. Samples without command-line auditing
+    # carry only ProcessId (parent PID), not ParentProcessName.
+    pid_to_name: dict[str, str] = {}
+    for row in rows:
+        if _event_id_value(row.get("event_id")) == 4688:
+            pre = _extract_evtx_entities(row.get("data") or {}, 4688)
+            new_pid = _norm_pid(pre.get("pid"))
+            new_name = _win_basename(pre.get("process"))
+            if new_pid and new_name:
+                pid_to_name[new_pid] = new_name
     for row in rows:
         event_id = _event_id_value(row.get("event_id"))
         channel = str(row.get("channel") or "")
@@ -4053,6 +4298,141 @@ def evtx_rows_to_findings(
                     "mitre_technique": "T1053.005",
                 }
             )
+        elif event_id == 4625:
+            failed_logons += 1
+            if not failed_logon_ctx:
+                ent = _extract_evtx_entities(row.get("data") or {}, event_id)
+                failed_logon_ctx = {
+                    "account": ent.get("account") or ent.get("subject_account"),
+                    "domain": ent.get("domain") or ent.get("subject_domain"),
+                    "source_ip": ent.get("source_ip"),
+                }
+        elif event_id == 4624 and "rdp_logon" not in seen_kinds:
+            ent = _extract_evtx_entities(row.get("data") or {}, event_id)
+            if str(ent.get("logon_type") or "") == "10":
+                seen_kinds.add("rdp_logon")
+                who = (
+                    _format_account(ent.get("account"), ent.get("domain"))
+                    or "an account"
+                )
+                src = ent.get("source_ip")
+                findings.append(
+                    {
+                        "case_id": case_id,
+                        "finding_id": "f-B-evtx-rdp-logon",
+                        "tool_call_id": tool_call_id,
+                        "artifact_path": artifact_path,
+                        "description": (
+                            f"EVTX Security EID 4624 records a Remote Desktop (Type 10) "
+                            f"logon for {who}"
+                            + (f" from {src}" if src else "")
+                            + f" (record {record_id}); treat as a lateral-movement / "
+                            "remote-access lead until corroborated with the source host "
+                            "and in-session activity."
+                        ),
+                        "confidence": "HYPOTHESIS",
+                        "pool_origin": "B",
+                        "mitre_technique": "T1021.001",
+                    }
+                )
+        elif event_id == 4688 and "process_creation_lead" not in seen_kinds:
+            ent = _extract_evtx_entities(row.get("data") or {}, event_id)
+            proc = _win_basename(ent.get("process"))
+            parent = _win_basename(ent.get("parent_process"))
+            if not parent:
+                parent = pid_to_name.get(_norm_pid(ent.get("parent_pid")), "")
+            cmd = str(ent.get("command_line") or "").lower()
+            who = _format_account(ent.get("account"), ent.get("domain")) or "an account"
+            if parent == "wmiprvse.exe":
+                seen_kinds.add("process_creation_lead")
+                findings.append(
+                    {
+                        "case_id": case_id,
+                        "finding_id": "f-B-evtx-wmi-exec",
+                        "tool_call_id": tool_call_id,
+                        "artifact_path": artifact_path,
+                        "description": (
+                            f"EVTX Security EID 4688 shows {proc or 'a process'} with "
+                            f"WmiPrvSE.exe as its parent process, under {who} (record "
+                            f"{record_id}) — consistent with remote WMI activity (a "
+                            "lateral-movement pattern); corroborate the source host and "
+                            "process bytes."
+                        ),
+                        "confidence": "HYPOTHESIS",
+                        "pool_origin": "B",
+                        "mitre_technique": "T1047",
+                    }
+                )
+            elif proc in LOLBINS and any(t in cmd for t in _LOLBIN_CMD_TOKENS):
+                seen_kinds.add("process_creation_lead")
+                findings.append(
+                    {
+                        "case_id": case_id,
+                        "finding_id": "f-B-evtx-lolbin-exec",
+                        "tool_call_id": tool_call_id,
+                        "artifact_path": artifact_path,
+                        "description": (
+                            f"EVTX Security EID 4688 shows living-off-the-land binary {proc} "
+                            f"invoked with a download/encoded command line under {who} (record "
+                            f"{record_id}); treat as a malicious-tooling lead until the payload "
+                            "and parent process are corroborated."
+                        ),
+                        "confidence": "HYPOTHESIS",
+                        "pool_origin": "B",
+                        "mitre_technique": "T1059",
+                    }
+                )
+        elif event_id in (7045, 4697) and "service_install" not in seen_kinds:
+            ent = _extract_evtx_entities(row.get("data") or {}, event_id)
+            seen_kinds.add("service_install")
+            svc = ent.get("service_name") or "a service"
+            path = ent.get("service_path")
+            suspicious = any(
+                t in str(path or "").lower() for t in _SUSPICIOUS_SVC_PATH_TOKENS
+            )
+            findings.append(
+                {
+                    "case_id": case_id,
+                    "finding_id": "f-B-evtx-service-install",
+                    "tool_call_id": tool_call_id,
+                    "artifact_path": artifact_path,
+                    "description": (
+                        f"EVTX EID {event_id} records installation of service '{svc}'"
+                        + (f" (image {path})" if path else "")
+                        + f" (record {record_id}); service installation is a durable "
+                        "persistence and lateral-movement mechanism — "
+                        + ("the image path looks suspicious; " if suspicious else "")
+                        + "corroborate the binary and origin before response."
+                    ),
+                    "confidence": "HYPOTHESIS",
+                    "pool_origin": "B",
+                    "mitre_technique": "T1543.003",
+                }
+            )
+    if failed_logons >= 5 and "failed_logon_burst" not in seen_kinds:
+        seen_kinds.add("failed_logon_burst")
+        who = _format_account(
+            failed_logon_ctx.get("account"), failed_logon_ctx.get("domain")
+        )
+        src = failed_logon_ctx.get("source_ip")
+        findings.append(
+            {
+                "case_id": case_id,
+                "finding_id": "f-B-evtx-failed-logon-burst",
+                "tool_call_id": tool_call_id,
+                "artifact_path": artifact_path,
+                "description": (
+                    f"EVTX Security EID 4625 shows {failed_logons} failed logons"
+                    + (f" for {who}" if who else "")
+                    + (f" from {src}" if src else "")
+                    + "; consistent with password-spray / brute-force. Treat as a "
+                    "credential-access lead and check for a subsequent successful logon."
+                ),
+                "confidence": "HYPOTHESIS",
+                "pool_origin": "B",
+                "mitre_technique": "T1110",
+            }
+        )
     return findings
 
 
@@ -4835,8 +5215,12 @@ class Investigation:
         # assertion needs >=2 artifact classes, not one process-view divergence.
         if ps_seen == 0 and psscan_count > 0:
             _core_os = {
-                "system", "smss.exe", "csrss.exe", "wininit.exe",
-                "services.exe", "lsass.exe",
+                "system",
+                "smss.exe",
+                "csrss.exe",
+                "wininit.exe",
+                "services.exe",
+                "lsass.exe",
             }
             _ps_list = psscan if isinstance(psscan, list) else []
 
@@ -4897,9 +5281,7 @@ class Investigation:
                 self.findings_pool_a.append(
                     {
                         "case_id": self.handle["id"],
-                        "finding_id": self._finding_id_for(
-                            "f-A-dkom", evidence_path
-                        ),
+                        "finding_id": self._finding_id_for("f-A-dkom", evidence_path),
                         "tool_call_id": tcid_psxview,
                         "artifact_path": evidence_path,
                         "description": (
@@ -5791,6 +6173,7 @@ class Investigation:
         artifact_path: str,
         description: str,
         technique: str,
+        confidence: str = "HYPOTHESIS",
     ) -> None:
         target = self.findings_pool_a if pool == "A" else self.findings_pool_b
         if any(f.get("finding_id") == finding_id for f in target):
@@ -5802,7 +6185,7 @@ class Investigation:
                 "tool_call_id": tool_call_id,
                 "artifact_path": artifact_path,
                 "description": description,
-                "confidence": "HYPOTHESIS",
+                "confidence": confidence,
                 "pool_origin": pool,
                 "mitre_technique": technique,
             }
@@ -5884,6 +6267,78 @@ class Investigation:
                     "T1071.001",
                 )
                 break
+
+    def _add_pcap_http_request_findings(
+        self, out: dict[str, Any], tcid: str, artifact_path: str
+    ) -> None:
+        """Turn per-request HTTP data (src->host, method, cookie) into Findings.
+
+        The count-only DNS/HTTP-host summaries miss targeted activity that sits
+        outside the top-N (e.g. a handful of requests to an anonymous-email
+        service). This consumes pcap_triage's `http_requests` to (a) flag contact
+        with anonymous/disposable email services and identify the originating
+        internal host, and (b) attribute authenticated webmail sessions.
+        """
+        requests = out.get("http_requests") or []
+        anon_seen: set[tuple[str, str]] = set()
+        webmail_seen: set[tuple[str, str]] = set()
+        emitted = 0
+        for row in requests:
+            if not isinstance(row, dict) or emitted >= 12:
+                break
+            host = str(row.get("host") or "").strip()
+            src = str(row.get("src") or "").strip() or "an internal host"
+            method = (str(row.get("method") or "").strip() or "GET").upper()
+            if not host:
+                continue
+            anon, token = _host_anonymous_email(host)
+            if anon and (src, host) not in anon_seen:
+                anon_seen.add((src, host))
+                posted = method == "POST"
+                # POST = an actual submission to the service; with the contact it
+                # is two corroborating facts, so INFERRED. A bare GET is a lead.
+                confidence = "INFERRED" if posted else "HYPOTHESIS"
+                verb = "submitted a request (HTTP POST) to" if posted else "contacted"
+                self._network_finding(
+                    "B",
+                    self._finding_id_for(f"f-B-pcap-anon-email-{host}", artifact_path),
+                    tcid,
+                    artifact_path,
+                    (
+                        f"Internal host {src} {verb} anonymous/self-destructing email "
+                        f"service `{host}` ({token}) over HTTP — consistent with sending "
+                        f"an anonymous or harassing message, and identifies {src} as the "
+                        "originating source host. Corroborate the message body/recipient "
+                        "before naming a person; do not assert attribution from network "
+                        "metadata alone."
+                    ),
+                    "T1071.001",
+                    confidence=confidence,
+                )
+                emitted += 1
+                continue
+            if (
+                row.get("has_cookie")
+                and _host_is_webmail(host)
+                and (src, host) not in webmail_seen
+            ):
+                webmail_seen.add((src, host))
+                self._network_finding(
+                    "B",
+                    self._finding_id_for(f"f-B-pcap-webmail-{host}", artifact_path),
+                    tcid,
+                    artifact_path,
+                    (
+                        f"Authenticated webmail session to `{host}` from internal host "
+                        f"{src} (HTTP session cookie present) — attributes the web/email "
+                        f"activity on {src} to a specific webmail account, corroborating "
+                        "the source host's identity. Account ownership still requires "
+                        "provider records."
+                    ),
+                    "T1071.001",
+                    confidence="INFERRED",
+                )
+                emitted += 1
 
     def _add_sysmon_network_findings(
         self, rows: list[dict[str, Any]], tcid: str, artifact_path: str
@@ -6033,7 +6488,9 @@ class Investigation:
 
         for entry in by_class["pcap"][:5]:
             path = str(entry["path"])
-            args = {"case_id": self.handle["id"], "pcap_path": path, "limit": 10000}
+            # Read the whole capture (bounded by the tool's own cap). A small
+            # limit truncates targeted activity that sits deep in the pcap.
+            args = {"case_id": self.handle["id"], "pcap_path": path, "limit": 500000}
             out = rust.call_tool("pcap_triage", args, timeout=1800.0)
             error = out.get("_error", {}).get("message") if "_error" in out else None
             if error:
@@ -6055,6 +6512,7 @@ class Investigation:
                 arguments=args,
             )
             self._add_network_summary_findings("pcap_triage", out, tcid, path)
+            self._add_pcap_http_request_findings(out, tcid, path)
             zeek = out.get("zeek")
             if isinstance(zeek, dict):
                 self._add_network_summary_findings("pcap_triage", zeek, tcid, path)
@@ -6423,7 +6881,9 @@ class Investigation:
                 resolution=str(contra.get("resolution", "auto_higher_credibility")),
                 approved_by="auto" if self.unattended else "analyst",
             )
-            self._audit(py, record["kind"], {k: v for k, v in record.items() if k != "kind"})
+            self._audit(
+                py, record["kind"], {k: v for k, v in record.items() if k != "kind"}
+            )
 
         # verify_finding before judge_findings. The verifier re-runs the
         # cited typed tool call and approves, downgrades, or rejects each
@@ -6472,6 +6932,7 @@ class Investigation:
             kept = downgraded = 0
 
         merged = self._embed_verifier_replays(merged)
+        merged = self._tag_finding_cves(merged)
         return merged, len(contras), kept, downgraded
 
     def _build_report_metadata(
@@ -6579,8 +7040,7 @@ class Investigation:
         print(f"  status: {report_qa.get('status')}")
         print(f"  packet_state: {report_qa.get('packet_state')}")
         print(
-            "  ready_for_expert_signoff: "
-            f"{report_qa.get('ready_for_expert_signoff')}"
+            f"  ready_for_expert_signoff: {report_qa.get('ready_for_expert_signoff')}"
         )
         payload = {
             "status": report_qa.get("status"),
@@ -6684,6 +7144,22 @@ class Investigation:
             {**release_gate, "report_qa_sha256": self._hash_obj(report_qa)},
         )
         return release_gate
+
+    def _tag_finding_cves(self, merged: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Surface CVE ids that literally appear in a finding's text into a
+        structured `cves` field (only when present). Purely additive — no
+        inference and no verdict impact; the post-verdict grounding step
+        validates each id against NVD. See agent-config/GROUNDING.md.
+        """
+        for finding in merged:
+            text = " ".join(
+                str(finding.get(k) or "")
+                for k in ("description", "title", "summary", "reasoning")
+            )
+            cves = _extract_cve_ids(text)
+            if cves:
+                finding["cves"] = cves
+        return merged
 
     def _emit_final_findings(
         self, py: SshMcpClient, merged: list[dict[str, Any]]
@@ -6875,7 +7351,7 @@ class Investigation:
                 "error": result["_error"].get("message", "manifest_verify failed"),
             }
         self.post_finalize_verification = result
-        print("  manifest_verify = " f"{'PASS' if result.get('overall') else 'FAIL'}")
+        print(f"  manifest_verify = {'PASS' if result.get('overall') else 'FAIL'}")
         return result
 
     def compute_verdict(self, merged: list[dict[str, Any]]) -> str:
@@ -7354,7 +7830,9 @@ class Investigation:
     # ------------------------------------------------------------------
 
     def run(self) -> dict[str, Any]:
-        print(f"\n{'='*70}\nfind-evil-auto: investigating {self.evidence}\n{'='*70}")
+        print(
+            f"\n{'=' * 70}\nfind-evil-auto: investigating {self.evidence}\n{'=' * 70}"
+        )
         print(f"  case_id         = {self.case_id}")
         print(f"  run_id          = {self.run_id}")
         print(f"  unattended      = {self.unattended}")
@@ -7507,7 +7985,7 @@ class Investigation:
                     f"{release_gate.get('packet_state')}"
                 )
 
-            print(f"\n{'='*70}\nDONE — verdict: {verdict}\n{'='*70}")
+            print(f"\n{'=' * 70}\nDONE — verdict: {verdict}\n{'=' * 70}")
             print(f"  packet_state    = {final_release_gate.get('packet_state')}")
             print(
                 "  customer_ready  = "

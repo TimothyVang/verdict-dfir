@@ -284,7 +284,17 @@ dashboard shows a "Recommended actions" section. This **replaces** the old
 n8n 2.x); `setup-n8n.py` no longer deploys it, but still provisions the n8n owner + API key the
 grounding workflow needs.
 
-**Remaining:** CVE/NVD grounding — see the plan.
+## CVE/NVD grounding (engine tag + NVD validation)
+
+The verdict engine (`find_evil_auto.py`) tags findings with CVE ids that **literally appear** in
+their text (`finding.cves[]` — purely additive, no inference, no verdict impact; locked by
+`verdict-policy-smoke`). Post-verdict, `ground_verdict.py` validates each id against the keyless
+**NVD** JSON API → `cve_research` ({description, CVSS, severity}); the judge records
+`cve_grounding[]` (supported / unsupported / unknown). A finding citing a CVE id NVD does not
+recognize is flagged `possible_hallucination`. CVSS is severity **context, not proof** the CVE was
+exploited on this host. The dashboard shows a "CVE grounding" section.
+
+**Remaining:** auto-run in `scripts/verdict` + submission-boundary re-confirm — see the plan.
 
 ---
 

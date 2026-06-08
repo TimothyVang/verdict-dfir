@@ -347,6 +347,25 @@ def offline_openweb_checks(gv) -> None:
     )
 
 
+def offline_cve_checks(gv) -> None:
+    print("[offline] CVE extraction (engine-tagged + text fallback)")
+    verdict = {
+        "findings": [
+            {"finding_id": "f1", "cves": ["CVE-2021-34527"]},
+            {
+                "finding_id": "f2",
+                "description": "exploited cve-2017-0144 (EternalBlue)",
+            },
+            {"finding_id": "f3", "description": "no cve here"},
+        ]
+    }
+    m = gv.extract_cves(verdict)
+    check("CVE-2021-34527" in m, "extract_cves reads engine-tagged finding.cves")
+    check("CVE-2017-0144" in m, "extract_cves falls back to a literal text scan")
+    check(m.get("CVE-2021-34527") == ["f1"], "extract_cves maps cve -> finding ids")
+    check(gv.ground_cves({}) is None, "ground_cves returns None when there are no CVEs")
+
+
 def offline_actions_checks() -> None:
     print("[offline] grounding-aware action routing")
     spec = importlib.util.spec_from_file_location(
@@ -460,6 +479,7 @@ def main() -> int:
     offline_checks(gv)
     offline_ioc_checks(gv)
     offline_openweb_checks(gv)
+    offline_cve_checks(gv)
     offline_actions_checks()
     if webhook_up():
         live_checks()

@@ -24,7 +24,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -38,6 +40,11 @@ WEBHOOK = os.environ.get(
 )
 RESEARCH_FILENAME = "grounding_research.json"
 HTTP_TIMEOUT_S = 240
+
+# NVD JSON REST API (keyless; ~5 req/30s unauthenticated, so space the calls).
+NVD_API = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+NVD_RATE_DELAY_S = float(os.environ.get("NVD_RATE_DELAY", "6"))
+CVE_RE = re.compile(r"CVE-\d{4}-\d{4,7}", re.IGNORECASE)
 
 
 def resolve_case_dir(arg: str) -> Path:
@@ -156,6 +163,88 @@ def build_queries(
         snippet = (e["claim_snippets"] or e["names"] or [""])[0]
         add(f"{e['technique_id']} {snippet}".strip(), "technique-claim")
     return queries[:4]
+
+
+def extract_cves(verdict: dict[str, Any]) -> dict[str, list[str]]:
+    """CVE id -> [finding_ids] from findings' `cves` field (tagged by the engine),
+    falling back to a literal scan of finding text for older cases."""
+    out: dict[str, list[str]] = {}
+    for f in verdict.get("findings") or []:
+        fid = f.get("finding_id") or f.get("id") or ""
+        ids = list(f.get("cves") or [])
+        if not ids:
+            text = " ".join(
+                str(f.get(k) or "") for k in ("description", "title", "summary")
+            )
+            ids = CVE_RE.findall(text)
+        for c in ids:
+            c = c.upper()
+            out.setdefault(c, [])
+            if fid and fid not in out[c]:
+                out[c].append(fid)
+    return out
+
+
+def _nvd_get(cve_id: str) -> dict[str, Any]:
+    req = urllib.request.Request(f"{NVD_API}?cveId={cve_id}")
+    req.add_header("User-Agent", "findevil-grounding")
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read().decode())
+
+
+def ground_cves(cve_map: dict[str, list[str]]) -> dict[str, Any] | None:
+    """Validate each CVE id against the keyless NVD JSON API (host-side)."""
+    if not cve_map:
+        return None
+    results: list[dict[str, Any]] = []
+    first = True
+    for cve_id, fids in cve_map.items():
+        if not first:
+            time.sleep(NVD_RATE_DELAY_S)  # respect NVD unauthenticated rate limit
+        first = False
+        entry: dict[str, Any] = {
+            "cve_id": cve_id,
+            "claimed_by": fids,
+            "found": False,
+            "source": "nvd",
+            "url": f"https://nvd.nist.gov/vuln/detail/{cve_id}",
+        }
+        try:
+            data = _nvd_get(cve_id)
+            vulns = data.get("vulnerabilities") or []
+            if vulns:
+                cve = vulns[0].get("cve", {})
+                desc = next(
+                    (
+                        d["value"]
+                        for d in cve.get("descriptions", [])
+                        if d.get("lang") == "en"
+                    ),
+                    None,
+                )
+                cvss = sev = None
+                metrics = cve.get("metrics", {})
+                for mk in ("cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
+                    if metrics.get(mk):
+                        m0 = metrics[mk][0]
+                        cd = m0.get("cvssData", {})
+                        cvss = cd.get("baseScore")
+                        sev = cd.get("baseSeverity") or m0.get("baseSeverity")
+                        break
+                entry.update(
+                    {
+                        "found": True,
+                        "description": (desc or "")[:600],
+                        "cvss": cvss,
+                        "severity": sev,
+                    }
+                )
+            else:
+                entry["error"] = "not_found"
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            entry["error"] = str(e)[:120]
+        results.append(entry)
+    return {"results": results}
 
 
 def call_workflow(
@@ -282,6 +371,11 @@ def main(argv: list[str]) -> int:
         print(f"enriching {ioc_total} IOC(s) host-side (VirusTotal + abuse.ch)…")
     ioc_block = run_ioc_enrichment(iocs)
 
+    cve_map = extract_cves(verdict)
+    if cve_map:
+        print(f"grounding {len(cve_map)} CVE(s) host-side via NVD…")
+    cve_block = ground_cves(cve_map)
+
     queries = build_queries(techs, ioc_block)
     if queries:
         print(f"open-web research: {len(queries)} query(ies) via self-hosted SearXNG")
@@ -303,6 +397,8 @@ def main(argv: list[str]) -> int:
     }
     if ioc_block is not None:
         bundle["ioc_enrichment"] = ioc_block
+    if cve_block is not None:
+        bundle["cve_research"] = cve_block
     if open_web:
         bundle["open_web_research"] = open_web
     out_path = case_dir / RESEARCH_FILENAME
@@ -329,6 +425,15 @@ def main(argv: list[str]) -> int:
                     f"  [ioc] {mk} {r.get('type'):<6} mal_src={r.get('malicious_sources')} "
                     f"[{prov}] {r.get('ioc', '')[:40]}"
                 )
+    if cve_block is not None:
+        for c in cve_block.get("results", []):
+            mk = "ok  " if c.get("found") else "MISS"
+            extra = (
+                f"CVSS {c.get('cvss')} {c.get('severity') or ''}"
+                if c.get("found")
+                else c.get("error")
+            )
+            print(f"  [cve] {mk} {c.get('cve_id'):<16} {extra}")
     for ow in open_web:
         n = len(ow.get("results") or [])
         err = ow.get("error")
