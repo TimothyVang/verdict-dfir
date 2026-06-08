@@ -197,7 +197,15 @@ pub fn registry_query(input: &RegistryInput) -> Result<RegistryOutput, RegistryE
         parse_errors: 0,
     };
 
-    walk(&hive, key, &normalized, input.recursive, limit, 0, &mut output);
+    walk(
+        &hive,
+        key,
+        &normalized,
+        input.recursive,
+        limit,
+        0,
+        &mut output,
+    );
 
     Ok(output)
 }
@@ -238,17 +246,20 @@ fn walk(
             } else {
                 format!("{key_path}\\{name}")
             };
-            walk(hive, child, &child_path, recursive, limit, depth + 1, output);
+            walk(
+                hive,
+                child,
+                &child_path,
+                recursive,
+                limit,
+                depth + 1,
+                output,
+            );
         }
     }
 }
 
-fn build_entry(
-    hive: &Hive,
-    key: Key,
-    key_path: &str,
-    children: &[(String, Key)],
-) -> RegistryEntry {
+fn build_entry(hive: &Hive, key: Key, key_path: &str, children: &[(String, Key)]) -> RegistryEntry {
     let last_write_time_iso = filetime_to_iso(hive.key_timestamp(key));
 
     let values: Vec<RegistryValue> = hive

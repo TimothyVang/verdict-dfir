@@ -65,7 +65,8 @@ pub struct Hive {
 }
 
 fn read_u16(buf: &[u8], at: usize) -> Option<u16> {
-    buf.get(at..at + 2).map(|b| u16::from_le_bytes([b[0], b[1]]))
+    buf.get(at..at + 2)
+        .map(|b| u16::from_le_bytes([b[0], b[1]]))
 }
 
 fn read_u32(buf: &[u8], at: usize) -> Option<u32> {
@@ -377,7 +378,12 @@ mod tests {
         }
         eprintln!("values:");
         for v in hive.values(key) {
-            eprintln!("  - {} (type {}) {} bytes", v.name, v.value_type, v.data.len());
+            eprintln!(
+                "  - {} (type {}) {} bytes",
+                v.name,
+                v.value_type,
+                v.data.len()
+            );
         }
     }
 }

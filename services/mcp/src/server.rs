@@ -783,17 +783,16 @@ fn handle_tools_call(params: &Value, registry: &[ToolEntry]) -> Result<Value, To
     // parser hitting an unimplemented code path on an unusual artifact) taking
     // down the whole stdio server mid-investigation. Convert the panic into a
     // clean per-call ToolError so the run continues with the remaining tools.
-    let payload = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        (entry.handler)(arguments)
-    }))
-    .map_err(|panic| {
-        let detail = panic
-            .downcast_ref::<&str>()
-            .map(|s| (*s).to_string())
-            .or_else(|| panic.downcast_ref::<String>().cloned())
-            .unwrap_or_else(|| "tool handler panicked".to_string());
-        ToolError::Internal(format!("tool '{name}' panicked: {detail}"))
-    })??;
+    let payload =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| (entry.handler)(arguments)))
+            .map_err(|panic| {
+                let detail = panic
+                    .downcast_ref::<&str>()
+                    .map(|s| (*s).to_string())
+                    .or_else(|| panic.downcast_ref::<String>().cloned())
+                    .unwrap_or_else(|| "tool handler panicked".to_string());
+                ToolError::Internal(format!("tool '{name}' panicked: {detail}"))
+            })??;
     let payload_text = serde_json::to_string(&payload)
         .map_err(|e| ToolError::Internal(format!("serialize tool output: {e}")))?;
     let sha = sha256_hex(payload_text.as_bytes());
