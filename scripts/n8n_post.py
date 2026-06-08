@@ -16,6 +16,7 @@ n8n_reachable=false so the dashboard can say so honestly.
 Usage: n8n_post.py <case-dir>
 Env:   FINDEVIL_N8N_WEBHOOK  (default http://localhost:5678/webhook/findevil-finding-to-action)
 """
+
 from __future__ import annotations
 
 import json
@@ -62,7 +63,9 @@ def main() -> int:
 
     if not verdict_file.is_file():
         out_file.write_text(
-            json.dumps({"ran": False, "reason": "no verdict.json", "source": SOURCE}, indent=2)
+            json.dumps(
+                {"ran": False, "reason": "no verdict.json", "source": SOURCE}, indent=2
+            )
         )
         return 0
 

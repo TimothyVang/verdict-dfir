@@ -8,6 +8,7 @@ Verifies that:
 - PANDOC / CHROME module constants are resolved without raising
 - render_html_pdf returns (html, None) gracefully when PANDOC is None
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -41,7 +42,11 @@ def test_resolve_tool_env_override(mod: types.ModuleType, tmp_path: Path) -> Non
     fake_exe = tmp_path / "mypandoc"
     fake_exe.write_text("#!/bin/sh\necho pandoc", encoding="utf-8")
     fake_exe.chmod(0o755)
-    result = mod._resolve_tool.__wrapped__(str(fake_exe), "no-such-binary-xyz") if hasattr(mod._resolve_tool, "__wrapped__") else None
+    result = (
+        mod._resolve_tool.__wrapped__(str(fake_exe), "no-such-binary-xyz")
+        if hasattr(mod._resolve_tool, "__wrapped__")
+        else None
+    )
     # Re-call directly with env patched
     env_backup = os.environ.pop("PANDOC_BIN", None)
     try:
@@ -65,11 +70,14 @@ def test_resolve_tool_env_bad_path(mod: types.ModuleType) -> None:
             os.environ["PANDOC_BIN"] = env_backup
         else:
             os.environ.pop("PANDOC_BIN", None)
-    assert result is None, f"Expected None for bad override + missing fallback, got {result!r}"
+    assert result is None, (
+        f"Expected None for bad override + missing fallback, got {result!r}"
+    )
 
 
 def test_resolve_tool_which_fallback(mod: types.ModuleType) -> None:
     import shutil
+
     env_backup = os.environ.pop("PANDOC_BIN", None)
     try:
         result = mod._resolve_tool("PANDOC_BIN", "python3", "python")
@@ -105,11 +113,22 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
         tests = [
-            ("resolve_tool_env_override", lambda: test_resolve_tool_env_override(mod, tmp)),
+            (
+                "resolve_tool_env_override",
+                lambda: test_resolve_tool_env_override(mod, tmp),
+            ),
             ("resolve_tool_env_bad_path", lambda: test_resolve_tool_env_bad_path(mod)),
-            ("resolve_tool_which_fallback", lambda: test_resolve_tool_which_fallback(mod)),
+            (
+                "resolve_tool_which_fallback",
+                lambda: test_resolve_tool_which_fallback(mod),
+            ),
             ("constants_do_not_raise", lambda: test_constants_do_not_raise(mod)),
-            ("render_html_pdf_degrades_when_pandoc_none", lambda: test_render_html_pdf_degrades_when_pandoc_none(mod, tmp / "case2")),
+            (
+                "render_html_pdf_degrades_when_pandoc_none",
+                lambda: test_render_html_pdf_degrades_when_pandoc_none(
+                    mod, tmp / "case2"
+                ),
+            ),
         ]
         passed = 0
         failed = 0

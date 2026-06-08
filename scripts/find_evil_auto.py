@@ -1972,7 +1972,22 @@ def build_normalized_timeline(
         sorted(timeline_events, key=lambda e: e.get("ts") or ""), 1
     ):
         tcid = str(event.get("tool_call_id") or "")
-        linked = findings_by_tool.get(tcid, [])
+        event_record = str((event.get("details") or {}).get("record_id") or "")
+        linked = []
+        for fid, finding in findings_by_tool.get(tcid, []):
+            subject_records = finding.get("subject_record_ids")
+            is_primary_tool = str(finding.get("tool_call_id") or "") == tcid
+            if is_primary_tool and subject_records:
+                # A finding's own tool emits one tool_call_id for the whole log;
+                # link only the record the finding is actually about so unrelated
+                # context events are not tagged with the finding's confidence.
+                if event_record and event_record in {str(r) for r in subject_records}:
+                    linked.append((fid, finding))
+            else:
+                # Cross-tool corroboration (links the second artifact class for the
+                # >=2-class execution gate), or a finding with no pinned record:
+                # preserve the existing coarse linkage.
+                linked.append((fid, finding))
         techniques = sorted(
             {
                 str(finding.get("mitre_technique"))
@@ -4232,6 +4247,7 @@ def evtx_rows_to_findings(
     seen_kinds: set[str] = set()
     failed_logons = 0
     failed_logon_ctx: dict[str, Any] = {}
+    failed_logon_records: list[str] = []
     # Pre-pass: map each spawned process PID -> its image basename so a child's
     # parent PID can be resolved to a name. Samples without command-line auditing
     # carry only ProcessId (parent PID), not ParentProcessName.
@@ -4324,6 +4340,8 @@ def evtx_rows_to_findings(
             )
         elif event_id == 4625:
             failed_logons += 1
+            if record_id not in (None, ""):
+                failed_logon_records.append(str(record_id))
             if not failed_logon_ctx:
                 ent = _extract_evtx_entities(row.get("data") or {}, event_id)
                 failed_logon_ctx = {
@@ -4455,8 +4473,19 @@ def evtx_rows_to_findings(
                 "confidence": "HYPOTHESIS",
                 "pool_origin": "B",
                 "mitre_technique": "T1110",
+                "subject_record_ids": list(failed_logon_records),
             }
         )
+    # Pin each finding to the EVTX record(s) it is actually about. The normalized
+    # timeline uses this to link a finding only to its subject event(s), instead of
+    # to every event that merely shares this evtx_query tool_call_id — which would
+    # otherwise smear a single lead's confidence across unrelated context events.
+    for finding in findings:
+        if "subject_record_ids" in finding:
+            continue
+        records = re.findall(r"record (\d+)", finding.get("description", ""))
+        if records:
+            finding["subject_record_ids"] = records
     return findings
 
 
@@ -6369,11 +6398,7 @@ class Investigation:
                 emitted += 1
                 continue
             social, platform = _host_social_media(host)
-            if (
-                row.get("has_cookie")
-                and social
-                and (src, platform) not in social_seen
-            ):
+            if row.get("has_cookie") and social and (src, platform) not in social_seen:
                 social_seen.add((src, platform))
                 self._network_finding(
                     "B",

@@ -505,9 +505,7 @@ def main() -> int:
 
     corr_path = fleet_dir / "fleet_correlation.json"
     if not corr_path.exists():
-        print(
-            f"correlation file missing — run fleet_correlate.py first: " f"{corr_path}"
-        )
+        print(f"correlation file missing — run fleet_correlate.py first: {corr_path}")
         return 1
     corr = json.loads(corr_path.read_text(encoding="utf-8"))
 

@@ -128,7 +128,9 @@ class TestConstants:
 
 
 class TestResolveMemoryStorePath:
-    def test_resolve_memory_store_path_precedence(self, tmp_path: pytest.TemporaryDirectory) -> None:
+    def test_resolve_memory_store_path_precedence(
+        self, tmp_path: pytest.TemporaryDirectory
+    ) -> None:
         override = tmp_path / "custom_memory.sqlite"
         env = {"FINDEVIL_MEMORY_STORE": str(override), "HOME": str(tmp_path)}
         result = resolve_memory_store_path(env=env)

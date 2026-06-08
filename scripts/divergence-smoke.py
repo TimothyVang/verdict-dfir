@@ -350,9 +350,7 @@ def _check_mcp_json_surface() -> list[str]:
         )
     missing = _MCP_JSON_REQUIRED_SERVERS - server_names
     if missing:
-        issues.append(
-            f".mcp.json is missing required server(s): {sorted(missing)}"
-        )
+        issues.append(f".mcp.json is missing required server(s): {sorted(missing)}")
 
     for name, server in servers.items():
         args = server.get("args", [])
@@ -417,7 +415,9 @@ def main() -> int:
     total_checks += 1
     mcp_issues = _check_mcp_json_surface()
     if mcp_issues:
-        print("[FAIL] #10  .mcp.json locked to two typed servers, no gateway/shell drift")
+        print(
+            "[FAIL] #10  .mcp.json locked to two typed servers, no gateway/shell drift"
+        )
         for issue in mcp_issues:
             print(f"         {issue}")
         print(
@@ -427,14 +427,16 @@ def main() -> int:
         )
         failed += 1
     else:
-        print("[OK  ] #10  .mcp.json locked to two typed servers, no gateway/shell drift")
+        print(
+            "[OK  ] #10  .mcp.json locked to two typed servers, no gateway/shell drift"
+        )
 
     print()
     print("=" * 60)
     if failed:
-        print(f"FAIL - {failed} of {total_checks} divergences have " f"active drift.")
+        print(f"FAIL - {failed} of {total_checks} divergences have active drift.")
         return 1
-    print(f"OK - all {total_checks} active divergences are " f"downstream-clean.")
+    print(f"OK - all {total_checks} active divergences are downstream-clean.")
     print("=" * 60)
     return 0
 

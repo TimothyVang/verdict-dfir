@@ -234,7 +234,9 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"^docs/[a-z][a-zA-Z0-9_/-]*\.md#"),
     # MIME / content types (e.g. `text/html`, `application/json`) quoted in
     # docs/onboarding.md + runbooks — HTTP media types, not file paths.
-    re.compile(r"^(?:text|application|image|audio|video|multipart|font)/[A-Za-z0-9.+-]+$"),
+    re.compile(
+        r"^(?:text|application|image|audio|video|multipart|font)/[A-Za-z0-9.+-]+$"
+    ),
     # SANS SIFT OVA download host quoted in docs/onboarding.md
     # (`sansorg.egnyte.com/dl/<token>`) — an external Egnyte share URL written
     # without a scheme, not a repo path. See the SIFT setup notes.

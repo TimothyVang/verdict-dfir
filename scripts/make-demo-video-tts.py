@@ -16,6 +16,7 @@ Env overrides:
     PIPER_VOICE   HF voice id to fetch if PIPER_MODEL is unset
                   (default: en_US-amy-medium)
 """
+
 from __future__ import annotations
 
 import os
@@ -49,8 +50,11 @@ def extract_narrations() -> list[str]:
 
 
 def resolve_piper() -> str:
-    for cand in (os.environ.get("PIPER_BIN"), shutil.which("piper"),
-                 "/tmp/piper-venv/bin/piper"):
+    for cand in (
+        os.environ.get("PIPER_BIN"),
+        shutil.which("piper"),
+        "/tmp/piper-venv/bin/piper",
+    ):
         if cand and Path(cand).exists():
             return cand
     raise SystemExit("piper not found. Install it: pip install piper-tts")
@@ -87,16 +91,32 @@ def main() -> int:
     length_scale = os.environ.get("PIPER_LENGTH_SCALE", "0.9")
     for i, narr in enumerate(narrations, 1):
         wav = CACHE / f"beat_{i:02d}.wav"
-        subprocess.run([piper, "-m", str(model), "--length-scale", length_scale, "-f", str(wav)],
-                       input=narr, text=True, check=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            [piper, "-m", str(model), "--length-scale", length_scale, "-f", str(wav)],
+            input=narr,
+            text=True,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         mp3 = AUDIO_OUT / f"beat_{i:02d}.mp3"
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), str(mp3)],
-                       check=True)
+        subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), str(mp3)], check=True
+        )
         dur = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-             "-of", "default=noprint_wrappers=1:nokey=1", str(mp3)],
-            capture_output=True, text=True).stdout.strip()
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(mp3),
+            ],
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
         print(f"  beat {i}: {mp3.name}  ({float(dur):.1f}s)")
     print("\ndone — re-render with: bash scripts/make-demo-video.sh --skip-tts")
     return 0

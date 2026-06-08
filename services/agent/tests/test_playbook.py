@@ -62,23 +62,26 @@ class TestDetectEvidenceType:
 class TestClassifyArtifactPath:
     """classify_artifact_path must agree with the legacy in find_evil_auto.py."""
 
-    @pytest.mark.parametrize("path,expected_class,expected_tool", [
-        ("dump.mem", "memory", "memory_playbook"),
-        ("sysmon.evtx", "sysmon_network", "sysmon_network_query"),
-        ("Security.evtx", "evtx", "evtx_query"),
-        ("capture.pcap", "pcap", "pcap_triage"),
-        ("capture.pcapng", "pcap", "pcap_triage"),
-        ("conn.log", "zeek", "zeek_summary"),
-        ("disk.e01", "raw_disk", None),
-        ("$MFT", "mft", "mft_timeline"),
-        ("SVCHOST.EXE-ABCDEF12.pf", "prefetch", "prefetch_parse"),
-        ("NTUSER.DAT", "registry", "registry_query"),
-        ("amcache.hve", "registry", "registry_query"),
-        ("$UsnJrnl", "usnjrnl", "usnjrnl_query"),
-        ("malware.exe", "yara_target", "yara_scan"),
-        ("collection.zip", "velociraptor", "vel_collect"),
-        ("readme.txt", "unknown", None),
-    ])
+    @pytest.mark.parametrize(
+        "path,expected_class,expected_tool",
+        [
+            ("dump.mem", "memory", "memory_playbook"),
+            ("sysmon.evtx", "sysmon_network", "sysmon_network_query"),
+            ("Security.evtx", "evtx", "evtx_query"),
+            ("capture.pcap", "pcap", "pcap_triage"),
+            ("capture.pcapng", "pcap", "pcap_triage"),
+            ("conn.log", "zeek", "zeek_summary"),
+            ("disk.e01", "raw_disk", None),
+            ("$MFT", "mft", "mft_timeline"),
+            ("SVCHOST.EXE-ABCDEF12.pf", "prefetch", "prefetch_parse"),
+            ("NTUSER.DAT", "registry", "registry_query"),
+            ("amcache.hve", "registry", "registry_query"),
+            ("$UsnJrnl", "usnjrnl", "usnjrnl_query"),
+            ("malware.exe", "yara_target", "yara_scan"),
+            ("collection.zip", "velociraptor", "vel_collect"),
+            ("readme.txt", "unknown", None),
+        ],
+    )
     def test_classify_returns_expected(
         self, path: str, expected_class: str, expected_tool: str | None
     ) -> None:
@@ -97,7 +100,16 @@ class TestClassifyArtifactPath:
 
 class TestToolSequences:
     def test_tool_sequences_cover_all_evidence_types(self) -> None:
-        required = {"disk", "memory", "evtx", "network", "velociraptor", "extracted_disk", "directory", "unknown"}
+        required = {
+            "disk",
+            "memory",
+            "evtx",
+            "network",
+            "velociraptor",
+            "extracted_disk",
+            "directory",
+            "unknown",
+        }
         assert required.issubset(set(TOOL_SEQUENCES.keys()))
 
     def test_memory_sequence_has_pslist_and_psscan(self) -> None:

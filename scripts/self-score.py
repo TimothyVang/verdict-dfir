@@ -28,24 +28,57 @@ from typing import Any
 # The six criteria. Reused from the agent package when importable so there is a
 # single source of truth; falls back to an inline copy for a zero-dependency run.
 try:  # pragma: no cover - import shim
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "services" / "agent"))
+    sys.path.insert(
+        0, str(Path(__file__).resolve().parent.parent / "services" / "agent")
+    )
     from findevil_agent.playbook import JUDGE_SELFSCORE_CRITERIA as CRITERIA
 except Exception:  # pragma: no cover
     CRITERIA = [
-        {"criterion": 1, "question": "Did any tool call fail this run? If yes, did the audit log show explicit course-correction?", "answer_style": "failures=N corrections=N"},
-        {"criterion": 2, "question": "What % of Findings are CONFIRMED vs INFERRED vs HYPOTHESIS?", "answer_style": "C=X% I=Y% H=Z%"},
-        {"criterion": 3, "question": "How many artifact classes did this case touch? Which Findings cross >=2?", "answer_style": "classes=[…] crossed=[…]"},
-        {"criterion": 4, "question": "Were any tool calls rejected by typed-surface validation this run?", "answer_style": "rejected=N reasons=[…]"},
-        {"criterion": 5, "question": "Does every Finding cite a tool_call_id? (must be 100%; verifier vetoes otherwise)", "answer_style": "cited=N/N"},
-        {"criterion": 6, "question": "Is the run reproducible from the manifest alone (no external state)?", "answer_style": "reproducible=yes/no"},
+        {
+            "criterion": 1,
+            "question": "Did any tool call fail this run? If yes, did the audit log show explicit course-correction?",
+            "answer_style": "failures=N corrections=N",
+        },
+        {
+            "criterion": 2,
+            "question": "What % of Findings are CONFIRMED vs INFERRED vs HYPOTHESIS?",
+            "answer_style": "C=X% I=Y% H=Z%",
+        },
+        {
+            "criterion": 3,
+            "question": "How many artifact classes did this case touch? Which Findings cross >=2?",
+            "answer_style": "classes=[…] crossed=[…]",
+        },
+        {
+            "criterion": 4,
+            "question": "Were any tool calls rejected by typed-surface validation this run?",
+            "answer_style": "rejected=N reasons=[…]",
+        },
+        {
+            "criterion": 5,
+            "question": "Does every Finding cite a tool_call_id? (must be 100%; verifier vetoes otherwise)",
+            "answer_style": "cited=N/N",
+        },
+        {
+            "criterion": 6,
+            "question": "Is the run reproducible from the manifest alone (no external state)?",
+            "answer_style": "reproducible=yes/no",
+        },
     ]
 
 ARTIFACT_CLASS_FOR_TOOL = {
-    "vol_pslist": "memory", "vol_psscan": "memory", "vol_psxview": "memory", "vol_malfind": "memory",
-    "evtx_query": "evtx", "hayabusa_scan": "evtx",
-    "mft_timeline": "mft", "usnjrnl_query": "usnjrnl",
-    "registry_query": "registry", "prefetch_parse": "prefetch",
-    "yara_scan": "yara", "vel_collect": "velociraptor",
+    "vol_pslist": "memory",
+    "vol_psscan": "memory",
+    "vol_psxview": "memory",
+    "vol_malfind": "memory",
+    "evtx_query": "evtx",
+    "hayabusa_scan": "evtx",
+    "mft_timeline": "mft",
+    "usnjrnl_query": "usnjrnl",
+    "registry_query": "registry",
+    "prefetch_parse": "prefetch",
+    "yara_scan": "yara",
+    "vel_collect": "velociraptor",
 }
 
 
@@ -75,8 +108,8 @@ def score(case_dir: Path) -> dict[str, Any]:
     """Reconstruct run signals from audit.jsonl and answer the six criteria."""
     lines = _load_audit(case_dir)
 
-    tools: dict[str, str] = {}          # tool_call_id -> tool name
-    have_output: set[str] = set()       # tool_call_ids with an output_hash
+    tools: dict[str, str] = {}  # tool_call_id -> tool name
+    have_output: set[str] = set()  # tool_call_ids with an output_hash
     findings: list[dict[str, Any]] = []
     rejected = 0
 
@@ -98,8 +131,16 @@ def score(case_dir: Path) -> dict[str, Any]:
 
     n = max(1, len(findings))
     conf = [f.get("confidence") for f in findings]
-    c = conf.count("CONFIRMED"); i = conf.count("INFERRED"); h = conf.count("HYPOTHESIS")
-    classes = sorted({ARTIFACT_CLASS_FOR_TOOL[t] for t in tools.values() if t in ARTIFACT_CLASS_FOR_TOOL})
+    c = conf.count("CONFIRMED")
+    i = conf.count("INFERRED")
+    h = conf.count("HYPOTHESIS")
+    classes = sorted(
+        {
+            ARTIFACT_CLASS_FOR_TOOL[t]
+            for t in tools.values()
+            if t in ARTIFACT_CLASS_FOR_TOOL
+        }
+    )
     failures = sum(1 for tcid in tools if tcid not in have_output)
     cited = sum(1 for f in findings if f.get("tool_call_id"))
     reproducible = "yes" if tools and have_output >= set(tools) else "no"
@@ -113,7 +154,11 @@ def score(case_dir: Path) -> dict[str, Any]:
         f"reproducible={reproducible}",
     ]
     rows = [
-        {"criterion": crit["criterion"], "question": crit["question"], "answer": answers[crit["criterion"] - 1]}
+        {
+            "criterion": crit["criterion"],
+            "question": crit["question"],
+            "answer": answers[crit["criterion"] - 1],
+        }
         for crit in CRITERIA
     ]
     return {"case_dir": str(case_dir), "rows": rows}
@@ -126,7 +171,10 @@ def main(argv: list[str]) -> int:
         case_dir = _newest_case_dir()
         if case_dir is None:
             print("usage: python scripts/self-score.py <case-dir>", file=sys.stderr)
-            print("  (no case dir given and none found under tmp/auto-runs/)", file=sys.stderr)
+            print(
+                "  (no case dir given and none found under tmp/auto-runs/)",
+                file=sys.stderr,
+            )
             return 2
     if not (case_dir / "audit.jsonl").is_file():
         print(f"error: {case_dir}/audit.jsonl not found", file=sys.stderr)

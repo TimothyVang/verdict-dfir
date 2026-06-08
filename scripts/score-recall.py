@@ -67,7 +67,9 @@ _NEUTRAL_WORDS = frozenset({"UNKNOWN", "INDETERMINATE"})
 
 def _tokens(*parts: str | None) -> set[str]:
     text = " ".join(p for p in parts if p).lower()
-    return {t for t in re.findall(r"[a-z0-9]+", text) if t not in _STOPWORDS and len(t) > 2}
+    return {
+        t for t in re.findall(r"[a-z0-9]+", text) if t not in _STOPWORDS and len(t) > 2
+    }
 
 
 def _coverage(expected: set[str], candidate: set[str]) -> tuple[float, int]:
@@ -163,7 +165,9 @@ def _is_eligible(expected: dict[str, Any], rf: dict[str, Any]) -> bool:
     for any claim and inflate recall. Content overlap is the honest signal.
     """
     exp_tokens = _tokens(expected.get("description"), expected.get("artifact_hint"))
-    cov, shared = _coverage(exp_tokens, _tokens(rf.get("description"), rf.get("artifact_path")))
+    cov, shared = _coverage(
+        exp_tokens, _tokens(rf.get("description"), rf.get("artifact_path"))
+    )
     return shared >= MATCH_MIN_SHARED and cov >= MATCH_COVERAGE
 
 
@@ -177,7 +181,8 @@ def _max_matching(
     order nor a shared MITRE technique can under- or over-count recall.
     """
     adj: list[list[int]] = [
-        [j for j, rf in enumerate(run_findings) if _is_eligible(exp, rf)] for exp in expected
+        [j for j, rf in enumerate(run_findings) if _is_eligible(exp, rf)]
+        for exp in expected
     ]
     run_to_exp: dict[int, int] = {}
 
@@ -213,7 +218,9 @@ def score(case_dir: Path, golden_path: Path) -> dict[str, Any]:
             "mitre_technique": exp.get("mitre_technique"),
         }
         if i in assignment:
-            record["matched_run_finding_id"] = run_findings[assignment[i]].get("finding_id")
+            record["matched_run_finding_id"] = run_findings[assignment[i]].get(
+                "finding_id"
+            )
             matched.append(record)
         else:
             unmatched.append(record)
@@ -278,8 +285,13 @@ def main(argv: list[str]) -> int:
 
     case_dir = Path(args[0]) if args else _newest_case_dir()
     if case_dir is None:
-        print("usage: python scripts/score-recall.py <case-dir> [--golden <dir>]", file=sys.stderr)
-        print("  (no case dir given and none found under tmp/auto-runs/)", file=sys.stderr)
+        print(
+            "usage: python scripts/score-recall.py <case-dir> [--golden <dir>]",
+            file=sys.stderr,
+        )
+        print(
+            "  (no case dir given and none found under tmp/auto-runs/)", file=sys.stderr
+        )
         return 2
     if not (case_dir / "verdict.json").is_file():
         print(f"error: {case_dir}/verdict.json not found", file=sys.stderr)
@@ -287,7 +299,10 @@ def main(argv: list[str]) -> int:
 
     golden_path = _resolve_golden(case_dir, golden_override)
     if golden_path is None:
-        print(f"error: no expected-findings.json golden found for {case_dir}", file=sys.stderr)
+        print(
+            f"error: no expected-findings.json golden found for {case_dir}",
+            file=sys.stderr,
+        )
         print("  pass one explicitly with --golden goldens/<case-id>", file=sys.stderr)
         return 2
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Smoke tests for the Remotion-based demo video builder."""
+
 from __future__ import annotations
 
 import ast
@@ -74,7 +75,9 @@ def test_logo_assets_exist() -> None:
 def test_dry_run_shows_nine_beats_and_300s() -> None:
     result = subprocess.run(
         [sys.executable, str(PREP_SCRIPT), "--dry-run"],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True,
+        text=True,
+        timeout=15,
     )
     assert result.returncode == 0, f"--dry-run failed:\n{result.stderr[:300]}"
     lines = [l for l in result.stdout.splitlines() if "Beat" in l and "s " in l]

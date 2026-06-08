@@ -21,6 +21,7 @@ Dependencies:
 If edge-tts or ffmpeg is absent the script exits with a clear message
 listing the install commands — it never silently degrades.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -44,7 +45,7 @@ DEFAULT_OUT = REPO_ROOT / "docs" / "find-evil-demo.mp4"
 WIDTH = 1920
 HEIGHT = 1080
 FPS = 30
-BG_COLOR = "0d1117"   # GitHub dark
+BG_COLOR = "0d1117"  # GitHub dark
 TITLE_COLOR = "ffffff"
 SUB_COLOR = "a0a0a0"
 BADGE_COLOR = "f0883e"  # orange
@@ -103,14 +104,16 @@ def parse_beats(text: str) -> list[Beat]:
     beats = []
     for num in sorted(meta):
         start_s, end_s, title, rubric = meta[num]
-        beats.append(Beat(
-            number=num,
-            title=title,
-            start_s=start_s,
-            end_s=end_s,
-            rubric=rubric,
-            narration=narrations.get(num, title),
-        ))
+        beats.append(
+            Beat(
+                number=num,
+                title=title,
+                start_s=start_s,
+                end_s=end_s,
+                rubric=rubric,
+                narration=narrations.get(num, title),
+            )
+        )
     return beats
 
 
@@ -143,14 +146,16 @@ def _enrich_narration_github_models(beats: list[Beat], token: str) -> list[Beat]
                 max_tokens=200,
             )
             new_text = resp.choices[0].message.content.strip()
-            enriched.append(Beat(
-                number=beat.number,
-                title=beat.title,
-                start_s=beat.start_s,
-                end_s=beat.end_s,
-                rubric=beat.rubric,
-                narration=new_text,
-            ))
+            enriched.append(
+                Beat(
+                    number=beat.number,
+                    title=beat.title,
+                    start_s=beat.start_s,
+                    end_s=beat.end_s,
+                    rubric=beat.rubric,
+                    narration=new_text,
+                )
+            )
             print(f"  [enrich] Beat {beat.number} enriched via GitHub Models")
         except Exception as exc:
             print(f"  [enrich] Beat {beat.number} skipped ({exc})")
@@ -196,12 +201,22 @@ def _make_slide(beat: Beat, out_path: Path) -> None:
 
     vf = ",".join(filters)
     cmd = [
-        "ffmpeg", "-y",
-        "-f", "lavfi",
-        "-i", f"color=c=#{BG_COLOR}:size={WIDTH}x{HEIGHT}:rate={FPS}",
-        "-vf", vf,
-        "-t", str(beat.duration_s),
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+        "ffmpeg",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=#{BG_COLOR}:size={WIDTH}x{HEIGHT}:rate={FPS}",
+        "-vf",
+        vf,
+        "-t",
+        str(beat.duration_s),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-crf",
+        "23",
         str(out_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -213,17 +228,26 @@ def _make_slide(beat: Beat, out_path: Path) -> None:
 def _mux_beat(video: Path, audio: Path, out: Path) -> None:
     """Combine video slide + TTS audio, trimming to the shorter duration."""
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(video),
-        "-i", str(audio),
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(video),
+        "-i",
+        str(audio),
         "-shortest",
-        "-c:v", "copy",
-        "-c:a", "aac", "-b:a", "192k",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
         str(out),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        raise RuntimeError(f"ffmpeg mux failed for {video.name}:\n{result.stderr[-300:]}")
+        raise RuntimeError(
+            f"ffmpeg mux failed for {video.name}:\n{result.stderr[-300:]}"
+        )
 
 
 def _concat_beats(beat_files: list[Path], out: Path) -> None:
@@ -234,10 +258,16 @@ def _concat_beats(beat_files: list[Path], out: Path) -> None:
         flist_path = flist.name
     try:
         cmd = [
-            "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0",
-            "-i", flist_path,
-            "-c", "copy",
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            flist_path,
+            "-c",
+            "copy",
             str(out),
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -253,15 +283,23 @@ def _check_deps() -> list[str]:
     if not shutil.which("ffmpeg"):
         missing.append("ffmpeg  →  sudo apt install ffmpeg  (or brew install ffmpeg)")
     if importlib.util.find_spec("edge_tts") is None:
-        missing.append("edge-tts  →  pip install edge-tts  (or uv pip install edge-tts)")
+        missing.append(
+            "edge-tts  →  pip install edge-tts  (or uv pip install edge-tts)"
+        )
     return missing
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Generate demo video from demo-script-a2.md")
-    parser.add_argument("--dry-run", action="store_true", help="Print plan without generating")
+    parser = argparse.ArgumentParser(
+        description="Generate demo video from demo-script-a2.md"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print plan without generating"
+    )
     parser.add_argument("--out", default=str(DEFAULT_OUT), help="Output MP4 path")
-    parser.add_argument("--voice", default="en-US-AriaNeural", help="edge-tts voice name")
+    parser.add_argument(
+        "--voice", default="en-US-AriaNeural", help="edge-tts voice name"
+    )
     args = parser.parse_args(argv)
 
     text = DEMO_SCRIPT.read_text(encoding="utf-8")
@@ -290,7 +328,9 @@ def main(argv: list[str] | None = None) -> int:
     # Optionally enrich narrations via GitHub Models
     token = os.environ.get("GITHUB_TOKEN", "").strip()
     if token:
-        print("[make-demo-video] GITHUB_TOKEN found — enriching narrations via GitHub Models")
+        print(
+            "[make-demo-video] GITHUB_TOKEN found — enriching narrations via GitHub Models"
+        )
         beats = _enrich_narration_github_models(beats, token)
     else:
         print("[make-demo-video] GITHUB_TOKEN not set — using raw narration text")

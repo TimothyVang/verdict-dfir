@@ -6,6 +6,7 @@ Verifies:
 - fetch-fixtures.sh contains the SANS_STARTER_URL contract (lines 78-87)
 - When SANS_STARTER_URL is set to a file:// URI, the hook logic stages the archive
 """
+
 from __future__ import annotations
 
 import json
@@ -24,19 +25,25 @@ FETCH_SCRIPT = REPO_ROOT / "scripts" / "fetch-fixtures.sh"
 def test_stub_exists_and_valid() -> None:
     assert GOLDENS_STUB.exists(), f"Missing stub: {GOLDENS_STUB}"
     data = json.loads(GOLDENS_STUB.read_text(encoding="utf-8"))
-    assert data.get("status") == "pending_manual_walkthrough", \
+    assert data.get("status") == "pending_manual_walkthrough", (
         f"Expected status=pending_manual_walkthrough, got {data.get('status')!r}"
+    )
     assert "case_id" in data, "stub missing case_id"
     assert "findings" in data, "stub missing findings list"
 
 
 def test_fetch_script_has_starter_url_contract() -> None:
     text = FETCH_SCRIPT.read_text(encoding="utf-8")
-    assert "SANS_STARTER_URL" in text, "fetch-fixtures.sh missing SANS_STARTER_URL reference"
-    assert "SKIP sans-starter" in text, "fetch-fixtures.sh missing SKIP sans-starter message"
+    assert "SANS_STARTER_URL" in text, (
+        "fetch-fixtures.sh missing SANS_STARTER_URL reference"
+    )
+    assert "SKIP sans-starter" in text, (
+        "fetch-fixtures.sh missing SKIP sans-starter message"
+    )
     # Both branches must exist: if set → fetch; else → SKIP
-    assert re.search(r'if\s+\[\[.*SANS_STARTER_URL', text), \
+    assert re.search(r"if\s+\[\[.*SANS_STARTER_URL", text), (
         "fetch-fixtures.sh missing SANS_STARTER_URL conditional"
+    )
 
 
 def test_fetch_stages_when_url_set() -> None:
@@ -72,18 +79,24 @@ fi
 """
         result = subprocess.run(
             ["bash", "-c", snippet],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True,
+            text=True,
+            timeout=15,
         )
         assert result.returncode == 0, f"snippet failed: {result.stderr[:300]}"
         unpacked = fixtures_dir / "sans-starter" / "stub.txt"
-        assert unpacked.exists(), \
+        assert unpacked.exists(), (
             f"Expected unpacked stub.txt at {unpacked}; stderr: {result.stderr[:200]}"
+        )
 
 
 def main() -> int:
     tests = [
         ("stub_exists_and_valid", test_stub_exists_and_valid),
-        ("fetch_script_has_starter_url_contract", test_fetch_script_has_starter_url_contract),
+        (
+            "fetch_script_has_starter_url_contract",
+            test_fetch_script_has_starter_url_contract,
+        ),
         ("fetch_stages_when_url_set", test_fetch_stages_when_url_set),
     ]
     passed = 0
