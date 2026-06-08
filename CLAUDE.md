@@ -8,7 +8,9 @@ executes the investigation. CLI binary is `claude`.
 > This file is the load-bearing core. Bulky reference material lives in linked docs:
 > onboarding behavior → `docs/onboarding.md`; commands & the live-test gate →
 > `docs/live-test-matrix.md`; repo layout, subsystems, amendment history →
-> `docs/repo-guide.md`; judge-facing trust boundaries → `docs/architecture.md`.
+> `docs/repo-guide.md`; judge-facing trust boundaries → `docs/architecture.md`;
+> the full MCP/tool/dependency/env inventory → `docs/reference/`; how to run the product →
+> `docs/using/`; the dev/operator memory layer → `docs/runbooks/obsidian-mind-memory.md`.
 
 ---
 
@@ -95,7 +97,7 @@ analyst resolves → `verify_finding` re-runs each cited tool → `judge_finding
 
 Violating any of these breaks the judging story or an integration contract.
 
-- **No `execute_shell` MCP tool, ever.** The Rust surface is deliberately narrow (19 typed tools). Adding shell pass-through undoes the "reduces the attack surface" pitch.
+- **No `execute_shell` MCP tool, ever.** The Rust surface is deliberately narrow (19 typed tools). Adding shell pass-through undoes the "reduces the attack surface" pitch. The 19 Rust + 12 Python product tools are the only verbs in the audit chain; the operator-runtime servers `.mcp.json` also registers (`n8n-mcp`/`playwright`/`puppeteer`) never touch evidence and never emit Findings.
 - **Every Finding cites a `tool_call_id`.** The verifier vetos any Finding without one. UI chips render `[confirmed · tool · sha256]` per finding.
 - **Epistemic hierarchy is strict.** `CONFIRMED` (backed by tool output) > `INFERRED` (≥2 confirmed facts, labeled) > `HYPOTHESIS` (prefixed "hypothesis:"). Nothing else is legal.
 - **Execution claims need ≥2 artifact classes** (Prefetch + Amcache+ShimCache, or EDR telemetry). Amcache alone is insufficient — it's catalog-registration time, not execution.
@@ -118,6 +120,12 @@ in `agent-config/TOOLS.md`.
 | `findevil-mcp` | Rust (`services/mcp/`) | 19 | DFIR primitives: `case_open`, disk mount/extract/unmount, evtx/mft/usnjrnl/registry/prefetch, hayabusa, vol_pslist/psscan/psxview/malfind, yara, vel_collect, sysmon/zeek/pcap. Read-only on evidence; SHA-256 every output. |
 | `findevil-agent-mcp` | Python (`services/agent_mcp/`) | 12 | Crypto/ACH: audit_append/verify, manifest_finalize/verify, verify_finding, detect_contradictions, judge_findings, correlate_findings. Memory: memory_remember/recall. ACP: pool_handoff. Expert: expert_miss_capture. |
 
+`.mcp.json` registers **3 additional OPERATOR-RUNTIME servers** — `n8n-mcp` (post-verdict
+automation), `playwright`, `puppeteer` (browser tasks) — that are **not in the audit chain and
+emit no Findings**. So `.mcp.json` has 5 servers total while the product surface is 31 tools;
+neither number contradicts the other. Full server + dependency inventory:
+`docs/reference/mcp-and-tools.md` and `docs/reference/dependencies.md`.
+
 **DKOM redundancy is intentional.** `vol_pslist` walks the active list; `vol_psscan`
 signature-scans EPROCESS pool memory; `vol_psxview` cross-references process views.
 Divergence is the classic DKOM / T1014 signal — but disambiguate from an acquisition smear /
@@ -129,7 +137,9 @@ dashboard → signed verdict + report; `--sift` runs DFIR tools in the SIFT VM, 
 skips the browser; output in `tmp/auto-runs/<case-id>/`). Interactive: `claude` /
 `scripts/find-evil` then `investigate <path>`. Headless engine: `scripts/find_evil_auto.py`.
 Offline manifest verification: the `manifest_verify` MCP tool. SIFT setup and the full
-command catalog are in `docs/live-test-matrix.md` and `docs/repo-guide.md`.
+command catalog are in `docs/live-test-matrix.md` and `docs/repo-guide.md`; operator usage
+(every flag, watch mode, the fleet pipeline, output layout) is in `docs/using/running-verdict.md`
+and `docs/using/fleet-analysis.md`.
 
 ---
 
@@ -192,6 +202,28 @@ references in legacy specs; replay-evidence-as-blocker) are in `docs/repo-guide.
 
 ---
 
+## 8.5 Memory (dev/operator knowledge layer)
+
+VERDICT has **three memory systems**; keep them straight, and keep the dev/operator ones out of
+the audit chain.
+
+1. **obsidian-mind vault** (`obsidian-mind/`) — the **primary project/operator memory**: DFIR
+   tradecraft, the Tier-1 artifact caveats, architecture decisions, gotchas. Git-tracked markdown
+   (`brain/`) with semantic recall via QMD (`mcp__qmd__query`, registered at local scope), curated
+   with `/om-*` commands. It is the better successor to the flat `~/.claude/.../memory/` index, but
+   it is **never evidence, never in a case `audit.jsonl`, never Merkle-hashed, never a Finding** —
+   the same boundary Engram and the n8n grounding feature keep. How-to + the hard boundary:
+   `docs/runbooks/obsidian-mind-memory.md`.
+2. **Hermes FTS5** — the in-flow **investigation** memory: `memory_remember`/`memory_recall`,
+   audit-chained, part of the product (§4). This is the *only* memory inside the investigation.
+3. **Engram** (`engram-vang/`) — optional operator knowledge base; not bundled, not in the chain.
+
+`CLAUDE.md` stays the instruction core; the vault is where evolving knowledge lives. When you
+learn something durable about the repo, write it to the right `obsidian-mind/brain/` note — not
+into this file.
+
+---
+
 ## 9. Navigation index
 
 | For… | Read |
@@ -200,6 +232,14 @@ references in legacy specs; replay-evidence-as-blocker) are in `docs/repo-guide.
 | Commands, live-test gate, per-evidence-type matrix | `docs/live-test-matrix.md` |
 | Repo layout, 3 subsystems, sandbox layers, A1–A6 amendment history, project state | `docs/repo-guide.md` |
 | Judge-facing trust boundaries & architecture diagram | `docs/architecture.md` |
+| Full MCP-server + tool inventory (5 servers / 31 product tools) | `docs/reference/mcp-and-tools.md` |
+| Dependency + external-DFIR-tool + version matrix | `docs/reference/dependencies.md` |
+| Env-var reference (~35 vars) | `docs/reference/environment-variables.md` |
+| How to run the product (flags, modes, output layout) | `docs/using/running-verdict.md` |
+| Fleet analysis (3-stage pipeline) | `docs/using/fleet-analysis.md` |
+| Evidence staging / report customization | `docs/using/evidence-intake.md`, `docs/using/reports.md` |
+| Per-tool analyst playbooks + expected-failure table | `docs/analyst/tool-playbooks.md` |
+| Dev/operator memory layer (obsidian-mind + boundary) | `docs/runbooks/obsidian-mind-memory.md` |
 | 3-step quick start | `QUICKSTART.md` |
 | Verdict word semantics | `docs/verdict-semantics.md` |
 | False-positive prevention & analyst checklists | `docs/false-positives.md` |

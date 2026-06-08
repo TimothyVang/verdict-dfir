@@ -7,6 +7,9 @@ Read this first when navigating the documentation tree. The root README is the j
 | Need | Read |
 |---|---|
 | Install and run an investigation | [`../QUICKSTART.md`](../QUICKSTART.md) — the one command is `scripts/verdict <evidence>` |
+| Run it — every flag, run modes, output layout | [`using/running-verdict.md`](using/running-verdict.md) |
+| Full MCP-server / tool / dependency / env inventory | [`reference/mcp-and-tools.md`](reference/mcp-and-tools.md), [`reference/dependencies.md`](reference/dependencies.md), [`reference/environment-variables.md`](reference/environment-variables.md) |
+| The dev/operator memory layer (obsidian-mind) | [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md) |
 | Understand the architecture | [`architecture.md`](architecture.md) |
 | Verify custody/manifest claims | [`cryptographic-attestation.md`](cryptographic-attestation.md) |
 | Interpret verdicts safely | [`verdict-semantics.md`](verdict-semantics.md) |
@@ -67,6 +70,30 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 - `bash scripts/make-demo-video.sh` generates `docs/find-evil-demo.mp4` from `docs/demo-script-a2.md` using Remotion (React animated video, headless Chrome) + edge-tts TTS audio. Prerequisites: `pip install edge-tts` + `pnpm install --dir scripts/make-demo-video --ignore-workspace`. If `claude` is on PATH, narration is auto-enriched via `claude -p` before TTS.
 - `python3 scripts/make-demo-video-prep.py --dry-run` verifies beat parsing (9 beats, 300s) without invoking TTS or Remotion.
 
+## `docs/reference/` (canonical inventories)
+
+| File | Status | Purpose |
+|---|---|---|
+| `mcp-and-tools.md` | **ACTIVE** | Single source of truth for MCP servers (5 registered: 2 product + 3 operator-runtime) + the 31 product tools + the no-`execute_shell` invariant. Resolves the server "undercount." |
+| `dependencies.md` | **ACTIVE** | Dependency + external-DFIR-tool + version matrix mirroring `scripts/doctor.sh`; licenses + expected-failure-when-missing. |
+| `environment-variables.md` | **ACTIVE** | The ~35 `FIND_EVIL_*`/`FINDEVIL_*`/credential/SIFT/n8n env vars in one table. |
+
+## `docs/using/` (operator how-to)
+
+| File | Status | Purpose |
+|---|---|---|
+| `running-verdict.md` | **ACTIVE** | Canonical usage guide: `scripts/verdict` + every flag, the three run modes, dashboard, output layout under `tmp/auto-runs/<case-id>/`. |
+| `fleet-analysis.md` | **ACTIVE** | The 3-stage fleet pipeline (`fleet_investigate` → `fleet_correlate` → `render_fleet_report`). |
+| `evidence-intake.md` | **ACTIVE** | Evidence staging conventions + which evidence type triggers which PLAYBOOK path. |
+| `reports.md` | **ACTIVE** | `render_report.py`: REPORT.html/PDF, re-rendering after expert edits, customization. |
+
+## `docs/analyst/` (interpretation)
+
+| File | Status | Purpose |
+|---|---|---|
+| `verdict-interpretation.md` | **ACTIVE** | Hub for "I have a Verdict/Finding — now what?" Ties together verdict semantics + false-positives + finding-to-action (originals stay authoritative). |
+| `tool-playbooks.md` | **ACTIVE** | Per-tool operator guidance (zeek/sysmon/registry/vel_collect/yara) + a per-tool expected-failure / troubleshooting table. |
+
 ## `agent-config/` (runtime DFIR agent identity)
 
 These are read by the agent at investigation start (per CLAUDE.md "Agent investigation prompt").
@@ -119,6 +146,7 @@ The original five implementation plans shipped (the build-swarm plan was removed
 | `ci-smoke-checklist.md` | **ACTIVE** | End-to-end pipeline verification before submission. |
 | `dockerfile-a2-decision.md` | **RESEARCH** (decision archive) | Cut the in-container `find-evil` wrapper + `.deb` packaging (PR #4, 2026-04-27, "Option B"). Body retained as decision record. |
 | `engram-memory-integration.md` | **ACTIVE** | Optional: wire Engram (standalone Apache-2.0 knowledge/memory MCP server) as a third, locally-run MCP server. Not bundled, not in the investigation flow, not in the audit chain. |
+| `obsidian-mind-memory.md` | **ACTIVE** | The dev/operator **memory layer**: the obsidian-mind vault (QMD semantic recall + `brain/` notes) as VERDICT's project memory. Optional, gitignored, **never evidence, never in the audit chain**. Pairs with CLAUDE.md §8.5. |
 | `github-remote-bootstrap.md` | **ACTIVE** | Pre-submission ops doc for setting up the public GitHub repo URL Devpost requires. |
 | `local-smoke-gate.md` | **ACTIVE** | Prerequisites, per-smoke coverage map, and common failure → fix pairs for `bash scripts/run-all-smokes.sh`. |
 | `n8n-automation-integration.md` | **ACTIVE** | Optional: wire n8n as an operator-local harness *around* the product — repeatable runs + post-verdict finding-to-action (via `n8n-mcp`, user-scope). Not bundled, not the orchestrator, not in the audit chain. |
@@ -153,6 +181,6 @@ Investigation reports + their figures. Currently:
 
 ## What this index does NOT cover
 
-- User-level memory at `~/.claude/projects/.../memory/` — 22 files, see `MEMORY.md` index there. Not git-tracked.
-- Source code (`services/`, `apps/`, `scripts/`) — see CLAUDE.md "Repository layout" + per-service `README.md`.
-- External research clones (`git-hub-references/`, `openclaw/`, `hermes-agent/`, etc.) — see CLAUDE.md "External reference clones." Gitignored.
+- Memory: the **obsidian-mind vault** (`obsidian-mind/`, gitignored) is now the dev/operator memory layer — see [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md) + CLAUDE.md §8.5. The user-level `~/.claude/.../memory/MEMORY.md` is a thin index pointing into it.
+- Source code (`services/`, `apps/`, `scripts/`) — see `repo-guide.md` "Repository layout" + per-service `README.md`.
+- External clones (`obsidian-mind/`, `engram-vang/`, `n8n-references/`) — gitignored; see `repo-guide.md` "External clones (gitignored…)".

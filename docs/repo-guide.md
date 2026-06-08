@@ -11,24 +11,44 @@ see `docs/architecture.md`; for commands and the live-test gate see
 ```
 .
 ├── Cargo.toml / Cargo.lock / rust-toolchain.toml   # Rust workspace (members = [services/mcp]); Cargo.lock IS committed (app, not library)
-├── Dockerfile                                      # Production multi-stage → ghcr.io/find-evil/find-evil:v<N>
+├── requirements.txt                                # host pip DFIR tooling (volatility3==2.27.0, matplotlib) + large-download manifest
+├── Dockerfile / .dockerignore                      # Production multi-stage → ghcr.io/find-evil/find-evil:v<N>
 ├── LICENSE                                         # Apache-2.0
-├── sift-2026.03.24.ova                             # 9.3 GB SIFT VM image — Packer input; gitignored (*.ova)
-├── agent-config/                                   # Runtime DFIR agent identity (SOUL/AGENTS/TOOLS/MEMORY/HEARTBEAT/JUDGING/PLAYBOOK/EXPERT + expert-rules.json — 60+ claim rules, severity blocker/warning)
-├── docs/specs/ + plans/                            # 8 specs (A1/A2/A3 amendments + per-subsystem) + 6 TDD plans (most recent: 2026-05-20-finish-to-v-submit-plan.md)
-├── docs/legacy/                                    # v1 docs superseded by v2 + amendments
-├── services/mcp/                                   # Rust MCP server (19 typed DFIR tools; hand-rolled stdio JSON-RPC 2.0 — see CLAUDE.md §11)
+├── sift-2026-04-22.ova                             # ~9.4 GB SIFT VM image — Packer input; gitignored (*.ova), never committed
+├── .mcp.json / .mcp.json.sift                      # Auto-spawn registry: 5 servers (findevil-mcp, findevil-agent-mcp, n8n-mcp, playwright, puppeteer); .sift swaps the 2 product servers to SSH transport
+│
+│   # ── PRODUCT (ships; in the audit chain) ──
+├── services/mcp/                                   # Rust MCP server (19 typed DFIR tools; hand-rolled stdio JSON-RPC 2.0)
 ├── services/agent/                                 # Python package findevil_agent — M2 crypto + M4 ACH + A3 memory/acp (FastAPI/LangGraph dropped under A2)
 ├── services/agent_mcp/                             # Python MCP server wrapping M2/M4/memory/ACP/expert feedback as 12 typed tools
-├── .mcp.json                                       # A2: registers findevil-mcp + findevil-agent-mcp for auto-spawn
-├── apps/web/                                       # Next.js 15 + Tailwind v4 + NES.css dashboard (A3 §2.1) — SSE audit-log tail at /api/audit, role-state sprite containers, /debug viewer, /codex operator cockpit, pydantic→TS codegen at lib/events.ts
-├── apps/mcp-widgets/                               # M3 widgets — DEFERRED per A2 §2.1 (A3 doesn't need them)
+├── apps/web/                                       # Next.js 15 + Tailwind v4 + NES.css dashboard (A3) — SSE audit-log tail, role-state sprites, /debug, /codex
+├── apps/mcp-widgets/                               # M3 widgets — DEFERRED per A2 §2.1
+├── agent-config/                                   # Runtime DFIR agent identity (SOUL/AGENTS/TOOLS/MEMORY/HEARTBEAT/JUDGING/PLAYBOOK/EXPERT/GROUNDING + expert-rules.json)
+├── scripts/                                        # ~70 entry points + smoke runners; `scripts/verdict` is canonical (see docs/using/running-verdict.md)
+│
+│   # ── DOCS / FIXTURES / CI ──
+├── docs/                                           # reference/ (tool+dep+env inventory), using/ (operator guides), analyst/, specs/, plans/, runbooks/, references/, legacy/, reports/
+├── goldens/                                        # 12 forensic ground-truth datasets (NIST, DFRWS, Ali Hadi, M57-Jean, Nitroba, …) with expected-findings.json
+├── fixtures/                                       # downloaded test fixtures (e.g. nitroba pcap)
+├── evidence/                                       # staged evidence (gitignored; never committed)
+├── out/ + tmp/                                     # run outputs (auto-runs, fleet-runs, summaries) — generated
+├── assets/                                         # logo + brand assets
 ├── packer/sift-microvm.pkr.hcl                     # L3 warm-qcow2 build from the OVA
-├── docker/                                         # l1-compose.yml, l1-devbase.Dockerfile, l2-siftlite.Dockerfile
-├── scripts/                                        # See `ls scripts/` for the current list
-├── goldens/                                        # nist-hacking-case/, synthetic-benign/ — L3 golden fixtures
+├── docker/                                         # l1-compose.yml, l1-devbase / l2-siftlite Dockerfiles, verdict-runner
+├── .remotion/                                      # Remotion headless render cache (demo video)
+├── target/ / node_modules/                         # build output — generated, gitignored
 └── .github/workflows/                              # l0/l1/l2/l3 + release + competitor-watch + devpost-submit
+│
+│   # ── EXTERNAL CLONES (gitignored; never ship, never import) ──
+├── obsidian-mind/                                  # DEV/OPERATOR MEMORY VAULT (MIT, own .git) — see docs/runbooks/obsidian-mind-memory.md. NEVER evidence, NEVER in the audit chain.
+├── engram-vang/                                    # Engram knowledge MCP (Apache-2.0) — optional operator memory, not bundled
+└── n8n-references/                                 # n8n docs/templates/workflows for the optional finding-to-action automation
 ```
+
+> **External clones (`obsidian-mind/`, `engram-vang/`, `n8n-references/`) are gitignored** — they
+> do not ship in the Devpost zip. `obsidian-mind/` is the dev/operator **memory layer** (see
+> CLAUDE.md §8.5 and `docs/runbooks/obsidian-mind-memory.md`); it is held strictly outside the
+> investigation and the audit chain.
 
 The pre-A2 `python -m findevil_agent.cli` entry point was dropped by A2; the Dockerfile
 wrapper + `scripts/build-deb.sh` were cut 2026-04-27 (PR #4) per
@@ -139,8 +159,15 @@ User-level auto-memory is auto-loaded into every session. The index (`MEMORY.md`
 per-topic memory files. Read the index at session start if you need historical context;
 update the relevant memory file (don't invent a new one) when facts change.
 
-### External reference clones (never ship, never edit, never import)
-Local-only research clones (`openclaw/`, `hermes-agent/`, `Linear-Coding-Agent-Harness/`,
-`.playwright-mcp/`, `obsidian-mind/`, `n8n-references/`, `git-hub-references/`) are
-`.gitignore`'d. See `git-hub-references/CLAUDE.md` for the per-clone index. The Devpost zip
-is produced by `scripts/package-devpost.sh`.
+### External clones (gitignored; never ship, never import)
+Local-only directories with their own `.git`, all `.gitignore`'d so they never enter the Devpost
+zip (produced by `scripts/package-devpost.sh`):
+
+- **`obsidian-mind/`** — the dev/operator **memory vault** (MIT). Promoted from a reference clone
+  to VERDICT's memory layer: `brain/` notes + QMD semantic search, queried via the local-scope
+  `qmd` MCP. Held strictly outside the investigation and the audit chain. See
+  `docs/runbooks/obsidian-mind-memory.md`.
+- **`engram-vang/`** — Engram knowledge-platform MCP (Apache-2.0); optional operator memory.
+- **`n8n-references/`** — n8n docs/templates/workflows backing the optional post-verdict
+  finding-to-action automation (`docs/runbooks/n8n-automation-integration.md`).
+- **`.playwright-mcp/`** — Playwright MCP scratch state.

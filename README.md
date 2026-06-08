@@ -117,13 +117,15 @@ Per-environment setup (local DFIR binaries vs. the SANS SIFT VM) and evidence pl
 ├── services/agent/      — findevil_agent package (crypto chain + ACH primitives)
 ├── apps/web/            — Next.js dashboard (live audit-stream viewer + design system)
 ├── scripts/             — verdict launcher (find-evil/-auto shims), report renderer, CI smoke runners
-├── docs/                — architecture, crypto attestation, verdict semantics, reports
-└── .mcp.json            — Claude Code auto-spawn registry for both MCP servers
+├── docs/                — reference/ (tools+deps+env), using/ (how to run), architecture, crypto attestation
+└── .mcp.json            — Claude Code auto-spawn registry: 5 MCP servers (2 product + 3 operator-runtime)
 ```
 
 ## Documentation
 
 - [docs/README.md](docs/README.md) — canonical documentation index
+- [docs/using/running-verdict.md](docs/using/running-verdict.md) — how to run it (every flag, run modes, output layout)
+- [docs/reference/mcp-and-tools.md](docs/reference/mcp-and-tools.md) — full MCP-server + tool inventory, and [dependencies.md](docs/reference/dependencies.md)
 - [docs/architecture.md](docs/architecture.md) — the five trust boundaries
 - [docs/cryptographic-attestation.md](docs/cryptographic-attestation.md) — the chain of custody + FRE 902(14)
 - [docs/verdict-semantics.md](docs/verdict-semantics.md) — what `SUSPICIOUS` / `INDETERMINATE` / `NO_EVIL` mean

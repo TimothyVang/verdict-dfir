@@ -155,6 +155,8 @@ Verifying a manifest someone else produced: drive `manifest_verify` from the age
 
 For the full doc map (every file with status badge + one-line purpose), see [`docs/README.md`](docs/README.md). High-traffic entries when something goes wrong:
 
+- "Every `verdict` flag, run mode, and output file" → [`docs/using/running-verdict.md`](docs/using/running-verdict.md) (canonical). Entry points: `scripts/verdict` is canonical; `find-evil-run`/`find-evil-live` are deprecated shims; `find-evil-auto` is the internal engine; `find-evil-sift` is the SIFT helper.
+- "What must I install, and what version?" → [`docs/reference/dependencies.md`](docs/reference/dependencies.md) + run `bash scripts/doctor.sh`.
 - "How do I avoid false positives?" → [`docs/false-positives.md`](docs/false-positives.md)
 - "What does the agent actually do?" → [`agent-config/PLAYBOOK.md`](agent-config/PLAYBOOK.md)
 - "What evidence is available?" → [`docs/DATASET.md`](docs/DATASET.md)

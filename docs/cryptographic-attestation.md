@@ -194,12 +194,12 @@ and certification (the Rule 902(11) notice requirement).
   Find Evil!'s authors. This *strengthens* provenance and gives a
   lower-bound time, but the 902(14) admissibility claim does not
   depend on it.
-  - **Pre-A5 note:** this independent-time property was previously
-    *also* anchored to the Bitcoin blockchain via OpenTimestamps
-    (removed under Amendment A5). Bitcoin offered a stronger
-    no-single-party timestamp; Rekor trusts the LF to operate the log
-    honestly. Either way, this is supplementary to — not part of —
-    the 902(14) requirement.
+  - **Historical (pre-A5):** the shipped chain is Rekor-only for this
+    independent-time property. An OpenTimestamps/Bitcoin tier that
+    *also* anchored it was **removed under Amendment A5 and is not part
+    of the current chain.** Bitcoin offered a stronger no-single-party
+    timestamp; Rekor trusts the LF to operate the log honestly. Either
+    way, this is supplementary to — not part of — the 902(14) requirement.
 
 A judge looking at a `run.manifest.json` three years from now
 establishes the record's integrity from the hash chain and signature
