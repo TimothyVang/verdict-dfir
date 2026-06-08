@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from findevil_agent.crypto.audit_log import AuditLog
 from findevil_agent.memory.store import MemoryStore
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,6 +21,15 @@ class MemoryRecallInput(BaseModel):
         description="Optional filter: 'ioc'|'hash'|'ttp'|'hostname'|'finding_summary'.",
     )
     limit: int = Field(default=10, ge=1, le=100)
+    audit_log_path: str | None = Field(
+        default=None,
+        description=(
+            "Optional absolute path to the case audit.jsonl. When set, a "
+            "'memory_recall' record is appended so the run records THAT recall "
+            "happened (process provenance). This is NOT evidence: the record is "
+            "excluded from the Merkle root and carries no tool_call_id."
+        ),
+    )
 
 
 class RecallHitOut(BaseModel):
@@ -40,11 +50,30 @@ class MemoryRecallOutput(BaseModel):
     hits: list[RecallHitOut]
 
 
+def _append_recall_provenance(audit_log_path: str, inp: MemoryRecallInput, hits: list) -> None:
+    """Record THAT a recall happened — process provenance, never evidence.
+
+    The 'memory_recall' kind falls into the "other kinds" branch of
+    ``build_manifest`` so it is hash-chained but never a Merkle leaf, and the
+    payload carries no ``tool_call_id`` so it cannot masquerade as tool-call
+    evidence (the "memory is never evidence" invariant).
+    """
+    AuditLog(Path(audit_log_path)).append(
+        "memory_recall",
+        {
+            "query": inp.query,
+            "kind": inp.kind,
+            "hit_count": len(hits),
+            "hits": [{"case_id": h.case_id, "ts": h.ts, "confidence": h.confidence} for h in hits],
+        },
+    )
+
+
 async def _handle(inp: BaseModel) -> MemoryRecallOutput:
     assert isinstance(inp, MemoryRecallInput)
     with MemoryStore(Path(inp.store_path)) as store:
         rows = store.recall(inp.query, kind=inp.kind, limit=inp.limit)
-    return MemoryRecallOutput(
+    output = MemoryRecallOutput(
         hits=[
             RecallHitOut(
                 case_id=r.case_id,
@@ -58,6 +87,9 @@ async def _handle(inp: BaseModel) -> MemoryRecallOutput:
             for r in rows
         ]
     )
+    if inp.audit_log_path is not None:
+        _append_recall_provenance(inp.audit_log_path, inp, output.hits)
+    return output
 
 
 SPEC = ToolSpec(
