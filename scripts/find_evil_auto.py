@@ -62,6 +62,19 @@ try:
 except ImportError:
     _PLAYBOOK_AVAILABLE = False
 
+try:
+    from findevil_agent.config import resolve_memory_store_path
+    from findevil_agent.memory.hooks import (
+        attach_prior_observations,
+        confirmed_findings_for_remember,
+        recall_terms_for_finding,
+        remember_payload_for_finding,
+    )
+
+    _MEMORY_HOOKS_AVAILABLE = True
+except ImportError:
+    _MEMORY_HOOKS_AVAILABLE = False
+
 # ---------------------------------------------------------------------------
 # Configuration (env-overridable)
 # ---------------------------------------------------------------------------
@@ -3193,7 +3206,9 @@ def clean_analysis_limitations(items: list[str]) -> list[str]:
         if not text:
             continue
         if any(marker in text for marker in _RAW_TOOL_ERROR_MARKERS):
-            match = re.match(r"([\w.-]+?)(?:_scan|_query)?(?: failed| could not| exited)", text)
+            match = re.match(
+                r"([\w.-]+?)(?:_scan|_query)?(?: failed| could not| exited)", text
+            )
             tool = match.group(1) if match else "A tool"
             text = (
                 f"{tool} did not complete (tool error); raw output is in the run "
@@ -3244,7 +3259,9 @@ def normalize_hypothesis_prefix(findings: list[dict[str, Any]]) -> list[dict[str
     for f in findings:
         if f.get("confidence") == "HYPOTHESIS":
             desc = f.get("description")
-            if isinstance(desc, str) and not desc.lstrip().lower().startswith("hypothesis:"):
+            if isinstance(desc, str) and not desc.lstrip().lower().startswith(
+                "hypothesis:"
+            ):
                 f = {**f, "description": f"hypothesis: {desc.lstrip()}"}
         out.append(f)
     return out
@@ -3646,9 +3663,36 @@ def _extract_ascii_strings_from_hex(sample_hex: str, min_len: int = 4) -> list[s
 # Final labels that make a `word.word` token an executable/file name, not a domain.
 _NON_DOMAIN_SUFFIXES = frozenset(
     {
-        "exe", "dll", "sys", "bat", "cmd", "ps1", "psm1", "vbs", "vbe", "js",
-        "jse", "wsf", "wsh", "scr", "msi", "lnk", "dmp", "dat", "tmp", "log",
-        "bin", "hta", "cpl", "ocx", "drv", "efi", "ini", "cfg", "sav", "txt",
+        "exe",
+        "dll",
+        "sys",
+        "bat",
+        "cmd",
+        "ps1",
+        "psm1",
+        "vbs",
+        "vbe",
+        "js",
+        "jse",
+        "wsf",
+        "wsh",
+        "scr",
+        "msi",
+        "lnk",
+        "dmp",
+        "dat",
+        "tmp",
+        "log",
+        "bin",
+        "hta",
+        "cpl",
+        "ocx",
+        "drv",
+        "efi",
+        "ini",
+        "cfg",
+        "sav",
+        "txt",
     }
 )
 
@@ -5172,7 +5216,9 @@ class Investigation:
             print(f"  vol_pslist error: {pslist_error[:80]}")
             self.analysis_limitations.append(f"vol_pslist failed: {pslist_error}")
             self._course_correct(
-                py, "vol_pslist", pslist_error,
+                py,
+                "vol_pslist",
+                pslist_error,
                 "defer (psscan signature-scan still covers process recovery)",
             )
             pslist = {
@@ -5222,7 +5268,9 @@ class Investigation:
             print(f"  vol_malfind error: {malfind_error[:80]}")
             self.analysis_limitations.append(f"vol_malfind failed: {malfind_error}")
             self._course_correct(
-                py, "vol_malfind", malfind_error,
+                py,
+                "vol_malfind",
+                malfind_error,
                 "defer (injection triage skipped; rely on psscan/psxview signals)",
             )
             mal = {
@@ -5308,7 +5356,9 @@ class Investigation:
             print(f"  vol_psscan error: {psscan_error[:80]}")
             self.analysis_limitations.append(f"vol_psscan failed: {psscan_error}")
             self._course_correct(
-                py, "vol_psscan", psscan_error,
+                py,
+                "vol_psscan",
+                psscan_error,
                 "defer (no signature-scan process recovery this run)",
             )
             psscan_out = {
@@ -5363,7 +5413,9 @@ class Investigation:
                 print(f"  vol_psxview error: {psxview_error[:80]}")
                 self.analysis_limitations.append(f"vol_psxview failed: {psxview_error}")
                 self._course_correct(
-                    py, "vol_psxview", psxview_error,
+                    py,
+                    "vol_psxview",
+                    psxview_error,
                     "defer (no cross-view DKOM corroboration this run)",
                 )
                 psxview_out = {
@@ -6239,7 +6291,8 @@ class Investigation:
                         f"registry_query failed for {path} {key_path or '<root>'}: {error}"
                     )
                     self._course_correct(
-                        py, "registry_query",
+                        py,
+                        "registry_query",
                         f"{key_path or '<root>'} in {path}: {error}",
                         "narrow (skip this key; continue remaining hive triage)",
                     )
@@ -7177,8 +7230,99 @@ class Investigation:
             verified.append(next_finding)
         return verified
 
+    def _memory_store_path(self) -> str | None:
+        """Host path to the Hermes cross-case memory store, or None if unavailable."""
+        if not _MEMORY_HOOKS_AVAILABLE:
+            return None
+        try:
+            return str(resolve_memory_store_path())
+        except Exception:
+            return None
+
+    def _memory_recall(
+        self, py: SshMcpClient, store_path: str, query: str
+    ) -> list[dict[str, Any]]:
+        """Recall prior-case hits for a query. Audit-logged, best-effort (never raises)."""
+        out = py.call_tool(
+            "memory_recall",
+            {
+                "store_path": store_path,
+                "query": query,
+                "audit_log_path": self.audit_path,
+            },
+        )
+        if not isinstance(out, dict) or "_error" in out:
+            return []
+        hits = out.get("hits", [])
+        return hits if isinstance(hits, list) else []
+
+    def _enrich_findings_with_recall(self, py: SshMcpClient) -> None:
+        """Attach NON-evidentiary prior-case context to each drafted finding.
+
+        Hermes ``memory_recall`` runs for each finding's most distinctive term; the
+        hits ride on the finding as ``prior_observations``. The finding's
+        ``tool_call_id`` and artifact class are untouched, so the SOUL.md
+        >=2-artifact rule is unaffected (G1/G4). Each recall is audit-logged as
+        process provenance and is never a Merkle leaf (G3). Best-effort: memory
+        failures never abort the investigation.
+        """
+        store_path = self._memory_store_path()
+        if store_path is None:
+            return
+        recalls = 0
+        for pool in (self.findings_pool_a, self.findings_pool_b):
+            for idx, finding in enumerate(pool):
+                terms = recall_terms_for_finding(finding)
+                if not terms:
+                    continue
+                hits = self._memory_recall(py, store_path, terms[0])
+                if hits:
+                    pool[idx] = attach_prior_observations(finding, hits)
+                    recalls += 1
+        if recalls:
+            print(f"  memory: attached prior-case context to {recalls} finding(s)")
+
+    def _remember_confirmed(
+        self, py: SshMcpClient, merged: list[dict[str, Any]]
+    ) -> None:
+        """Seed future cases with this run's CONFIRMED findings (Hermes memory_remember).
+
+        Writes one memory_remember row per CONFIRMED finding (G5) and audit-logs the
+        write as process provenance — never a Merkle leaf (G3). Runs AFTER
+        ``_emit_final_findings`` so the memory records follow the finding_approved
+        leaves and contribute zero leaves. Best-effort: never aborts the run.
+        """
+        store_path = self._memory_store_path()
+        if store_path is None:
+            return
+        remembered = 0
+        for finding in confirmed_findings_for_remember(merged):
+            payload = remember_payload_for_finding(finding)
+            if payload is None:
+                continue
+            out = py.call_tool(
+                "memory_remember",
+                {
+                    "store_path": store_path,
+                    "case_id": self.handle["id"],
+                    **payload,
+                    "audit_log_path": self.audit_path,
+                },
+            )
+            if isinstance(out, dict) and "_error" not in out:
+                remembered += 1
+        if remembered:
+            print(
+                f"  memory: remembered {remembered} CONFIRMED finding(s) for future cases"
+            )
+
     def reason(self, py: SshMcpClient) -> tuple[list[dict[str, Any]], int, int, int]:
         print("\n=== reasoning phase ===")
+
+        # Recall prior-case context onto each drafted finding BEFORE the
+        # verifier/judge see them (Hermes memory_recall). Non-evidentiary
+        # context only — never changes a tool_call_id or the >=2-artifact rule.
+        self._enrich_findings_with_recall(py)
 
         # detect_contradictions
         cs = py.call_tool(
@@ -8232,6 +8376,10 @@ class Investigation:
             release_gate = self._emit_release_gate(py, report_metadata["report_qa"])
             report_metadata["release_gate"] = release_gate
             self._emit_final_findings(py, merged)
+            # Remember CONFIRMED findings for future cases AFTER the
+            # finding_approved Merkle leaves are written. memory_remember records
+            # are audit-chained provenance only and contribute zero leaves (G3).
+            self._remember_confirmed(py, merged)
             packet_attestation = self._build_packet_attestation(
                 merged,
                 verdict,
