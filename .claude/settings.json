@@ -7,7 +7,17 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "bash scripts/session-suggest.sh" }
+          { "type": "command", "command": "bash scripts/session-suggest.sh" },
+          { "type": "command", "command": "bash scripts/obsidian-mind-hook.sh session-start", "timeout": 30 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "bash scripts/obsidian-mind-hook.sh validate-write.ts", "timeout": 20 },
+          { "type": "command", "command": "bash scripts/obsidian-mind-hook.sh qmd-refresh.ts", "timeout": 20 }
         ]
       }
     ]

@@ -218,9 +218,18 @@ the audit chain.
    audit-chained, part of the product (§4). This is the *only* memory inside the investigation.
 3. **Engram** (`engram-vang/`) — optional operator knowledge base; not bundled, not in the chain.
 
-`CLAUDE.md` stays the instruction core; the vault is where evolving knowledge lives. When you
-learn something durable about the repo, write it to the right `obsidian-mind/brain/` note — not
-into this file.
+`CLAUDE.md` stays the instruction core; the vault is where evolving knowledge lives.
+
+**Default behavior — use the memory, don't just have it (wired into the repo, no folder switch):**
+- **Recall first.** Before answering a question about how this repo works, a past decision, a known
+  gotcha, or "how do we usually…", call `mcp__qmd__query` (index `verdict-memory`) and ground the
+  answer in what comes back. The SessionStart hook also injects the North Star + brain-topic index
+  at the start of interactive sessions (it is gated OFF during `scripts/verdict` investigations).
+- **Capture durable facts.** When you learn something that will matter next session (a fix, a
+  gotcha, a decision), write it to the right `obsidian-mind/brain/…` note — or run `/om-dump <fact>`
+  — not into this file. The PostToolUse hook reindexes vault writes automatically.
+- **Never cross the boundary.** Memory is never evidence, never in a case `audit.jsonl`, never a
+  Finding. Don't run investigation tools "to remember." See `docs/runbooks/obsidian-mind-memory.md`.
 
 ---
 

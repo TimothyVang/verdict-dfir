@@ -1,30 +1,30 @@
 #!/usr/bin/env bash
-# obsidian-mind-hook.sh — vault-scoped, inert-by-default runner for the
-# obsidian-mind memory-layer lifecycle hooks (docs/runbooks/obsidian-mind-memory.md).
+# obsidian-mind-hook.sh — runner that wires the obsidian-mind memory layer into the
+# MAIN repo so the vault works WITHOUT switching folders
+# (docs/runbooks/obsidian-mind-memory.md). Two modes:
 #
-# Why this wrapper exists:
-#   * The memory layer is an OPT-IN dev/operator convenience (like Engram / n8n),
-#     never part of the DFIR product or the audit chain. It must not break the
-#     repo for anyone who hasn't installed it.
-#   * obsidian-mind's PostToolUse hook validates frontmatter + reindexes QMD on
-#     every .md write. Run unguarded in this repo it would fire on Rust/Python/docs
-#     edits too. This wrapper runs the vault hook ONLY when the edited file is under
-#     obsidian-mind/, so normal repo edits are never touched.
-#   * The vault hooks need Node 22 (--experimental-strip-types). This wrapper
-#     resolves it via nvm and EXITS 0 (no-op) if it isn't installed, so the
-#     committed config stays machine-independent and harmless on a fresh clone.
+#   bash scripts/obsidian-mind-hook.sh session-start
+#       SessionStart: inject the vault's North Star + brain-topic index into the
+#       session. SKIPPED during headless investigations (FIND_EVIL_LOCAL) so a
+#       `scripts/verdict` run is never polluted with dev memory.
 #
-# Usage (from a hook command):  bash scripts/obsidian-mind-hook.sh <hook-file.ts>
-# Never blocks a tool call: every failure path is a clean exit 0.
+#   bash scripts/obsidian-mind-hook.sh <hook-file.ts>
+#       PostToolUse(Write|Edit): run the vault hook (validate-write / qmd-refresh)
+#       ONLY when the edited file is under obsidian-mind/, so normal repo edits are
+#       never validated or blocked.
+#
+# Inert by default: the vault hooks need Node 22; if it isn't installed this exits 0
+# (no-op), so the committed config is harmless on a fresh clone / for a judge.
+# Never blocks a tool call or session — every failure path is a clean exit 0.
+# Boundary: injects context / reindexes the vault only — never writes to a case
+# audit chain, never touches evidence.
 set -euo pipefail
 
-HOOK_FILE="${1:-}"
-[ -n "$HOOK_FILE" ] || exit 0
+MODE="${1:-}"
+[ -n "$MODE" ] || exit 0
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 VAULT="$REPO/obsidian-mind"
-HOOK_PATH="$VAULT/.claude/scripts/$HOOK_FILE"
-[ -f "$HOOK_PATH" ] || exit 0
 
 # Resolve Node 22 via nvm; absent → memory layer not installed → no-op.
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
@@ -35,6 +35,26 @@ NODE22="$(nvm which 22 2>/dev/null || true)"
 NODE22_BIN_DIR="$(dirname "$NODE22")"
 GLOBNM="$(cd "$NODE22_BIN_DIR/../lib/node_modules" 2>/dev/null && pwd || true)"
 
+# Run a vault hook with the vault as CLAUDE_PROJECT_DIR; stdin forwarded, stdout passes through.
+run_vault_hook() {  # $1 = absolute hook path
+  CLAUDE_PROJECT_DIR="$VAULT" NODE_PATH="${GLOBNM:-}" PATH="$NODE22_BIN_DIR:$PATH" \
+    "$NODE22" --disable-warning=ExperimentalWarning --experimental-strip-types "$1" 2>/dev/null || exit 0
+}
+
+# --- SessionStart mode: inject vault context (interactive dev sessions only) ---
+if [ "$MODE" = "session-start" ]; then
+  # Investigation gate: never inject dev memory into a headless verdict run.
+  [ -n "${FIND_EVIL_LOCAL:-}" ] && exit 0
+  [ -n "${FINDEVIL_NO_MEMORY_HOOK:-}" ] && exit 0
+  HOOK_PATH="$VAULT/.claude/scripts/session-start.ts"
+  [ -f "$HOOK_PATH" ] || exit 0
+  cat | run_vault_hook "$HOOK_PATH"   # stdout (injected context) passes through to the session
+  exit 0
+fi
+
+# --- PostToolUse mode: $MODE is a hook file under the vault's .claude/scripts/ ---
+HOOK_PATH="$VAULT/.claude/scripts/$MODE"
+[ -f "$HOOK_PATH" ] || exit 0
 INPUT="$(cat)"
 
 # Path-scope guard: only act on writes under obsidian-mind/.
@@ -44,5 +64,5 @@ case "$FP" in
   *) exit 0 ;;                                    # anywhere else → no-op
 esac
 
-printf '%s' "$INPUT" | CLAUDE_PROJECT_DIR="$VAULT" NODE_PATH="${GLOBNM:-}" PATH="$NODE22_BIN_DIR:$PATH" \
-  "$NODE22" --disable-warning=ExperimentalWarning --experimental-strip-types "$HOOK_PATH" 2>/dev/null || exit 0
+printf '%s' "$INPUT" | run_vault_hook "$HOOK_PATH"
+exit 0

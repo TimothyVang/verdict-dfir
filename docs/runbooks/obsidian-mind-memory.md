@@ -76,54 +76,36 @@ subpath resolve fails and it falls back to the `qmd` shim — which must be on P
 bin dir). After this, a new session exposes `mcp__qmd__query` / `mcp__qmd__get` /
 `mcp__qmd__multi_get` / `mcp__qmd__status`, scoped to the `verdict-memory` index.
 
-## Recall + curation flow
+## Recall + curation flow — wired into the repo (no folder switching)
 
-- **Recall (any repo session):** call `mcp__qmd__query` before answering a question that touches a
-  brain topic (Gotchas, Patterns, Key Decisions, Skills). Fall back to
-  `qmd --index verdict-memory query "<topic>"` or `grep` if the MCP isn't loaded.
-- **Curate (vault session):** `cd obsidian-mind && claude`, then `/om-standup` (load context),
-  `/om-dump` (capture + auto-route), `/om-wrap-up` (review + reindex). The vault's **own**
-  `.claude/settings.json` runs the full 5-hook lifecycle set (SessionStart / UserPromptSubmit /
-  PostToolUse / PreCompact / Stop) plus the 9 subagents — these run **here**, not in the main repo
-  session, deliberately (see below). After curating, the QMD index updates automatically.
-- **Write a memory:** add it to the right `brain/` note with a `[[wikilink]]` to context, then
-  update `brain/Memories.md` if a new topic was created. Never run repo investigation tools "to
-  remember" — memory and evidence are separate.
+The memory layer is integrated into the **main repo** `.claude/`, so a single `claude` in the repo
+root gives you the whole loop:
 
-## Why the lifecycle hooks run in vault sessions, not the repo session
+- **Recall (automatic).** `mcp__qmd__query` (index `verdict-memory`) is available, and CLAUDE.md
+  §8.5 instructs the agent to query it before answering brain-topic questions. Fallback:
+  `qmd --index verdict-memory query "<topic>"` from `obsidian-mind/`.
+- **Context injection (automatic, dev sessions only).** The repo SessionStart hook runs
+  `scripts/obsidian-mind-hook.sh session-start`, injecting the North Star + brain-topic index. It
+  is **gated OFF during `scripts/verdict` investigations** (`FIND_EVIL_LOCAL`) and inert without
+  Node 22 — so a judge's run is never polluted.
+- **Curate from the repo root.** `/om-standup`, `/om-dump`, `/om-wrap-up`, `/om-weekly` are repo
+  slash commands (`.claude/commands/`) that operate on `obsidian-mind/…` paths. `/om-dump <fact>`
+  captures into the right `brain/`/`work/` note.
+- **Auto-reindex (automatic, vault-scoped).** The repo PostToolUse hook reindexes QMD when a file
+  **under `obsidian-mind/`** is written, and no-ops on normal Rust/Python/docs edits.
+- **Deeper curation** (the full vault hook set + the 4 subagents) still lives in the vault's own
+  `.claude/` for `cd obsidian-mind && claude` sessions; the repo wiring covers the daily loop.
 
-Two deliberate reasons the full obsidian-mind hook set is scoped to vault-native sessions and
-**not** added to the repo's startup config:
+The hooks **inject context and reindex only — they never write to a case audit chain or touch
+evidence**, so the M2 "no second unverified trail" stance holds, and the SessionStart investigation
+gate keeps dev memory out of `scripts/verdict` runs.
 
-1. **No dev memory in a judge's investigation.** The SessionStart context-injection hook would
-   push vault notes into every `claude`/`scripts/verdict` session — including a judge's. The repo
-   SessionStart stays focused on the evidence-suggestion block (`scripts/session-suggest.sh`).
-2. **No second audit trail.** The repo's `.claude/settings.json` deliberately avoids Stop hooks
-   so nothing writes a parallel, unverified trail beside the M2 hash-chained `audit.jsonl`. The
-   vault's Stop hook only nudges a checklist (writes nothing to the audit chain), but keeping it
-   vault-scoped preserves that stance cleanly.
+### Enabling / disabling
 
-### Optional: vault-scoped reindex in the main session
-
-If you want vault notes you edit *from the main repo session* to reindex automatically, add this
-to `.claude/settings.local.json` yourself (Claude Code's auto-mode classifier blocks the agent
-from editing its own hook config — this is an intentional self-modification guardrail, so it is a
-manual step):
-
-```json
-"hooks": {
-  "PostToolUse": [
-    { "matcher": "Write|Edit", "hooks": [
-      { "type": "command", "command": "bash scripts/obsidian-mind-hook.sh validate-write.ts", "timeout": 20 },
-      { "type": "command", "command": "bash scripts/obsidian-mind-hook.sh qmd-refresh.ts", "timeout": 20 }
-    ]}
-  ]
-}
-```
-
-`scripts/obsidian-mind-hook.sh` is the safety rail: it is **inert** without the Node-22 memory
-layer (exits 0) and **vault-scoped** — it runs the vault hook ONLY when the edited file is under
-`obsidian-mind/`, so it never validates or blocks normal Rust/Python/docs edits in the repo.
+The hooks live in `.claude/settings.json` (committed). The guard `scripts/obsidian-mind-hook.sh` is
+the safety rail — **inert without Node 22 + QMD** (so a fresh clone / a judge is unaffected),
+**vault-scoped** for writes, **investigation-gated** for SessionStart, and it never blocks a tool
+call. To force the memory layer off for a session, set `FINDEVIL_NO_MEMORY_HOOK=1`.
 
 ## Verify
 
