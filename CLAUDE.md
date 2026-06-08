@@ -226,7 +226,10 @@ the audit chain.
    the same boundary the n8n grounding feature keeps. How-to + the hard boundary:
    `docs/runbooks/obsidian-mind-memory.md`.
 2. **Hermes FTS5** — the in-flow **investigation** memory: `memory_remember`/`memory_recall`,
-   audit-chained, part of the product (§4). This is the *only* memory inside the investigation.
+   audit-chained **as process provenance** (when given an `audit_log_path` they record *that*
+   recall/remember happened, but the records are never a Merkle evidence leaf and never a
+   Finding's `tool_call_id`), part of the product (§4). This is the *only* memory inside the
+   investigation; recall hits ride on a Finding as a non-evidentiary `prior_observations` field.
 
 `CLAUDE.md` stays the instruction core; the vault is where evolving knowledge lives.
 

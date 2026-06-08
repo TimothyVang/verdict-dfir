@@ -93,6 +93,50 @@ class TestBuildManifest:
         # Empty Merkle root is 64 zeros.
         assert manifest.merkle_root_hex == "00" * 32
 
+    def test_memory_kinds_never_become_leaves(self, tmp_path: Path) -> None:
+        # G3 regression guard (the "memory is never evidence" invariant):
+        # memory_recall / memory_remember records are hash-chained process
+        # provenance but must NEVER be Merkle evidence leaves. If anyone later
+        # adds these kinds to build_manifest's leaf selection, this fails loudly.
+        log = AuditLog(tmp_path / "audit.jsonl")
+        log.append("tool_call_output", {"tool_call_id": "tc-1", "output_hash": "a" * 64})
+        log.append(
+            "finding_approved",
+            {"finding_id": "f-1", "tool_call_id": "tc-1", "confidence": "CONFIRMED"},
+        )
+        log.append(
+            "memory_recall",
+            {
+                "query": "T1014",
+                "kind": None,
+                "hit_count": 1,
+                "hits": [{"case_id": "c-prev", "ts": "2026-01-01T00:00:00Z", "confidence": 0.8}],
+            },
+        )
+        log.append(
+            "memory_remember",
+            {
+                "case_id": "c-1",
+                "kind": "finding_summary",
+                "key": "T1014",
+                "sha256": "sha256:" + "b" * 64,
+            },
+        )
+
+        manifest = build_manifest(
+            case_id="c-1",
+            run_id="r-1",
+            started_at="2026-01-01T00:00:00Z",
+            audit_log=log,
+            signer=StubSigner(run_id="r-1"),
+        )
+        # Only the tool_call_output + the finding become leaves.
+        assert manifest.leaf_count == 2
+        assert {leaf.kind for leaf in manifest.leaves} == {"tool_call_output", "finding"}
+        assert all(
+            leaf.kind not in ("memory_recall", "memory_remember") for leaf in manifest.leaves
+        )
+
     def test_audit_log_final_hash_links_last_record(self, tmp_path: Path) -> None:
         log = _seed_log(tmp_path / "audit.jsonl")
         manifest = build_manifest(

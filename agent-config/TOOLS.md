@@ -146,14 +146,14 @@ Returns: `{refined[], outcomes[]}` where each outcome is `{finding_id, action: '
 Use when: enforcing the SOUL.md ≥2-artifact-class rule. A finding claiming "X executed" must cite ≥2 distinct artifact classes (Prefetch + Amcache+ShimCache, or EDR + memory). Single-source claims auto-downgrade.
 
 ### memory_remember
-Args: `{store_path, case_id, kind, key, value, sha256, ts?, case_path?}`
+Args: `{store_path, case_id, kind, key, value, sha256, ts?, case_path?, audit_log_path?}`
 Returns: `{case_id, kind, key, sha256}`
-Use when: a Finding has been marked `CONFIRMED` by the judge and the IOC / hash / TTP / hostname / one-line summary is worth surfacing in future investigations on different cases. Hermes-pattern (A3 §2.2). The `store_path` is the session-constant `MEMORY_STORE_PATH` resolved by the supervisor at session start; `kind` ∈ `{ioc, hash, ttp, hostname, finding_summary}`; `sha256` is `sha256:` + 64 lowercase hex. Skip for HYPOTHESIS-tier — the memory chain only remembers things the army would stand behind.
+Use when: a Finding has been marked `CONFIRMED` by the judge and the IOC / hash / TTP / hostname / one-line summary is worth surfacing in future investigations on different cases. Hermes-pattern (A3 §2.2). The `store_path` is the session-constant `MEMORY_STORE_PATH` resolved by the supervisor at session start; `kind` ∈ `{ioc, hash, ttp, hostname, finding_summary}`; `sha256` is `sha256:` + 64 lowercase hex. Skip for HYPOTHESIS-tier — the memory chain only remembers things the army would stand behind. When `audit_log_path` is set, a `memory_remember` record is appended to the case audit JSONL as process provenance — hash-chained but **never a Merkle leaf and never a `tool_call_id`** (memory is never evidence).
 
 ### memory_recall
-Args: `{store_path, query, kind?, limit?}`
+Args: `{store_path, query, kind?, limit?, audit_log_path?}`
 Returns: `{hits: [{case_id, kind, key, value, sha256, ts, confidence}, …]}`
-Use when: BEFORE drafting a Finding, to check whether you've seen this IOC / hash / TTP / hostname in a previous investigation. Hits become a `prior_observations` field on the Finding for prioritization and context only; a prior-case hit is not current-case evidence and must not satisfy the SOUL.md >=2 artifact-class rule. Hits are returned ordered by BM25 relevance × 90-day decay, descending confidence. **Query semantics: exact phrase match** — the query is phrase-quoted before hitting FTS5, so `evil.com` and `T1059.001` are safe; multi-word queries (`powershell encoded`) become exact-phrase searches and may return zero hits even when both tokens exist separately. Pass single tokens for broad recall.
+Use when: BEFORE drafting a Finding, to check whether you've seen this IOC / hash / TTP / hostname in a previous investigation. Hits become a `prior_observations` field on the Finding for prioritization and context only; a prior-case hit is not current-case evidence and must not satisfy the SOUL.md >=2 artifact-class rule. When `audit_log_path` is set, a `memory_recall` record is appended as process provenance — hash-chained but **never a Merkle leaf and never a `tool_call_id`**. Hits are returned ordered by BM25 relevance × 90-day decay, descending confidence. **Query semantics: exact phrase match** — the query is phrase-quoted before hitting FTS5, so `evil.com` and `T1059.001` are safe; multi-word queries (`powershell encoded`) become exact-phrase searches and may return zero hits even when both tokens exist separately. Pass single tokens for broad recall.
 
 ### pool_handoff
 Args: `{audit_path, from_role, to_role, payload, correlation_id?}`
