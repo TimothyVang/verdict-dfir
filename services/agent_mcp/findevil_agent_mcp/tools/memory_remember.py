@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from findevil_agent.crypto.audit_log import AuditLog
 from findevil_agent.memory.store import MemoryStore
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,6 +28,15 @@ class MemoryRememberInput(BaseModel):
     )
     ts: str | None = Field(default=None, description="UTC ISO-8601Z; defaults to now().")
     case_path: str | None = Field(default=None)
+    audit_log_path: str | None = Field(
+        default=None,
+        description=(
+            "Optional absolute path to the case audit.jsonl. When set, a "
+            "'memory_remember' record is appended so the run records THAT a write "
+            "happened (process provenance). This is NOT evidence: the record is "
+            "excluded from the Merkle root and carries no tool_call_id."
+        ),
+    )
 
 
 class MemoryRememberOutput(BaseModel):
@@ -49,6 +59,19 @@ async def _handle(inp: BaseModel) -> MemoryRememberOutput:
             sha256=inp.sha256,
             ts=inp.ts,
             case_path=inp.case_path,
+        )
+    if inp.audit_log_path is not None:
+        # Record THAT a write happened — process provenance, never evidence.
+        # Kind 'memory_remember' is excluded from Merkle leaves (build_manifest)
+        # and the payload carries no tool_call_id.
+        AuditLog(Path(inp.audit_log_path)).append(
+            "memory_remember",
+            {
+                "case_id": inp.case_id,
+                "kind": inp.kind,
+                "key": inp.key,
+                "sha256": inp.sha256,
+            },
         )
     return MemoryRememberOutput(case_id=inp.case_id, kind=inp.kind, key=inp.key, sha256=inp.sha256)
 

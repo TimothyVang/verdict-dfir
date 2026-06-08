@@ -125,3 +125,57 @@ async def test_memory_recall_returns_remembered_row(tmp_path: Path) -> None:
     assert len(out.hits) == 1
     assert out.hits[0].case_id == "case-recall-1"
     assert out.hits[0].confidence > 0.0
+
+
+class TestMemoryRememberAuditChaining:
+    """memory_remember logs that a write happened (provenance) — never evidence."""
+
+    async def _remember(self, db: Path, audit: Path | None) -> None:
+        await REMEMBER_SPEC.handler(
+            MemoryRememberInput(
+                store_path=str(db),
+                case_id="case-001",
+                kind="hash",
+                key="evil.exe",
+                value="evil.exe sha=abc",
+                sha256="sha256:" + "a" * 64,
+                audit_log_path=str(audit) if audit is not None else None,
+            )
+        )
+
+    @pytest.mark.asyncio
+    async def test_remember_appends_memory_remember_record(self, tmp_path: Path) -> None:
+        db, audit = tmp_path / "memory.sqlite", tmp_path / "audit.jsonl"
+        await self._remember(db, audit)
+        records = [r for r in AuditLog(audit).iter_records() if r.kind == "memory_remember"]
+        assert len(records) == 1
+        assert records[0].prev_hash == ""
+
+    @pytest.mark.asyncio
+    async def test_remember_record_is_not_a_merkle_leaf(self, tmp_path: Path) -> None:
+        # G3: a remember record is hash-chained provenance, never an evidence leaf.
+        db, audit = tmp_path / "memory.sqlite", tmp_path / "audit.jsonl"
+        await self._remember(db, audit)
+        manifest = build_manifest(
+            case_id="c-1",
+            run_id="r-1",
+            started_at="2026-01-01T00:00:00Z",
+            audit_log=AuditLog(audit),
+            signer=StubSigner(run_id="r-1"),
+        )
+        assert manifest.leaf_count == 0
+        assert all(leaf.kind != "memory_remember" for leaf in manifest.leaves)
+
+    @pytest.mark.asyncio
+    async def test_remember_payload_shape(self, tmp_path: Path) -> None:
+        db, audit = tmp_path / "memory.sqlite", tmp_path / "audit.jsonl"
+        await self._remember(db, audit)
+        rec = next(r for r in AuditLog(audit).iter_records() if r.kind == "memory_remember")
+        assert set(rec.payload) == {"case_id", "kind", "key", "sha256"}
+        assert "tool_call_id" not in rec.payload
+
+    @pytest.mark.asyncio
+    async def test_remember_without_audit_path_writes_no_chain(self, tmp_path: Path) -> None:
+        db, audit = tmp_path / "memory.sqlite", tmp_path / "audit.jsonl"
+        await self._remember(db, None)
+        assert not audit.exists()
