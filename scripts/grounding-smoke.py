@@ -211,7 +211,7 @@ def offline_checks(gv) -> None:
         before = {f: sha(case / f) for f in ("audit.jsonl", "run.manifest.json")}
 
         orig = gv.call_workflow
-        gv.call_workflow = lambda cid, techs: {
+        gv.call_workflow = lambda cid, techs, queries=None: {
             "generated_at": "2026-01-01T00:00:00Z",
             "technique_research": [
                 {
@@ -306,6 +306,47 @@ def offline_ioc_checks(gv) -> None:
         )
 
 
+def offline_openweb_checks(gv) -> None:
+    print("[offline] open-web query building")
+    techs = gv.collect_techniques(
+        {
+            "findings": [
+                {
+                    "finding_id": "f1",
+                    "mitre_technique": "T1055",
+                    "confidence": "INFERRED",
+                    "description": "process injection lead",
+                }
+            ],
+            "attack_coverage": {"targets": [{"technique_id": "T1055"}]},
+        }
+    )
+    ioc_block = {
+        "results": [
+            {
+                "ioc": "abc",
+                "sources": [
+                    {"provider": "threatfox", "malicious": True, "label": "MintsLoader"}
+                ],
+            }
+        ]
+    }
+    q = gv.build_queries(techs, ioc_block)
+    terms = [x["query"] for x in q]
+    check(
+        any("MintsLoader" in t for t in terms),
+        "build_queries seeds a malware-family query",
+    )
+    check(
+        any("T1055" in t for t in terms), "build_queries adds a claimed-technique query"
+    )
+    check(len(q) <= 4, "build_queries caps at 4")
+    check(
+        isinstance(gv.build_queries(techs, None), list),
+        "build_queries works without IOCs",
+    )
+
+
 def webhook_up() -> bool:
     try:
         with urllib.request.urlopen(N8N_HEALTH, timeout=4) as r:
@@ -371,6 +412,7 @@ def main() -> int:
     gv = load_ground_verdict()
     offline_checks(gv)
     offline_ioc_checks(gv)
+    offline_openweb_checks(gv)
     if webhook_up():
         live_checks()
     else:

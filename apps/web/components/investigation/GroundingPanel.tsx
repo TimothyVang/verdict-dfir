@@ -57,6 +57,13 @@ interface IocGrounding {
   rationale?: string;
 }
 
+interface OpenWebItem {
+  query: string;
+  relevance?: string; // corroborates | contradicts | unrelated
+  note?: string;
+  sources?: GroundingSource[];
+}
+
 interface CoverageTargets {
   validated?: number;
   on_mitre?: number;
@@ -88,6 +95,7 @@ interface GroundingData {
   judged_by?: string;
   grounding?: GroundingClaim[];
   ioc_grounding?: IocGrounding[];
+  open_web?: OpenWebItem[];
   coverage_targets?: CoverageTargets;
   summary?: GroundingSummary;
 }
@@ -311,6 +319,34 @@ function IocRow({ ioc }: { ioc: IocGrounding }) {
   );
 }
 
+const RELEVANCE_COLOR: Record<string, string> = {
+  corroborates: VERDICT.hypothesis,
+  contradicts: VERDICT.alertRed,
+  unrelated: VERDICT.muted,
+};
+
+function OpenWebRow({ item }: { item: OpenWebItem }) {
+  const color = RELEVANCE_COLOR[item.relevance ?? ""] ?? VERDICT.muted;
+  return (
+    <div style={{ padding: "10px 0", borderTop: `1px solid ${VERDICT.borderSubtle}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        {item.relevance ? <Chip label={item.relevance} color={color} /> : null}
+        <span style={{ fontFamily: MONO, fontSize: 12.5, color: VERDICT.text }}>
+          “{item.query}”
+        </span>
+      </div>
+      {item.note ? (
+        <p style={{ margin: "6px 0 0", fontFamily: MONO, fontSize: 12, lineHeight: 1.55, color: VERDICT.text }}>
+          {item.note}
+        </p>
+      ) : null}
+      {(item.sources ?? []).map((src, i) => (
+        <SourceQuote key={`${item.query}-src-${i}`} src={src} />
+      ))}
+    </div>
+  );
+}
+
 export function GroundingPanel({ caseDir }: { caseDir: string }) {
   const [data, setData] = useState<GroundingData | null>(null);
 
@@ -487,6 +523,32 @@ export function GroundingPanel({ caseDir }: { caseDir: string }) {
           </div>
           {(data.ioc_grounding ?? []).map((ioc, i) => (
             <IocRow key={`${ioc.ioc}-${i}`} ioc={ioc} />
+          ))}
+        </div>
+      ) : null}
+
+      {(data.open_web?.length ?? 0) > 0 ? (
+        <div
+          style={{
+            marginTop: 14,
+            paddingTop: 12,
+            borderTop: `1px solid ${VERDICT.borderSubtle}`,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: GROTESK,
+              fontSize: 11,
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+              color: VERDICT.muted,
+            }}
+          >
+            Open-web corroboration
+            <span style={{ color: VERDICT.mutedDark }}> (lowest trust · self-hosted search)</span>
+          </div>
+          {(data.open_web ?? []).map((item, i) => (
+            <OpenWebRow key={`ow-${i}`} item={item} />
           ))}
         </div>
       ) : null}

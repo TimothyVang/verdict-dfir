@@ -128,12 +128,47 @@ def claim_for(entry: dict[str, Any]) -> str:
     return "coverage target (no finding asserts this)"
 
 
-def call_workflow(case_id: str, techs: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def build_queries(
+    techs: dict[str, dict[str, Any]], ioc_block: dict[str, Any] | None
+) -> list[dict[str, str]]:
+    """Open-web search terms (capped, deduped): malware families surfaced by IOC
+    enrichment first (highest signal), then the top asserted-technique claims."""
+    seen: set[str] = set()
+    queries: list[dict[str, str]] = []
+
+    def add(term: str, why: str) -> None:
+        term = " ".join(term.split())[:120]
+        key = term.lower()
+        if term and key not in seen:
+            seen.add(key)
+            queries.append({"query": term, "why": why})
+
+    if ioc_block:
+        for r in ioc_block.get("results", []):
+            for s in r.get("sources", []):
+                if s.get("malicious") and s.get("label"):
+                    add(
+                        f"{s['label']} malware analysis", f"ioc:{r.get('ioc', '')[:24]}"
+                    )
+    for e in techs.values():
+        if not e["claimed"]:
+            continue
+        snippet = (e["claim_snippets"] or e["names"] or [""])[0]
+        add(f"{e['technique_id']} {snippet}".strip(), "technique-claim")
+    return queries[:4]
+
+
+def call_workflow(
+    case_id: str,
+    techs: dict[str, dict[str, Any]],
+    queries: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
     payload = {
         "case_id": case_id,
         "techniques": [
             {"id": e["technique_id"], "claim": claim_for(e)} for e in techs.values()
         ],
+        "queries": queries or [],
     }
     req = urllib.request.Request(
         WEBHOOK, data=json.dumps(payload).encode(), method="POST"
@@ -240,14 +275,20 @@ def main(argv: list[str]) -> int:
         f"for case {case_id} via {WEBHOOK}"
     )
 
-    response = call_workflow(case_id, techs)
-    merged = merge_bundle(techs, response.get("technique_research") or [])
-
+    # Enrich IOCs first (host-side) so malware families can seed open-web queries.
     iocs = extract_iocs(verdict)
     ioc_total = sum(len(v) for v in iocs.values())
     if ioc_total:
-        print(f"enriching {ioc_total} IOC(s) host-side via VirusTotal…")
+        print(f"enriching {ioc_total} IOC(s) host-side (VirusTotal + abuse.ch)…")
     ioc_block = run_ioc_enrichment(iocs)
+
+    queries = build_queries(techs, ioc_block)
+    if queries:
+        print(f"open-web research: {len(queries)} query(ies) via self-hosted SearXNG")
+
+    response = call_workflow(case_id, techs, queries)
+    merged = merge_bundle(techs, response.get("technique_research") or [])
+    open_web = response.get("open_web_research") or []
 
     bundle = {
         "case_id": case_id,
@@ -262,6 +303,8 @@ def main(argv: list[str]) -> int:
     }
     if ioc_block is not None:
         bundle["ioc_enrichment"] = ioc_block
+    if open_web:
+        bundle["open_web_research"] = open_web
     out_path = case_dir / RESEARCH_FILENAME
     out_path.write_text(json.dumps(bundle, indent=2))
 
@@ -286,6 +329,12 @@ def main(argv: list[str]) -> int:
                     f"  [ioc] {mk} {r.get('type'):<6} mal_src={r.get('malicious_sources')} "
                     f"[{prov}] {r.get('ioc', '')[:40]}"
                 )
+    for ow in open_web:
+        n = len(ow.get("results") or [])
+        err = ow.get("error")
+        print(
+            f"  [web] {('ERR ' + err) if err else str(n) + ' hits'} :: {ow.get('query', '')[:50]}"
+        )
     print(f"\nwrote {out_path}")
     print(
         "next: Claude Code judges this bundle per agent-config/GROUNDING.md "

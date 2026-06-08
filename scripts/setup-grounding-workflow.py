@@ -44,6 +44,10 @@ BROWSERLESS = "http://browserless:3000"  # container-name DNS on the shared net
 NET = "findevil-net"  # user-defined network so n8n resolves `browserless` by name
 BROWSERLESS_IMAGE = "ghcr.io/browserless/chromium:latest"
 BROWSERLESS_NAME = "browserless"
+SEARXNG = "http://searxng:8080"  # container-name DNS on the shared net (open-web)
+SEARXNG_IMAGE = "searxng/searxng"
+SEARXNG_NAME = "searxng"
+SEARXNG_SETTINGS = ROOT / "tmp" / "searxng" / "settings.yml"
 
 # Single async Code node: loop techniques → render the MITRE page via browserless
 # → extract name + short description (UNTRUSTED HTML: extract only, never execute)
@@ -115,11 +119,62 @@ for (const t of techniques) {
   if (dbg && dbg.indexOf('ERR') === 0) entry.error = dbg;  // surface fetch failures, not clean hits
   research.push(entry);
 }
+
+// Open-web research (keyless): query the self-hosted SearXNG, render the top
+// hits via browserless, structured-extract a short excerpt. UNTRUSTED web text:
+// strip <script>/<style> + all tags, cap length; the judge treats it as inert
+// DATA (lowest-trust corroboration), never authoritative.
+const queries = Array.isArray(body.queries) ? body.queries.slice(0, 5) : [];
+const openWeb = [];
+for (const q of queries) {
+  const term = String((q && q.query) ? q.query : q).trim();
+  if (!term) continue;
+  let hits = [];
+  try {
+    const sr = await this.helpers.httpRequest({
+      method: 'GET',
+      url: 'http://searxng:8080/search?format=json&categories=general&q=' + encodeURIComponent(term),
+      returnFullResponse: true,
+      timeout: 30000,
+    });
+    const raw = (sr && sr.body != null) ? sr.body : {};
+    const data = (typeof raw === 'object') ? raw : JSON.parse(String(raw || '{}'));
+    hits = Array.isArray(data.results) ? data.results.slice(0, 4) : [];
+  } catch (e) {
+    openWeb.push({ query: term, results: [], error: 'searxng:' + (e && (e.message || e.toString())).slice(0, 120) });
+    continue;
+  }
+  const results = [];
+  for (let i = 0; i < hits.length; i++) {
+    const u = hits[i].url;
+    const rec = { url: u, title: String(hits[i].title || '').slice(0, 200),
+      snippet: String(hits[i].content || '').slice(0, 400), source: 'open_web' };
+    if (i < 2 && u) {  // render the top 2 for a real quotable excerpt
+      try {
+        const rr = await this.helpers.httpRequest({
+          method: 'POST', url: 'http://browserless:3000/content',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: u, gotoOptions: { waitUntil: 'domcontentloaded' } }),
+          returnFullResponse: true, timeout: 30000,
+        });
+        const h = String((rr && rr.body) || '');
+        const text = h.replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        rec.excerpt = text.slice(0, 600);
+      } catch (e) { rec.render_error = (e && (e.message || e.toString())).slice(0, 80); }
+    }
+    results.push(rec);
+  }
+  openWeb.push({ query: term, results, retrieved_at: new Date().toISOString() });
+}
+
 return [{ json: {
   case_id: caseId,
   generated_at: new Date().toISOString(),
   source: 'n8n findevil-grounding (operator aid; not evidence, not in audit chain)',
   technique_research: research,
+  open_web_research: openWeb,
 } }];
 """.strip()
 
@@ -188,6 +243,50 @@ def _running(name: str) -> bool:
     return name in out.split()
 
 
+def _ensure_searxng() -> None:
+    """Start a self-hosted SearXNG (open-web search) on the shared net.
+
+    Public SERPs block headless browsers (anti-bot), so we run our own search
+    engine: keyless, JSON output, no upstream blocking for low-volume grounding.
+    Writes a settings.yml (JSON format on, limiter off, random secret) if absent.
+    """
+    if _running(SEARXNG_NAME):
+        _docker("network", "connect", NET, SEARXNG_NAME)
+        return
+    if not SEARXNG_SETTINGS.is_file():
+        import secrets
+
+        SEARXNG_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+        SEARXNG_SETTINGS.write_text(
+            "use_default_settings: true\n"
+            "server:\n"
+            f'  secret_key: "{secrets.token_hex(24)}"\n'
+            "  limiter: false\n"
+            "  image_proxy: false\n"
+            '  method: "GET"\n'
+            "search:\n"
+            "  safe_search: 0\n"
+            "  formats:\n"
+            "    - html\n"
+            "    - json\n"
+        )
+    _docker("rm", "-f", SEARXNG_NAME)
+    print(f"  starting {SEARXNG_NAME} on {NET}…")
+    _docker(
+        "run",
+        "-d",
+        "--name",
+        SEARXNG_NAME,
+        "--network",
+        NET,
+        "-p",
+        "127.0.0.1:8888:8080",
+        "-v",
+        f"{SEARXNG_SETTINGS}:/etc/searxng/settings.yml:ro",
+        SEARXNG_IMAGE,
+    )
+
+
 def ensure_infra() -> None:
     """Wire the shared docker network so n8n can reach browserless by name.
 
@@ -219,10 +318,12 @@ def ensure_infra() -> None:
             "127.0.0.1:3000:3000",
             BROWSERLESS_IMAGE,
         )
+    _ensure_searxng()
     if _running("n8n"):
         _docker("network", "connect", NET, "n8n")
     print(
-        f"  infra ready: network {NET}, {BROWSERLESS_NAME} reachable as {BROWSERLESS}"
+        f"  infra ready: network {NET}, {BROWSERLESS_NAME} ({BROWSERLESS}) + "
+        f"{SEARXNG_NAME} ({SEARXNG})"
     )
 
 

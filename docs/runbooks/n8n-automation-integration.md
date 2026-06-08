@@ -256,8 +256,22 @@ completed profile (unique username + display name → Create Profile) before **G
 an Auth-Key — shown **once** ("not viewable again"), so capture/copy it then. Same boundary:
 enrichment results are an operator aid, never evidence.
 
-**Remaining:** open-web research (browserless-only SERP, keyless), grounding-aware action routing,
-and CVE/NVD grounding — see the plan.
+## Open-web research (self-hosted SearXNG, keyless)
+
+For corroboration beyond the authoritative APIs, the workflow does keyless open-web research.
+Public SERPs block headless browsers (DuckDuckGo returns an anomaly challenge, Bing serves
+unreliable redirect-wrapped results), so we run **our own search engine**: a self-hosted
+**SearXNG** container on `findevil-net` (JSON output, no upstream blocking for low-volume
+grounding; `setup-grounding-workflow.py` bootstraps it idempotently). The research node queries
+SearXNG → takes the top result URLs → renders the top hits via browserless → structured-extracts
+`{title, snippet, excerpt, url}` (scripts/styles stripped, length-capped). `ground_verdict.py`
+seeds queries from malware families surfaced by IOC enrichment, then asserted-technique claims.
+
+Open web is the **lowest-trust** tier: inert DATA, never authoritative, never makes a claim
+`supported` on its own — it adds context the analyst can follow (e.g. a Recorded Future write-up
+of the malware family). Same boundary: operator aid, never evidence.
+
+**Remaining:** grounding-aware action routing and CVE/NVD grounding — see the plan.
 
 ---
 
