@@ -129,11 +129,6 @@ coverage/
 /ref-folders/
 /git-hub-references/
 
-# engram-vang/ — an external sibling clone with its own git repo that may
-# sit in this tree on a developer's disk. Not part of VERDICT; kept ignored
-# so the separate repo never enters the submission.
-/engram-vang/
-
 # Default evidence drop directory. The directory ships (README + .gitkeep)
 # so `find-evil-auto` has a documented default location, but actual
 # evidence dropped here never enters git. See evidence/README.md.

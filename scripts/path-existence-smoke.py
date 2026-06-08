@@ -223,12 +223,6 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # the audit chain), so its paths exist on a developer's disk but not in the
     # CI checkout.  Same shape as the git-hub-references/ external-clone allowance.
     re.compile(r"^n8n-references(/|$)"),
-    # Engram — an external sibling clone with its own git repo that may sit
-    # in this tree on a developer's disk.  /engram-vang/ is gitignored (never
-    # bundled in the submission), so its paths exist on a developer's disk
-    # but not in the CI checkout.  Same shape as the git-hub-references/
-    # external-clone allowance above.
-    re.compile(r"^(?:\.\./)*engram-vang(/|$)"),
     # User-level Claude Code auto-memory dir.  CLAUDE.md references
     # `memory/project_autonomous_queue.md` which actually lives at
     # `~/.claude/projects/<project>/memory/...`, not at repo root.
@@ -257,7 +251,7 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # obsidian-mind external vault notes (`brain/Memories.md`, etc.) quoted in
     # docs/runbooks/obsidian-mind-memory.md — paths inside the operator's separate
     # Obsidian vault (`cd obsidian-mind && claude`), not this repo. Same shape as
-    # the engram-vang / git-hub-references external-clone allowances above.
+    # the git-hub-references external-clone allowance above.
     re.compile(r"^brain/"),
     # Placeholder paths that carry a literal ellipsis (U+2026), e.g.
     # `obsidian-mind/brain/…` in CLAUDE.md or `obsidian-mind/…` in the
