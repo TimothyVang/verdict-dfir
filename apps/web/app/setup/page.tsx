@@ -8,6 +8,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 import { DashboardNav } from "@/components/DashboardNav";
 import { BrandMark, Kicker, MONO, RADIUS, RuleLine, SerifHeadline, VERDICT } from "@/lib/verdict-ui";
@@ -202,7 +203,7 @@ export default function SetupPage() {
               <code style={{ color: VERDICT.accentPurpleLight }}>python3 scripts/find-evil-live</code> — it
               opens the live dashboard and investigates on drop.
             </div>
-            <a
+            <Link
               href="/"
               style={{
                 display: "inline-block",
@@ -218,7 +219,7 @@ export default function SetupPage() {
               }}
             >
               Open mission control →
-            </a>
+            </Link>
           </section>
         ) : null}
 
