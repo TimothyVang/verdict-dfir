@@ -15,7 +15,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # ---------------------------------------------------------------------------
 # Shared base.
@@ -89,6 +89,26 @@ class Finding(_BaseEvent):
     mitre_technique: str | None = None  # e.g. "T1053.005"
     description: str
     pool_origin: Literal["A", "B", "merged"] | None = None
+    # SOUL.md / JUDGING.md §"IR Accuracy": an INFERRED finding must cite the
+    # confirmed facts it rests on (≥2). Carries the tool_call_ids (or
+    # finding_ids) of those facts. Optional so CONFIRMED/HYPOTHESIS findings,
+    # which don't derive from other facts, can omit it.
+    derived_from: list[str] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _enforce_hypothesis_prefix(cls, data: object) -> object:
+        """SOUL.md: HYPOTHESIS findings carry a ``hypothesis:`` prefix.
+
+        Normalize rather than reject — a missing prefix is a labeling slip,
+        not grounds for dropping a lead. Prepends the prefix when absent so
+        the epistemic level is unambiguous in the report and the audit chain.
+        """
+        if isinstance(data, dict) and data.get("confidence") == "HYPOTHESIS":
+            desc = data.get("description")
+            if isinstance(desc, str) and not desc.lstrip().lower().startswith("hypothesis:"):
+                data = {**data, "description": f"hypothesis: {desc.lstrip()}"}
+        return data
 
 
 class VerifierAction(_BaseEvent):

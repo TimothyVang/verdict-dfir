@@ -3175,6 +3175,81 @@ def _cap_first(text: str) -> str:
     return text[:1].upper() + text[1:] if text else text
 
 
+_RAW_TOOL_ERROR_MARKERS = ("tools/call:", "exited ", "Usage:", "--help", "Traceback")
+
+
+def clean_analysis_limitations(items: list[str]) -> list[str]:
+    """Make analysis limitations readable and non-repetitive for the report.
+
+    Raw tool-runner failures arrive as multi-line stderr dumps (CLI usage text,
+    stack traces) and can repeat once per tool invocation. Collapse each to a
+    one-line summary that names the failing tool and keeps the raw detail in the
+    audit log only, then drop duplicates while preserving order.
+    """
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        text = " ".join(str(item or "").split())
+        if not text:
+            continue
+        if any(marker in text for marker in _RAW_TOOL_ERROR_MARKERS):
+            match = re.match(r"([\w.-]+?)(?:_scan|_query)?(?: failed| could not| exited)", text)
+            tool = match.group(1) if match else "A tool"
+            text = (
+                f"{tool} did not complete (tool error); raw output is in the run "
+                "audit log. Resolve the tool's prerequisites and re-run."
+            )
+        if text not in seen:
+            seen.add(text)
+            cleaned.append(text)
+    return cleaned
+
+
+def inference_provenance_warnings(findings: list[dict[str, Any]]) -> list[str]:
+    """Surface INFERRED findings that don't cite ≥2 confirmed facts.
+
+    SOUL.md / JUDGING.md require an INFERRED finding to rest on ≥2 confirmed
+    facts, cited in ``derived_from``. This gate WARNS rather than blocks: it
+    never fabricates corroboration or silently drops a finding — it makes a
+    single-source inference visible as an analysis limitation so an analyst
+    (and a judge) can see exactly which inferences are thinly supported.
+    """
+    warnings: list[str] = []
+    for f in findings:
+        if f.get("confidence") != "INFERRED":
+            continue
+        cited = [c for c in (f.get("derived_from") or []) if c]
+        if len(set(cited)) < 2:
+            fid = f.get("finding_id", "<unknown>")
+            warnings.append(
+                f"INFERRED finding {fid} cites {len(set(cited))} confirmed "
+                "fact(s) in derived_from; the SOUL.md ≥2-fact rule wants two "
+                "independent sources before an inference is fully corroborated. "
+                "Treat as a single-source lead pending a second artifact class."
+            )
+    return warnings
+
+
+def normalize_hypothesis_prefix(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Ensure every HYPOTHESIS finding's description carries the ``hypothesis:`` prefix.
+
+    SOUL.md requires the prefix so the epistemic level is unambiguous. The
+    typed Finding validator handles findings built directly, but confidence
+    downgrades that happen *after* validation (verifier actions, correlator
+    model_copy) bypass it — so this pass runs over the final dict findings
+    just before they are sealed into verdict.json. Normalizes (prepends),
+    never drops.
+    """
+    out: list[dict[str, Any]] = []
+    for f in findings:
+        if f.get("confidence") == "HYPOTHESIS":
+            desc = f.get("description")
+            if isinstance(desc, str) and not desc.lstrip().lower().startswith("hypothesis:"):
+                f = {**f, "description": f"hypothesis: {desc.lstrip()}"}
+        out.append(f)
+    return out
+
+
 def build_executive_attack_story(
     findings: list[dict[str, Any]],
     verdict: str,
@@ -3289,9 +3364,11 @@ def build_executive_attack_story(
         category = profile.get("category", "")
         tail = f" — {category}" if category else ""
         headline = f"{tier_word}: {action}{where}{who}{tail}."
+        # Lead sentence = what happened (with time/host/account). The interpretation
+        # (evil + honest caveat) lives only in `assessment` below, so the BLUF does
+        # not print the same paragraph twice.
         customer_summary = (
-            f"The supplied evidence shows {action}{where}{who}{when}. "
-            f"{profile.get('evil', '')} {profile.get('honest_caveat', '')}"
+            f"The supplied evidence shows {action}{where}{who}{when}."
         ).strip()
         assessment = (
             f"{profile.get('evil', '')} {profile.get('honest_caveat', '')}"
@@ -3345,7 +3422,9 @@ def build_executive_attack_story(
         reason, recovery = GAP_REASON[cls]
         cannot_say.append(f"Undetermined: {reason}. To resolve: {recovery}.")
         gaps_added += 1
-    cannot_say.extend(analysis_limitations[:2])
+    # Run-specific analysis limitations (e.g. a tool that failed to run) are
+    # rendered in the technical Limitations section, not folded into the executive
+    # narrative — keeping raw tool failures out of the Bottom Line Up Front.
 
     return {
         "version": 1,
@@ -3509,9 +3588,13 @@ def attach_expert_miss_summary(
     attack_story: dict[str, Any], expert_miss_summary: dict[str, Any]
 ) -> dict[str, Any]:
     attack_story["expert_miss_summary"] = expert_miss_summary
-    can_say = list(attack_story.get("what_we_can_say", []) or [])
-    can_say.append(str(expert_miss_summary.get("summary") or ""))
-    attack_story["what_we_can_say"] = [item for item in can_say if item]
+    # Only surface the expert-miss tally in the customer narrative when an expert
+    # actually corrected something. A "0 misses" line is an internal QA metric, not
+    # a customer key finding, so it stays out of the Bottom Line Up Front.
+    if (expert_miss_summary or {}).get("total", 0) > 0:
+        can_say = list(attack_story.get("what_we_can_say", []) or [])
+        can_say.append(str(expert_miss_summary.get("summary") or ""))
+        attack_story["what_we_can_say"] = [item for item in can_say if item]
     return attack_story
 
 
@@ -3560,6 +3643,16 @@ def _extract_ascii_strings_from_hex(sample_hex: str, min_len: int = 4) -> list[s
     return _uniq(strings)[:25]
 
 
+# Final labels that make a `word.word` token an executable/file name, not a domain.
+_NON_DOMAIN_SUFFIXES = frozenset(
+    {
+        "exe", "dll", "sys", "bat", "cmd", "ps1", "psm1", "vbs", "vbe", "js",
+        "jse", "wsf", "wsh", "scr", "msi", "lnk", "dmp", "dat", "tmp", "log",
+        "bin", "hta", "cpl", "ocx", "drv", "efi", "ini", "cfg", "sav", "txt",
+    }
+)
+
+
 def _extract_iocs_from_texts(texts: list[str]) -> dict[str, list[str]]:
     blob = "\n".join(texts)
     iocs = _empty_iocs()
@@ -3574,6 +3667,14 @@ def _extract_iocs_from_texts(texts: list[str]) -> dict[str, list[str]]:
         )
     )[:50]
     domains = re.findall(r"\b(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}\b", blob)
+    # The regex also matches executable/file names like `calc.exe` or `cmd.exe`
+    # (the final label looks like a TLD). Those are processes, not domains — drop
+    # any candidate whose final label is a known file extension.
+    domains = [
+        domain
+        for domain in domains
+        if domain.rsplit(".", 1)[-1].lower() not in _NON_DOMAIN_SUFFIXES
+    ]
     iocs["domains"] = _uniq(
         [domain for domain in domains if not domain.lower().startswith("www.")]
         + [domain[4:] for domain in domains if domain.lower().startswith("www.")]
@@ -5349,6 +5450,9 @@ class Investigation:
                         "confidence": "INFERRED",
                         "pool_origin": "A",
                         "mitre_technique": "T1014",
+                        # Two confirmed tool outputs: pslist returned 0 and
+                        # psscan recovered N>0 EPROCESS objects.
+                        "derived_from": [tcid_pslist, tcid_psscan],
                     }
                 )
                 self.findings_pool_b.append(
@@ -5368,6 +5472,9 @@ class Investigation:
                         "confidence": "INFERRED",
                         "pool_origin": "B",
                         "mitre_technique": "T1014",
+                        # Same two confirmed facts seen from the integrity angle:
+                        # psscan recovered N>0 while pslist's active list was 0.
+                        "derived_from": [tcid_psscan, tcid_pslist],
                     }
                 )
 
@@ -5419,6 +5526,9 @@ class Investigation:
                     "confidence": "INFERRED",
                     "pool_origin": "B",
                     "mitre_technique": None,
+                    # Single confirmed source (psscan image-name list); the QA
+                    # gate surfaces this as a single-source inference.
+                    "derived_from": [tcid_psscan],
                 }
             )
 
@@ -6061,6 +6171,10 @@ class Investigation:
                     "confidence": "INFERRED",
                     "pool_origin": "B",
                     "mitre_technique": technique,
+                    # Single disk-artifact source (Prefetch); flagged by the QA
+                    # gate as a lead needing a second artifact class before any
+                    # standalone execution claim.
+                    "derived_from": [tcid],
                 }
                 self.findings_pool_b.append(prefetch_finding)
                 # Remember the executable so a later UserAssist match can promote
@@ -6229,22 +6343,25 @@ class Investigation:
         description: str,
         technique: str,
         confidence: str = "HYPOTHESIS",
+        derived_from: list[str] | None = None,
     ) -> None:
         target = self.findings_pool_a if pool == "A" else self.findings_pool_b
         if any(f.get("finding_id") == finding_id for f in target):
             return
-        target.append(
-            {
-                "case_id": self.handle["id"],
-                "finding_id": finding_id,
-                "tool_call_id": tool_call_id,
-                "artifact_path": artifact_path,
-                "description": description,
-                "confidence": confidence,
-                "pool_origin": pool,
-                "mitre_technique": technique,
-            }
-        )
+        finding = {
+            "case_id": self.handle["id"],
+            "finding_id": finding_id,
+            "tool_call_id": tool_call_id,
+            "artifact_path": artifact_path,
+            "description": description,
+            "confidence": confidence,
+            "pool_origin": pool,
+            "mitre_technique": technique,
+        }
+        # SOUL.md: INFERRED findings cite the confirmed facts they rest on.
+        if derived_from:
+            finding["derived_from"] = list(derived_from)
+        target.append(finding)
 
     def _disk_summary(self) -> dict[str, Any]:
         if self.disk_artifact_summary is None:
@@ -6373,6 +6490,7 @@ class Investigation:
                     ),
                     "T1071.001",
                     confidence=confidence,
+                    derived_from=[tcid],
                 )
                 emitted += 1
                 continue
@@ -6396,6 +6514,7 @@ class Investigation:
                     ),
                     "T1071.001",
                     confidence="INFERRED",
+                    derived_from=[tcid],
                 )
                 emitted += 1
                 continue
@@ -6416,6 +6535,7 @@ class Investigation:
                     ),
                     "T1071.001",
                     confidence="INFERRED",
+                    derived_from=[tcid],
                 )
                 emitted += 1
 
@@ -6494,6 +6614,7 @@ class Investigation:
                 ),
                 "T1071.001",
                 confidence="INFERRED",
+                derived_from=[tcid],
             )
             emitted += 1
 
@@ -7090,6 +7211,16 @@ class Investigation:
 
         merged = self._embed_verifier_replays(merged)
         merged = self._tag_finding_cves(merged)
+
+        # SOUL.md ≥2-fact provenance gate: surface (don't fabricate or drop)
+        # any INFERRED finding that cites fewer than two confirmed facts.
+        for warning in inference_provenance_warnings(merged):
+            self.analysis_limitations.append(warning)
+
+        # SOUL.md HYPOTHESIS-prefix normalization — catches confidence
+        # downgrades (verifier/correlator) that happen after Finding validation.
+        merged = normalize_hypothesis_prefix(merged)
+
         return merged, len(contras), kept, downgraded
 
     def _build_report_metadata(
@@ -7121,6 +7252,11 @@ class Investigation:
         )
         expert_rules = load_expert_rules()
         expert_doctrine = build_expert_doctrine(expert_rules)
+        # Summarize raw tool-error dumps and drop duplicates before any consumer
+        # (QA, narrative, verdict.json) reads the list.
+        self.analysis_limitations = clean_analysis_limitations(
+            self.analysis_limitations
+        )
         report_qa = build_report_qa_signoff(
             merged,
             self.tool_calls,
