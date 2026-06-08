@@ -112,6 +112,7 @@ def score(case_dir: Path) -> dict[str, Any]:
     have_output: set[str] = set()  # tool_call_ids with an output_hash
     findings: list[dict[str, Any]] = []
     rejected = 0
+    corrections = 0  # kind=course_correction records (real-time failure recovery)
 
     for rec in lines:
         kind = rec.get("kind")
@@ -128,6 +129,8 @@ def score(case_dir: Path) -> dict[str, Any]:
             findings.append(p)
         elif kind == "verifier_action" and p.get("action") == "rejected":
             rejected += 1
+        elif kind == "course_correction":
+            corrections += 1
 
     n = max(1, len(findings))
     conf = [f.get("confidence") for f in findings]
@@ -146,7 +149,7 @@ def score(case_dir: Path) -> dict[str, Any]:
     reproducible = "yes" if tools and have_output >= set(tools) else "no"
 
     answers = [
-        f"failures={failures} corrections=0",
+        f"failures={failures} corrections={corrections}",
         f"C={c * 100 // n}% I={i * 100 // n}% H={h * 100 // n}% (n={len(findings)})",
         f"classes={classes} crossed={'yes' if len(classes) >= 2 else 'no'}",
         f"rejected={rejected} reasons=[]",
