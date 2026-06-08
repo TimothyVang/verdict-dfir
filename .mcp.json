@@ -34,6 +34,12 @@
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    },
+    "qmd": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["scripts/run-mcp-qmd.sh"],
+      "cwd": "."
     }
   }
 }

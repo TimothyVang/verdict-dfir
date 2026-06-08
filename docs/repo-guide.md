@@ -15,7 +15,7 @@ see `docs/architecture.md`; for commands and the live-test gate see
 ├── Dockerfile / .dockerignore                      # Production multi-stage → ghcr.io/find-evil/find-evil:v<N>
 ├── LICENSE                                         # Apache-2.0
 ├── sift-2026-04-22.ova                             # ~9.4 GB SIFT VM image — Packer input; gitignored (*.ova), never committed
-├── .mcp.json / .mcp.json.sift                      # Auto-spawn registry: 5 servers (findevil-mcp, findevil-agent-mcp, n8n-mcp, playwright, puppeteer); .sift swaps the 2 product servers to SSH transport
+├── .mcp.json / .mcp.json.sift                      # Auto-spawn registry: 6 servers (2 product + n8n-mcp, playwright, puppeteer, qmd dev-memory); .sift swaps the 2 product servers to SSH transport
 │
 │   # ── PRODUCT (ships; in the audit chain) ──
 ├── services/mcp/                                   # Rust MCP server (19 typed DFIR tools; hand-rolled stdio JSON-RPC 2.0)

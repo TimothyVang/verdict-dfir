@@ -118,7 +118,7 @@ Per-environment setup (local DFIR binaries vs. the SANS SIFT VM) and evidence pl
 ├── apps/web/            — Next.js dashboard (live audit-stream viewer + design system)
 ├── scripts/             — verdict launcher (find-evil/-auto shims), report renderer, CI smoke runners
 ├── docs/                — reference/ (tools+deps+env), using/ (how to run), architecture, crypto attestation
-└── .mcp.json            — Claude Code auto-spawn registry: 5 MCP servers (2 product + 3 operator-runtime)
+└── .mcp.json            — Claude Code auto-spawn registry: 6 MCP servers (2 product + 4 non-product incl. qmd memory)
 ```
 
 ## Documentation

@@ -57,24 +57,20 @@ cd obsidian-mind && node --experimental-strip-types scripts/qmd-bootstrap.ts
 memory — recall via `grep`/Obsidian-CLI instead of QMD, and skip the MCP/hook steps below. You
 lose semantic search but keep durability, structure, and human-readability.
 
-## Wire QMD recall into the main repo session
+## QMD recall — shipped in `.mcp.json` (works from a fresh clone)
 
-Registered at **local scope** so the committed `.mcp.json` stays at its clean five product/operator
-servers (the QMD server is machine-specific and dev-only):
+`qmd` is the **6th MCP server** in the committed `.mcp.json`, launched by the machine-independent
+`scripts/run-mcp-qmd.sh` (it resolves Node 22 via nvm and runs the vault's `qmd-mcp.mjs` scoped to
+the `verdict-memory` index). So once a clone has run the install steps above, the next `claude`
+session exposes `mcp__qmd__query` / `get` / `multi_get` / `status` — no per-machine
+`claude mcp add` needed. Verify: `claude mcp get qmd` → `Project config (shared via .mcp.json)` +
+`✓ Connected`.
 
-```bash
-NODE22="$(nvm which 22)"; GLOBNM="$(dirname "$NODE22")/../lib/node_modules"
-claude mcp add -s local qmd \
-  -e NODE_PATH="$GLOBNM" \
-  -e PATH="$(dirname "$NODE22"):/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-  -- "$NODE22" "$PWD/obsidian-mind/.claude/scripts/qmd-mcp.mjs"
-claude mcp get qmd      # expect: ✓ Connected
-```
-
-The `PATH` entry matters: `@tobilu/qmd`'s `exports` field only exposes `.`, so the wrapper's
-subpath resolve fails and it falls back to the `qmd` shim — which must be on PATH (the Node-22
-bin dir). After this, a new session exposes `mcp__qmd__query` / `mcp__qmd__get` /
-`mcp__qmd__multi_get` / `mcp__qmd__status`, scoped to the `verdict-memory` index.
+The launcher is **inert without Node 22 + QMD** (it exits cleanly so the server just doesn't
+start), so a judge / a fresh clone without the toolchain is unaffected — `qmd` is dev/operator
+memory, never in the audit chain. (Implementation note: `@tobilu/qmd`'s `exports` field only
+exposes `.`, so the wrapper falls back to the `qmd` shim, which is why the launcher puts the
+Node-22 bin on `PATH`.)
 
 ## Recall + curation flow — wired into the repo (no folder switching)
 

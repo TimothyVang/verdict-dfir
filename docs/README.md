@@ -74,7 +74,7 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 
 | File | Status | Purpose |
 |---|---|---|
-| `mcp-and-tools.md` | **ACTIVE** | Single source of truth for MCP servers (5 registered: 2 product + 3 operator-runtime) + the 31 product tools + the no-`execute_shell` invariant. Resolves the server "undercount." |
+| `mcp-and-tools.md` | **ACTIVE** | Single source of truth for MCP servers (6 registered: 2 product + 4 non-product incl. `qmd` dev-memory) + the 31 product tools + the no-`execute_shell` invariant. Resolves the server "undercount." |
 | `dependencies.md` | **ACTIVE** | Dependency + external-DFIR-tool + version matrix mirroring `scripts/doctor.sh`; licenses + expected-failure-when-missing. |
 | `environment-variables.md` | **ACTIVE** | The ~35 `FIND_EVIL_*`/`FINDEVIL_*`/credential/SIFT/n8n env vars in one table. |
 

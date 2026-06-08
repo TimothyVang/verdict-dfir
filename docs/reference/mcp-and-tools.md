@@ -10,10 +10,11 @@ Two numbers that look like a contradiction but aren't:
 
 - **31** = the **product tool surface** (19 Rust + 12 Python). This is the narrow, typed,
   audit-chained verb set the investigation runs on. It does not change lightly.
-- **5** = the number of **MCP servers actually registered in `.mcp.json`**. Only the first two
-  are product-default and in the audit chain; the other three are operator-runtime conveniences.
+- **6** = the number of **MCP servers actually registered in `.mcp.json`**. Only the first two
+  are product-default and in the audit chain; the other four are non-product conveniences
+  (operator-runtime browser/automation + the `qmd` dev-memory recall server).
 
-Neither number contradicts the other: 31 counts *product tools*, 5 counts *registered servers*.
+Neither number contradicts the other: 31 counts *product tools*, 6 counts *registered servers*.
 
 ---
 
@@ -26,21 +27,25 @@ Neither number contradicts the other: 31 counts *product tools*, 5 counts *regis
 | 3 | `n8n-mcp` | stdio · `npx -y n8n-mcp` (`MCP_MODE=stdio`) | Post-verdict finding-to-action automation (operator-local) | No | No |
 | 4 | `playwright` | stdio · `npx -y @playwright/mcp@latest` | Browser automation / dashboard verification | No | No |
 | 5 | `puppeteer` | stdio · `npx -y @modelcontextprotocol/server-puppeteer` | Gated-asset (SANS SIFT OVA) browser download during `setup` | No | No |
+| 6 | `qmd` | stdio · `bash scripts/run-mcp-qmd.sh` | obsidian-mind **dev-memory recall** (`mcp__qmd__query` over the `verdict-memory` vault) | No | No |
 
 **Product-default (1–2)** are the only servers whose calls are hash-chained into `audit.jsonl`,
 Merkle-rooted, and signed. Every Finding cites a `tool_call_id` from one of these two.
 
-**Operator-runtime (3–5)** are convenience servers for the human operator (automation, browser
-tasks). They **never touch evidence, never append to the audit chain, and never emit a
-Finding.** A Codex/Claude operator seeing five entries in `.mcp.json` is correct — it is not
-malformed.
+**Non-product (3–6)** are conveniences for the human operator — automation (`n8n-mcp`), browser
+tasks (`playwright`/`puppeteer`), and **`qmd` dev-memory recall** (see
+[`../runbooks/obsidian-mind-memory.md`](../runbooks/obsidian-mind-memory.md)). They **never touch
+evidence, never append to the audit chain, and never emit a Finding.** `qmd` is launched via
+`scripts/run-mcp-qmd.sh`, which resolves Node 22 via nvm and is **inert without Node 22 + QMD** —
+so a fresh clone / a judge without the toolchain simply doesn't get it. Seeing six entries in
+`.mcp.json` is correct, not malformed.
 
 ### SIFT-transport variant — `.mcp.json.sift`
 
 `scripts/find-evil-sift` (and `scripts/verdict --sift`) swap **servers 1 and 2** to an `ssh`
 transport that runs the same two binaries inside the SANS SIFT VM (IP/key/repo populated at
 runtime from `SIFT_SSH_KEY` / `SIFT_VM_IP` / `GUEST_USER` / `GUEST_REPO_PATH`; default key
-`~/.ssh/sift_key`). Servers 3–5 stay host-local. Do **not** hand-edit the IP or key path in
+`~/.ssh/sift_key`). Servers 3–6 stay host-local. Do **not** hand-edit the IP or key path in
 `.mcp.json.sift` — they are rewritten automatically.
 
 ### Globally-registered MCP (outside `.mcp.json`)
