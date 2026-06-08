@@ -155,6 +155,17 @@ must be `true`, and the Verdict word must be honest about coverage (an `INDETERM
 custody-only disk is a PASS). Full PASS criteria and the per-evidence-type matrix:
 `docs/live-test-matrix.md`.
 
+**Test evidence vs. scored benchmarks (don't conflate the two).** `evidence/` is the ad-hoc
+live-run drop zone — pass an explicit path per case (`scripts/verdict evidence/<file>`); never
+run with no path when it holds multiple unrelated cases. `fixtures/<case>/` is the *scored*
+benchmark corpus, paired 1:1 with `goldens/<case>/expected-findings.json` and graded by
+`scripts/score-recall.py`. The split is **enforced**: `scripts/fetch-fixtures.sh` aborts if
+`FIXTURES` resolves under `evidence/`. A **golden is an answer key** — only author one when a
+real published ground truth exists (NIST key, scenario solution); competition cases whose briefs
+are mere *background* (ROCBA, base-dc, SANS starter) are **live-run-only, not scoreable**. Never
+fabricate a golden. Full corpus inventory, the SANS Egnyte download mechanism, and per-dataset
+recall results: `docs/DATASET.md`.
+
 ---
 
 ## 6. How to code in this repo (four principles)
@@ -247,6 +258,7 @@ the audit chain.
 | How to run the product (flags, modes, output layout) | `docs/using/running-verdict.md` |
 | Fleet analysis (3-stage pipeline) | `docs/using/fleet-analysis.md` |
 | Evidence staging / report customization | `docs/using/evidence-intake.md`, `docs/using/reports.md` |
+| Public test-dataset corpus, goldens, recall scoring | `docs/DATASET.md` |
 | Per-tool analyst playbooks + expected-failure table | `docs/analyst/tool-playbooks.md` |
 | Dev/operator memory layer (obsidian-mind + boundary) | `docs/runbooks/obsidian-mind-memory.md` |
 | 3-step quick start | `QUICKSTART.md` |
