@@ -242,6 +242,11 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # Disk-image file-extension examples written as a pair (e.g. `.dd/.E01`) in
     # docs/DATASET.md — extension shorthand, not a filesystem path.
     re.compile(r"^\.[A-Za-z0-9]+/\.[A-Za-z0-9]+$"),
+    # obsidian-mind external vault notes (`brain/Memories.md`, etc.) quoted in
+    # docs/runbooks/obsidian-mind-memory.md — paths inside the operator's separate
+    # Obsidian vault (`cd obsidian-mind && claude`), not this repo. Same shape as
+    # the engram-vang / git-hub-references external-clone allowances above.
+    re.compile(r"^brain/"),
 )
 
 # Compile once.  PATH_RE matches any backtick-quoted token that
