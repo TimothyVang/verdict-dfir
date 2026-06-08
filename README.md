@@ -19,6 +19,11 @@ images, EVTX logs, disk artifacts, and network captures — and produces an evid
 party can verify offline**. It runs as a [Claude Code](https://claude.com/claude-code) agent over a
 narrow, typed tool surface, so every conclusion cites the exact tool call that produced it.
 
+<p align="center">
+  <a href="docs/find-evil-demo.mp4"><img src="assets/screenshots/demo.gif" alt="VERDICT live investigation dashboard streaming a case" width="760"></a>
+</p>
+<p align="center"><sub>The live dashboard streams every tool call and finding as the case runs. <a href="docs/find-evil-demo.mp4">Watch the full walkthrough →</a></sub></p>
+
 ## What you get
 
 Every run writes a self-contained case directory:
@@ -29,6 +34,11 @@ Every run writes a self-contained case directory:
 | `verdict.json` | The evidence-bound verdict + findings, each citing a `tool_call_id` and a confidence tier |
 | `run.manifest.json` | Merkle root over canonical tool outputs + signature metadata — verifiable offline |
 | `report.html` | Analyst report: findings, ATT&CK coverage, normalized timeline, next analyst actions |
+
+<p align="center">
+  <img src="assets/screenshots/chain-of-custody.png" alt="Cryptographic chain of custody: hash-chained audit log to Merkle root to signed manifest" width="760">
+</p>
+<p align="center"><sub>Every run seals into a hash-chained audit log, a Merkle root over canonical tool outputs, and a signed manifest — verifiable offline with <code>manifest_verify</code>.</sub></p>
 
 ## How it works
 
@@ -97,6 +107,11 @@ Velociraptor). Output lands in `tmp/auto-runs/<case-id>/`, and the dashboard
 
 **Prefer to drive it yourself?** Open Claude Code in the repo (`claude`) and prompt
 `investigate <path>` — same tools, interactive.
+
+<p align="center">
+  <img src="assets/screenshots/claudecode.png" alt="Driving VERDICT interactively as a Claude Code agent" width="520">
+</p>
+<p align="center"><sub>Agent mode: VERDICT scopes the evidence, plans the live test, and confirms run mode before it touches a byte.</sub></p>
 
 **No evidence yet?** Evidence files are never committed (they're gitignored), so a fresh clone
 ships with none. Stage public test datasets with `bash scripts/fetch-fixtures.sh` (sources +
