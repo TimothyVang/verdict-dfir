@@ -347,6 +347,53 @@ def offline_openweb_checks(gv) -> None:
     )
 
 
+def offline_actions_checks() -> None:
+    print("[offline] grounding-aware action routing")
+    spec = importlib.util.spec_from_file_location(
+        "ground_actions", ROOT / "scripts" / "ground_actions.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    grounding = {
+        "verdict": "SUSPICIOUS",
+        "grounding": [
+            {
+                "technique_id": "T1055",
+                "status": "supported",
+                "possible_hallucination": False,
+            },
+            {
+                "technique_id": "T9999",
+                "status": "contradicted",
+                "possible_hallucination": True,
+            },
+        ],
+        "ioc_grounding": [
+            {"ioc": "abc123", "status": "malicious"},
+            {"ioc": "good.test", "status": "clean", "possible_overclaim": True},
+        ],
+    }
+    actions = mod.derive_actions(grounding)
+    check(
+        all(a["auto"] is False for a in actions),
+        "all actions are human-in-the-loop (auto=false)",
+    )
+    by_basis = {a["based_on"]: a for a in actions}
+    check(
+        by_basis.get("T1055", {}).get("route") == "act",
+        "supported technique on SUSPICIOUS -> act",
+    )
+    check(
+        by_basis.get("T9999", {}).get("route") == "review",
+        "possible-hallucination technique -> review",
+    )
+    check(by_basis.get("abc123", {}).get("route") == "act", "malicious IOC -> act")
+    check(
+        by_basis.get("good.test", {}).get("route") == "review",
+        "possible-overclaim IOC -> review",
+    )
+
+
 def webhook_up() -> bool:
     try:
         with urllib.request.urlopen(N8N_HEALTH, timeout=4) as r:
@@ -413,6 +460,7 @@ def main() -> int:
     offline_checks(gv)
     offline_ioc_checks(gv)
     offline_openweb_checks(gv)
+    offline_actions_checks()
     if webhook_up():
         live_checks()
     else:

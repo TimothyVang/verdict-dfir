@@ -57,6 +57,14 @@ interface IocGrounding {
   rationale?: string;
 }
 
+interface ActionItem {
+  action: string;
+  based_on?: string;
+  why?: string;
+  route?: string; // act | review
+  auto?: boolean;
+}
+
 interface OpenWebItem {
   query: string;
   relevance?: string; // corroborates | contradicts | unrelated
@@ -96,6 +104,7 @@ interface GroundingData {
   grounding?: GroundingClaim[];
   ioc_grounding?: IocGrounding[];
   open_web?: OpenWebItem[];
+  actions?: ActionItem[];
   coverage_targets?: CoverageTargets;
   summary?: GroundingSummary;
 }
@@ -319,6 +328,31 @@ function IocRow({ ioc }: { ioc: IocGrounding }) {
   );
 }
 
+function ActionRow({ item }: { item: ActionItem }) {
+  const isAct = item.route === "act";
+  const color = isAct ? VERDICT.accentPurpleLight : VERDICT.inferred;
+  return (
+    <div style={{ padding: "10px 0", borderTop: `1px solid ${VERDICT.borderSubtle}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <Chip label={item.route === "act" ? "act" : "review"} color={color} />
+        {item.based_on ? (
+          <code style={{ fontFamily: MONO, fontSize: 12, color: VERDICT.muted }}>
+            {item.based_on.length > 20 ? item.based_on.slice(0, 17) + "…" : item.based_on}
+          </code>
+        ) : null}
+      </div>
+      <div style={{ marginTop: 4, fontFamily: MONO, fontSize: 12.5, lineHeight: 1.55, color: VERDICT.text }}>
+        {item.action}
+      </div>
+      {item.why ? (
+        <div style={{ marginTop: 2, fontFamily: GROTESK, fontSize: 11, color: VERDICT.mutedDark }}>
+          {item.why}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 const RELEVANCE_COLOR: Record<string, string> = {
   corroborates: VERDICT.hypothesis,
   contradicts: VERDICT.alertRed,
@@ -437,6 +471,34 @@ export function GroundingPanel({ caseDir }: { caseDir: string }) {
           color={(s.renumbered_ids ?? 0) > 0 ? VERDICT.inferred : VERDICT.muted}
         />
       </div>
+
+      {(data.actions?.length ?? 0) > 0 ? (
+        <div
+          style={{
+            marginTop: 10,
+            padding: "10px 12px",
+            background: VERDICT.surfaceInset,
+            border: `1px solid ${VERDICT.borderSubtle}`,
+            borderRadius: RADIUS.tile,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: GROTESK,
+              fontSize: 11,
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+              color: VERDICT.muted,
+            }}
+          >
+            Recommended actions
+            <span style={{ color: VERDICT.mutedDark }}> (human-in-the-loop · nothing auto-run)</span>
+          </div>
+          {(data.actions ?? []).map((item, i) => (
+            <ActionRow key={`act-${i}`} item={item} />
+          ))}
+        </div>
+      ) : null}
 
       {claims.length > 0 ? (
         <div style={{ marginTop: 6 }}>

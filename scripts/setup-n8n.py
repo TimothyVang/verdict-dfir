@@ -8,8 +8,9 @@ It makes the post-verdict automation reproducible instead of hand-set:
   2. Ensure an owner account exists (create it on a fresh instance, else log in).
   3. Ensure a REST API key exists (reuse a saved one, else mint one via the
      authenticated session).
-  4. Deploy + activate the `findevil-finding-to-action` workflow
-     (webhook -> route+map -> write ticket -> [Slack] -> respond) and smoke-test it.
+  4. (No longer deploys the `findevil-finding-to-action` workflow — superseded by
+     grounding-aware routing in scripts/ground_actions.py. The owner + API key
+     provisioned here are what scripts/setup-grounding-workflow.py needs.)
 
 Credentials/key are written to gitignored files under tmp/ (the same paths
 scripts/n8n_post.py and the dashboard already read):
@@ -381,11 +382,19 @@ def main() -> int:
     key = ensure_api_key()
     if not key:
         return 0
-    deploy_workflow(key)
+    # NOTE: the `findevil-finding-to-action` workflow (deploy_workflow / WRITE_JS /
+    # ACTIONS / JS_CODE below) is SUPERSEDED by grounding-aware routing in
+    # scripts/ground_actions.py (host-side, written into grounding.json,
+    # human-in-the-loop). Its in-node fs.writeFileSync is also disallowed on
+    # n8n 2.x. We no longer deploy it; the owner + API key provisioned above are
+    # what the grounding workflow (scripts/setup-grounding-workflow.py) needs.
     log(
         f"done. creds -> {CRED_FILE.relative_to(ROOT)}, key -> {KEY_FILE.relative_to(ROOT)}"
     )
-    log("dashboard AutomationPanel + scripts/n8n_post.py will now route live verdicts.")
+    log(
+        "n8n owner + API key ready. Deploy grounding: "
+        "python3 scripts/setup-grounding-workflow.py"
+    )
     return 0
 
 

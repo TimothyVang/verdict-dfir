@@ -271,7 +271,20 @@ Open web is the **lowest-trust** tier: inert DATA, never authoritative, never ma
 `supported` on its own — it adds context the analyst can follow (e.g. a Recorded Future write-up
 of the malware family). Same boundary: operator aid, never evidence.
 
-**Remaining:** grounding-aware action routing and CVE/NVD grounding — see the plan.
+## Grounding-aware action routing (supersedes finding-to-action)
+
+`scripts/ground_actions.py` reads the judged `grounding.json` and derives **recommended** next
+actions keyed off the grounding statuses + the verdict word: a `supported` technique on a
+`SUSPICIOUS` verdict or a `malicious` IOC routes to **act** (the per-technique IR step from
+`docs/finding-to-action.md`, a fleet hunt for the IOC); a `possible_hallucination`,
+`contradicted`, or `possible_overclaim` routes to **review** (re-examine — never auto-act). Every
+action is `auto: false` (human-in-the-loop) and written into the `grounding.json` sidecar; the
+dashboard shows a "Recommended actions" section. This **replaces** the old
+`findevil-finding-to-action` n8n workflow (whose in-node `fs.writeFileSync` is disallowed on
+n8n 2.x); `setup-n8n.py` no longer deploys it, but still provisions the n8n owner + API key the
+grounding workflow needs.
+
+**Remaining:** CVE/NVD grounding — see the plan.
 
 ---
 
