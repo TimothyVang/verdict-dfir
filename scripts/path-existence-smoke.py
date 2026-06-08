@@ -249,6 +249,11 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # Obsidian vault (`cd obsidian-mind && claude`), not this repo. Same shape as
     # the engram-vang / git-hub-references external-clone allowances above.
     re.compile(r"^brain/"),
+    # Placeholder paths that carry a literal ellipsis (U+2026), e.g.
+    # `obsidian-mind/brain/…` in CLAUDE.md or `obsidian-mind/…` in the
+    # obsidian-mind runbook. The ellipsis means "and so on" — a real file
+    # can never contain it, so any such token is illustrative, not a path.
+    re.compile(r".*…"),
 )
 
 # Compile once.  PATH_RE matches any backtick-quoted token that

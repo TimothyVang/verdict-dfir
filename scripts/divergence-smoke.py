@@ -323,10 +323,20 @@ _MCP_JSON_FORBIDDEN_TOKENS = (
     "browser",
 )
 _MCP_JSON_REQUIRED_SERVERS = frozenset({"findevil-mcp", "findevil-agent-mcp"})
+# Non-product servers .mcp.json may also register (CLAUDE.md §3/§4): they never
+# touch evidence, never emit Findings, and are not in the audit chain. Six
+# servers total = 2 product + these 4. The forbidden-token (gateway/shell)
+# check below applies only to the product servers, since the narrow audit-chain
+# surface is the invariant — these are explicitly browser/automation/memory tools.
+_MCP_JSON_ALLOWED_NONPRODUCT_SERVERS = frozenset(
+    {"n8n-mcp", "playwright", "puppeteer", "qmd"}
+)
 
 
 def _check_mcp_json_surface() -> list[str]:
-    """Assert .mcp.json has exactly the two typed servers and no gateway/shell tokens."""
+    """Assert .mcp.json keeps the two typed product servers (plus only the
+    documented non-product servers) and no gateway/shell drift on the product
+    surface."""
     import json
 
     mcp_path = REPO / ".mcp.json"
@@ -342,17 +352,26 @@ def _check_mcp_json_surface() -> list[str]:
     server_names = frozenset(servers.keys())
     issues = []
 
-    extra = server_names - _MCP_JSON_REQUIRED_SERVERS
+    extra = (
+        server_names - _MCP_JSON_REQUIRED_SERVERS - _MCP_JSON_ALLOWED_NONPRODUCT_SERVERS
+    )
     if extra:
         issues.append(
-            f".mcp.json has unexpected server(s): {sorted(extra)} — "
-            "only findevil-mcp and findevil-agent-mcp are permitted"
+            f".mcp.json has unexpected server(s): {sorted(extra)} — only the two "
+            "product servers (findevil-mcp, findevil-agent-mcp) and the documented "
+            f"non-product servers {sorted(_MCP_JSON_ALLOWED_NONPRODUCT_SERVERS)} "
+            "are permitted"
         )
     missing = _MCP_JSON_REQUIRED_SERVERS - server_names
     if missing:
         issues.append(f".mcp.json is missing required server(s): {sorted(missing)}")
 
+    # Gateway/shell pass-through is forbidden on the product (audit-chain)
+    # surface. The non-product servers are by-design browser/automation tools
+    # and are not in the audit chain, so they are exempt from this scan.
     for name, server in servers.items():
+        if name not in _MCP_JSON_REQUIRED_SERVERS:
+            continue
         args = server.get("args", [])
         cmd = server.get("command", "")
         combined = " ".join([cmd] + args).lower()

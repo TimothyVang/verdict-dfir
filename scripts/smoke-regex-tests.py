@@ -202,6 +202,16 @@ PATH_EXISTENCE_ALLOW_CASES = [
         "services/foo/bar.py",
         False,
     ),
+    (
+        "Ellipsis placeholder path is allow-listed",
+        "obsidian-mind/brain/…",
+        True,
+    ),
+    (
+        "Mid-path ellipsis placeholder is allow-listed",
+        "services/foo/…/bar",
+        True,
+    ),
 ]
 
 
