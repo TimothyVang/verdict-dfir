@@ -179,7 +179,7 @@ def validate_report_text(text: str) -> CheckResult:
     required_common = (
         "<html",
         "</html>",
-        "find evil",
+        "verdict",
         "cryptographic attestation",
     )
     missing = [token for token in required_common if token not in lowered]

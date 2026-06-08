@@ -370,7 +370,7 @@ def main() -> int:
             ]
         )
         valid_html_text = """<!doctype html><html><body>
-            <h1>Find Evil investigation report</h1>
+            <h1>VERDICT — Forensic Investigation Report</h1>
             <h2>Cryptographic Attestation</h2>
             <h2>QA / Expert Signoff</h2>
             <h2>Customer Release Gate</h2>
@@ -386,7 +386,7 @@ def main() -> int:
         invalid_html = case_dir / "invalid-investigation-report.html"
         invalid_html.write_text(
             """<!doctype html><html><body>
-            <h1>Find Evil investigation report</h1>
+            <h1>VERDICT — Forensic Investigation Report</h1>
             <h2>Cryptographic Attestation</h2>
             <h2>QA / Expert Signoff</h2>
             <h2>Customer Release Gate</h2>
@@ -446,7 +446,10 @@ def main() -> int:
             "## Observed Hosts, Accounts & Processes" in text,
         ),
         ("iocs heading", "## Indicators of Compromise (IOCs)" in text),
-        ("analysis coverage by domain heading", "## Analysis Coverage by Domain" in text),
+        (
+            "analysis coverage by domain heading",
+            "## Analysis Coverage by Domain" in text,
+        ),
         ("technical report tier divider", "# Technical Report {.tier-break}" in text),
         (
             "internal gates tier divider",
