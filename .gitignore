@@ -1,5 +1,7 @@
 # Large binaries / evidence / VMs
 *.ova
+*.pcap
+*.pcapng
 *.qcow2
 *.vmdk
 *.vdi
@@ -20,6 +22,9 @@
 # Memory-image evidence dropped in the repo root for local investigation
 # (e.g. Rocba-Memory.zip wraps a ~5.6 GB .7z). Evidence never enters git.
 /Rocba-Memory.zip
+# Benchmark fixtures pulled by scripts/fetch-fixtures.sh — never committed
+# (only goldens, scripts, and docs are tracked). See docs/DATASET.md.
+/fixtures/
 
 # Rust
 target/
@@ -99,7 +104,15 @@ coverage/
 /hermes-agent/
 /Linear-Coding-Agent-Harness/
 /.playwright-mcp/
-/obsidian-mind/
+# obsidian-mind is VENDORED into the repo as the dev/operator memory layer (no
+# longer a separate clone). See docs/runbooks/obsidian-mind-memory.md + CLAUDE.md
+# §8.5. Track the vault content; ignore derived state + heavy template marketing.
+/obsidian-mind/.obsidian/
+/obsidian-mind/node_modules/
+/obsidian-mind/obsidian-mind-demo.gif
+/obsidian-mind/README.ja.md
+/obsidian-mind/README.ko.md
+/obsidian-mind/README.zh-CN.md
 # n8n research clones (8 repos: n8n-io/n8n, n8n-docs, czlonkowski/n8n-mcp +
 # n8n-skills, Zie619/n8n-workflows, enescingoz/awesome-n8n-templates,
 # nusquama/n8nworkflows.xyz, djeknet/n8n-master-workflows); see
