@@ -33,6 +33,7 @@ import matplotlib.patches as mpatches  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch  # noqa: E402
 
+
 def _resolve_tool(env_var: str, *fallback_names: str) -> str | None:
     override = os.environ.get(env_var, "").strip()
     if override and Path(override).exists():
@@ -303,49 +304,6 @@ def fig_psscan_timeline(psscan: list[dict[str, Any]], out: Path) -> None:
     plt.close(fig)
 
 
-def fig_findings_table(findings: list[dict[str, Any]], out: Path) -> None:
-    fig, ax = plt.subplots(figsize=(12, 0.5 + 0.4 * max(1, len(findings))))
-    ax.axis("off")
-    if not findings:
-        ax.text(
-            0.5,
-            0.5,
-            "No merged findings",
-            ha="center",
-            va="center",
-            fontsize=11,
-            color="#777",
-        )
-        fig.savefig(out)
-        plt.close(fig)
-        return
-    table_data = [["Conf.", "Pool", "MITRE", "Description"]]
-    for f in findings[:20]:
-        table_data.append(
-            [
-                f.get("confidence", "?")[:9],
-                f.get("pool_origin", "?")[:1],
-                (f.get("mitre_technique") or "—")[:10],
-                (f.get("description", ""))[:90],
-            ]
-        )
-    table = ax.table(
-        cellText=table_data,
-        loc="center",
-        cellLoc="left",
-        colWidths=[0.10, 0.05, 0.10, 0.75],
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(8)
-    table.scale(1, 1.4)
-    for i in range(len(table_data[0])):
-        cell = table[(0, i)]
-        cell.set_facecolor("#9b59b6")
-        cell.set_text_props(color="white", fontweight="bold")
-    fig.savefig(out)
-    plt.close(fig)
-
-
 def _parse_event_time(event: dict[str, Any]) -> datetime | None:
     value = event.get("timestamp_utc") or event.get("ts")
     if not value:
@@ -553,52 +511,6 @@ def fig_attack_story_timeline(attack_story: dict[str, Any], out: Path) -> bool:
         )
     ax.set_title("How they got hacked - evidence-bound attack story")
     fig.tight_layout()
-    fig.savefig(out)
-    plt.close(fig)
-    return True
-
-
-def fig_practitioner_coverage(coverage: dict[str, Any], out: Path) -> bool:
-    lanes = coverage.get("lanes", {}) if coverage else {}
-    fig, ax = plt.subplots(figsize=(12, 2.4 + 0.35 * max(1, len(lanes))))
-    ax.axis("off")
-    if not lanes:
-        ax.text(
-            0.5,
-            0.5,
-            "No practitioner coverage data available",
-            ha="center",
-            va="center",
-            fontsize=11,
-            color="#777",
-        )
-        fig.savefig(out)
-        plt.close(fig)
-        return False
-    table_data = [["Domain", "Status", "Artifacts Seen", "Tools", "ATT&CK Data Sources"]]
-    for lane, row in lanes.items():
-        table_data.append(
-            [
-                _lane_label(lane, row),
-                row.get("status", "?"),
-                ", ".join(row.get("artifact_classes_seen") or []) or "none",
-                ", ".join(row.get("tools_run") or []) or "none",
-                ", ".join(row.get("attck_data_sources_seen") or []) or "none",
-            ]
-        )
-    table = ax.table(
-        cellText=table_data,
-        loc="center",
-        cellLoc="left",
-        colWidths=[0.17, 0.13, 0.20, 0.25, 0.25],
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(7.5)
-    table.scale(1, 1.35)
-    for i in range(len(table_data[0])):
-        cell = table[(0, i)]
-        cell.set_facecolor("#9b59b6")
-        cell.set_text_props(color="white", fontweight="bold")
     fig.savefig(out)
     plt.close(fig)
     return True
@@ -1016,7 +928,7 @@ def html_event_composition(evtx_summary: dict[str, Any] | None) -> str:
         '<div class="vfig vcomp">'
         f'<div class="vfig-title">What the evidence contains '
         f'<span class="vfig-sub">{_h(total)} records</span></div>'
-        f'{"".join(rows)}</div>'
+        f"{''.join(rows)}</div>"
     )
 
 
@@ -1028,7 +940,9 @@ def html_event_sequence(events: list[dict[str, Any]]) -> str:
     rows = []
     for event in key_events:
         entities = event.get("entities") or {}
-        critical = _event_id_from_ref(event.get("source_record_ref")) in CRITICAL_EVENT_IDS
+        critical = (
+            _event_id_from_ref(event.get("source_record_ref")) in CRITICAL_EVENT_IDS
+        )
         kind = "vseq-evil" if critical else "vseq-ctx"
         who = _format_account_display(entities) or _entity_cell(
             entities, "host", "workstation"
@@ -1039,9 +953,7 @@ def html_event_sequence(events: list[dict[str, Any]]) -> str:
             if critical
             else '<span class="vseq-tag">context</span>'
         )
-        sub = " &nbsp;·&nbsp; ".join(
-            _h(v) for v in (who, tcid) if v
-        )
+        sub = " &nbsp;·&nbsp; ".join(_h(v) for v in (who, tcid) if v)
         rows.append(
             f'<li class="vseq-item {kind}"><span class="vseq-dot"></span>'
             f'<span class="vseq-time">{_h(event.get("timestamp_utc") or "—")}</span>'
@@ -1178,10 +1090,7 @@ def build_timeline_of_events_section(
         "\n## Timeline\n\n"
         "Key events in chronological order, traceable by account, host, and address; "
         "each cites the tool call that produced it. The full event ledger is in the "
-        "technical report below.\n\n"
-        + figs
-        + narrative_block
-        + table_block
+        "technical report below.\n\n" + figs + narrative_block + table_block
     )
 
 
@@ -1205,7 +1114,9 @@ def build_detailed_event_timeline_section(
         entities = event.get("entities") or {}
         process = _entity_cell(entities, "process")
         pid = _entity_cell(entities, "pid")
-        process_pid = f"{process} ({pid})" if process and pid else (process or pid or "")
+        process_pid = (
+            f"{process} ({pid})" if process and pid else (process or pid or "")
+        )
         rows.append(
             "| {ts} | {ac} | {ev} | {acct} | {host} | {ip} | {logon} | {pp} | "
             "{conf} | `{tcid}` |".format(
@@ -1231,10 +1142,7 @@ def build_detailed_event_timeline_section(
     return (
         "\n## Full Event Timeline\n\n"
         f"Normalized timeline events: {len(timeline)}. First 40 shown below; full "
-        f"data is in {exports}.\n\n"
-        + fig_block
-        + "\n".join(rows)
-        + "\n\n"
+        f"data is in {exports}.\n\n" + fig_block + "\n".join(rows) + "\n\n"
     )
 
 
@@ -1350,7 +1258,6 @@ def write_markdown(
     event_narratives: list[dict[str, Any]] | None = None,
     has_timeline_fig: bool = False,
     has_attack_story_fig: bool = False,
-    has_practitioner_fig: bool = False,
     has_process_view_fig: bool = False,
     has_entity_timeline_fig: bool = False,
 ) -> Path:
@@ -1494,6 +1401,21 @@ def write_markdown(
     findings_section = (
         "\n".join(findings_md_lines) if findings_md_lines else "*No merged findings.*"
     )
+    if merged:
+        findings_summary_rows = [
+            "| Confidence | Pool | MITRE | Finding |",
+            "|---|---|---|---|",
+        ]
+        for finding in merged:
+            findings_summary_rows.append(
+                f"| {md_cell(finding.get('confidence', ''))} "
+                f"| {md_cell(finding.get('pool_origin', ''))} "
+                f"| {md_cell(finding.get('mitre_technique', '') or '—')} "
+                f"| {md_cell(finding.get('description', ''))} |"
+            )
+        findings_summary_table = "\n".join(findings_summary_rows)
+    else:
+        findings_summary_table = "*No merged findings.*"
     replay_appendix = ""
     if len(replay_rows) > 2:
         replay_appendix = (
@@ -1584,16 +1506,10 @@ def write_markdown(
                 f"{md_cell(row.get('coverage_gaps', [])) or 'none'} |"
             )
         guardrails = practitioner_coverage.get("overclaim_guardrails_applied", [])
-        fig_block = (
-            "![Practitioner coverage](figures/practitioner_coverage.png)\n\n"
-            if has_practitioner_fig
-            else ""
-        )
         practitioner_section = (
             "\n## Analysis Coverage by Domain\n\n"
             "This table shows which DFIR analysis domains the typed tools "
             "exercised on the supplied evidence. Coverage is scope, not assurance.\n\n"
-            + fig_block
             + "\n".join(rows)
             + "\n\n"
             + "**Overclaim guardrails applied:** "
@@ -1678,7 +1594,9 @@ def write_markdown(
                 f"{md_cell(item.get('based_on', []))} | "
                 f"{md_cell(item.get('expected_evidence', ''))} |"
             )
-        actions_section = "\n## Recommended Analyst Actions\n\n" + "\n".join(rows) + "\n\n"
+        actions_section = (
+            "\n## Recommended Analyst Actions\n\n" + "\n".join(rows) + "\n\n"
+        )
 
     # Single authoritative Limitations section: the justified unknowns (from the
     # attack story's what_we_cannot_say) plus any run-specific analysis limitations.
@@ -1777,10 +1695,10 @@ def write_markdown(
 
 [DFIR at machine speed · sigstore-signed chain of custody]{{.tagline}}
 
-**Case ID:** `{manifest['case_id']}`
-**Run ID:** `{manifest['run_id']}`
-**Started:** {manifest['started_at']}
-**Finalized:** {manifest['finalized_at']}
+**Case ID:** `{manifest["case_id"]}`
+**Run ID:** `{manifest["run_id"]}`
+**Started:** {manifest["started_at"]}
+**Finalized:** {manifest["finalized_at"]}
 **Evidence:** `{md_cell(evidence)}`
 **Verdict:** **{verdict}**
 
@@ -1796,9 +1714,9 @@ def write_markdown(
 
 * **Total merged findings:** {len(merged)}
 * **By confidence:**
-  - CONFIRMED: {sum(1 for m in merged if m.get('confidence') == 'CONFIRMED')}
-  - INFERRED:  {sum(1 for m in merged if m.get('confidence') == 'INFERRED')}
-  - HYPOTHESIS: {sum(1 for m in merged if m.get('confidence') == 'HYPOTHESIS')}
+  - CONFIRMED: {sum(1 for m in merged if m.get("confidence") == "CONFIRMED")}
+  - INFERRED:  {sum(1 for m in merged if m.get("confidence") == "INFERRED")}
+  - HYPOTHESIS: {sum(1 for m in merged if m.get("confidence") == "HYPOTHESIS")}
 * **Contradictions surfaced (Pool A vs Pool B):** {contras}
 * **SOUL.md correlator:** {kept} kept, {downgraded} downgraded
 
@@ -1812,7 +1730,7 @@ def write_markdown(
 
 ## Findings Summary
 
-![Findings table](figures/findings_table.png)
+{findings_summary_table}
 
 {decisions_section}
 
@@ -2004,7 +1922,9 @@ def render_html_pdf(
         style_path.write_text(_DEFAULT_CSS, encoding="utf-8")
 
     if PANDOC is None:
-        print("  WARN: pandoc not found (set PANDOC_BIN or install pandoc); skipping HTML render")
+        print(
+            "  WARN: pandoc not found (set PANDOC_BIN or install pandoc); skipping HTML render"
+        )
         return html, None
 
     subprocess.run(
@@ -2166,7 +2086,6 @@ def render_report(
                     pass
 
     fig_audit_chain(audit, manifest, fig_dir / "chain_of_custody.png")
-    fig_findings_table(merged, fig_dir / "findings_table.png")
 
     has_psscan = False
     psscan_path = case_dir / "psscan.json"
@@ -2196,10 +2115,6 @@ def render_report(
             final_release_gate = {}
 
     practitioner_coverage = verdict_obj.get("attck_practitioner_coverage", {})
-    has_practitioner_fig = fig_practitioner_coverage(
-        practitioner_coverage,
-        fig_dir / "practitioner_coverage.png",
-    )
     has_process_view_fig = fig_process_view_comparison(
         verdict_obj.get("tool_calls", []),
         fig_dir / "process_view_comparison.png",
@@ -2288,7 +2203,6 @@ def render_report(
         event_narratives=event_narratives,
         has_timeline_fig=has_timeline_fig,
         has_attack_story_fig=has_attack_story_fig,
-        has_practitioner_fig=has_practitioner_fig,
         has_process_view_fig=has_process_view_fig,
         has_entity_timeline_fig=has_entity_timeline_fig,
     )
@@ -2300,7 +2214,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Render report for a finished case dir")
     p.add_argument(
         "case_dir",
-        help="Directory containing audit.jsonl + " "run.manifest.json + verdict.json",
+        help="Directory containing audit.jsonl + run.manifest.json + verdict.json",
     )
     args = p.parse_args()
     case_dir = Path(args.case_dir)
