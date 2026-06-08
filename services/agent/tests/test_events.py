@@ -20,6 +20,7 @@ from findevil_agent.events import (
     Finding,
     HypothesisUpdate,
     PlanApproved,
+    PriorObservation,
     ToolCallStart,
 )
 
@@ -206,6 +207,78 @@ class TestContradictionEmission:
         )
         assert interactive.resolution_required is True
         assert unattended.resolution_required is False
+
+
+class TestFindingPriorObservations:
+    """Hermes recall hits ride on a Finding as NON-evidentiary context.
+
+    Guards the "memory is never evidence" invariant at the type layer:
+    - G1: prior_observations never substitutes for the required tool_call_id.
+    - G2: a prior observation carries only {case_id, ts, confidence} — no
+      tool_call_id / value / sha256 that could masquerade as current-case
+      evidence.
+    """
+
+    def _finding(self, **overrides: object) -> Finding:
+        base: dict[str, object] = {
+            "case_id": "c-1",
+            "finding_id": "f-1",
+            "tool_call_id": "tc-1",
+            "artifact_path": "x",
+            "confidence": "CONFIRMED",
+            "description": "y",
+        }
+        base.update(overrides)
+        return Finding(**base)  # type: ignore[arg-type]
+
+    def test_prior_observations_defaults_empty(self) -> None:
+        # Backward-compatible: findings built without recall context have [].
+        assert self._finding().prior_observations == []
+
+    def test_accepts_context_entries_and_round_trips(self) -> None:
+        f = self._finding(
+            prior_observations=[
+                {"case_id": "c-prev", "ts": "2026-01-01T00:00:00Z", "confidence": 0.8}
+            ]
+        )
+        assert len(f.prior_observations) == 1
+        assert isinstance(f.prior_observations[0], PriorObservation)
+        # Survives a model_dump round-trip through the discriminated union…
+        again = AE.validate_python(f.model_dump())
+        assert again.prior_observations[0].case_id == "c-prev"  # type: ignore[union-attr]
+        # …and JSON serialization.
+        assert "c-prev" in f.model_dump_json()
+
+    def test_prior_observation_forbids_tool_call_id(self) -> None:
+        # G2: a prior observation must not smuggle a current-case evidence
+        # handle. extra="forbid" rejects tool_call_id / value / sha256.
+        with pytest.raises(ValidationError):
+            PriorObservation(
+                case_id="c-prev",
+                ts="2026-01-01T00:00:00Z",
+                confidence=0.8,
+                tool_call_id="tc-prev",  # type: ignore[call-arg]
+            )
+
+    def test_prior_observations_do_not_replace_tool_call_id(self) -> None:
+        # G1: memory context never satisfies the required evidence citation.
+        with pytest.raises(ValidationError) as exc:
+            Finding(  # type: ignore[call-arg]
+                case_id="c-1",
+                finding_id="f-1",
+                artifact_path="x",
+                confidence="CONFIRMED",
+                description="y",
+                prior_observations=[
+                    {"case_id": "c-prev", "ts": "2026-01-01T00:00:00Z", "confidence": 0.8}
+                ],
+            )
+        assert "tool_call_id" in str(exc.value)
+
+    def test_prior_observation_frozen(self) -> None:
+        po = PriorObservation(case_id="c-prev", ts="2026-01-01T00:00:00Z", confidence=0.8)
+        with pytest.raises(ValidationError):
+            po.confidence = 0.1  # type: ignore[misc]
 
 
 class TestHypothesisUpdate:

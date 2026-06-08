@@ -79,6 +79,23 @@ class AgentMessage(_BaseEvent):
 # ---------------------------------------------------------------------------
 
 
+class PriorObservation(BaseModel):
+    """A NON-evidentiary cross-case recall hit (Hermes ``memory_recall``).
+
+    Rides on a :class:`Finding` as background context only. It deliberately
+    carries no ``tool_call_id``, ``value``, or ``sha256``: prior-case memory is
+    never current-case evidence (SOUL.md / PLAYBOOK.md §34), never satisfies the
+    >=2-artifact-class rule, and never becomes a Merkle leaf. ``extra="forbid"``
+    keeps an evidence handle from being smuggled in.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    case_id: str = Field(..., description="UUID4 of the PRIOR case this hit came from")
+    ts: str = Field(..., description="UTC ISO-8601 (trailing Z) of the prior observation")
+    confidence: float = Field(..., description="BM25 x recency-decayed recall confidence, 0.0-1.0")
+
+
 class Finding(_BaseEvent):
     event_type: Literal["Finding"] = "Finding"
     finding_id: str
@@ -94,6 +111,11 @@ class Finding(_BaseEvent):
     # finding_ids) of those facts. Optional so CONFIRMED/HYPOTHESIS findings,
     # which don't derive from other facts, can omit it.
     derived_from: list[str] | None = None
+    # Hermes cross-case recall hits attached as NON-evidentiary context
+    # (memory_recall). Never a tool_call_id, never counts toward the >=2
+    # artifact-class rule, never a Merkle leaf. Default empty so findings
+    # drafted without recall stay backward-compatible.
+    prior_observations: list[PriorObservation] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -213,6 +235,7 @@ __all__ = [
     "HypothesisUpdate",
     "PlanApproved",
     "PlanProposed",
+    "PriorObservation",
     "RunVerdict",
     "ToolCallOutput",
     "ToolCallStart",

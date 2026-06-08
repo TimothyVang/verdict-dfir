@@ -83,7 +83,15 @@ def main() -> int:
     # Without this, json2ts only emits interfaces for definitions
     # reachable from the top-level — which would be none, leaving the
     # output essentially empty.
-    schema["oneOf"] = [{"$ref": f"#/definitions/{m.__name__}"} for m in models]
+    # Only event variants (those with an ``event_type`` discriminator) belong
+    # in the AgentEvent union. Nested value models like ``PriorObservation``
+    # still get a TS interface (they're reachable via the events that embed
+    # them) but must not become union members.
+    schema["oneOf"] = [
+        {"$ref": f"#/definitions/{m.__name__}"}
+        for m in models
+        if "event_type" in m.model_fields
+    ]
     schema["title"] = "AgentEvent"
     schema.pop("type", None)
 

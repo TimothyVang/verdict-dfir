@@ -68,12 +68,26 @@ export type Confidence = "CONFIRMED" | "INFERRED" | "HYPOTHESIS";
 export type MitreTechnique = string | null;
 export type Description = string;
 export type PoolOrigin = ("A" | "B" | "merged") | null;
+export type DerivedFrom = string[] | null;
+/**
+ * UUID4 of the PRIOR case this hit came from
+ */
+export type CaseId4 = string;
+/**
+ * UTC ISO-8601 (trailing Z) of the prior observation
+ */
+export type Ts4 = string;
+/**
+ * BM25 × recency-decayed recall confidence, 0.0–1.0
+ */
+export type Confidence1 = number;
+export type PriorObservations = PriorObservation[];
 /**
  * UUID4 of the case this event belongs to
  */
-export type CaseId4 = string;
+export type CaseId5 = string;
 export type EventId4 = string;
-export type Ts4 = string;
+export type Ts5 = string;
 export type EventType4 = "VerifierAction";
 export type Action = "approved" | "rejected" | "downgraded";
 export type FindingId1 = string;
@@ -81,9 +95,9 @@ export type Reason = string;
 /**
  * UUID4 of the case this event belongs to
  */
-export type CaseId5 = string;
+export type CaseId6 = string;
 export type EventId5 = string;
-export type Ts5 = string;
+export type Ts6 = string;
 export type EventType5 = "ChainUpdate";
 export type MerkleRoot = string;
 export type LeafCount = number;
@@ -91,9 +105,9 @@ export type OtsPending = boolean;
 /**
  * UUID4 of the case this event belongs to
  */
-export type CaseId6 = string;
+export type CaseId7 = string;
 export type EventId6 = string;
-export type Ts6 = string;
+export type Ts7 = string;
 export type EventType6 = "RunVerdict";
 export type Verdict = "CONFIRMED_EVIL" | "SUSPICIOUS" | "BENIGN" | "INCONCLUSIVE";
 export type ConfidenceScore = number;
@@ -103,26 +117,26 @@ export type OtsReceiptPath = string;
 /**
  * UUID4 of the case this event belongs to
  */
-export type CaseId7 = string;
+export type CaseId8 = string;
 export type EventId7 = string;
-export type Ts7 = string;
+export type Ts8 = string;
 export type EventType7 = "PlanProposed";
 export type PlanSteps = string[];
 export type EstimatedToolCalls = number;
 /**
  * UUID4 of the case this event belongs to
  */
-export type CaseId8 = string;
+export type CaseId9 = string;
 export type EventId8 = string;
-export type Ts8 = string;
+export type Ts9 = string;
 export type EventType8 = "PlanApproved";
 export type ApprovedBy = "human" | "auto";
 /**
  * UUID4 of the case this event belongs to
  */
-export type CaseId9 = string;
+export type CaseId10 = string;
 export type EventId9 = string;
-export type Ts9 = string;
+export type Ts10 = string;
 export type EventType9 = "HypothesisUpdate";
 export type Hypothesis = "persistence" | "exfiltration" | "both" | "neither";
 export type Pool1 = "A" | "B";
@@ -131,9 +145,9 @@ export type SupportingFindingIds = string[];
 /**
  * UUID4 of the case this event belongs to
  */
-export type CaseId10 = string;
+export type CaseId11 = string;
 export type EventId10 = string;
-export type Ts10 = string;
+export type Ts11 = string;
 export type EventType10 = "ContradictionFound";
 export type ContradictionId = string;
 export type PoolAClaim = string;
@@ -183,29 +197,45 @@ export interface Finding {
   mitre_technique?: MitreTechnique;
   description: Description;
   pool_origin?: PoolOrigin;
+  derived_from?: DerivedFrom;
+  prior_observations?: PriorObservations;
+}
+/**
+ * A NON-evidentiary cross-case recall hit (Hermes ``memory_recall``).
+ *
+ * Rides on a :class:`Finding` as background context only. It deliberately
+ * carries no ``tool_call_id``, ``value``, or ``sha256``: prior-case memory is
+ * never current-case evidence (SOUL.md / PLAYBOOK.md §34), never satisfies the
+ * ≥2-artifact-class rule, and never becomes a Merkle leaf. ``extra="forbid"``
+ * keeps an evidence handle from being smuggled in.
+ */
+export interface PriorObservation {
+  case_id: CaseId4;
+  ts: Ts4;
+  confidence: Confidence1;
 }
 export interface VerifierAction {
-  case_id: CaseId4;
+  case_id: CaseId5;
   event_id?: EventId4;
-  ts?: Ts4;
+  ts?: Ts5;
   event_type?: EventType4;
   action: Action;
   finding_id: FindingId1;
   reason: Reason;
 }
 export interface ChainUpdate {
-  case_id: CaseId5;
+  case_id: CaseId6;
   event_id?: EventId5;
-  ts?: Ts5;
+  ts?: Ts6;
   event_type?: EventType5;
   merkle_root: MerkleRoot;
   leaf_count: LeafCount;
   ots_pending: OtsPending;
 }
 export interface RunVerdict {
-  case_id: CaseId6;
+  case_id: CaseId7;
   event_id?: EventId6;
-  ts?: Ts6;
+  ts?: Ts7;
   event_type?: EventType6;
   verdict: Verdict;
   confidence_score: ConfidenceScore;
@@ -214,24 +244,24 @@ export interface RunVerdict {
   ots_receipt_path: OtsReceiptPath;
 }
 export interface PlanProposed {
-  case_id: CaseId7;
+  case_id: CaseId8;
   event_id?: EventId7;
-  ts?: Ts7;
+  ts?: Ts8;
   event_type?: EventType7;
   plan_steps: PlanSteps;
   estimated_tool_calls: EstimatedToolCalls;
 }
 export interface PlanApproved {
-  case_id: CaseId8;
+  case_id: CaseId9;
   event_id?: EventId8;
-  ts?: Ts8;
+  ts?: Ts9;
   event_type?: EventType8;
   approved_by: ApprovedBy;
 }
 export interface HypothesisUpdate {
-  case_id: CaseId9;
+  case_id: CaseId10;
   event_id?: EventId9;
-  ts?: Ts9;
+  ts?: Ts10;
   event_type?: EventType9;
   hypothesis: Hypothesis;
   pool: Pool1;
@@ -239,9 +269,9 @@ export interface HypothesisUpdate {
   supporting_finding_ids: SupportingFindingIds;
 }
 export interface ContradictionFound {
-  case_id: CaseId10;
+  case_id: CaseId11;
   event_id?: EventId10;
-  ts?: Ts10;
+  ts?: Ts11;
   event_type?: EventType10;
   contradiction_id: ContradictionId;
   pool_a_claim: PoolAClaim;
