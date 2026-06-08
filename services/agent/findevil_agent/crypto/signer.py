@@ -202,6 +202,12 @@ def make_signer(*, kind: str | None = None, **kwargs: Any) -> Signer:
     """
     actual = kind if kind is not None else os.environ.get("FINDEVIL_SIGNER", "stub")
     if actual == "sigstore":
+        # Pick up the ambient OIDC identity from $SIGSTORE_ID_TOKEN when the
+        # caller didn't pass one explicitly — this is the non-interactive path
+        # the docs/manifest_finalize describe (a judge/CI exports the token
+        # before sealing). Without it SigstoreSigner.sign() raises a clear
+        # error rather than silently producing an unsigned bundle.
+        kwargs.setdefault("identity_token", os.environ.get("SIGSTORE_ID_TOKEN"))
         return SigstoreSigner(**kwargs)
     if actual == "stub":
         return StubSigner(**kwargs)
