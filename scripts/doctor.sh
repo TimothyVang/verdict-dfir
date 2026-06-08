@@ -217,6 +217,24 @@ else
   REMEDIES+=("n8n-mcp (opt): install Node 20+ (npx); then python3 scripts/setup-n8n.py")
 fi
 
+# Grounding infra — OPTIONAL post-verdict anti-hallucination sidecar. Needs the
+# self-hosted browserless + SearXNG containers reachable on localhost. Warn-only.
+if curl -fsS --max-time 2 http://127.0.0.1:5678/healthz >/dev/null 2>&1; then
+  bl=$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 2 -X POST \
+       http://127.0.0.1:3000/content -H 'Content-Type: application/json' \
+       -d '{"url":"https://attack.mitre.org/"}' 2>/dev/null || echo 000)
+  sx=$(curl -fsS -o /dev/null -w '%{http_code}' --max-time 3 \
+       'http://127.0.0.1:8888/search?q=ping&format=json' 2>/dev/null || echo 000)
+  if [ "${bl}" = "200" ] && [ "${sx}" = "200" ]; then
+    row ok "grounding (opt)" "n8n + browserless + searxng up — grounding runs post-verdict"
+  else
+    row warn "grounding (opt)" "n8n up; browserless=${bl} searxng=${sx} — deploy: scripts/setup-grounding-workflow.py"
+    REMEDIES+=("grounding (opt): python3 scripts/setup-grounding-workflow.py (starts browserless + searxng)")
+  fi
+else
+  row warn "grounding (opt)" "optional anti-hallucination sidecar — n8n down; see docs/runbooks/n8n-automation-integration.md"
+fi
+
 # ---------------------------------------------------------------------------
 # DFIR external binaries (warn-only; the in-process tools work without them).
 # ---------------------------------------------------------------------------

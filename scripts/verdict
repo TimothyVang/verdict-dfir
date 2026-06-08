@@ -215,6 +215,18 @@ if [[ "${SIFT}" == "0" && -n "${CASE_DIR:-}" && -f scripts/n8n_post.py ]]; then
   python3 scripts/n8n_post.py "${CASE_DIR}" >/dev/null 2>&1 || true
 fi
 
+# Optional post-verdict GROUNDING (anti-hallucination sidecar). Researches the
+# verdict's claims (MITRE/IOC/CVE/open-web) and writes a first-pass grounding.json
+# + recommended actions. Post-verdict aid only — never evidence, never in the audit
+# chain. Needs n8n+browserless up; non-fatal; skip with FINDEVIL_SKIP_GROUNDING=1.
+if [[ "${SIFT}" == "0" && -n "${CASE_DIR:-}" && -z "${FINDEVIL_SKIP_GROUNDING:-}" \
+      && -f scripts/ground_verdict.py ]] \
+   && curl -fsS --max-time 3 http://127.0.0.1:5678/healthz >/dev/null 2>&1; then
+  log "grounding (anti-hallucination sidecar)"
+  python3 scripts/ground_verdict.py "${CASE_DIR}" >/dev/null 2>&1 \
+    && python3 scripts/ground_actions.py "${CASE_DIR}" >/dev/null 2>&1 || true
+fi
+
 # 5. SIFT mode: the case dir is resolved + opened after the post-run sync ------
 if [[ "${SIFT}" == "1" || -z "${CASE_DIR:-}" ]]; then
   log "4/4 dashboard"

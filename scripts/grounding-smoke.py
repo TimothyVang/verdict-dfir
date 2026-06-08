@@ -240,9 +240,14 @@ def offline_checks(gv) -> None:
         check(
             (case / gv.RESEARCH_FILENAME).is_file(), "helper wrote the research sidecar"
         )
+        # Headless: the helper writes a first-pass grounding.json (sidecar), but
+        # NEVER touches evidence/audit/manifest (asserted byte-unchanged above).
+        gpath = case / "grounding.json"
+        check(gpath.is_file(), "helper writes a first-pass grounding.json (headless)")
+        fp = json.loads(gpath.read_text())
         check(
-            not (case / "grounding.json").exists(),
-            "helper does NOT write grounding.json (the agent judges that)",
+            "first-pass" in (fp.get("judged_by") or ""),
+            "headless grounding.json is labeled a deterministic first-pass",
         )
 
 
@@ -366,6 +371,93 @@ def offline_cve_checks(gv) -> None:
     check(gv.ground_cves({}) is None, "ground_cves returns None when there are no CVEs")
 
 
+def offline_firstpass_checks(gv) -> None:
+    print("[offline] headless first-pass grounding")
+    bundle = {
+        "case_id": "x",
+        "verdict": "SUSPICIOUS",
+        "techniques": [
+            {
+                "technique_id": "T1055",
+                "claimed": True,
+                "found": True,
+                "id_match": True,
+                "mitre_name": "Process Injection",
+                "excerpt": "e",
+                "sources": [{"url": "u"}],
+            },
+            {
+                "technique_id": "T9999",
+                "claimed": True,
+                "found": False,
+                "id_match": False,
+            },
+        ],
+        "ioc_enrichment": {
+            "results": [
+                {
+                    "ioc": "h",
+                    "type": "hash",
+                    "found": True,
+                    "malicious_sources": 1,
+                    "sources": [
+                        {
+                            "provider": "virustotal",
+                            "found": True,
+                            "url": "u",
+                            "detail": "d",
+                        }
+                    ],
+                }
+            ]
+        },
+        "cve_research": {
+            "results": [
+                {
+                    "cve_id": "CVE-2021-34527",
+                    "found": True,
+                    "cvss": 8.8,
+                    "severity": "HIGH",
+                    "url": "u",
+                    "description": "d",
+                },
+                {
+                    "cve_id": "CVE-9999-0000",
+                    "found": False,
+                    "url": "u",
+                    "error": "not_found",
+                },
+            ]
+        },
+    }
+    fp = gv.first_pass_grounding(bundle)
+    g = {x["technique_id"]: x for x in fp["grounding"]}
+    check(
+        g["T1055"]["status"] == "supported", "first-pass: found technique -> supported"
+    )
+    check(
+        g["T9999"]["status"] == "contradicted" and g["T9999"]["possible_hallucination"],
+        "first-pass: not-found technique -> contradicted + possible_hallucination",
+    )
+    check(
+        fp["ioc_grounding"][0]["status"] == "malicious",
+        "first-pass: flagged IOC -> malicious",
+    )
+    cg = {c["cve_id"]: c for c in fp["cve_grounding"]}
+    check(
+        cg["CVE-2021-34527"]["status"] == "supported",
+        "first-pass: found CVE -> supported",
+    )
+    check(
+        cg["CVE-9999-0000"]["possible_hallucination"],
+        "first-pass: unknown CVE -> possible_hallucination",
+    )
+    check(
+        "first-pass" in fp["judged_by"],
+        "first-pass labels judged_by as deterministic first-pass",
+    )
+
+
 def offline_actions_checks() -> None:
     print("[offline] grounding-aware action routing")
     spec = importlib.util.spec_from_file_location(
@@ -480,6 +572,7 @@ def main() -> int:
     offline_ioc_checks(gv)
     offline_openweb_checks(gv)
     offline_cve_checks(gv)
+    offline_firstpass_checks(gv)
     offline_actions_checks()
     if webhook_up():
         live_checks()

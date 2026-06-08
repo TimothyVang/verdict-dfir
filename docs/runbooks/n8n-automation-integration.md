@@ -294,7 +294,18 @@ their text (`finding.cves[]` — purely additive, no inference, no verdict impac
 recognize is flagged `possible_hallucination`. CVSS is severity **context, not proof** the CVE was
 exploited on this host. The dashboard shows a "CVE grounding" section.
 
-**Remaining:** auto-run in `scripts/verdict` + submission-boundary re-confirm — see the plan.
+## Auto-run + headless judging
+
+`scripts/verdict` runs grounding automatically after the verdict (right after the `n8n_post.py`
+hook): when n8n is reachable it calls `ground_verdict.py` then `ground_actions.py` — **non-fatal**,
+gated on a `/healthz` check, and skippable with `FINDEVIL_SKIP_GROUNDING=1`. Because an unattended
+run has no agent in the loop, `ground_verdict.py` writes a **deterministic first-pass**
+`grounding.json` (technique on MITRE → supported / not on MITRE → contradicted+flag; provider-
+flagged IOC → malicious; CVE on NVD → supported; `judged_by` says "deterministic first-pass") so
+the dashboard populates headless. It is **non-clobbering** — an existing agent-judged
+`grounding.json` is never overwritten; a Claude Code session refines the first-pass per
+`agent-config/GROUNDING.md`. `scripts/doctor.sh` reports grounding-infra readiness (n8n +
+browserless + searxng).
 
 ---
 

@@ -306,6 +306,147 @@ def merge_bundle(
     return merged
 
 
+def first_pass_grounding(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Deterministic, headless first-pass judgment of a research bundle.
+
+    For unattended runs (no agent in the loop) so the dashboard populates. It only
+    encodes the MECHANICAL facts — MITRE lists the id / NVD lists the CVE / a vendor
+    flagged the IOC — and explicitly defers the semantic "does it match the finding"
+    call to a Claude Code session (judged_by says so). An interactive judge per
+    agent-config/GROUNDING.md overwrites this with the real verdict.
+    """
+    grounding: list[dict[str, Any]] = []
+    for t in bundle.get("techniques", []):
+        if not t.get("claimed"):
+            continue
+        srcs = (
+            [
+                {
+                    "source": "mitre_attack",
+                    "url": (t.get("sources") or [{}])[0].get("url"),
+                    "excerpt": t.get("excerpt"),
+                }
+            ]
+            if t.get("excerpt")
+            else []
+        )
+        found, idm = t.get("found"), t.get("id_match")
+        status = "supported" if found else "contradicted"
+        grounding.append(
+            {
+                "technique_id": t["technique_id"],
+                "claimed": True,
+                "claimed_by": t.get("claimed_by", []),
+                "finding_confidence": (t.get("finding_confidences") or [None])[0],
+                "status": status,
+                "possible_hallucination": not found,
+                "id_status": "renumbered" if (found and not idm) else "current",
+                "mitre_current_id": t.get("mitre_id"),
+                "mitre_name": t.get("mitre_name"),
+                "sources": srcs,
+                "rationale": "first-pass: MITRE "
+                + ("lists this id" if found else "does NOT list this id")
+                + " — confirm it matches the finding in a Claude Code session.",
+            }
+        )
+
+    ioc_grounding: list[dict[str, Any]] = []
+    for r in (bundle.get("ioc_enrichment") or {}).get("results", []):
+        if not r.get("found"):
+            st = "unknown"
+        elif (r.get("malicious_sources") or 0) > 0:
+            st = "malicious"
+        else:
+            st = "clean"
+        srcs = [
+            {
+                "source": s.get("provider"),
+                "url": s.get("url"),
+                "excerpt": s.get("detail"),
+            }
+            for s in r.get("sources", [])
+            if s.get("found")
+        ]
+        ioc_grounding.append(
+            {
+                "ioc": r.get("ioc"),
+                "type": r.get("type"),
+                "status": st,
+                "possible_overclaim": False,
+                "sources": srcs,
+                "rationale": "first-pass: provider reputation only — analyst confirms.",
+            }
+        )
+
+    cve_grounding: list[dict[str, Any]] = []
+    for c in (bundle.get("cve_research") or {}).get("results", []):
+        found = c.get("found")
+        cve_grounding.append(
+            {
+                "cve_id": c.get("cve_id"),
+                "status": "supported" if found else "unsupported",
+                "possible_hallucination": not found,
+                "cvss": c.get("cvss"),
+                "severity": c.get("severity"),
+                "sources": [
+                    {
+                        "source": "nvd",
+                        "url": c.get("url"),
+                        "excerpt": c.get("description") or c.get("error"),
+                    }
+                ],
+                "rationale": "first-pass: NVD "
+                + (
+                    "lists this CVE (severity context only)"
+                    if found
+                    else "does NOT list this CVE id"
+                )
+                + ".",
+            }
+        )
+
+    open_web = [
+        {
+            "query": o.get("query"),
+            "relevance": "unknown",
+            "note": "first-pass: not yet judged",
+            "sources": [
+                {"source": "open_web", "url": x.get("url"), "excerpt": x.get("excerpt")}
+                for x in (o.get("results") or [])
+                if x.get("excerpt")
+            ][:2],
+        }
+        for o in bundle.get("open_web_research", [])
+    ]
+
+    return {
+        "case_id": bundle.get("case_id"),
+        "verdict": bundle.get("verdict"),
+        "generated_at": bundle.get("generated_at"),
+        "source": "grounding first-pass (operator aid; not evidence, not in audit chain)",
+        "judged_by": "deterministic first-pass (headless) — refine in a Claude Code session",
+        "grounding": grounding,
+        "ioc_grounding": ioc_grounding,
+        "cve_grounding": cve_grounding,
+        "open_web": open_web,
+        "summary": {
+            "claims_judged": len(grounding),
+            "supported": sum(1 for g in grounding if g["status"] == "supported"),
+            "contradicted": sum(1 for g in grounding if g["status"] == "contradicted"),
+            "unsupported": 0,
+            "unknown": 0,
+            "possible_hallucinations": sum(
+                1 for g in grounding if g["possible_hallucination"]
+            ),
+            "iocs_judged": len(ioc_grounding),
+            "iocs_malicious": sum(
+                1 for i in ioc_grounding if i["status"] == "malicious"
+            ),
+            "cves_judged": len(cve_grounding),
+        },
+    }
+
+
 # Typed IOC buckets we can reputation-enrich (from malware_triage.aggregate_iocs).
 ENRICHABLE_IOC_TYPES = ("hashes", "domains", "ips", "urls")
 
@@ -404,6 +545,15 @@ def main(argv: list[str]) -> int:
     out_path = case_dir / RESEARCH_FILENAME
     out_path.write_text(json.dumps(bundle, indent=2))
 
+    # Headless support: write a deterministic first-pass grounding.json so the
+    # dashboard populates in unattended runs. Non-clobbering — never overwrite an
+    # existing (likely agent-judged) grounding.json.
+    grounding_path = case_dir / "grounding.json"
+    wrote_first_pass = False
+    if not grounding_path.is_file():
+        grounding_path.write_text(json.dumps(first_pass_grounding(bundle), indent=2))
+        wrote_first_pass = True
+
     for m in merged:
         tag = "claim" if m["claimed"] else "cover"
         if not m["found"]:
@@ -441,10 +591,17 @@ def main(argv: list[str]) -> int:
             f"  [web] {('ERR ' + err) if err else str(n) + ' hits'} :: {ow.get('query', '')[:50]}"
         )
     print(f"\nwrote {out_path}")
-    print(
-        "next: Claude Code judges this bundle per agent-config/GROUNDING.md "
-        f"and writes {case_dir / 'grounding.json'}"
-    )
+    if wrote_first_pass:
+        print(f"wrote first-pass {grounding_path} (headless default)")
+        print(
+            "next: Claude Code refines it per agent-config/GROUNDING.md "
+            "(replaces the deterministic first-pass with real judgment)"
+        )
+    else:
+        print(
+            f"next: Claude Code judges this bundle per agent-config/GROUNDING.md "
+            f"and writes {grounding_path}"
+        )
     return 0
 
 
