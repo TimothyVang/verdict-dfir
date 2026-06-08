@@ -16,11 +16,29 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_ROOT}"
 
 FIXTURES="${FIXTURES:-fixtures}"
+
+log() { printf '[fetch-fixtures] %s\n' "$*" >&2; }
+
+# Hard separation: benchmark fixtures must NEVER land in the evidence/ drop zone.
+# evidence/ is the ad-hoc, human-driven investigation directory (gitignored to
+# README + .gitkeep); fixtures/ is the scored benchmark corpus paired 1:1 with
+# goldens/<case-id>/. Staging a benchmark dataset into evidence/ would orphan it
+# from its golden and the l3-run-goldens scoring loop. Enforce it rather than
+# trust convention: resolve FIXTURES and abort if it points at evidence/.
+_fixtures_abs="$(cd "$(dirname "${FIXTURES}")" 2>/dev/null && pwd)/$(basename "${FIXTURES}")"
+_evidence_abs="${REPO_ROOT}/evidence"
+case "${_fixtures_abs}/" in
+  "${_evidence_abs}/"*)
+    log "ERROR: FIXTURES (${FIXTURES}) resolves under evidence/. Benchmark fixtures"
+    log "       must live in fixtures/, paired with goldens/<case-id>/. Unset FIXTURES"
+    log "       or point it outside evidence/."
+    exit 1
+    ;;
+esac
+
 SHA_FILE="${FIXTURES}/sha256sums.txt"
 mkdir -p "${FIXTURES}"
 touch "${SHA_FILE}"
-
-log() { printf '[fetch-fixtures] %s\n' "$*" >&2; }
 
 # Download helper — atomic: downloads to .tmp, checksums, renames.
 # fetch_fixture <url> <dest-subpath> <optional-expected-sha256>

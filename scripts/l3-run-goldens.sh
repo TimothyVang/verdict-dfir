@@ -143,6 +143,10 @@ fi
 OVERALL_EXIT=0
 for fixture in "${FIXTURES[@]}"; do
   log "--- fixture: ${fixture} ---"
+  # Benchmark data is required to live under fixtures/, paired 1:1 with its
+  # golden under goldens/. The runner only ever reads fixtures/<case> — a dataset
+  # dropped in evidence/ is invisible here by design (evidence/ is the ad-hoc
+  # drop zone, not the scored corpus).
   golden_dir="goldens/${fixture}"
   fixture_dir="fixtures/${fixture}"
   if [[ ! -d "${golden_dir}" ]] || [[ ! -d "${fixture_dir}" ]]; then
