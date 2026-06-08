@@ -78,7 +78,7 @@ export type CaseId4 = string;
  */
 export type Ts4 = string;
 /**
- * BM25 × recency-decayed recall confidence, 0.0–1.0
+ * BM25 x recency-decayed recall confidence, 0.0-1.0
  */
 export type Confidence1 = number;
 export type PriorObservations = PriorObservation[];
@@ -206,7 +206,7 @@ export interface Finding {
  * Rides on a :class:`Finding` as background context only. It deliberately
  * carries no ``tool_call_id``, ``value``, or ``sha256``: prior-case memory is
  * never current-case evidence (SOUL.md / PLAYBOOK.md §34), never satisfies the
- * ≥2-artifact-class rule, and never becomes a Merkle leaf. ``extra="forbid"``
+ * >=2-artifact-class rule, and never becomes a Merkle leaf. ``extra="forbid"``
  * keeps an evidence handle from being smuggled in.
  */
 export interface PriorObservation {
