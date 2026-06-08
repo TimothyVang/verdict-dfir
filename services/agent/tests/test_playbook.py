@@ -146,9 +146,9 @@ class TestJudgeSelfscoreCriteria:
             # Each question should appear (at least partially) in JUDGING.md.
             # We check the first 40 chars to be resilient to minor wording.
             snippet = entry["question"][:40]
-            assert snippet in judging_text, (
-                f"Criterion {entry['criterion']} question not found in JUDGING.md: {snippet!r}"
-            )
+            assert (
+                snippet in judging_text
+            ), f"Criterion {entry['criterion']} question not found in JUDGING.md: {snippet!r}"
 
     def test_playbook_md_tables_match_module(self) -> None:
         """PLAYBOOK.md must reference the canonical tool names from TOOL_SEQUENCES."""

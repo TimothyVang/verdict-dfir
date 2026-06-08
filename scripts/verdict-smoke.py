@@ -26,22 +26,22 @@ def test_bash_syntax_clean() -> None:
 
 
 def test_chains_doctor() -> None:
-    assert "doctor.sh" in SCRIPT.read_text(encoding="utf-8"), (
-        "verdict does not reference doctor.sh"
-    )
+    assert "doctor.sh" in SCRIPT.read_text(
+        encoding="utf-8"
+    ), "verdict does not reference doctor.sh"
 
 
 def test_chains_build() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
-    assert "cargo build" in text or "findevil-mcp" in text, (
-        "verdict does not reference cargo build / findevil-mcp"
-    )
+    assert (
+        "cargo build" in text or "findevil-mcp" in text
+    ), "verdict does not reference cargo build / findevil-mcp"
 
 
 def test_chains_engine() -> None:
-    assert "find_evil_auto" in SCRIPT.read_text(encoding="utf-8"), (
-        "verdict does not chain the find_evil_auto engine"
-    )
+    assert "find_evil_auto" in SCRIPT.read_text(
+        encoding="utf-8"
+    ), "verdict does not chain the find_evil_auto engine"
 
 
 def test_has_sift_and_dashboard_flags() -> None:
@@ -54,13 +54,13 @@ def test_dry_run_produces_no_investigation() -> None:
     result = subprocess.run(
         ["bash", str(SCRIPT), "--dry-run"], capture_output=True, text=True, timeout=10
     )
-    assert result.returncode == 0, (
-        f"--dry-run exited {result.returncode}: {result.stderr}"
-    )
+    assert (
+        result.returncode == 0
+    ), f"--dry-run exited {result.returncode}: {result.stderr}"
     combined = result.stdout + result.stderr
-    assert "DRY-RUN" in combined, (
-        f"--dry-run did not emit DRY-RUN markers: {combined[:300]}"
-    )
+    assert (
+        "DRY-RUN" in combined
+    ), f"--dry-run did not emit DRY-RUN markers: {combined[:300]}"
     assert "4/4" in combined, "verdict --dry-run did not reach the final stage (4/4)"
 
 

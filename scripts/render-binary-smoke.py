@@ -70,9 +70,9 @@ def test_resolve_tool_env_bad_path(mod: types.ModuleType) -> None:
             os.environ["PANDOC_BIN"] = env_backup
         else:
             os.environ.pop("PANDOC_BIN", None)
-    assert result is None, (
-        f"Expected None for bad override + missing fallback, got {result!r}"
-    )
+    assert (
+        result is None
+    ), f"Expected None for bad override + missing fallback, got {result!r}"
 
 
 def test_resolve_tool_which_fallback(mod: types.ModuleType) -> None:

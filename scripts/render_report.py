@@ -1134,7 +1134,13 @@ def build_detailed_event_timeline_section(
                     _entity_cell(entities, "logon_type_label", "logon_type") or "—"
                 ),
                 pp=md_cell(process_pid or "—"),
-                conf=md_cell(event.get("confidence", "")),
+                # Confidence is a Finding attribute: show it only for events that
+                # actually back a Finding; pure context events show "—".
+                conf=md_cell(
+                    event.get("confidence", "")
+                    if event.get("linked_finding_ids")
+                    else "—"
+                ),
                 tcid=md_cell(event.get("tool_call_id", "?")),
             )
         )

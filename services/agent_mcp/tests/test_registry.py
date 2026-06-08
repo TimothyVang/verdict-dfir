@@ -54,9 +54,9 @@ class TestRegistry:
 
     def test_every_handler_is_async(self) -> None:
         for spec in all_specs():
-            assert inspect.iscoroutinefunction(spec.handler), (
-                f"{spec.name} handler must be `async def`"
-            )
+            assert inspect.iscoroutinefunction(
+                spec.handler
+            ), f"{spec.name} handler must be `async def`"
 
     def test_input_schema_is_json_serializable(self) -> None:
         import json
