@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
 import hashlib
 import ipaddress
@@ -380,6 +381,17 @@ class SshMcpClient:
             text = result["content"][0]["text"]
             body = json.loads(text)
             if isinstance(body, dict):
+                # The Python agent MCP reports a handler exception as a top-level
+                # {"error": {"kind": "...", "message": "..."}} envelope (with
+                # isError=false), NOT the {"_error": ...} shape every caller in
+                # this engine checks for. Without this normalization a tool that
+                # raised (e.g. verify_finding hitting a Finding ValidationError)
+                # is silently read as a success with missing fields — the verifier
+                # then rejects every finding with "no reason" and the real error
+                # is lost. Surface it as _error so existing checks catch it.
+                err = body.get("error")
+                if isinstance(err, dict) and "message" in err:
+                    return {"_error": {"message": err.get("message"), "kind": err.get("kind")}}
                 body["_mcp_output_sha256"] = hashlib.sha256(
                     text.encode("utf-8")
                 ).hexdigest()
@@ -5291,6 +5303,8 @@ class Investigation:
         signer: str = "stub",
         force_fresh_replay: bool = False,
         case_id: str | None = None,
+        parallel: bool = False,
+        workers: int = 4,
     ) -> None:
         self.evidence = evidence_path
         # In local mode, pin the evidence to an absolute path so every consumer
@@ -5312,6 +5326,12 @@ class Investigation:
         self.with_report = with_report
         self.signer = signer
         self.force_fresh_replay = force_fresh_replay
+        # Parallel mode runs independent tool calls (verify_finding re-runs,
+        # investigation parse batches) concurrently. Audit appends stay
+        # serialized in finding order so the hash-chained log and the verdict
+        # remain deterministic regardless of completion timing.
+        self.parallel = parallel
+        self.workers = max(1, workers)
         # The launcher can pin the case_id so it can deep-link the dashboard to
         # the case dir BEFORE the run starts (live watching). Else a fresh uuid.
         self.case_id = case_id or f"auto-{uuid.uuid4()}"
@@ -7599,21 +7619,56 @@ class Investigation:
     def _verify_pool(
         self, py: SshMcpClient, findings: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        actions: list[dict[str, Any]] = []
+        # Two stages: (A) re-run every finding's cited tool via verify_finding
+        # (slow, independent — parallelized under --parallel), then (B) record
+        # the verifier actions to the hash-chained audit log in finding order
+        # (strictly serial so prev_hash and the verifier->judge handoffs stay
+        # deterministic regardless of Stage A completion timing).
+        results = self._verify_findings_parallel(py, findings)
+        return self._record_verify_actions(py, findings, results)
+
+    def _verify_findings_parallel(
+        self, py: SshMcpClient, findings: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Stage A: re-run each finding's cited tool. verify_finding spawns its
+        own fresh findevil-mcp subprocess per call, so the re-runs are
+        independent; under --parallel they run concurrently (bounded by
+        self.workers — each may map a memory image into RAM). No audit writes
+        happen here. Results are returned in finding order."""
         tool_call_index = self._tool_call_index()
-        for finding in findings:
-            verify_args = {
+
+        def _run(finding: dict[str, Any]) -> dict[str, Any]:
+            verify_args: dict[str, Any] = {
                 "finding": finding,
                 "tool_call_index": tool_call_index,
                 "findevil_mcp_command": rust_replay_command(),
             }
             if self.force_fresh_replay:
                 verify_args["force_fresh_replay"] = True
-            result = py.call_tool(
-                "verify_finding",
-                verify_args,
-                timeout=1800.0,
-            )
+            return py.call_tool("verify_finding", verify_args, timeout=1800.0)
+
+        if not self.parallel or len(findings) <= 1:
+            return [_run(finding) for finding in findings]
+        results: list[dict[str, Any]] = [{} for _ in findings]
+        with ThreadPoolExecutor(max_workers=self.workers) as pool:
+            future_to_idx = {
+                pool.submit(_run, finding): idx
+                for idx, finding in enumerate(findings)
+            }
+            for future in as_completed(future_to_idx):
+                results[future_to_idx[future]] = future.result()
+        return results
+
+    def _record_verify_actions(
+        self,
+        py: SshMcpClient,
+        findings: list[dict[str, Any]],
+        results: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Stage B: build verifier actions from the Stage A results and append
+        them to the audit chain in finding order. Serial by construction."""
+        actions: list[dict[str, Any]] = []
+        for finding, result in zip(findings, results, strict=True):
             finding_id = str(finding.get("finding_id") or "unknown")
             if "_error" in result:
                 action = {
