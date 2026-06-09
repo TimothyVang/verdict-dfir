@@ -7536,10 +7536,13 @@ class Investigation:
             )
         if not entries:
             self.analysis_limitations.append(
-                "Velociraptor zip contained no supported EVTX/Prefetch/Registry/MFT/USN/network artifacts for typed parsing."
+                "Velociraptor zip contained no supported EVTX/Prefetch/Registry/MFT/USN/memory/network artifacts for typed parsing."
             )
             return
 
+        memory_entries = [
+            entry for entry in entries if entry.get("evidence_type") == "memory"
+        ]
         evtx_entries = [
             entry for entry in entries if entry.get("evidence_type") == "evtx"
         ]
@@ -7562,6 +7565,8 @@ class Investigation:
             if parent and parent != "." and count >= 2
         ]
 
+        for entry in memory_entries[:3]:
+            self.investigate_memory(rust, py, str(entry["path"]))
         for entry in evtx_entries[:50]:
             self.investigate_evtx(rust, py, str(entry["path"]))
         for evtx_dir in hayabusa_dirs[:5]:
