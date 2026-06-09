@@ -35,8 +35,9 @@ plain run executes silently.
 - Run: `bash scripts/verdict <evidence> --parallel`
   - `--parallel` overlaps the independent tool calls (verify re-runs + disk-artifact
     parses); the Verdict and the audit chain are unchanged.
-  - Add `--workers N` (default 4) — lower it on a low-RAM host; each lane is its own
-    findevil-mcp process.
+  - Add `--workers N` (default 2) — each lane is its own findevil-mcp process, so a
+    higher count can over-subscribe a RAM-constrained host (e.g. the SIFT VM) and make
+    registry hive loads fail; raise it only after a parity check.
   - Add `--no-dashboard` only if the operator does not want the browser opened.
 - Stream the launcher's stage output. It now prints a line when n8n posts and when
   grounding is written or skipped — surface those to the operator as they happen.

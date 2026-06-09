@@ -5305,7 +5305,7 @@ class Investigation:
         force_fresh_replay: bool = False,
         case_id: str | None = None,
         parallel: bool = False,
-        workers: int = 4,
+        workers: int = 2,
     ) -> None:
         self.evidence = evidence_path
         # In local mode, pin the evidence to an absolute path so every consumer
@@ -9355,10 +9355,12 @@ def main() -> int:
     p.add_argument(
         "--workers",
         type=int,
-        default=4,
+        default=2,
         metavar="N",
-        help="Max concurrent lanes when --parallel is set (default: 4). Each "
-        "lane is its own findevil-mcp process; lower it on low-RAM hosts.",
+        help="Max concurrent lanes when --parallel is set (default: 2). Each "
+        "lane is its own findevil-mcp process, so on a RAM-constrained host "
+        "(e.g. the SIFT VM) a higher count can over-subscribe memory and make "
+        "registry hive loads fail; raise it only after a parity check.",
     )
     args = p.parse_args()
 

@@ -27,8 +27,10 @@
 #   --unattended      no interactive prompts (forwarded to the engine)
 #   --parallel        run independent tool calls (verify re-runs + disk-artifact
 #                     parses) concurrently; the verdict + audit chain are unchanged
-#   --workers N       max concurrent lanes for --parallel (default 4; lower on
-#                     low-RAM hosts — each lane is its own findevil-mcp process)
+#   --workers N       max concurrent lanes for --parallel (default 2; each lane
+#                     is its own findevil-mcp process, so a higher count can
+#                     over-subscribe a RAM-constrained host — raise only after a
+#                     parallel-vs-sequential parity check)
 #   --run-summary F   also write a machine-readable JSON pointer to F
 #   -- <args...>      forward any remaining args to the engine
 #
