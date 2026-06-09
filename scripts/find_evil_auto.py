@@ -5578,6 +5578,64 @@ class Investigation:
                 },
             )
 
+    # Substrings that mark a *transient* tool failure — worth one retry before
+    # the caller defers. Acquisition smears, timeouts, and dropped MCP
+    # connections are flaky; bad arguments or not-found are not (retrying just
+    # masks a real failure), so those fall straight through to defer.
+    _TRANSIENT_MARKERS = (
+        "queue.empty",
+        "timed out",
+        "timeout",
+        "no response",
+        "connection reset",
+        "broken pipe",
+        "server closed",
+        "temporarily",
+    )
+
+    def _is_transient_error(self, message: str) -> bool:
+        m = message.lower()
+        return any(marker in m for marker in self._TRANSIENT_MARKERS)
+
+    def _call_resilient(
+        self,
+        rust: SshMcpClient,
+        py: SshMcpClient,
+        tool: str,
+        args: dict[str, Any],
+        timeout: float | None = None,
+    ) -> dict[str, Any]:
+        """Call a rust tool with one retry on a *transient* error before defer.
+
+        The recovery tier the judging-audit flagged as missing: every failure
+        used to drop straight to ``defer``. HEARTBEAT.md reasons about the
+        failure and tries again before giving up. On a transient error this
+        retries exactly once, emitting a ``tool_retry`` audit record so the
+        retry is visible in the chain (not a silent re-call); a non-transient
+        error is returned unchanged so the caller still defers. Bounded at one
+        retry — we never hammer a hard failure.
+        """
+        res = (
+            rust.call_tool(tool, args, timeout=timeout)
+            if timeout is not None
+            else rust.call_tool(tool, args)
+        )
+        if "_error" not in res:
+            return res
+        message = str(res["_error"].get("message", ""))
+        if not self._is_transient_error(message):
+            return res
+        self._audit(
+            py,
+            "tool_retry",
+            {"tool": tool, "reason": message[:300], "attempt": 2},
+        )
+        return (
+            rust.call_tool(tool, args, timeout=timeout)
+            if timeout is not None
+            else rust.call_tool(tool, args)
+        )
+
     def _record_tool(
         self,
         py: SshMcpClient,
@@ -5887,7 +5945,7 @@ class Investigation:
             "memory_path": evidence_path,
             "limit": 500,
         }
-        pslist = rust.call_tool("vol_pslist", pslist_args)
+        pslist = self._call_resilient(rust, py, "vol_pslist", pslist_args)
         pslist_error = None
         if "_error" in pslist:
             pslist_error = str(pslist["_error"].get("message", "vol_pslist failed"))
@@ -5939,7 +5997,7 @@ class Investigation:
             "memory_path": evidence_path,
             "limit": 200,
         }
-        mal = rust.call_tool("vol_malfind", malfind_args, timeout=1800.0)
+        mal = self._call_resilient(rust, py, "vol_malfind", malfind_args, timeout=1800.0)
         malfind_error = None
         if "_error" in mal:
             malfind_error = str(mal["_error"].get("message", "vol_malfind failed"))
