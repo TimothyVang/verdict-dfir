@@ -67,6 +67,26 @@ else
   rm -rf "${t}"
 fi
 
+# --- hayabusa Sigma rules (the binary ships WITHOUT them) ---
+# hayabusa reads its rules + config from `./rules` relative to CWD. The MCP
+# (services/mcp/src/tools/hayabusa_scan.rs) runs hayabusa with CWD set to this
+# base dir, so populate `<base>/rules` here. Without it every EVTX/Sigma scan
+# fails ("Cannot open file [rules/config/...]") and the lane reads as broken.
+HAYABUSA_RULES_BASE="${HAYABUSA_RULES_BASE:-${XDG_DATA_HOME:-${HOME}/.local/share}/hayabusa-mcp}"
+if [ -d "${HAYABUSA_RULES_BASE}/rules/config" ]; then
+  ok "hayabusa rules present (${HAYABUSA_RULES_BASE}/rules)."
+elif have hayabusa || [ -x "${LOCAL_BIN}/hayabusa" ]; then
+  info "Fetching hayabusa Sigma rules -> ${HAYABUSA_RULES_BASE}/rules ..."
+  hb_bin="$(command -v hayabusa || echo "${LOCAL_BIN}/hayabusa")"
+  mkdir -p "${HAYABUSA_RULES_BASE}"
+  if "${hb_bin}" update-rules -r "${HAYABUSA_RULES_BASE}/rules" >/dev/null 2>&1 \
+     && [ -d "${HAYABUSA_RULES_BASE}/rules/config" ]; then
+    ok "hayabusa rules -> ${HAYABUSA_RULES_BASE}/rules"
+  else
+    warn "hayabusa update-rules failed (needs network; EVTX/Sigma scans will degrade until rules are fetched)."
+  fi
+fi
+
 # --- chainsaw (EVTX hunting) — release zip ---
 if have chainsaw || [ -x "${LOCAL_BIN}/chainsaw" ]; then
   ok "chainsaw present."
