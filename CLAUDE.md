@@ -269,6 +269,7 @@ the audit chain.
 | Public test-dataset corpus, goldens, recall scoring | `docs/DATASET.md` |
 | Per-tool analyst playbooks + expected-failure table | `docs/analyst/tool-playbooks.md` |
 | Dev/operator memory layer (obsidian-mind + boundary) | `docs/runbooks/obsidian-mind-memory.md` |
+| Failure modes → code-enforced detectors → fixes | `docs/troubleshooting.md` |
 | 3-step quick start | `QUICKSTART.md` |
 | Verdict word semantics | `docs/verdict-semantics.md` |
 | False-positive prevention & analyst checklists | `docs/false-positives.md` |
