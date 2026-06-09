@@ -1,13 +1,15 @@
 ---
 name: verdict
-description: Run the whole VERDICT pipeline on evidence in one go and report what fired. Use when the operator says /verdict, "run verdict", "investigate <path> end to end", "is there evil here", or asks to run the full investigation + automation + report and SEE every workflow that ran. Runs scripts/verdict --parallel, then surfaces the Verdict, the n8n automation, and the grounding sidecar in one status block.
+description: Turnkey end-to-end DFIR — type /verdict <evidence> and it bootstraps everything (builds the MCP servers, brings up n8n, prepares the SIFT VM) then runs the full pipeline with no flags. Use when the operator says /verdict, "run verdict", "investigate <path> end to end", "is there evil here", or wants the whole investigation + automation + report in one go. Auto-selects the SIFT VM (full forensic toolchain) so disk images fully extract, fires n8n + grounding, and surfaces the Verdict + every workflow that ran.
 ---
 
-# VERDICT — one-shot investigation + a unified "what ran" report
+# VERDICT — turnkey one-shot DFIR + a unified "what ran" report
 
-Use this skill when the operator wants the full pipeline in a single command and wants
-to *see* every tool fire — including the n8n automation and grounding workflows that the
-plain run executes silently.
+The operator types `/verdict <evidence>` (or just `/verdict`) and gets the **whole** pipeline
+with no setup and no flags: this skill bootstraps the environment, auto-uses the SIFT VM so disk
+images actually extract, runs the parallel investigation to a signed Verdict, fires the n8n
+automation + grounding workflows, and shows the dashboard + report — then reports everything that
+fired.
 
 ## Safety rules (do not violate)
 
@@ -25,23 +27,30 @@ plain run executes silently.
 - If the operator gave a path, use it. Otherwise use the newest file in `evidence/`
   (the launcher does this for you when no path is passed).
 
-### 2. Pre-check the automation stack (so it visibly fires, not silently skips)
-- Check n8n: `curl -fsS --max-time 3 http://127.0.0.1:5678/healthz`.
-- If it is **down**, tell the operator the grounding + finding-to-action workflows will be
-  skipped, and *offer* to start n8n first (do not start it without asking). The
-  investigation + signed Verdict still run fully without n8n.
+### 2. Bootstrap everything (no manual installs, no flags for the operator)
+- Run `bash scripts/verdict-setup.sh` and read its two stdout lines:
+  `FIND_EVIL_GUEST_IP=<ip>` and `SIFT_OK=<0|1>`.
+- It builds the MCP servers (via `install.sh`) if missing, brings up n8n, and prepares the
+  SIFT VM — resolves its **current** DHCP IP (the hardcoded default is often stale), powers it
+  on if it is off, and confirms the forensic toolchain (`ewfmount` etc.). The SIFT VM is where
+  Volatility/Hayabusa/ewfmount/TSK live pre-installed, so this is how "install everything" is
+  satisfied without installing forensic binaries on the host.
+- Surface its progress lines to the operator. It is non-fatal: a missing n8n just means
+  automation is skipped; a missing VM falls back to local mode.
 
-### 3. Run the pipeline (one go)
-- Run: `bash scripts/verdict <evidence>`
-  - Parallel execution is the **default**: the independent tool calls (verify re-runs +
-    disk-artifact parses) overlap; the Verdict and the audit chain are identical to serial.
-    Pass `--no-parallel` (alias `--sequential`) only to force fully serial execution.
-  - Add `--workers N` (default 2) — each lane is its own findevil-mcp process, so a
-    higher count can over-subscribe a RAM-constrained host (e.g. the SIFT VM) and make
-    registry hive loads fail; raise it only after a parity check.
-  - Add `--no-dashboard` only if the operator does not want the browser opened.
-- Stream the launcher's stage output. It now prints a line when n8n posts and when
-  grounding is written or skipped — surface those to the operator as they happen.
+### 3. Run the full pipeline — auto-SIFT, parallel, n8n + grounding, all in one go
+The operator types only `/verdict <evidence>`; **this skill adds the right flags.**
+- If `SIFT_OK=1`, run:
+  `FIND_EVIL_GUEST_IP=<ip> bash scripts/verdict <evidence> --sift`
+  → DFIR tools run **in the SIFT VM** (the only way to fully extract a disk image) → signed
+  verdict + manifest → **n8n finding-to-action fires** → **grounding fires** → dashboard + report.
+- If `SIFT_OK=0` (no reachable VM), run `bash scripts/verdict <evidence>` locally and tell the
+  operator a **disk image is custody-only** without the VM (memory/EVTX/network still work if
+  their tools are present).
+- Parallel is the **default** (`--workers 2`); pass `--no-parallel` only to force serial, and
+  `--no-dashboard` only if the operator does not want the browser opened.
+- Stream the launcher's stage output — it prints when n8n posts and when grounding is
+  written/skipped; surface those as they happen.
 
 ### 4. Locate the Case outputs
 - Read `tmp/verdict-last-run.json` to get the `case_id` / case directory.
