@@ -25,12 +25,13 @@
 #   --skip-build      assume target/release/findevil-mcp is already built
 #   --dry-run         print each stage without running anything
 #   --unattended      no interactive prompts (forwarded to the engine)
-#   --parallel        run independent tool calls (verify re-runs + disk-artifact
-#                     parses) concurrently; the verdict + audit chain are unchanged
-#   --workers N       max concurrent lanes for --parallel (default 2; each lane
-#                     is its own findevil-mcp process, so a higher count can
-#                     over-subscribe a RAM-constrained host — raise only after a
-#                     parallel-vs-sequential parity check)
+# (parallel is the DEFAULT) independent tool calls (verify re-runs + disk-artifact
+#                     parses) run concurrently; the verdict + audit chain are
+#                     identical to serial
+#   --no-parallel     run fully serially (alias: --sequential) — the escape hatch
+#   --workers N       max concurrent lanes (default 2; each lane is its own
+#                     findevil-mcp process, so a higher count can over-subscribe a
+#                     RAM-constrained host — raise only after a parity check)
 #   --run-summary F   also write a machine-readable JSON pointer to F
 #   -- <args...>      forward any remaining args to the engine
 #
@@ -63,6 +64,7 @@ while [[ $# -gt 0 ]]; do
     --watch)         WATCH=1; shift ;;
     --run-summary)   RUN_SUMMARY="$2"; shift 2 ;;
     --parallel)      PASSTHROUGH+=("--parallel"); shift ;;
+    --no-parallel|--sequential) PASSTHROUGH+=("--no-parallel"); shift ;;
     --workers)       PASSTHROUGH+=("--workers" "$2"); shift 2 ;;   # value-bearing
     --)              shift; PASSTHROUGH+=("$@"); break ;;
     -*)              PASSTHROUGH+=("$1"); shift ;;   # forward unknown flags (e.g. --unattended)

@@ -5304,9 +5304,11 @@ class Investigation:
         signer: str = "stub",
         force_fresh_replay: bool = False,
         case_id: str | None = None,
-        parallel: bool = False,
+        parallel: bool = True,
         workers: int = 2,
     ) -> None:
+        # NOTE: parallel defaults ON (validated parity vs serial on EVTX + the
+        # 23GB rocba disk via SIFT). --no-parallel is the serial escape hatch.
         self.evidence = evidence_path
         # In local mode, pin the evidence to an absolute path so every consumer
         # resolves it identically regardless of cwd. The verifier's fresh replay
@@ -9347,10 +9349,12 @@ def main() -> int:
     )
     p.add_argument(
         "--parallel",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=True,
         help="Run independent tool calls (verify_finding re-runs and "
-        "disk-artifact parses) concurrently. Audit appends stay serialized, so "
-        "the verdict and the hash-chained log are unchanged.",
+        "disk-artifact parses) concurrently (default). Use --no-parallel for "
+        "fully serial execution. Audit appends stay serialized either way, so "
+        "the verdict and the hash-chained log are identical to serial.",
     )
     p.add_argument(
         "--workers",

@@ -31,10 +31,11 @@ plain run executes silently.
   skipped, and *offer* to start n8n first (do not start it without asking). The
   investigation + signed Verdict still run fully without n8n.
 
-### 3. Run the pipeline (parallel, one go)
-- Run: `bash scripts/verdict <evidence> --parallel`
-  - `--parallel` overlaps the independent tool calls (verify re-runs + disk-artifact
-    parses); the Verdict and the audit chain are unchanged.
+### 3. Run the pipeline (one go)
+- Run: `bash scripts/verdict <evidence>`
+  - Parallel execution is the **default**: the independent tool calls (verify re-runs +
+    disk-artifact parses) overlap; the Verdict and the audit chain are identical to serial.
+    Pass `--no-parallel` (alias `--sequential`) only to force fully serial execution.
   - Add `--workers N` (default 2) — each lane is its own findevil-mcp process, so a
     higher count can over-subscribe a RAM-constrained host (e.g. the SIFT VM) and make
     registry hive loads fail; raise it only after a parity check.
