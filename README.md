@@ -64,6 +64,23 @@ Findings follow a strict epistemic hierarchy — **CONFIRMED** (≥2 corroborati
 verifier-passed) > **INFERRED** (derived from confirmed facts) > **HYPOTHESIS** — and execution
 claims require at least two artifact classes. Evidence is opened read-only.
 
+## Capabilities
+
+Beyond the three ideas above, a single case run also:
+
+- **Works disk *and* memory end-to-end.** Mounts raw/E01 images read-only and extracts `$MFT`,
+  registry hives, EVTX, and Prefetch (`disk_mount` / `disk_extract_artifacts` / `disk_unmount`),
+  then analyzes memory in the same case — no manual carving. ([tool inventory](docs/reference/mcp-and-tools.md))
+- **Re-verifies its own findings.** `verify_finding` re-runs each cited tool call and confirms the
+  output SHA-256 still matches, and `detect_contradictions` raises Pool A vs Pool B conflicts as
+  first-class records before the judge merges — so a third party can independently replay the chain.
+  ([tools](agent-config/TOOLS.md))
+- **Scales to a fleet.** Correlate findings across many hosts — shared processes, technique spread —
+  with the 3-stage investigate → correlate → render pipeline. ([fleet analysis](docs/using/fleet-analysis.md))
+- **Acts on the verdict (optional).** Post-verdict n8n workflows turn a verdict into a notification,
+  ticket, or containment step. This automation sits *outside* the audit chain — never evidence, never
+  a Finding. ([servers](docs/reference/mcp-and-tools.md))
+
 ## Hi, I'm new
 
 New here? You have two equivalent ways to get a working setup. Both install the full toolchain
