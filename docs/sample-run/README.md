@@ -42,6 +42,18 @@ manifest_verify(
 Both runs return `overall: true` — `audit_chain_ok`, `merkle_root_ok`, `leaf_count_ok`, and
 `signature_present` all pass. No network, no trusted third party (FRE 902(14) self-authentication).
 
+Or, with **nothing but a Python 3 interpreter** (no MCP server, no venv), re-verify the
+hash-chained audit log from scratch and trace every finding in one command:
+
+```
+scripts/trace-finding docs/sample-run/nist-hacking-case
+```
+
+`trace-finding` re-canonicalizes every audit line and replays every `prev_hash` link (it exits
+non-zero on a single flipped bit), confirms each declared Merkle leaf resolves to an audit
+record, and prints the chain below. `manifest_verify` additionally rebuilds the rs_merkle root
+and checks the signature bundle.
+
 ## Trace any finding to the tool execution that produced it
 
 Worked example (`attack-samples-evtx/`):
@@ -55,7 +67,8 @@ Finding  f-A-evtx-audit-log-cleared   (confidence: CONFIRMED)
 ```
 
 So the verdict word ← Finding ← `tool_call_id` ← audit record ← Merkle leaf ← signed manifest,
-end to end.
+end to end. `scripts/trace-finding <run-dir> [finding_id]` prints exactly this chain for every
+finding (or one), and exits non-zero if any finding fails to resolve.
 
 ## Honest caveats
 
