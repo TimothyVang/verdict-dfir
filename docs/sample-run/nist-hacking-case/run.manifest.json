@@ -1,39 +1,39 @@
 {
-  "audit_log_final_hash": "df5aa962cdc4ae8504ec255d2a108de31c4b2ec7d6e692dd5c36247c7fed346a",
-  "audit_log_path": "/home/sansforensics/find-evil/tmp/auto-e510c406-0205-47a4-9e2c-e5e56e75eba4/audit.jsonl",
-  "audit_log_record_count": 216,
-  "case_id": "0175c0a7-7c93-48ab-8401-9594024803a7",
+  "audit_log_final_hash": "66c8e3358b03a0f34a2de1690f7f1faae79cc9268b760deb6d23fe7e93cac583",
+  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/hb-schardt-live/audit.jsonl",
+  "audit_log_record_count": 235,
+  "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
   "extra": {
     "evidence_type": "disk",
-    "image_path": "/home/sansforensics/SCHARDT.dd",
+    "image_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/SCHARDT.dd",
     "model": "find-evil-auto",
     "packet_attestation": {
       "customer_releasable": false,
       "customer_release_candidate": false,
-      "expert_signoff_packet_sha256": "7c2a2f2c7bd3dc41e6601fd986c2ebe09c02c9842b29c19f2c33a41dfed6e3e3",
+      "expert_signoff_packet_sha256": "2f869622bcdf110c136c3771a073286988b5c8920226516b4f0494d6afd320b7",
       "final_finding_ids": [
         "f-B-prefetch-cain-exe",
         "f-B-prefetch-cain25b45-exe",
-        "f-B-prefetch-netstumbler-exe",
-        "f-B-prefetch-netstumblerinstaller-0-4-0-ex",
+        "f-B-prefetch-ethereal-setup-0-10-6-exe",
+        "f-B-prefetch-ethereal-exe",
         "f-B-prefetch-lookatlan-exe",
         "f-B-prefetch-mirc-exe",
         "f-B-prefetch-mirc612-exe",
-        "f-B-prefetch-ethereal-setup-0-10-6-exe",
-        "f-B-prefetch-ethereal-exe"
+        "f-B-prefetch-netstumbler-exe",
+        "f-B-prefetch-netstumblerinstaller-0-4-0-ex"
       ],
       "packet_state": "EXPERT_REVIEW_DRAFT",
-      "release_gate_sha256": "fffce88ebefafdaa21a96a1fc24db4fad289ae1c8a13a0d3f54cc2a8b47d3db6",
-      "report_qa_sha256": "c81c0fd9f1f3dd15a981954e0dbfc1493feaf74384fa28e2d04c9c481e1787a9",
-      "verdict_artifact_bytes": 251591,
-      "verdict_artifact_path": "/home/sansforensics/find-evil/tmp/auto-e510c406-0205-47a4-9e2c-e5e56e75eba4/verdict.json",
-      "verdict_artifact_sha256": "f4406007ab68f2a5450af28c3b5b6ef965a141eb1c6dd0fb3cef58c9cfe5724e",
-      "verdict_packet_sha256": "2810ade330628ae29b5ed66f5d0493e767428b1b6bcc6c170519550f910702ab"
+      "release_gate_sha256": "ec603472b2851ceec77116bec1cc790df9246710a19f891c6159ce8e829b33c5",
+      "report_qa_sha256": "7b448247f216bb61271169c078167d998ee4c4ce0235b2ed1f8632cfdd695756",
+      "verdict_artifact_bytes": 526652,
+      "verdict_artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/hb-schardt-live/verdict.json",
+      "verdict_artifact_sha256": "b89fc6aae0e1d276cebcd5f7f0b60d152d10601fb008fe94e16f50c3dcdda895",
+      "verdict_packet_sha256": "a5edc8c3e8e65c3a4e940eecfb34ba9b3d157400c4f9f649b201d90eb25101fc"
     },
     "signer": "stub"
   },
-  "finalized_at": "2026-06-07T15:04:17Z",
-  "leaf_count": 96,
+  "finalized_at": "2026-06-09T16:19:12Z",
+  "leaf_count": 97,
   "leaves": [
     {
       "digest_hex": "65e2002fed0b286f49541c7e97dcec0dda913d51a063ceeed86782bdacda2312",
@@ -42,175 +42,175 @@
       "seq": 2
     },
     {
-      "digest_hex": "1a4d3ef7c75a4a9ffffd3b13644482a6bcbce377ab762ecc3b3f1d0363a71896",
+      "digest_hex": "f450a6d65c3741ece1fe842339e0bd29f83163f58ddb5eed1780cf8c1335f88f",
       "kind": "tool_call_output",
       "record_id": "tc-002",
       "seq": 4
     },
     {
-      "digest_hex": "0cda48e2b67bda1c6a745ecfd70c1c3e57df1a3a0c43a54c2eca7b99a5364bf4",
+      "digest_hex": "3b2e4e310d4322aeba9413499993091d6f201df5f8b7dda8d4138aff99358cf7",
       "kind": "tool_call_output",
       "record_id": "tc-003",
       "seq": 6
     },
     {
-      "digest_hex": "7aa8e6f533a6ae738ff835a03fa584cfb049f688a3b62450b0dc176bfa8aac59",
+      "digest_hex": "9dbbbd01e4952495fd9f0bc779170d26147405b6385e882e031bc280c10204e7",
       "kind": "tool_call_output",
       "record_id": "tc-004",
       "seq": 8
     },
     {
-      "digest_hex": "c3c67d32050cd5628a2396e3f4f939bb53a28d16f89ee111ef2213f37611233c",
+      "digest_hex": "7aa8e6f533a6ae738ff835a03fa584cfb049f688a3b62450b0dc176bfa8aac59",
       "kind": "tool_call_output",
       "record_id": "tc-005",
       "seq": 10
     },
     {
-      "digest_hex": "0e453e9a8668b928ac56b878d5d2376b2e4aef113da819fe839e48c3667c8f55",
+      "digest_hex": "c3c67d32050cd5628a2396e3f4f939bb53a28d16f89ee111ef2213f37611233c",
       "kind": "tool_call_output",
       "record_id": "tc-006",
       "seq": 12
     },
     {
-      "digest_hex": "a0d9c501dab5e2d7fd1ac98c3a0f85850e8cdd7c2ea5d431e810d4f358074e60",
+      "digest_hex": "0e453e9a8668b928ac56b878d5d2376b2e4aef113da819fe839e48c3667c8f55",
       "kind": "tool_call_output",
       "record_id": "tc-007",
       "seq": 14
     },
     {
-      "digest_hex": "d8fc9ebc32cf4cc22d3eb3d2aa24df0008dcf266548fc1d306da766f72bb4502",
+      "digest_hex": "a0d9c501dab5e2d7fd1ac98c3a0f85850e8cdd7c2ea5d431e810d4f358074e60",
       "kind": "tool_call_output",
       "record_id": "tc-008",
       "seq": 16
     },
     {
-      "digest_hex": "b2e14c91aaa2765b77fde1fb865b6c1e4b75e0787616a84d2b05e8eca48682a3",
+      "digest_hex": "d8fc9ebc32cf4cc22d3eb3d2aa24df0008dcf266548fc1d306da766f72bb4502",
       "kind": "tool_call_output",
       "record_id": "tc-009",
       "seq": 18
     },
     {
-      "digest_hex": "76ae3ea8345e5c99d0702f42724c6b5d97b996c7cf1a4f21ab40171765af2a5f",
+      "digest_hex": "b2e14c91aaa2765b77fde1fb865b6c1e4b75e0787616a84d2b05e8eca48682a3",
       "kind": "tool_call_output",
       "record_id": "tc-010",
       "seq": 20
     },
     {
-      "digest_hex": "114fff24b0ccffdc443754243f4358e40bacc3760d08b6702bc018a0eba49875",
+      "digest_hex": "76ae3ea8345e5c99d0702f42724c6b5d97b996c7cf1a4f21ab40171765af2a5f",
       "kind": "tool_call_output",
       "record_id": "tc-011",
       "seq": 22
     },
     {
-      "digest_hex": "d00731eac477ddaf333f97cdb2bfba2ae27fb39c0311cfdc7218469671b879c0",
+      "digest_hex": "114fff24b0ccffdc443754243f4358e40bacc3760d08b6702bc018a0eba49875",
       "kind": "tool_call_output",
       "record_id": "tc-012",
       "seq": 24
     },
     {
-      "digest_hex": "6480a368a55affeb24afb2acd7f0eebee0fde40197c6a1c44f62265de2779533",
+      "digest_hex": "d00731eac477ddaf333f97cdb2bfba2ae27fb39c0311cfdc7218469671b879c0",
       "kind": "tool_call_output",
       "record_id": "tc-013",
       "seq": 26
     },
     {
-      "digest_hex": "e1029a4763402f9f9df5c1ceb4f2f1387fe2829b530806291060b24d7df2f4c8",
+      "digest_hex": "9ccee9287b972b45a9de7a9197901c8824c045dd37fca549efb52a08172d7f1a",
       "kind": "tool_call_output",
       "record_id": "tc-014",
       "seq": 28
     },
     {
-      "digest_hex": "285bbb457d33faf2847cd33110eb298216c82bce0e99d70108f26daea13e3b94",
+      "digest_hex": "caefe057dc9b394d096cbe40d88fceb424ddeba6f9cd4a889539f068eceaa15e",
       "kind": "tool_call_output",
       "record_id": "tc-015",
       "seq": 30
     },
     {
-      "digest_hex": "ef2de964549695233bb004da6aeca7575e83ffd0c2dfa6968334d8acabece07e",
+      "digest_hex": "8f370d7a5063474fa4c6dc4a1298ca6f1001b49d313400d3c1775c733dc0534b",
       "kind": "tool_call_output",
       "record_id": "tc-016",
       "seq": 32
     },
     {
-      "digest_hex": "21dce043e33eb0cc216310c7404d5f444b1c9510ec396974183ecd321c1b8670",
+      "digest_hex": "3ef011c0474aeb3f6dfb48c27761caf699046a065d15d67339c06735e6a827d1",
       "kind": "tool_call_output",
       "record_id": "tc-017",
       "seq": 34
     },
     {
-      "digest_hex": "890991505b38844663dfcaad1c75937ac597909314328b4f0a3dcf546f7e9992",
+      "digest_hex": "e3561ec131f236b5990acd3eee8aeee8f6aac51fc4fe662741d208693393b15b",
       "kind": "tool_call_output",
       "record_id": "tc-018",
       "seq": 36
     },
     {
-      "digest_hex": "2419ad98a3632d6c87533282bdcd12e45a1b655031d60d6ebe5eeb9cbb47ab08",
+      "digest_hex": "d471d52725ac3ddc26190bff97f4589d333dd20cd4b8c5f6a7026ba06330bdb5",
       "kind": "tool_call_output",
       "record_id": "tc-019",
       "seq": 38
     },
     {
-      "digest_hex": "edc667655a65a7498dc6b79d015af1a0f576e10ee6e43dc83852609ca0cdf857",
+      "digest_hex": "eba2574fcda278c78c3ff0a661f9c561dce39f4de1faaa409c190bb2b4862c9b",
       "kind": "tool_call_output",
       "record_id": "tc-020",
       "seq": 40
     },
     {
-      "digest_hex": "332486ff50fe6d3afcbee56ced49fed6db58564777bc4737d7b7a00c97277800",
+      "digest_hex": "cf2fcec98191056334ece6aabcd0b07325cf86154817764b7c219a979fcd6558",
       "kind": "tool_call_output",
       "record_id": "tc-021",
       "seq": 42
     },
     {
-      "digest_hex": "bd7ab7efd4b2a9bf761611ef677a86e6e1cb1bebb810e2169484757f137cb4e0",
+      "digest_hex": "a7f441ff1792b00ba6a51b80e2d552740cef804bb245b1297905265fc6e53e5c",
       "kind": "tool_call_output",
       "record_id": "tc-022",
       "seq": 44
     },
     {
-      "digest_hex": "c912d93baf9bf81ce4deb9b8b0a94862e2edcdfa5fdb7b4be32d9e3d1d13019b",
+      "digest_hex": "2dc4d79a36f00e7d70d2d59ddf2fe5fa7bd6c7c25a470619050f64ac1560636b",
       "kind": "tool_call_output",
       "record_id": "tc-023",
       "seq": 46
     },
     {
-      "digest_hex": "80850ecc397c7f70d417ea436915819bcf2279578d4d2b7435b5cb1d06cf646f",
+      "digest_hex": "be9547f5dccf15d1c3fc548332fab931e358457483f7aa041cd7d94d6be21667",
       "kind": "tool_call_output",
       "record_id": "tc-024",
       "seq": 48
     },
     {
-      "digest_hex": "567b543e1acfdac3e2954d2a4fb831dbe2fb8fdae23c30587bc4e07168730263",
+      "digest_hex": "224e99531cd859066eceeef39d9d4e25135994d261abdd6658e428ad8f81635a",
       "kind": "tool_call_output",
       "record_id": "tc-025",
       "seq": 50
     },
     {
-      "digest_hex": "7aaf8d33c3b0bd3e3adcc633f5f6c492233bc0efdaf68366c343dcc310d7f3f3",
+      "digest_hex": "ef00873262ccf95b4d6ae7292c9377a20601c5418f3593fd072e4ced4493b45d",
       "kind": "tool_call_output",
       "record_id": "tc-026",
       "seq": 52
     },
     {
-      "digest_hex": "166bffc06276b83dd8450fea3ee7069ed7be2475f3504412822ddbe8358ee0d6",
+      "digest_hex": "23afe9e15a4f00912adae75446fb4c91ddb89eac479c38ad05204aeee7d226b3",
       "kind": "tool_call_output",
       "record_id": "tc-027",
       "seq": 54
     },
     {
-      "digest_hex": "387e528249f046e78187f9664bf85ae1975620ad5ce373718f6d0287784661cc",
+      "digest_hex": "51baef1bd97a0fdbdf2d3524614aa52ac49a98420c795ae78f13715f04c827e6",
       "kind": "tool_call_output",
       "record_id": "tc-028",
       "seq": 56
     },
     {
-      "digest_hex": "42fed338eec4938ba378be6567f5dadf09f1f6bc05e8f30411524ffee23ced65",
+      "digest_hex": "6dfa118c33c2108cfa4347d125148b8d199c166697b7cd11c67d477a043fd7fc",
       "kind": "tool_call_output",
       "record_id": "tc-029",
       "seq": 58
     },
     {
-      "digest_hex": "2fbf30c711143c9dea088e0b7163630ec45a654c7e1ba1a33eb11c869e216511",
+      "digest_hex": "d1f7ee94672d1b0e969e7c85837e19600b3d1feae105ae58f97606b98f97640e",
       "kind": "tool_call_output",
       "record_id": "tc-030",
       "seq": 60
@@ -306,320 +306,326 @@
       "seq": 90
     },
     {
-      "digest_hex": "caefe057dc9b394d096cbe40d88fceb424ddeba6f9cd4a889539f068eceaa15e",
+      "digest_hex": "09bcf1896b0ac3c85f749e6214fe2b1de408b6a37be68bf77501c77efc82b11e",
       "kind": "tool_call_output",
       "record_id": "tc-046",
       "seq": 92
     },
     {
-      "digest_hex": "8f370d7a5063474fa4c6dc4a1298ca6f1001b49d313400d3c1775c733dc0534b",
+      "digest_hex": "c912d93baf9bf81ce4deb9b8b0a94862e2edcdfa5fdb7b4be32d9e3d1d13019b",
       "kind": "tool_call_output",
       "record_id": "tc-047",
       "seq": 94
     },
     {
-      "digest_hex": "3ef011c0474aeb3f6dfb48c27761caf699046a065d15d67339c06735e6a827d1",
+      "digest_hex": "80850ecc397c7f70d417ea436915819bcf2279578d4d2b7435b5cb1d06cf646f",
       "kind": "tool_call_output",
       "record_id": "tc-048",
       "seq": 96
     },
     {
-      "digest_hex": "e3561ec131f236b5990acd3eee8aeee8f6aac51fc4fe662741d208693393b15b",
+      "digest_hex": "567b543e1acfdac3e2954d2a4fb831dbe2fb8fdae23c30587bc4e07168730263",
       "kind": "tool_call_output",
       "record_id": "tc-049",
       "seq": 98
     },
     {
-      "digest_hex": "d471d52725ac3ddc26190bff97f4589d333dd20cd4b8c5f6a7026ba06330bdb5",
+      "digest_hex": "7aaf8d33c3b0bd3e3adcc633f5f6c492233bc0efdaf68366c343dcc310d7f3f3",
       "kind": "tool_call_output",
       "record_id": "tc-050",
       "seq": 100
     },
     {
-      "digest_hex": "eba2574fcda278c78c3ff0a661f9c561dce39f4de1faaa409c190bb2b4862c9b",
+      "digest_hex": "166bffc06276b83dd8450fea3ee7069ed7be2475f3504412822ddbe8358ee0d6",
       "kind": "tool_call_output",
       "record_id": "tc-051",
       "seq": 102
     },
     {
-      "digest_hex": "cf2fcec98191056334ece6aabcd0b07325cf86154817764b7c219a979fcd6558",
+      "digest_hex": "387e528249f046e78187f9664bf85ae1975620ad5ce373718f6d0287784661cc",
       "kind": "tool_call_output",
       "record_id": "tc-052",
       "seq": 104
     },
     {
-      "digest_hex": "a7f441ff1792b00ba6a51b80e2d552740cef804bb245b1297905265fc6e53e5c",
+      "digest_hex": "42fed338eec4938ba378be6567f5dadf09f1f6bc05e8f30411524ffee23ced65",
       "kind": "tool_call_output",
       "record_id": "tc-053",
       "seq": 106
     },
     {
-      "digest_hex": "5b117dd9fad1b2cf854d11e4366edbfe5ab9f234b8007c5f98362b0b54a38abb",
+      "digest_hex": "2fbf30c711143c9dea088e0b7163630ec45a654c7e1ba1a33eb11c869e216511",
       "kind": "tool_call_output",
       "record_id": "tc-054",
       "seq": 108
     },
     {
-      "digest_hex": "66755362a402e0d4a0d291d8e44c1ba5a2071fd856f814f24aa23e528009f5c8",
+      "digest_hex": "eba052f473398628be7cab71191524e84b3a891b48054145ddef9f6c3dd0cbd3",
       "kind": "tool_call_output",
       "record_id": "tc-055",
       "seq": 110
     },
     {
-      "digest_hex": "6f5c628bba6a105a417881d582fadd238ce3aa3fc1f76d2e2a623e73dd8c1252",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-056",
       "seq": 112
     },
     {
-      "digest_hex": "66755362a402e0d4a0d291d8e44c1ba5a2071fd856f814f24aa23e528009f5c8",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-057",
       "seq": 114
     },
     {
-      "digest_hex": "f747f3af690cf93fba2a1c7ae709c6122497b15a7751a19abb7afd94fb85bfc7",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-058",
       "seq": 116
     },
     {
-      "digest_hex": "66755362a402e0d4a0d291d8e44c1ba5a2071fd856f814f24aa23e528009f5c8",
+      "digest_hex": "d873d0df6abbef3ca10095b2f82be4c9c409771a5598081be6561da21927dfcc",
       "kind": "tool_call_output",
       "record_id": "tc-059",
       "seq": 118
     },
     {
-      "digest_hex": "6f5c628bba6a105a417881d582fadd238ce3aa3fc1f76d2e2a623e73dd8c1252",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-060",
       "seq": 120
     },
     {
-      "digest_hex": "66755362a402e0d4a0d291d8e44c1ba5a2071fd856f814f24aa23e528009f5c8",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-061",
       "seq": 122
     },
     {
-      "digest_hex": "a0558e31bb64e74d2469bd7b09af7526ebfed53e7b391c5944dabf75fcd6d16e",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-062",
       "seq": 124
     },
     {
-      "digest_hex": "66755362a402e0d4a0d291d8e44c1ba5a2071fd856f814f24aa23e528009f5c8",
+      "digest_hex": "872a33d4259ca7b6961b9e681c043150f3b14bd72c43565ae64cae443144f5e2",
       "kind": "tool_call_output",
       "record_id": "tc-063",
       "seq": 126
     },
     {
-      "digest_hex": "6f5c628bba6a105a417881d582fadd238ce3aa3fc1f76d2e2a623e73dd8c1252",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-064",
       "seq": 128
     },
     {
-      "digest_hex": "66755362a402e0d4a0d291d8e44c1ba5a2071fd856f814f24aa23e528009f5c8",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-065",
       "seq": 130
     },
     {
-      "digest_hex": "ef18d3dd580a1cef59480c1eecbf93102fde0ca82341fe9ad7a71565ccda6f4f",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-066",
       "seq": 132
     },
     {
-      "digest_hex": "66755362a402e0d4a0d291d8e44c1ba5a2071fd856f814f24aa23e528009f5c8",
+      "digest_hex": "d795e0b7b845d7bf2163c4892b9c231116096f20e7e4b7c4524b1d635269636b",
       "kind": "tool_call_output",
       "record_id": "tc-067",
       "seq": 134
     },
     {
-      "digest_hex": "e359e2d69645f700c0c1c41fa2a2d6dc0f6e11e1da4f97e04ac21d5cfc29cc62",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-068",
       "seq": 136
     },
     {
-      "digest_hex": "9bc8b0a207e8221d654d8cdb65ab8e565a02f0ba455693cba27465f905547fa3",
+      "digest_hex": "eba052f473398628be7cab71191524e84b3a891b48054145ddef9f6c3dd0cbd3",
       "kind": "tool_call_output",
       "record_id": "tc-069",
       "seq": 138
     },
     {
-      "digest_hex": "5c1ca9e3fe1f82a7597e6e757ab277dd2262c31dd11044b223c420d92d0d73e8",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-070",
       "seq": 140
     },
     {
-      "digest_hex": "6582ea84a86bfd8e513f44ae78537c1b9e46c187e4d5071dd66831917e141e62",
+      "digest_hex": "d6ec730f007734651a1edf3e4bef35213be190c6807f306123a4449f20b9808e",
       "kind": "tool_call_output",
       "record_id": "tc-071",
       "seq": 142
     },
     {
-      "digest_hex": "ad32745552e2e0adf82a19d32d4ec38bd6521c55438b89b5eb3b1ba6c6a0c200",
+      "digest_hex": "1587a36c4d5f47b4f7c3c9f220c69b2e9fe5bc3fd0b824c470bec558b0b0e10e",
       "kind": "tool_call_output",
       "record_id": "tc-072",
       "seq": 144
     },
     {
-      "digest_hex": "69f9ebb82f09357ac65c43f2e279529a1edf4828a8efd3ea5b21bb6f2712031a",
+      "digest_hex": "b87dad9463d3504a3653f784dc6e00357c983efb5215b9922cb05b40bf256361",
       "kind": "tool_call_output",
       "record_id": "tc-073",
       "seq": 146
     },
     {
-      "digest_hex": "5b117dd9fad1b2cf854d11e4366edbfe5ab9f234b8007c5f98362b0b54a38abb",
+      "digest_hex": "63e28bf5eb6f0fc8a3317dbf7a3c0c5d671df34cd2ccf2033775431805753d47",
       "kind": "tool_call_output",
       "record_id": "tc-074",
       "seq": 148
     },
     {
-      "digest_hex": "66755362a402e0d4a0d291d8e44c1ba5a2071fd856f814f24aa23e528009f5c8",
+      "digest_hex": "89a6240bb2f2ffa8846cbfeb3a3f02b081bb8bf72fea17157429c021cb96a1a5",
       "kind": "tool_call_output",
       "record_id": "tc-075",
       "seq": 150
     },
     {
-      "digest_hex": "e359e2d69645f700c0c1c41fa2a2d6dc0f6e11e1da4f97e04ac21d5cfc29cc62",
+      "digest_hex": "7526da199ca8a1b7e75b51b8cedb019dbaf424de5b764fbf68ba1fc039359a74",
       "kind": "tool_call_output",
       "record_id": "tc-076",
       "seq": 152
     },
     {
-      "digest_hex": "08d9107a766d3e27b98e7be4ad696811f75d0b7613c81b8d4c6bb2f7cbf7d266",
+      "digest_hex": "d6ec730f007734651a1edf3e4bef35213be190c6807f306123a4449f20b9808e",
       "kind": "tool_call_output",
       "record_id": "tc-077",
       "seq": 154
     },
     {
-      "digest_hex": "d765de47c6474df81a1787a3a0696429826ab249b3a381ceda08031e0b7c841d",
+      "digest_hex": "cf44fc2aa030c0f3a05444fbc8c6e4ca49167073f16403200cafdd7b52711efb",
       "kind": "tool_call_output",
       "record_id": "tc-078",
       "seq": 156
     },
     {
-      "digest_hex": "6582ea84a86bfd8e513f44ae78537c1b9e46c187e4d5071dd66831917e141e62",
+      "digest_hex": "bd8c369b019a209885bb3a40a5d290c3dba38a4528fbd5154109d4c561879f60",
       "kind": "tool_call_output",
       "record_id": "tc-079",
       "seq": 158
     },
     {
-      "digest_hex": "ad32745552e2e0adf82a19d32d4ec38bd6521c55438b89b5eb3b1ba6c6a0c200",
+      "digest_hex": "63e28bf5eb6f0fc8a3317dbf7a3c0c5d671df34cd2ccf2033775431805753d47",
       "kind": "tool_call_output",
       "record_id": "tc-080",
       "seq": 160
     },
     {
-      "digest_hex": "eefdfb04b9e4751104a6f2894c5145a7bd673a8871b598614fbdc12c87a08144",
+      "digest_hex": "89a6240bb2f2ffa8846cbfeb3a3f02b081bb8bf72fea17157429c021cb96a1a5",
       "kind": "tool_call_output",
       "record_id": "tc-081",
       "seq": 162
     },
     {
-      "digest_hex": "4b9c957146cdcd7236864bcaad4c3d4bc863c369e6d35e2761604c6a9598bad3",
+      "digest_hex": "a97173f066024e9ecc004ffad27f8c2a0f5769e825057ebf68ce7071a0e4b29d",
       "kind": "tool_call_output",
       "record_id": "tc-082",
       "seq": 164
     },
     {
-      "digest_hex": "4b9c957146cdcd7236864bcaad4c3d4bc863c369e6d35e2761604c6a9598bad3",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-083",
       "seq": 166
     },
     {
-      "digest_hex": "ed31a611295c9d610656d36f9e00f4d1e2c70ae843df6ac4d0405c1e11d01a17",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-084",
       "seq": 168
     },
     {
-      "digest_hex": "4b9c957146cdcd7236864bcaad4c3d4bc863c369e6d35e2761604c6a9598bad3",
+      "digest_hex": "93d0a7858a3ca0b85e93189c91b6d34cc27d9bdde56d87a78d69d7b2bb430aa3",
       "kind": "tool_call_output",
       "record_id": "tc-085",
       "seq": 170
     },
     {
-      "digest_hex": "4b9c957146cdcd7236864bcaad4c3d4bc863c369e6d35e2761604c6a9598bad3",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-086",
       "seq": 172
     },
     {
-      "digest_hex": "9dce705f3a2216e13b6aba04d62105cd557792a65ca59b2fb237f1f58c0c8ea9",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-087",
       "seq": 174
     },
     {
-      "digest_hex": "197004e651890c9712eccf597738ae3075eb380dafa1eb9112de34b91d03a55a",
+      "digest_hex": "08fb1ae58c87097ef76f20a3e6237db2642f653f35e18fe40952b7deee1eb8f9",
+      "kind": "tool_call_output",
+      "record_id": "tc-088",
+      "seq": 176
+    },
+    {
+      "digest_hex": "786f6b5587ad63edd397218e22bb7df86c205b2f79dcc13662f25ff902f85c8c",
       "kind": "finding",
       "record_id": "f-B-prefetch-cain-exe",
-      "seq": 204
+      "seq": 215
     },
     {
-      "digest_hex": "d3bcdf35e57852951f459b623efe4d1604ce3cbee5a495374103434e2466d73f",
+      "digest_hex": "f357b586dd7aab7ccd47f9dc8b33299947655331aabf3c5af6f98792d6b09079",
       "kind": "finding",
       "record_id": "f-B-prefetch-cain25b45-exe",
-      "seq": 205
+      "seq": 216
     },
     {
-      "digest_hex": "9366114104e55e5f9fe5ecd8fdc3682af7a6a4bd47c5acdabe029a3f1eab3636",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-netstumbler-exe",
-      "seq": 206
-    },
-    {
-      "digest_hex": "ee27be5691c102ef2dbb0cf4106abff73ffb3f93cc57648811078432ba794fbd",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-netstumblerinstaller-0-4-0-ex",
-      "seq": 207
-    },
-    {
-      "digest_hex": "8f687402388286f09a7f595c2edcaf19a5b5dcb59f7b09395d41338880e2e645",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-lookatlan-exe",
-      "seq": 208
-    },
-    {
-      "digest_hex": "20406e3bab8999a09af1e67e84ac148f5f274ad45be294cbd5659e3783226f37",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-mirc-exe",
-      "seq": 209
-    },
-    {
-      "digest_hex": "f5e5f43c338d26f15a54618ac9919e8af2fa1f09632fc5716f20906fc2bfe788",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-mirc612-exe",
-      "seq": 210
-    },
-    {
-      "digest_hex": "7c8fefd8cc948f22f06c32461bedc64e7823b22a0a735dcee1cd2c304bd49921",
+      "digest_hex": "65bcb669e8524d9a4ebf2fee837ad53c75af4defeb42c10ec2f2686f82464dcc",
       "kind": "finding",
       "record_id": "f-B-prefetch-ethereal-setup-0-10-6-exe",
-      "seq": 211
+      "seq": 217
     },
     {
-      "digest_hex": "6f35491ba9cc8a2424c5fcb70fdab37574917922cb01624cdfe798d4951293ba",
+      "digest_hex": "318f7068d0c7d3942cae4d589e633215495d69ceed0fa7fdf7cfa8f893a7b1a8",
       "kind": "finding",
       "record_id": "f-B-prefetch-ethereal-exe",
-      "seq": 212
+      "seq": 218
+    },
+    {
+      "digest_hex": "507b5bf999a91f22642c3cf8560643ca694b251c457c06f2a900641f132f049f",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-lookatlan-exe",
+      "seq": 219
+    },
+    {
+      "digest_hex": "3d49db5993942d72fde6ad3d648640864c1a10005ba33e00cf152a85cfe99907",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-mirc-exe",
+      "seq": 220
+    },
+    {
+      "digest_hex": "0fcf6caafd9b01e47e42c71838e9bea5ee65e256b5e1e78c3d41fe413e2cc533",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-mirc612-exe",
+      "seq": 221
+    },
+    {
+      "digest_hex": "a7832e5e639d71440370eb33d68178ac8a458781378e66f8ef753d7c8d547c6b",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-netstumbler-exe",
+      "seq": 222
+    },
+    {
+      "digest_hex": "07cc2e8763324b882206466f4faabff0d44775e6ab1b6137128d09887f1b993c",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-netstumblerinstaller-0-4-0-ex",
+      "seq": 223
     }
   ],
-  "merkle_root_hex": "ce8ad4ea0829ddc07e1dea3facdc0130a785aa57f8d06323a3a80f24ff1b763d",
-  "run_id": "auto-1780844650",
+  "merkle_root_hex": "fd9f37382ccfbaff3c19073507fabd08bf6f676cd0931c5200c386d6cd1b9320",
+  "run_id": "auto-1781021943",
   "signature": {
-    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiMzUzZGY5MGI4YTg5ZjNhYTdmNjFiZWUzY2E5ZWYwZDA2NmQzMjFjNzJiMTRkZWE2NzA5NDEzZGU2MGU3MTlhMCIsImtpbmQiOiJzdHViIiwibm90ZSI6IlN0dWJTaWduZXIgb3V0cHV0IFx1MjAxNCBOT1QgYSByZWFsIFNpZ3N0b3JlIHNpZ25hdHVyZS4iLCJwYXlsb2FkX3NoYTI1NiI6IjgyMTg2NjkxYTQ3OTBmYWY4N2ZkMmQwMzNkMzJhMThlZWE4OGM1ZDE5ZTdhNGE0NWEyYWJhZjc5ZDRhMWY5ZTQiLCJydW5faWQiOiJhdXRvLTE3ODA4NDQ2NTAiLCJzZXEiOjF9",
-    "cert_fingerprint": "353df90b8a89f3aa7f61bee3ca9ef0d066d321c72b14dea6709413de60e719a0",
-    "payload_sha256": "82186691a4790faf87fd2d033d32a18eea88c5d19e7a4a45a2abaf79d4a1f9e4",
-    "signed_at": "2026-06-07T15:04:17Z"
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiNjQ2ZTBkNTFlNjM0NjVhOWE4Mjk4NDAxMGFmZmE5ZjExYzJkZDA1MzM4ZTc2YjkyZmMwNjM2YzkyZTAzZjE1YiIsImtpbmQiOiJzdHViIiwibm90ZSI6IlN0dWJTaWduZXIgb3V0cHV0IFx1MjAxNCBOT1QgYSByZWFsIFNpZ3N0b3JlIHNpZ25hdHVyZS4iLCJwYXlsb2FkX3NoYTI1NiI6Ijg0Nzk2YmE5OTBlMzhlNDU5ZmM0MDEyYmU5ZmNlYWI5YmIwMzA4MmQwZmNhYWI0NjgzZWRjNzQ0YTY0ZDVmODIiLCJydW5faWQiOiJhdXRvLTE3ODEwMjE5NDMiLCJzZXEiOjF9",
+    "cert_fingerprint": "646e0d51e63465a9a82984010affa9f11c2dd05338e76b92fc0636c92e03f15b",
+    "payload_sha256": "84796ba990e38e459fc4012be9fceab9bb03082d0fcaab4683edc744a64d5f82",
+    "signed_at": "2026-06-09T16:19:12Z"
   },
-  "started_at": "2026-06-07T15:04:10Z",
+  "started_at": "2026-06-09T16:19:03Z",
   "version": "1"
 }

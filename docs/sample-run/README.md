@@ -6,14 +6,15 @@ Requirement #8) and can verify the chain of custody **offline**. Every file here
 byte-for-byte output of an actual run — nothing was edited, because editing any record would
 break the hash chain (which is the point).
 
-Three runs are included. The first two show the two halves of the agent's epistemic discipline;
-the third shows the ≥2-artifact-class rule escalating the *same* case once a second class is available:
+Three runs are included. The first shows catching evil head-on; the second and third show the
+≥2-artifact-class rule producing CONFIRMED execution findings on the *same* case — once in pure
+**local** mode (no SIFT VM) and again under `--sift`, proving the verdict is identical either way:
 
 | Run | Evidence | Verdict | Findings | What it demonstrates |
 |---|---|---|---|---|
 | [`attack-samples-evtx/`](attack-samples-evtx/) | EVTX attack-sample set | **SUSPICIOUS** | 3 (1 CONFIRMED + 2 `hypothesis:`) | Catching evil head-on: a directly-observed Security **EID 1102 audit-log-clear** (T1070.001) confirmed, with weaker leads honestly held at HYPOTHESIS. |
-| [`nist-hacking-case/`](nist-hacking-case/) | NIST CFReDS `SCHARDT.dd` (public domain), Prefetch only | **INDETERMINATE** | 9 (8 INFERRED + 1 HYPOTHESIS) | Anti-overclaim discipline: 8 hacking tools (cain, netstumbler, mirc, ethereal, lookatlan) recovered from Prefetch are labeled **INFERRED, not CONFIRMED** — Prefetch alone is one artifact class, and an execution claim needs ≥2. The verdict stays INDETERMINATE rather than overstating coverage. |
-| [`nist-hacking-case-sift/`](nist-hacking-case-sift/) | Same `SCHARDT.dd`, run under `--sift` (Prefetch **+** registry/UserAssist) | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | The other direction of the same rule: with the NTUSER.DAT **UserAssist** hive also parsed, each hacking-tool execution is corroborated by **two independent artifact classes** (Prefetch + registry/UserAssist), so the leads escalate to **CONFIRMED**. Each CONFIRMED finding's `derived_from` cites *both* `tool_call_id`s (a `prefetch_parse` and a `registry_query`), so the 2-class claim is greppable, not prose. |
+| [`nist-hacking-case/`](nist-hacking-case/) | NIST CFReDS `SCHARDT.dd` (public domain), **local mode** (Prefetch **+** registry/UserAssist) | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | The ≥2-artifact-class rule on the recommended **no-VM path**: with the disk's Prefetch *and* the NTUSER.DAT **UserAssist** hive both parsed on the host (TSK direct-read — no 9 GB SIFT OVA needed), each hacking-tool execution (cain, netstumbler, mirc, ethereal, lookatlan) is corroborated by **two independent artifact classes**, so it escalates to **CONFIRMED**. Each CONFIRMED finding's `derived_from` cites *both* `tool_call_id`s (a `prefetch_parse` and a `registry_query`), so the 2-class claim is greppable, not prose. |
+| [`nist-hacking-case-sift/`](nist-hacking-case-sift/) | Same `SCHARDT.dd`, run under `--sift` (Prefetch **+** registry/UserAssist inside the SIFT VM over SSH) | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | **Mode parity:** the identical 2-class CONFIRMED escalation, driven inside the SANS SIFT VM over SSH instead of on the host — proving a judge gets the same verdict whether they take the easy local path or the full VM. |
 
 ## Files in each run (lean set)
 
@@ -81,11 +82,12 @@ finding (or one), and exits non-zero if any finding fails to resolve.
 - **Absolute paths are left intact** (`/home/sansforensics/SCHARDT.dd`, etc.) on purpose — they are
   hashed into the chain, so rewriting them would break verification. They are run-host paths, not
   secrets.
-- **The NIST run is deliberately INDETERMINATE.** It is the standard for *honest coverage*, not a
-  miss: the agent recovered the hacking tools but declined to escalate Prefetch-only execution to
-  CONFIRMED. See `nist-hacking-case/REPORT.md`. `nist-hacking-case-sift/` is the same evidence with
-  a second artifact class available (UserAssist), and *that* run does escalate to CONFIRMED — the
-  ≥2-class rule cutting both ways on identical evidence.
 - **The two NIST runs share evidence, not a case id.** They are independent investigations of
-  `SCHARDT.dd` (one Prefetch-only, one with the registry hive too), so their `case_id`s, audit
-  chains, and Merkle roots differ — each verifies standalone.
+  `SCHARDT.dd` (one local-mode on the host, one inside the SIFT VM), so their `case_id`s, audit
+  chains, and Merkle roots differ — each verifies standalone. Their *verdicts and finding sets*
+  match, which is the mode-parity point.
+- **The ≥2-class rule cuts both ways.** When only one artifact class is parseable, the same
+  correlator holds execution claims at INFERRED/HYPOTHESIS instead of CONFIRMED — the aggregate
+  counts are in each run's `verdict.json → findings_summary` (`soul_md_kept` /
+  `soul_md_downgraded`); runs produced after 2026-06-09 additionally audit the per-finding
+  decisions as a `correlation_outcomes` record.
