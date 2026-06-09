@@ -5490,6 +5490,15 @@ class Investigation:
         self.local_run_dir: Path | None = None
         self.tcid_counter = 0
         self.handle: dict[str, Any] = {}
+        # HEARTBEAT.md escalation: count consecutive tool failures. A successful
+        # tool call (_record_tool) resets the streak; reaching the threshold
+        # emits a run-level ``heartbeat_failure`` record and escalates recovery
+        # from per-tool defer to a partial-report posture (HEARTBEAT.md:
+        # "2 consecutive failed self-tests -> session terminates with partial
+        # report"). Without this the documented escalation had no enforcing code.
+        self._consecutive_failures = 0
+        self._heartbeat_threshold = 2
+        self._heartbeat_escalated = False
 
     # ------------------------------------------------------------------
     # Audit chain + tool-call helpers
@@ -5541,6 +5550,28 @@ class Investigation:
             "course_correction",
             {"failed_tool": failed_tool, "reason": reason[:500], "action": action},
         )
+        # Run-level HEARTBEAT escalation. Per-tool corrections above defer the
+        # work; a *consecutive* streak of them is the documented self-test
+        # failure (HEARTBEAT.md "2 consecutive failed self-tests -> partial
+        # report"). Crossing the threshold emits a heartbeat_failure record so
+        # the escalation is visible in the audit chain, not silent.
+        self._consecutive_failures += 1
+        if self._consecutive_failures >= self._heartbeat_threshold:
+            self._heartbeat_escalated = True
+            self._audit(
+                py,
+                "heartbeat_failure",
+                {
+                    "consecutive_failures": self._consecutive_failures,
+                    "last_failed_tool": failed_tool,
+                    "action": "escalate",
+                    "recovery": (
+                        "escalate per-tool defer to partial-report posture; "
+                        "continue remaining lanes and seal an honest "
+                        "INDETERMINATE/partial Verdict over what was examined"
+                    ),
+                },
+            )
 
     def _record_tool(
         self,
@@ -5550,6 +5581,9 @@ class Investigation:
         extra: dict[str, Any] | None = None,
         arguments: dict[str, Any] | None = None,
     ) -> str:
+        # A successful tool call breaks any consecutive-failure streak, so a
+        # single transient error never trips the HEARTBEAT escalation.
+        self._consecutive_failures = 0
         tcid = self._next_tcid()
         self._audit(
             py,
@@ -6495,10 +6529,13 @@ class Investigation:
                     f"disk_extract_artifacts skipped {skipped_oversize} oversized artifact(s); rerun with a targeted extraction plan if those paths are needed."
                 )
 
+            evtx_entries: list[dict[str, Any]] = []
             for artifact in artifacts:
                 path = artifact.get("extracted_path")
                 artifact_class = artifact.get("artifact_class")
-                if path and artifact_class in EXTRACTED_DISK_CLASSES | {"yara_target"}:
+                if not path:
+                    continue
+                if artifact_class in EXTRACTED_DISK_CLASSES | {"yara_target"}:
                     extracted_entries.append(
                         {
                             "path": path,
@@ -6507,15 +6544,31 @@ class Investigation:
                             "size_bytes": artifact.get("size_bytes", 0),
                         }
                     )
+                elif artifact_class == "evtx":
+                    # Event logs carved from the disk are the richest finding
+                    # source on a host; route them through the same evtx flow as
+                    # standalone .evtx evidence (the extracted-disk dispatch only
+                    # parses MFT/Prefetch/Registry/USN/YARA).
+                    evtx_entries.append(
+                        {
+                            "path": path,
+                            "artifact_class": "evtx",
+                            "evidence_type": "evtx",
+                            "size_bytes": artifact.get("size_bytes", 0),
+                        }
+                    )
             print(
-                f"  disk_extract_artifacts: {len(extracted_entries)} supported artifacts"
+                f"  disk_extract_artifacts: {len(extracted_entries)} typed artifacts"
+                f" + {len(evtx_entries)} event logs"
             )
             if extracted_entries:
                 self.investigate_extracted_disk_artifacts(rust, py, extracted_entries)
-            else:
+            if evtx_entries:
+                self.investigate_extracted_evtx_artifacts(rust, py, evtx_entries)
+            if not extracted_entries and not evtx_entries:
                 limitation = (
-                    "Disk image mounted, but no supported MFT/USN/Prefetch/Registry/YARA-target artifacts "
-                    "were extracted for typed parsing."
+                    "Disk image mounted, but no supported MFT/USN/Prefetch/Registry/"
+                    "EVTX/YARA-target artifacts were extracted for typed parsing."
                 )
                 self.analysis_limitations.append(limitation)
                 self._audit(
@@ -6666,6 +6719,38 @@ class Investigation:
                 f"  execution corroboration: {upgraded} prefetch finding(s) "
                 "promoted to CONFIRMED via UserAssist (prefetch + registry)"
             )
+
+    def investigate_extracted_evtx_artifacts(
+        self, rust: SshMcpClient, py: SshMcpClient, evtx_entries: list[dict[str, Any]]
+    ) -> None:
+        """Run the EVTX investigation over event logs carved from a disk image.
+
+        Mirrors the standalone-evidence evtx flow: a per-log ``evtx_query`` for
+        entity/timeline extraction, plus a ``hayabusa_scan`` Sigma sweep over
+        each directory holding two or more logs (the sweep covers every log in
+        the directory, not just the per-log sample). A single unreadable log is
+        downgraded to a limitation rather than aborting the whole case.
+        """
+        print(f"\n=== extracted EVTX investigation ({len(evtx_entries)} logs) ===")
+        evtx_parent_counts = Counter(
+            str(PurePosixPath(str(entry["path"]).replace("\\", "/")).parent)
+            for entry in evtx_entries
+            if entry.get("path")
+        )
+        hayabusa_dirs = [
+            parent
+            for parent, count in evtx_parent_counts.items()
+            if parent and parent != "." and count >= 2
+        ]
+        for entry in evtx_entries[:50]:
+            try:
+                self.investigate_evtx(rust, py, str(entry["path"]))
+            except RuntimeError as exc:
+                self.analysis_limitations.append(
+                    f"evtx_query failed for {entry.get('path')}: {exc}"
+                )
+        for evtx_dir in hayabusa_dirs[:5]:
+            self.investigate_hayabusa_dir(rust, py, evtx_dir)
 
     def investigate_extracted_disk_artifacts(
         self, rust: SshMcpClient, py: SshMcpClient, entries: list[dict[str, Any]]
