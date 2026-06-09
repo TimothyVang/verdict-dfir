@@ -57,6 +57,81 @@ impl Drop for HomeGuard {
     }
 }
 
+/// Points `disk_extract_artifacts` at fake `fls`/`icat` binaries that serve a
+/// canned filesystem listing plus per-inode bytes, so the TSK direct-read
+/// extraction path (`fls -r -p` enumerate → `icat` extract) is exercised
+/// end-to-end without a real disk image. Real `fls`/`icat` reject a synthetic
+/// image with "Cannot determine file system type", which is why mock-mode
+/// directory fixtures no longer reach the extraction code.
+///
+/// Install only while a [`HomeGuard`] is held — that guard's env-lock
+/// serializes these process-global overrides — and let this drop *before* the
+/// `HomeGuard` so the overrides are restored while the lock is still held.
+#[cfg(unix)]
+struct FakeTsk {
+    fls_prev: Option<String>,
+    icat_prev: Option<String>,
+}
+
+#[cfg(unix)]
+impl FakeTsk {
+    fn install(dir: &std::path::Path, files: &[(&str, &str, &[u8])]) -> Self {
+        use std::fmt::Write as _;
+        use std::os::unix::fs::PermissionsExt;
+        let blobs = dir.join("blobs");
+        fs::create_dir_all(&blobs).unwrap();
+        let mut listing = String::new();
+        for (inode, path, bytes) in files {
+            // fls -p line shape: `r/r <inode>:\t<relative/path>`.
+            writeln!(listing, "r/r {inode}:\t{path}").unwrap();
+            fs::write(blobs.join(format!("{inode}.bin")), bytes).unwrap();
+        }
+        let fls_txt = dir.join("fls.txt");
+        fs::write(&fls_txt, listing).unwrap();
+
+        // fls ignores its args and prints the canned listing; icat extracts the
+        // last argument (the inode) from `<image> <inode>` and streams that
+        // blob, mirroring how `disk_extract_artifacts` invokes them.
+        let fls = dir.join("fake_fls.sh");
+        fs::write(&fls, format!("#!/bin/sh\ncat '{}'\n", fls_txt.display())).unwrap();
+        let icat = dir.join("fake_icat.sh");
+        fs::write(
+            &icat,
+            format!(
+                "#!/bin/sh\nfor a in \"$@\"; do last=\"$a\"; done\ncat '{}'/\"$last\".bin\n",
+                blobs.display()
+            ),
+        )
+        .unwrap();
+        for script in [&fls, &icat] {
+            let mut perm = fs::metadata(script).unwrap().permissions();
+            perm.set_mode(0o755);
+            fs::set_permissions(script, perm).unwrap();
+        }
+
+        let fls_prev = std::env::var("FINDEVIL_FLS_BIN").ok();
+        let icat_prev = std::env::var("FINDEVIL_ICAT_BIN").ok();
+        std::env::set_var("FINDEVIL_FLS_BIN", &fls);
+        std::env::set_var("FINDEVIL_ICAT_BIN", &icat);
+        Self {
+            fls_prev,
+            icat_prev,
+        }
+    }
+}
+
+#[cfg(unix)]
+impl Drop for FakeTsk {
+    fn drop(&mut self) {
+        let restore = |key: &str, prev: &Option<String>| match prev {
+            Some(v) => std::env::set_var(key, v),
+            None => std::env::remove_var(key),
+        };
+        restore("FINDEVIL_FLS_BIN", &self.fls_prev);
+        restore("FINDEVIL_ICAT_BIN", &self.icat_prev);
+    }
+}
+
 fn write_evidence_image(dir: &std::path::Path, bytes: &[u8]) -> PathBuf {
     let p = dir.join("case.e01");
     fs::write(&p, bytes).expect("write fixture evidence");
@@ -207,6 +282,7 @@ fn case_open_two_calls_produce_distinct_case_ids() {
 }
 
 #[test]
+#[cfg(unix)]
 fn disk_mount_extract_unmount_uses_session_resource_ledger_in_mock_mode() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let _home = HomeGuard::set(tmp.path());
@@ -218,26 +294,23 @@ fn disk_mount_extract_unmount_uses_session_resource_ledger_in_mock_mode() {
     })
     .expect("case_open ok");
 
-    let mount_root = tmp.path().join("mock-mounted-root");
-    fs::create_dir_all(mount_root.join("Windows/System32/config")).unwrap();
-    fs::create_dir_all(mount_root.join("Windows/Prefetch")).unwrap();
-    fs::write(mount_root.join("$MFT"), b"mft bytes").unwrap();
-    fs::write(
-        mount_root.join("Windows/Prefetch/CMD.EXE-12345678.pf"),
-        b"pf",
-    )
-    .unwrap();
-    fs::write(mount_root.join("Windows/System32/config/SOFTWARE"), b"hive").unwrap();
+    let _tsk = FakeTsk::install(
+        tmp.path(),
+        &[
+            ("100", "$MFT", b"mft bytes"),
+            ("101", "Windows/Prefetch/CMD.EXE-12345678.pf", b"pf"),
+            ("102", "Windows/System32/config/SOFTWARE", b"hive"),
+        ],
+    );
 
     let mounted = disk_mount(&DiskMountInput {
         case_id: handle.id.clone(),
         image_path: image,
-        mount_point: Some(mount_root.clone()),
+        mount_point: None,
         mode: DiskMode::Mock,
     })
     .expect("mock mount succeeds");
     assert_eq!(mounted.status, "mounted");
-    assert_eq!(mounted.fs_root, mount_root);
     assert!(mounted.ledger_path.is_file());
 
     let extracted = disk_extract_artifacts(&DiskExtractArtifactsInput {
@@ -278,6 +351,7 @@ fn disk_mount_extract_unmount_uses_session_resource_ledger_in_mock_mode() {
 }
 
 #[test]
+#[cfg(unix)]
 fn disk_extract_artifacts_skips_oversized_yara_targets() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let _home = HomeGuard::set(tmp.path());
@@ -289,17 +363,24 @@ fn disk_extract_artifacts_skips_oversized_yara_targets() {
     })
     .expect("case_open ok");
 
-    let mount_root = tmp.path().join("mock-mounted-root");
-    fs::create_dir_all(mount_root.join("Users/Alice/AppData/Local/Temp")).unwrap();
-    let small = mount_root.join("Users/Alice/AppData/Local/Temp/small.bin");
-    let large = mount_root.join("Users/Alice/AppData/Local/Temp/large.bin");
-    fs::write(&small, b"small").unwrap();
-    fs::write(&large, b"this file is too large for the smoke max").unwrap();
+    let small = PathBuf::from("Users/Alice/AppData/Local/Temp/small.bin");
+    let large = PathBuf::from("Users/Alice/AppData/Local/Temp/large.bin");
+    let _tsk = FakeTsk::install(
+        tmp.path(),
+        &[
+            ("200", small.to_str().unwrap(), b"small"),
+            (
+                "201",
+                large.to_str().unwrap(),
+                b"this file is too large for the smoke max",
+            ),
+        ],
+    );
 
     let mounted = disk_mount(&DiskMountInput {
         case_id: handle.id.clone(),
         image_path: image,
-        mount_point: Some(mount_root),
+        mount_point: None,
         mode: DiskMode::Mock,
     })
     .expect("mock mount succeeds");

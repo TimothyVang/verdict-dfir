@@ -5,7 +5,7 @@
 //! tool invocations; tests and Windows use the explicit `mock` mode so normal
 //! CI never needs FUSE, libewf, or administrator privileges.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -256,30 +256,30 @@ pub fn disk_extract_artifacts(
     let wanted = wanted_kinds(&input.artifact_kinds);
     let sector_offset = first_partition_sector_offset(&image_path);
 
-    // Enumerate every file once, keep the wanted classes, and extract in class
-    // priority (MFT/registry/prefetch first, broad yara targets last) so the
-    // high-value artifacts are never crowded out by `limit`.
-    let mut candidates: Vec<(u8, &'static str, String, String)> =
-        tsk_list(&image_path, sector_offset)?
-            .into_iter()
-            .filter_map(|(inode, path)| {
-                let class = classify_artifact_path(&path)?;
-                wanted.get(class).copied().unwrap_or(false).then_some((
-                    class_priority(class),
-                    class,
-                    inode,
-                    path,
-                ))
-            })
-            .collect();
-    candidates.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.3.cmp(&b.3)));
+    // Enumerate every file once and keep the wanted classes. Selection then
+    // allocates the `limit` *fairly across classes* (round-robin) so a
+    // voluminous class — hundreds of prefetch or evtx files — can't starve the
+    // others, and within each class the highest-signal artifacts are drawn
+    // first (for evtx, the canonical Windows logs ahead of the long
+    // Microsoft-Windows-*/Operational tail). A single global priority sort
+    // would otherwise let prefetch consume the whole budget and extract zero
+    // event logs — the richest finding source on a disk.
+    let candidates: Vec<(&'static str, String, String)> = tsk_list(&image_path, sector_offset)?
+        .into_iter()
+        .filter_map(|(inode, path)| {
+            let class = classify_artifact_path(&path)?;
+            wanted
+                .get(class)
+                .copied()
+                .unwrap_or(false)
+                .then_some((class, inode, path))
+        })
+        .collect();
+    let selected = select_artifacts(candidates, input.limit);
 
     let mut artifacts = Vec::new();
     let mut artifacts_skipped_oversize = 0;
-    for (_priority, class, inode, path) in candidates {
-        if artifacts.len() >= input.limit {
-            break;
-        }
+    for (class, inode, path) in selected {
         tsk_extract(
             &image_path,
             sector_offset,
@@ -819,6 +819,88 @@ fn class_priority(class: &str) -> u8 {
     }
 }
 
+/// Draw order *within* a class (lower = extracted first). Only evtx is
+/// sub-ranked: a Windows disk carries hundreds of low-signal
+/// `Microsoft-Windows-*/Operational` logs that sort alphabetically *ahead* of
+/// `Security.evtx`/`System.evtx`, so without this the canonical logs that
+/// Sigma/hayabusa rules actually fire on would be the ones crowded out of the
+/// budget. Tier 0 = the core four (Security/System/Sysmon/PowerShell); tier 1 =
+/// other named high-signal logs (Application, forwarded/rotated security,
+/// task-scheduler, defender, winrm, wmi, terminal-services, applocker); tier 2
+/// = the per-provider operational tail.
+fn artifact_subrank(class: &str, rel_path: &str) -> u8 {
+    if class != "evtx" {
+        return 0;
+    }
+    let lower = rel_path.replace('\\', "/").to_ascii_lowercase();
+    let name = lower.rsplit('/').next().unwrap_or("");
+    if name == "security.evtx"
+        || name == "system.evtx"
+        || name.contains("sysmon")
+        || name.contains("powershell")
+    {
+        0
+    } else if name == "application.evtx"
+        || name == "forwardedevents.evtx"
+        || name.starts_with("archive-security")
+        || name.contains("taskscheduler")
+        || name.contains("windows defender")
+        || name.contains("winrm")
+        || name.contains("wmi-activity")
+        || name.contains("terminalservices")
+        || name.contains("applocker")
+        || !name.starts_with("microsoft-windows-")
+    {
+        1
+    } else {
+        2
+    }
+}
+
+/// Choose up to `limit` artifacts to extract, allocating the budget *fairly
+/// across classes* so no single voluminous class starves the rest. Classes are
+/// visited in [`class_priority`] order and drawn round-robin: every class with
+/// candidates gets a turn each pass, and a class that drains early hands its
+/// unused budget to the others. Within a class, [`artifact_subrank`] then path
+/// order decides which artifacts win the class's share. Pure (no I/O) so the
+/// allocation is unit-testable.
+fn select_artifacts(
+    candidates: Vec<(&'static str, String, String)>,
+    limit: usize,
+) -> Vec<(&'static str, String, String)> {
+    let mut buckets: BTreeMap<u8, Vec<(&'static str, String, String)>> = BTreeMap::new();
+    for candidate in candidates {
+        buckets
+            .entry(class_priority(candidate.0))
+            .or_default()
+            .push(candidate);
+    }
+    let mut queues: Vec<VecDeque<(&'static str, String, String)>> = buckets
+        .into_values()
+        .map(|mut bucket| {
+            bucket.sort_by(|a, b| {
+                artifact_subrank(a.0, &a.2)
+                    .cmp(&artifact_subrank(b.0, &b.2))
+                    .then_with(|| a.2.cmp(&b.2))
+            });
+            VecDeque::from(bucket)
+        })
+        .collect();
+
+    let mut selected = Vec::new();
+    while selected.len() < limit && queues.iter().any(|queue| !queue.is_empty()) {
+        for queue in &mut queues {
+            if selected.len() >= limit {
+                break;
+            }
+            if let Some(item) = queue.pop_front() {
+                selected.push(item);
+            }
+        }
+    }
+    selected
+}
+
 /// `icat` one inode out of the image into `output_dir/<class>/<rel_path>`,
 /// streaming to disk (no in-memory buffering) and enforcing the size cap.
 /// A failed `icat` (unreadable inode) is skipped, not fatal.
@@ -1038,8 +1120,8 @@ fn tail_utf8_lossy(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        class_priority, classify_artifact_path, parse_fls_line, parse_mmls_first_partition_offset,
-        unmount_steps,
+        artifact_subrank, class_priority, classify_artifact_path, parse_fls_line,
+        parse_mmls_first_partition_offset, select_artifacts, unmount_steps,
     };
     use std::path::Path;
 
@@ -1094,6 +1176,98 @@ mod tests {
         assert!(class_priority("mft") < class_priority("registry"));
         assert!(class_priority("registry") < class_priority("prefetch"));
         assert!(class_priority("prefetch") < class_priority("yara_target"));
+    }
+
+    #[test]
+    fn artifact_subrank_surfaces_canonical_evtx_before_operational_tail() {
+        let logs = "Windows/System32/winevt/Logs";
+        // The core logs Sigma/hayabusa fire on hardest rank ahead of the long
+        // Microsoft-Windows-*/Operational tail that sorts first alphabetically.
+        assert!(
+            artifact_subrank("evtx", &format!("{logs}/Security.evtx"))
+                < artifact_subrank(
+                    "evtx",
+                    &format!("{logs}/Microsoft-Windows-Kernel-WHEA%4Operational.evtx")
+                )
+        );
+        assert!(
+            artifact_subrank("evtx", &format!("{logs}/System.evtx"))
+                < artifact_subrank(
+                    "evtx",
+                    &format!("{logs}/Microsoft-Windows-Bits-Client%4Operational.evtx")
+                )
+        );
+        // Sysmon / PowerShell match by substring regardless of provider prefix.
+        assert_eq!(
+            artifact_subrank(
+                "evtx",
+                &format!("{logs}/Microsoft-Windows-Sysmon%4Operational.evtx")
+            ),
+            0
+        );
+        // Non-evtx classes are never sub-ranked.
+        assert_eq!(
+            artifact_subrank("prefetch", "Windows/Prefetch/CMD.EXE-1.pf"),
+            0
+        );
+    }
+
+    #[test]
+    fn select_artifacts_gives_every_class_a_fair_share() {
+        // A budget far smaller than one voluminous class must still reach the
+        // others: 400 prefetch + 600 operational evtx + 1 mft, limit 50 -> all
+        // three classes represented (the old global-priority sort extracted
+        // zero evtx), and the canonical Security.evtx wins evtx's share over
+        // the operational tail.
+        let mut candidates: Vec<(&'static str, String, String)> = Vec::new();
+        for i in 0..400 {
+            candidates.push((
+                "prefetch",
+                format!("{i}"),
+                format!("Windows/Prefetch/A{i:04}.pf"),
+            ));
+        }
+        for i in 0..600 {
+            candidates.push((
+                "evtx",
+                format!("e{i}"),
+                format!(
+                    "Windows/System32/winevt/Logs/Microsoft-Windows-Zzz{i:04}%4Operational.evtx"
+                ),
+            ));
+        }
+        candidates.push((
+            "evtx",
+            "sec".to_string(),
+            "Windows/System32/winevt/Logs/Security.evtx".to_string(),
+        ));
+        candidates.push(("mft", "mft".to_string(), "$MFT".to_string()));
+
+        let selected = select_artifacts(candidates, 50);
+        assert_eq!(selected.len(), 50);
+        let classes: std::collections::HashSet<&str> = selected.iter().map(|c| c.0).collect();
+        assert!(classes.contains("prefetch"), "prefetch starved");
+        assert!(classes.contains("evtx"), "evtx starved (the original bug)");
+        assert!(classes.contains("mft"), "mft missing");
+        assert!(
+            selected.iter().any(|c| c.2.ends_with("/Security.evtx")),
+            "canonical Security.evtx must win evtx's fair share"
+        );
+    }
+
+    #[test]
+    fn select_artifacts_caps_at_limit_and_handles_empty() {
+        assert!(select_artifacts(Vec::new(), 10).is_empty());
+        let candidates = vec![
+            ("mft", "1".to_string(), "$MFT".to_string()),
+            (
+                "prefetch",
+                "2".to_string(),
+                "Windows/Prefetch/X.pf".to_string(),
+            ),
+        ];
+        assert_eq!(select_artifacts(candidates.clone(), 1).len(), 1);
+        assert_eq!(select_artifacts(candidates, 5).len(), 2); // limit above supply
     }
 
     #[test]

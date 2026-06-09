@@ -54,4 +54,8 @@ SCRIPT="${REPO_ROOT}/scripts/find_evil_auto.py"
 if command -v cygpath >/dev/null 2>&1; then
   SCRIPT="$(cygpath -w "$SCRIPT")"
 fi
-exec python "$SCRIPT" "$@"
+# Linux ships `python3`; Windows/Git Bash ships `python` (the python.exe launcher
+# the cygpath conversion above targets). Prefer python3, fall back to python.
+PYBIN="$(command -v python3 || command -v python || true)"
+[ -n "$PYBIN" ] || { echo "find-evil-auto: no python3/python on PATH" >&2; exit 127; }
+exec "$PYBIN" "$SCRIPT" "$@"

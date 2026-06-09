@@ -28,8 +28,29 @@ import matplotlib.patches as mpatches  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PANDOC = r"C:\Program Files\Pandoc\pandoc.exe"
-CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+
+
+def _resolve_bin(env_var: str, names: list[str], win_fallback: str) -> str:
+    """Resolve a tool: $ENV override, then PATH (Linux/macOS), then the
+    Windows install path the script was originally written for."""
+    import os
+    import shutil
+
+    if os.environ.get(env_var):
+        return os.environ[env_var]
+    for n in names:
+        found = shutil.which(n)
+        if found:
+            return found
+    return win_fallback
+
+
+PANDOC = _resolve_bin("PANDOC_BIN", ["pandoc"], r"C:\Program Files\Pandoc\pandoc.exe")
+CHROME = _resolve_bin(
+    "CHROME_BIN",
+    ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser"],
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+)
 
 plt.rcParams.update(
     {
