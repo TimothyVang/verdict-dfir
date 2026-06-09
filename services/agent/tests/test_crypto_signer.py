@@ -98,17 +98,13 @@ class TestMakeSigner:
         s = make_signer()
         assert isinstance(s, SigstoreSigner)
 
-    def test_sigstore_picks_up_ambient_id_token(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_sigstore_picks_up_ambient_id_token(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("SIGSTORE_ID_TOKEN", "ambient-oidc-token")
         s = make_signer(kind="sigstore")
         assert isinstance(s, SigstoreSigner)
         assert s._identity_token == "ambient-oidc-token"
 
-    def test_explicit_token_overrides_ambient(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_explicit_token_overrides_ambient(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("SIGSTORE_ID_TOKEN", "ambient")
         s = make_signer(kind="sigstore", identity_token="explicit")
         assert isinstance(s, SigstoreSigner)

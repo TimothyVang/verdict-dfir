@@ -25,8 +25,14 @@ def test_counts_course_correction_records(tmp_path: Path) -> None:
         tmp_path,
         [
             {"kind": "tool_call_start", "payload": {"tool_call_id": "tc-1", "tool": "vol_pslist"}},
-            {"kind": "course_correction", "payload": {"failed_tool": "vol_pslist", "action": "defer"}},
-            {"kind": "course_correction", "payload": {"failed_tool": "registry_query", "action": "narrow"}},
+            {
+                "kind": "course_correction",
+                "payload": {"failed_tool": "vol_pslist", "action": "defer"},
+            },
+            {
+                "kind": "course_correction",
+                "payload": {"failed_tool": "registry_query", "action": "narrow"},
+            },
         ],
     )
     result = self_score.score(tmp_path)
