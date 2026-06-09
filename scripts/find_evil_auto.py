@@ -7964,9 +7964,20 @@ class Investigation:
         )
         print(f"  judge merged: {len(merged)} findings")
 
-        # correlate_findings (SOUL.md ≥2 rule)
+        # correlate_findings (SOUL.md ≥2 rule). Pass the tool_call_id -> artifact
+        # class map so the correlator derives execution corroboration from the tools
+        # each finding cites (structural), not its description prose — see
+        # findevil_agent.correlator.correlate / execution_claim.is_execution_corroborated.
         if merged:
-            c = py.call_tool("correlate_findings", {"findings": merged})
+            tool_classes = {
+                str(tc["tool_call_id"]): TOOL_ARTIFACT_CLASSES[tc["tool"]]
+                for tc in self.tool_calls
+                if tc.get("tool_call_id") and tc.get("tool") in TOOL_ARTIFACT_CLASSES
+            }
+            c = py.call_tool(
+                "correlate_findings",
+                {"findings": merged, "tool_classes": tool_classes},
+            )
             outcomes = c.get("outcomes", []) if "_error" not in c else []
             refined = c.get("refined") if "_error" not in c else None
             if isinstance(refined, list):
