@@ -1,0 +1,119 @@
+{
+  "audit_log_final_hash": "5230ada7577bda529e55caf0d76ace50b24d189f0e35c66a32d194aed6422ba5",
+  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-1a37a49e-4fb1-4345-a96f-528c79e2953a/audit.jsonl",
+  "audit_log_record_count": 33,
+  "case_id": "dir-70ca157294e2094d",
+  "extra": {
+    "evidence_inventory": {
+      "inventory_sha256": "70ca157294e2094d4fb262395a4edd332d209c2451db095d8054d95d611e891d",
+      "parent_case_id": "dir-70ca157294e2094d",
+      "summary": {
+        "class_counts": {
+          "evtx": 4
+        },
+        "disk_artifact_counts": {
+          "evtx": 4,
+          "mft": 0,
+          "prefetch": 0,
+          "registry": 0,
+          "usnjrnl": 0,
+          "yara_target": 0
+        },
+        "duplicate_names": [],
+        "entry_count": 4,
+        "evidence_type_counts": {
+          "evtx": 4
+        },
+        "extracted_disk_count": 0,
+        "limit": 500,
+        "raw_disk_count": 0,
+        "rejected_count": 0,
+        "truncated": false,
+        "yara_target_count": 0
+      }
+    },
+    "evidence_type": "directory",
+    "image_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples",
+    "model": "find-evil-auto",
+    "packet_attestation": {
+      "customer_releasable": false,
+      "customer_release_candidate": false,
+      "expert_signoff_packet_sha256": "9a565b00ae8bae62462fbef3f4a3ab0dc415df7a70c03744830cf0b64c1a2442",
+      "final_finding_ids": [
+        "f-A-evtx-audit-log-cleared",
+        "f-B-evtx-service-install",
+        "f-B-evtx-wmi-exec"
+      ],
+      "packet_state": "EXPERT_REVIEW_DRAFT",
+      "release_gate_sha256": "fffce88ebefafdaa21a96a1fc24db4fad289ae1c8a13a0d3f54cc2a8b47d3db6",
+      "report_qa_sha256": "430a2b8f33800fbda9335b222901d456b884b31184c2196de3934b5c87c88840",
+      "verdict_artifact_bytes": 191316,
+      "verdict_artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-1a37a49e-4fb1-4345-a96f-528c79e2953a/verdict.json",
+      "verdict_artifact_sha256": "89a483ee7bf3458070361c2729981777cd6975c5269ae4b7272dfd98602db023",
+      "verdict_packet_sha256": "790c10ea6eace81ef7623e8253e3e64e113a50e75f0715cc3d0e946b749a71a8"
+    },
+    "signer": "stub"
+  },
+  "finalized_at": "2026-06-09T04:34:05Z",
+  "leaf_count": 8,
+  "leaves": [
+    {
+      "digest_hex": "9ee81dd8d00608b4af4dab07c4cbf57865e31bf721bc612c6ffd713978dc0e01",
+      "kind": "tool_call_output",
+      "record_id": "tc-001",
+      "seq": 3
+    },
+    {
+      "digest_hex": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
+      "kind": "tool_call_output",
+      "record_id": "tc-002",
+      "seq": 5
+    },
+    {
+      "digest_hex": "c02ce481d2f1a84b7657d60c0e7c308f17209bbd2c6f2bdfe473345353942df5",
+      "kind": "tool_call_output",
+      "record_id": "tc-003",
+      "seq": 7
+    },
+    {
+      "digest_hex": "51f6fa751e99986b9648b45b942fe534386cbe2853aa33fdcb422c207814dd7a",
+      "kind": "tool_call_output",
+      "record_id": "tc-004",
+      "seq": 9
+    },
+    {
+      "digest_hex": "9165650bea01228cd015fd0c1770f2d8d02bc982e59224e1b68ae273ef4679d7",
+      "kind": "tool_call_output",
+      "record_id": "tc-005",
+      "seq": 11
+    },
+    {
+      "digest_hex": "38ccb74bbbf101581c953fdef205d1afe0d8d064da480ebb06d410062d3dcccb",
+      "kind": "finding",
+      "record_id": "f-A-evtx-audit-log-cleared",
+      "seq": 26
+    },
+    {
+      "digest_hex": "a0e28e3ace9d582035b46c357dde38f69304a8f71d877ba1b43660ca88639fd8",
+      "kind": "finding",
+      "record_id": "f-B-evtx-service-install",
+      "seq": 27
+    },
+    {
+      "digest_hex": "1677b226d478d6b95892a9dab5bc149d761f22ff3cd1a9bf5cf597b666468b3f",
+      "kind": "finding",
+      "record_id": "f-B-evtx-wmi-exec",
+      "seq": 28
+    }
+  ],
+  "merkle_root_hex": "58bb8c25afafb2011d9bf81af4b164c8d3c0b83e67274be0f45e2a8ae9bb0fa4",
+  "run_id": "auto-1780979644",
+  "signature": {
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiNjY3Yzk3MDA5ZjNkNDZkYjgwOGNlZjBhNzU5OGNmODRmNTI5ODRlM2FjODE5OGY0NDZiNDA1ZmRkN2Q2MTE3OCIsImtpbmQiOiJzdHViIiwibm90ZSI6IlN0dWJTaWduZXIgb3V0cHV0IFx1MjAxNCBOT1QgYSByZWFsIFNpZ3N0b3JlIHNpZ25hdHVyZS4iLCJwYXlsb2FkX3NoYTI1NiI6IjEyNzVlYWQ3ZTJlYTc2N2U1ZjZlM2RhMWMwZWFlMTlkYTY0NWM1ZWE5ZjU1ZGQxNmI5NjFiMWEzYjVmYTgxMmMiLCJydW5faWQiOiJhdXRvLTE3ODA5Nzk2NDQiLCJzZXEiOjF9",
+    "cert_fingerprint": "667c97009f3d46db808cef0a7598cf84f52984e3ac8198f446b405fdd7d61178",
+    "payload_sha256": "1275ead7e2ea767e5f6e3da1c0eae19da645c5ea9f55dd16b961b1a3b5fa812c",
+    "signed_at": "2026-06-09T04:34:05Z"
+  },
+  "started_at": "2026-06-09T04:34:04Z",
+  "version": "1"
+}

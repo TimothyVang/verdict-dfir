@@ -51,8 +51,8 @@ open source license file.
 > open the live dashboard → signed verdict + report. `QUICKSTART.md` covers three
 > environments:
 > - Local (SIFT tools on host) — the default
-> - SANS SIFT VM (`scripts/verdict --evidence <path> --sift`)
-> - Headless / automated (`scripts/verdict --evidence <path> --no-dashboard`)
+> - SANS SIFT VM (`scripts/verdict <path> --sift`)
+> - Headless / automated (`scripts/verdict <path> --no-dashboard`)
 
 ---
 
@@ -110,7 +110,7 @@ of your Project.
 
 **Requirement:** Include a demonstration video of your Project.
 
-**STATUS: SEE BELOW**
+**STATUS: SATISFIED**
 
 > **Video file in repo:** [`docs/find-evil-demo.mp4`](docs/find-evil-demo.mp4)
 >
@@ -126,9 +126,10 @@ of your Project.
 > - Beat 6: Fleet rollup (22-host SRL-2018 dataset), leaderboard diff
 > - Beat 8: Signed verdict — signed `verdict.json` + `manifest_verify` confirms the chain
 >
-> If the mp4 is not yet in the repo (pending recording), the Devpost submission URL
-> field will contain the hosted video link. The demo script at `docs/demo-script-a2.md`
-> is the authoritative beat map.
+> The mp4 is committed at `docs/find-evil-demo.mp4`. Per the hackathon rules the video
+> must also be hosted on YouTube/Vimeo/Youku — that hosted link goes in the Devpost
+> submission URL field. The demo script at `docs/demo-script-a2.md` is the authoritative
+> beat map.
 
 ---
 
@@ -206,8 +207,13 @@ of your Project.
 
 **STATUS: SATISFIED**
 
-> **Sample audit log:** [`docs/reports/`](docs/reports/) — every investigation produces
-> an `audit.jsonl` in the case run directory.
+> **Committed sample runs (self-contained on a fresh clone):**
+> [`docs/sample-run/`](docs/sample-run/) ships two real, completed investigations — their
+> `audit.jsonl`, `run.manifest.json`, `verdict.json`, `manifest_verify.json`, and `REPORT.md`.
+> Both verify **offline** (`manifest_verify` returns `overall: true`), and
+> [`docs/sample-run/README.md`](docs/sample-run/README.md) walks a single finding all the way
+> back to the tool execution and Merkle leaf that produced it. Every live investigation also
+> produces the same `audit.jsonl` in its case run directory.
 >
 > **Format:** Hash-chained JSONL — each line contains `seq`, `kind`, `ts` (UTC ISO-8601),
 > `payload`, `line_hash`, and `prev_hash`. The chain is verified by the
@@ -222,16 +228,15 @@ of your Project.
 > pnpm --filter @findevil/web dev   # then open http://localhost:3000/debug
 > ```
 >
-> **Sample run output directory structure:**
+> **Committed sample run layout** (`docs/sample-run/<case>/`; a full live run additionally
+> emits `REPORT.html`, `REPORT.pdf`, `figures/`, and `timeline.*`):
 > ```
-> tmp/auto-runs/<case-id>/
+> docs/sample-run/<case>/
 > ├── audit.jsonl          # hash-chained execution log (every tool call, finding, verdict)
 > ├── verdict.json         # final verdict with confidence and MITRE mappings
 > ├── run.manifest.json    # Merkle root + signature metadata
-> ├── manifest_verify.json # offline verification result
-> ├── REPORT.md            # human-readable investigation report
-> ├── REPORT.html          # styled HTML version
-> └── REPORT.pdf           # PDF (if Chrome/pandoc available)
+> ├── manifest_verify.json # offline verification result (overall: true)
+> └── REPORT.md            # human-readable investigation report
 > ```
 
 ---
@@ -245,12 +250,14 @@ of your Project.
 | 3 | README with setup instructions | [`README.md`](README.md) · [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 4 | Deployment / step-by-step instructions | [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 5 | Feature / functionality description | [`README.md`](README.md) | SATISFIED |
-| 6 | Demonstration video | [`docs/find-evil-demo.mp4`](docs/find-evil-demo.mp4) · [`docs/demo-script-a2.md`](docs/demo-script-a2.md) | SEE §6 |
+| 6 | Demonstration video | [`docs/find-evil-demo.mp4`](docs/find-evil-demo.mp4) · [`docs/demo-script-a2.md`](docs/demo-script-a2.md) | SATISFIED |
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
 | 9 | Accuracy report | [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED |
-| 10 | Agent execution logs | `tmp/auto-runs/<case-id>/audit.jsonl` · [`docs/reports/`](docs/reports/) | SATISFIED |
+| 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (2 committed runs, verify offline) | SATISFIED |
 
 ---
 
-*Last verified: 2026-06-07 against commit `b2dbc71` (master, `v-submit` tag).*
+*Last verified: 2026-06-09 — execution-log deliverable (#10) now ships two committed,
+offline-verifiable runs under [`docs/sample-run/`](docs/sample-run/); both return
+`manifest_verify overall: true`.*

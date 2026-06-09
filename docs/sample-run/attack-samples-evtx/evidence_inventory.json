@@ -1,0 +1,83 @@
+{
+  "canonical_root": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples",
+  "entries": [
+    {
+      "artifact_class": "evtx",
+      "canonical_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/CA_4624_4625_LogonType2_LogonProc_chrome.evtx",
+      "child_evidence_id": "ev-8edd86eca6bf9fca",
+      "custody_status": "custody_registered",
+      "evidence_type": "evtx",
+      "parser_tool": "evtx_query",
+      "path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/CA_4624_4625_LogonType2_LogonProc_chrome.evtx",
+      "sha256": "75f199b68d473172705bf874720b01820317fdd7aa4843545c98720dd6de197f",
+      "size_bytes": 69632,
+      "symlink_status": "not_symlink"
+    },
+    {
+      "artifact_class": "evtx",
+      "canonical_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/DE_1102_security_log_cleared.evtx",
+      "child_evidence_id": "ev-0a13c0e76e9e4468",
+      "custody_status": "custody_registered",
+      "evidence_type": "evtx",
+      "parser_tool": "evtx_query",
+      "path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/DE_1102_security_log_cleared.evtx",
+      "sha256": "a0615707b547a2ac254688fd725c3c590f62440fc9b7947c2843dd40498a39e8",
+      "size_bytes": 1118208,
+      "symlink_status": "not_symlink"
+    },
+    {
+      "artifact_class": "evtx",
+      "canonical_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/LM_Remote_Service02_7045.evtx",
+      "child_evidence_id": "ev-54518c91179555ac",
+      "custody_status": "custody_registered",
+      "evidence_type": "evtx",
+      "parser_tool": "evtx_query",
+      "path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/LM_Remote_Service02_7045.evtx",
+      "sha256": "af758eb492b6d5ab6665f7e4c44b31490f57be78c37dc0a8b1da714bb0d3d458",
+      "size_bytes": 69632,
+      "symlink_status": "not_symlink"
+    },
+    {
+      "artifact_class": "evtx",
+      "canonical_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/LM_WMI_4624_4688_TargetHost.evtx",
+      "child_evidence_id": "ev-08e49520bfcd8e49",
+      "custody_status": "custody_registered",
+      "evidence_type": "evtx",
+      "parser_tool": "evtx_query",
+      "path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/LM_WMI_4624_4688_TargetHost.evtx",
+      "sha256": "3ff3fcdb55c08ec0eaa39b25c1e02a205314f367bcedc662586bd063185ca41d",
+      "size_bytes": 69632,
+      "symlink_status": "not_symlink"
+    }
+  ],
+  "inventory_sha256": "70ca157294e2094d4fb262395a4edd332d209c2451db095d8054d95d611e891d",
+  "limit": 500,
+  "parent_case_id": "dir-70ca157294e2094d",
+  "root_is_directory": true,
+  "root_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples",
+  "summary": {
+    "class_counts": {
+      "evtx": 4
+    },
+    "disk_artifact_counts": {
+      "evtx": 4,
+      "mft": 0,
+      "prefetch": 0,
+      "registry": 0,
+      "usnjrnl": 0,
+      "yara_target": 0
+    },
+    "duplicate_names": [],
+    "entry_count": 4,
+    "evidence_type_counts": {
+      "evtx": 4
+    },
+    "extracted_disk_count": 0,
+    "limit": 500,
+    "raw_disk_count": 0,
+    "rejected_count": 0,
+    "truncated": false,
+    "yara_target_count": 0
+  },
+  "truncated": false
+}

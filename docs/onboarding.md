@@ -65,7 +65,7 @@ Rules:
 - When a Remotion preview renders to `/tmp/find-evil-preview.mp4`, offer to open it.
 - When an investigation completes and `REPORT.html` is generated, offer to open it in the browser.
 
-To open a URL, use the `mcp__cloakbrowser__navigate` tool. If the browser is not connected,
+To open a URL, use the `mcp__playwright__browser_navigate` tool. If the browser is not connected,
 tell the user: "Chrome DevTools is not connected. Start Chrome with remote debugging:
 `google-chrome --remote-debugging-port=9222` then retry."
 
@@ -112,9 +112,10 @@ Steps:
 3. If `gated` contains an entry with `present:false`, run the browser fallback. Look it up in
    `scripts/gated-tools.json` and follow its `browser.steps` (recon-verified — see `recon`).
    For the SANS SIFT OVA specifically (verified 2026-06-07, `login_required:false`):
-   - Drive the browser MCP (Playwright `browser_*`, or Puppeteer `mcp__puppeteer__puppeteer_*`
-     which are not pre-approved and will prompt on first use — expected). No SANS login is
-     needed; never invent or store credentials.
+   - Drive the browser MCP — prefer Playwright (`browser_*`, pre-approved in
+     `.claude/settings.local.json`, so it runs prompt-free); Puppeteer
+     (`mcp__puppeteer__puppeteer_*`) also works but is not pre-approved and will prompt on first
+     use — expected. No SANS login is needed; never invent or store credentials.
    - Navigate `landing_url` and read the `Download` anchor's href (it matches
      `sansorg.egnyte.com/dl/`). Never hardcode the token — it rotates when SANS updates the OVA.
    - Before clicking, set the browser's download directory to `tmp/gated-downloads` (CDP
