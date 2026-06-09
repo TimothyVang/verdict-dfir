@@ -22,20 +22,8 @@ import re
 from dataclasses import dataclass
 
 from findevil_agent.events import Finding
+from findevil_agent.execution_claim import is_execution_claim
 from findevil_agent.judge import _classify_artifact
-
-# Token sets that mark a Finding as making an execution claim.
-# Anchored at word boundaries so "execute_shell" mentions inside
-# narrative blocks don't accidentally trigger.
-_EXECUTION_TOKENS = (
-    r"\bexecut(?:ed|ion|ing)\b",
-    r"\bran\b",
-    r"\binvok(?:ed|ation|ing)\b",
-    r"\blaunch(?:ed|ing)\b",
-    r"\bspawn(?:ed|ing)\b",
-    r"\bstarted\b",
-)
-_EXECUTION_RE = re.compile("|".join(_EXECUTION_TOKENS), re.IGNORECASE)
 
 # Amcache-only execution evidence — the SOUL.md / MEMORY.md
 # explicit caveat: Amcache LastModified is registration, not run.
@@ -146,15 +134,9 @@ def correlate(
 
 
 def _is_execution_claim(f: Finding) -> bool:
-    if _EXECUTION_RE.search(f.description):
-        return True
-    # Common MITRE techniques classed as execution evidence.
-    return bool(
-        f.mitre_technique
-        and f.mitre_technique.startswith(
-            ("T1059", "T1106", "T1129", "T1203", "T1543", "T1547", "T1053")
-        )
-    )
+    # Single source of truth shared with the engine's report-QA gate so the two
+    # never disagree on what counts as an execution claim. See execution_claim.py.
+    return is_execution_claim(f.description, f.mitre_technique)
 
 
 def _downgrade(f: Finding) -> Finding:

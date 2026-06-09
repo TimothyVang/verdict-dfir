@@ -2554,14 +2554,44 @@ def _finding_text(finding: dict[str, Any]) -> str:
     ).lower()
 
 
-def _claims_execution(finding: dict[str, Any]) -> bool:
-    text = _finding_text(finding)
-    return bool(
-        re.search(
-            r"\b(?:executed|execution|ran|run count|process creation|launched)\b",
-            text,
+# Execution-claim predicate — an inline, byte-identical mirror of
+# findevil_agent.execution_claim. The bare-3.10 host engine cannot import the
+# 3.11+ findevil_agent package (same import trap as the Hermes glue above), so
+# the canonical token set + MITRE prefixes are duplicated here; the correlator
+# imports the real module, and services/agent/tests/test_execution_claim.py pins
+# the two predicates to identical behavior so the QA gate and the correlator
+# never disagree on what counts as an execution claim.
+_EXECUTION_MITRE_PREFIXES = (
+    "T1059",
+    "T1106",
+    "T1129",
+    "T1203",
+    "T1543",
+    "T1547",
+    "T1053",
+)
+_EXECUTION_RE = re.compile(
+    "|".join(
+        (
+            r"\bexecut(?:ed|ion|ing)\b",
+            r"\bran\b",
+            r"\brun count\b",
+            r"\bprocess creation\b",
+            r"\binvok(?:ed|ation|ing)\b",
+            r"\blaunch(?:ed|ing)\b",
+            r"\bspawn(?:ed|ing)\b",
+            r"\bstarted\b",
         )
-    )
+    ),
+    re.IGNORECASE,
+)
+
+
+def _claims_execution(finding: dict[str, Any]) -> bool:
+    if _EXECUTION_RE.search(_finding_text(finding)):
+        return True
+    mitre = finding.get("mitre_technique")
+    return bool(mitre and str(mitre).startswith(_EXECUTION_MITRE_PREFIXES))
 
 
 def _claims_exfiltration(finding: dict[str, Any]) -> bool:
