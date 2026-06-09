@@ -109,6 +109,11 @@ pub struct RegistryOutput {
     pub entries: Vec<RegistryEntry>,
     pub keys_visited: usize,
     pub parse_errors: usize,
+    /// False when the requested key path is absent from this hive. That is a
+    /// normal analytical result (e.g. a user with no `…\Run` autoruns), NOT a
+    /// tool failure — `entries` is empty and callers should read it as "no such
+    /// key here," not retry.
+    pub key_present: bool,
 }
 
 #[derive(Debug, Error)]
@@ -129,9 +134,6 @@ pub enum RegistryError {
         #[source]
         source: RegfError,
     },
-
-    #[error("registry key not found: {0}")]
-    KeyNotFound(String),
 }
 
 /// Cheap pre-flight: file path looks like a registry hive.
@@ -165,8 +167,9 @@ pub fn path_looks_like_hive(path: &Path) -> bool {
 ///   (permissions / I/O).
 /// * [`RegistryError::HiveOpen`] — file is not a valid hive (wrong
 ///   magic / corrupt header).
-/// * [`RegistryError::KeyNotFound`] — the requested key path does not
-///   exist in this hive.
+///
+/// A key path that is absent from the hive is NOT an error: it returns an empty
+/// [`RegistryOutput`] with `key_present == false`.
 pub fn registry_query(input: &RegistryInput) -> Result<RegistryOutput, RegistryError> {
     let path = &input.hive_path;
     if !path.is_file() {
@@ -188,13 +191,22 @@ pub fn registry_query(input: &RegistryInput) -> Result<RegistryOutput, RegistryE
     let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
 
     let Some(key) = hive.find(&normalized) else {
-        return Err(RegistryError::KeyNotFound(normalized));
+        // An absent key is a valid finding ("no such persistence here"), not an
+        // error. Return an empty result so the agent records "0 entries" rather
+        // than treating it as a tool failure that needs a course-correction.
+        return Ok(RegistryOutput {
+            entries: Vec::new(),
+            keys_visited: 0,
+            parse_errors: 0,
+            key_present: false,
+        });
     };
 
     let mut output = RegistryOutput {
         entries: Vec::new(),
         keys_visited: 0,
         parse_errors: 0,
+        key_present: true,
     };
 
     walk(

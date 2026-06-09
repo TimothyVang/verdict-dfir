@@ -357,11 +357,13 @@ fn build_registry() -> Vec<ToolEntry> {
                  keys_visited, parse_errors. Each value is normalized: REG_SZ/EXPAND_SZ \
                  → text, REG_MULTI_SZ → '|'-joined, REG_DWORD/QWORD → decimal, REG_BINARY \
                  → lowercase hex (truncated at 4096 bytes with marker). \
+                 An absent key path is NOT an error: it returns empty entries[] with \
+                 key_present=false (read it as 'no such key here'). Make sure the prefix \
+                 matches the hive type, e.g. SOFTWARE keys live under 'Microsoft\\…' not \
+                 'HKLM\\SOFTWARE\\Microsoft\\…'. \
                  ERRORS: HiveNotFound (verify path), HiveOpen (file is not a valid hive — \
                  wrong magic / corrupt header; try a fresh copy or a transaction-replayed \
-                 version), KeyNotFound (the requested key path doesn't exist in this hive — \
-                 check the prefix is right for the hive type, e.g. SOFTWARE keys live under \
-                 'Microsoft\\…' not 'HKLM\\SOFTWARE\\Microsoft\\…').",
+                 version).",
             annotations: ToolAnnotations {
                 title: "Read Windows Registry Hive",
                 read_only: true,
@@ -920,10 +922,11 @@ fn dispatch_mft_timeline(args: Value) -> Result<Value, ToolError> {
 
 fn dispatch_registry_query(args: Value) -> Result<Value, ToolError> {
     let input: RegistryInput = parse_args(args)?;
-    // HiveNotFound + KeyNotFound are user-input territory; surface as -32602.
-    // (HiveOpen/Unreadable stay -32603 since those represent corrupt or
-    // permission-denied files — system-state issues the agent can't fix
-    // by retrying with a different argument.)
+    // HiveNotFound is user-input territory; surface as -32602. (HiveOpen/
+    // Unreadable stay -32603 since those represent corrupt or permission-denied
+    // files — system-state issues the agent can't fix by retrying with a
+    // different argument.) An absent key is NOT an error: registry_query returns
+    // an empty result with key_present=false.
     match registry_query(&input) {
         Ok(output) => {
             serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
@@ -931,9 +934,6 @@ fn dispatch_registry_query(args: Value) -> Result<Value, ToolError> {
         Err(e @ crate::tools::RegistryError::HiveNotFound(_)) => {
             Err(ToolError::InvalidParams(format!("{e}")))
         }
-        Err(crate::tools::RegistryError::KeyNotFound(path)) => Err(ToolError::InvalidParams(
-            format!("registry key not found: {path}"),
-        )),
         Err(e) => Err(ToolError::Internal(format!("registry_query: {e}"))),
     }
 }

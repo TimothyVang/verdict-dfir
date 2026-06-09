@@ -148,4 +148,12 @@ fn registry_query_real_fixture_when_present() {
     );
     let entry = &out.entries[0];
     assert_eq!(entry.key_path, "Microsoft\\Windows\\CurrentVersion\\Run");
+    assert!(out.key_present, "an existing key reports key_present=true");
+
+    // A genuinely-absent key is a normal empty result, NOT an error — the agent
+    // must not treat "no autoruns here" as a tool failure.
+    input.key_path = "Microsoft\\Windows\\CurrentVersion\\NoSuchKeyXyzzy".to_string();
+    let absent = registry_query(&input).expect("absent key path is not an error");
+    assert!(!absent.key_present, "absent key reports key_present=false");
+    assert!(absent.entries.is_empty(), "absent key yields no entries");
 }
