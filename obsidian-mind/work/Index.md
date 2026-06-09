@@ -19,7 +19,7 @@ Incident docs live in `work/incidents/`. See `Incidents.base` for overview.
 
 ## Active Projects
 
--
+- [[find-evil-judging-readiness]] — SANS 1st-place readiness: shipped sample runs / predicate unification / bypass tests / trace CLI (46/60); open correlator-corroboration + Move-2 self-correction follow-ups
 
 ## Review Prep
 
