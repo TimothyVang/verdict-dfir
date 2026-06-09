@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
 import hashlib
@@ -112,6 +113,42 @@ def mem_attach_prior_observations(
 ) -> dict[str, Any]:
     """Return a NEW finding with prior_observations; tool_call_id untouched (G1)."""
     return {**finding, "prior_observations": mem_hits_to_prior_observations(hits)}
+
+
+# Canonical fields of the typed ``Finding`` event (events.py): _BaseEvent
+# envelope + Finding body. The verifier validates the finding against that
+# model, which is ``extra="forbid"`` — so any non-model decoration the engine
+# adds for reporting (host tag, analyst_note, next_pivot, hunt, named_technique,
+# cves, …) must be stripped before the verify call or every finding fails with
+# "Extra inputs are not permitted" (silently, pre-fix). Keep this in sync with
+# events.py if the Finding schema grows a field.
+_FINDING_MODEL_FIELDS = frozenset(
+    {
+        "case_id",
+        "event_id",
+        "ts",
+        "event_type",
+        "finding_id",
+        "tool_call_id",
+        "artifact_path",
+        "artifact_offset",
+        "confidence",
+        "mitre_technique",
+        "description",
+        "pool_origin",
+        "derived_from",
+        "prior_observations",
+    }
+)
+
+
+def finding_for_verifier(finding: dict[str, Any]) -> dict[str, Any]:
+    """Project a finding to just its typed Finding fields for verify_finding.
+
+    Report-only enrichments (host, analyst_note, next_pivot, hunt, cves, …) are
+    dropped — they are not part of the evidentiary Finding and the verifier's
+    ``extra="forbid"`` model rejects them."""
+    return {k: v for k, v in finding.items() if k in _FINDING_MODEL_FIELDS}
 
 
 def mem_confirmed_for_remember(merged: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -391,7 +428,12 @@ class SshMcpClient:
                 # is lost. Surface it as _error so existing checks catch it.
                 err = body.get("error")
                 if isinstance(err, dict) and "message" in err:
-                    return {"_error": {"message": err.get("message"), "kind": err.get("kind")}}
+                    return {
+                        "_error": {
+                            "message": err.get("message"),
+                            "kind": err.get("kind"),
+                        }
+                    }
                 body["_mcp_output_sha256"] = hashlib.sha256(
                     text.encode("utf-8")
                 ).hexdigest()
@@ -3479,18 +3521,59 @@ _KILL_CHAIN_PHASES: tuple[str, ...] = (
     "Impact",
 )
 _TECHNIQUE_PHASE: dict[str, int] = {
-    "T1078": 0, "T1190": 0, "T1133": 0, "T1566": 0, "T1200": 0,
-    "T1059": 1, "T1203": 1, "T1204": 1, "T1106": 1, "T1569": 1,
-    "T1543": 2, "T1053": 2, "T1547": 2, "T1546": 2, "T1136": 2, "T1505": 2,
-    "T1068": 3, "T1134": 3, "T1484": 3, "T1548": 3,
-    "T1055": 4, "T1014": 4, "T1070": 4, "T1027": 4, "T1112": 4, "T1562": 4,
-    "T1110": 5, "T1003": 5, "T1558": 5, "T1552": 5,
-    "T1087": 6, "T1082": 6, "T1083": 6, "T1018": 6, "T1057": 6,
-    "T1021": 7, "T1047": 7, "T1570": 7, "T1550": 7,
-    "T1005": 8, "T1560": 8, "T1114": 8,
-    "T1071": 9, "T1105": 9, "T1090": 9, "T1572": 9,
-    "T1041": 10, "T1048": 10, "T1567": 10, "T1020": 10,
-    "T1486": 11, "T1490": 11, "T1489": 11,
+    "T1078": 0,
+    "T1190": 0,
+    "T1133": 0,
+    "T1566": 0,
+    "T1200": 0,
+    "T1059": 1,
+    "T1203": 1,
+    "T1204": 1,
+    "T1106": 1,
+    "T1569": 1,
+    "T1543": 2,
+    "T1053": 2,
+    "T1547": 2,
+    "T1546": 2,
+    "T1136": 2,
+    "T1505": 2,
+    "T1068": 3,
+    "T1134": 3,
+    "T1484": 3,
+    "T1548": 3,
+    "T1055": 4,
+    "T1014": 4,
+    "T1070": 4,
+    "T1027": 4,
+    "T1112": 4,
+    "T1562": 4,
+    "T1110": 5,
+    "T1003": 5,
+    "T1558": 5,
+    "T1552": 5,
+    "T1087": 6,
+    "T1082": 6,
+    "T1083": 6,
+    "T1018": 6,
+    "T1057": 6,
+    "T1021": 7,
+    "T1047": 7,
+    "T1570": 7,
+    "T1550": 7,
+    "T1005": 8,
+    "T1560": 8,
+    "T1114": 8,
+    "T1071": 9,
+    "T1105": 9,
+    "T1090": 9,
+    "T1572": 9,
+    "T1041": 10,
+    "T1048": 10,
+    "T1567": 10,
+    "T1020": 10,
+    "T1486": 11,
+    "T1490": 11,
+    "T1489": 11,
 }
 
 
@@ -5362,6 +5445,10 @@ class Investigation:
         # remain deterministic regardless of completion timing.
         self.parallel = parallel
         self.workers = max(1, workers)
+        # Factory for extra findevil-mcp connections used to fan out independent
+        # read-only tool calls in parallel mode (set in run(); the Rust server is
+        # one-request-at-a-time, so concurrency comes from extra processes).
+        self._rust_factory: Callable[[], SshMcpClient] | None = None
         # The launcher can pin the case_id so it can deep-link the dashboard to
         # the case dir BEFORE the run starts (live watching). Else a fresh uuid.
         self.case_id = case_id or f"auto-{uuid.uuid4()}"
@@ -6609,10 +6696,23 @@ class Investigation:
                 },
             )
 
-        for entry in by_class["mft"][:3]:
+        mft_entries = by_class["mft"][:3]
+        mft_specs: list[tuple[str, dict[str, Any]]] = [
+            (
+                "mft_timeline",
+                {
+                    "case_id": self.handle["id"],
+                    "mft_path": str(e["path"]),
+                    "limit": 5000,
+                },
+            )
+            for e in mft_entries
+        ]
+        mft_outs = self._parallel_tool_calls(rust, mft_specs, timeout=1800.0)
+        for entry, (_name, args), out in zip(
+            mft_entries, mft_specs, mft_outs, strict=True
+        ):
             path = str(entry["path"])
-            args = {"case_id": self.handle["id"], "mft_path": path, "limit": 5000}
-            out = rust.call_tool("mft_timeline", args, timeout=1800.0)
             error = out.get("_error", {}).get("message") if "_error" in out else None
             if error:
                 self.analysis_limitations.append(
@@ -6675,10 +6775,23 @@ class Investigation:
                 )
             print(f"  mft_timeline: {path} rows={len(rows)}")
 
-        for entry in by_class["usnjrnl"][:3]:
+        usn_entries = by_class["usnjrnl"][:3]
+        usn_specs: list[tuple[str, dict[str, Any]]] = [
+            (
+                "usnjrnl_query",
+                {
+                    "case_id": self.handle["id"],
+                    "usnjrnl_path": str(e["path"]),
+                    "limit": 5000,
+                },
+            )
+            for e in usn_entries
+        ]
+        usn_outs = self._parallel_tool_calls(rust, usn_specs, timeout=1800.0)
+        for entry, (_name, args), out in zip(
+            usn_entries, usn_specs, usn_outs, strict=True
+        ):
             path = str(entry["path"])
-            args = {"case_id": self.handle["id"], "usnjrnl_path": path, "limit": 5000}
-            out = rust.call_tool("usnjrnl_query", args, timeout=1800.0)
             error = out.get("_error", {}).get("message") if "_error" in out else None
             if error:
                 self.analysis_limitations.append(
@@ -6739,10 +6852,19 @@ class Investigation:
                 )
             print(f"  usnjrnl_query: {path} rows={len(rows)}")
 
-        for entry in by_class["prefetch"][:50]:
+        prefetch_entries = by_class["prefetch"][:50]
+        prefetch_specs: list[tuple[str, dict[str, Any]]] = [
+            (
+                "prefetch_parse",
+                {"case_id": self.handle["id"], "prefetch_path": str(e["path"])},
+            )
+            for e in prefetch_entries
+        ]
+        prefetch_outs = self._parallel_tool_calls(rust, prefetch_specs, timeout=600.0)
+        for entry, (_name, args), out in zip(
+            prefetch_entries, prefetch_specs, prefetch_outs, strict=True
+        ):
             path = str(entry["path"])
-            args = {"case_id": self.handle["id"], "prefetch_path": path}
-            out = rust.call_tool("prefetch_parse", args)
             error = out.get("_error", {}).get("message") if "_error" in out else None
             if error:
                 self.analysis_limitations.append(
@@ -7646,6 +7768,55 @@ class Investigation:
             if tc.get("tool_call_id") and tc.get("tool") and tc.get("output_hash")
         }
 
+    def _parallel_tool_calls(
+        self,
+        rust: SshMcpClient,
+        specs: list[tuple[str, dict[str, Any]]],
+        *,
+        timeout: float = 1800.0,
+    ) -> list[dict[str, Any]]:
+        """Run independent, read-only findevil-mcp tool calls concurrently and
+        return their results in the SAME order as ``specs``.
+
+        The Rust server processes one request at a time, so concurrency comes
+        from extra server processes: each lane leases its own fresh connection
+        from ``self._rust_factory``. The caller records audit/findings serially
+        afterward (in spec order), so tool_call_ids and the hash-chained audit
+        log stay deterministic regardless of completion timing. Falls back to
+        sequential calls on the primary connection when parallel mode is off,
+        there is no factory, or there is a single call."""
+        if not self.parallel or self._rust_factory is None or len(specs) <= 1:
+            return [rust.call_tool(name, args, timeout=timeout) for name, args in specs]
+        lanes = min(self.workers, len(specs))
+        clients = [self._rust_factory() for _ in range(lanes)]
+        free: Queue[SshMcpClient] = Queue()
+        for client in clients:
+            free.put(client)
+        results: list[dict[str, Any]] = [{} for _ in specs]
+
+        def _run(
+            idx: int, name: str, args: dict[str, Any]
+        ) -> tuple[int, dict[str, Any]]:
+            client = free.get()
+            try:
+                return idx, client.call_tool(name, args, timeout=timeout)
+            finally:
+                free.put(client)
+
+        try:
+            with ThreadPoolExecutor(max_workers=lanes) as pool:
+                futures = [
+                    pool.submit(_run, idx, name, args)
+                    for idx, (name, args) in enumerate(specs)
+                ]
+                for future in as_completed(futures):
+                    idx, result = future.result()
+                    results[idx] = result
+        finally:
+            for client in clients:
+                client.close()
+        return results
+
     def _verify_pool(
         self, py: SshMcpClient, findings: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
@@ -7669,7 +7840,7 @@ class Investigation:
 
         def _run(finding: dict[str, Any]) -> dict[str, Any]:
             verify_args: dict[str, Any] = {
-                "finding": finding,
+                "finding": finding_for_verifier(finding),
                 "tool_call_index": tool_call_index,
                 "findevil_mcp_command": rust_replay_command(),
             }
@@ -7682,8 +7853,7 @@ class Investigation:
         results: list[dict[str, Any]] = [{} for _ in findings]
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
             future_to_idx = {
-                pool.submit(_run, finding): idx
-                for idx, finding in enumerate(findings)
+                pool.submit(_run, finding): idx for idx, finding in enumerate(findings)
             }
             for future in as_completed(future_to_idx):
                 results[future_to_idx[future]] = future.result()
@@ -8928,6 +9098,27 @@ class Investigation:
         else:
             rust = SshMcpClient(PY_LAUNCHER, "rust-mcp")
             py = SshMcpClient(PY_MCP_LAUNCHER, "py-mcp")
+
+        def _spawn_rust() -> SshMcpClient:
+            # A fresh, initialized findevil-mcp connection for a parallel lane.
+            client = (
+                StdioMcpClient(_local_rust_command(), "rust-mcp")
+                if LOCAL_MODE
+                else SshMcpClient(PY_LAUNCHER, "rust-mcp")
+            )
+            client.call(
+                "initialize",
+                {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "find-evil-auto", "version": "1"},
+                },
+            )
+            client.notify("notifications/initialized")
+            return client
+
+        self._rust_factory = _spawn_rust
+
         try:
             # Initialize handshakes
             for client in (rust, py):
