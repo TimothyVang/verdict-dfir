@@ -80,7 +80,11 @@ Unless the operator passed `--no-dashboard`, surface both:
 - If `--no-dashboard` was passed, skip opening but still print the paths.
 
 ## Notes
-- `--sift` runs the DFIR tools inside the SANS SIFT VM; in that mode the n8n/grounding steps
-  are skipped by design.
+- `--sift` runs the DFIR tools inside the SANS SIFT VM over SSH (needed for full disk
+  extraction — local mode can only mount the EWF container, not the inner volume). The
+  post-verdict n8n automation + grounding now fire in `--sift` mode too (host-side, after the
+  case dir syncs back), so `--sift` gives you the full pipeline in one go.
+- The SIFT VM IP default (`192.168.197.143`) can be stale; if `--sift` can't reach the VM,
+  set `FIND_EVIL_GUEST_IP` to the current IP (e.g. via `vmrun getGuestIPAddress`).
 - If `scripts/verdict` stops before `case_open`, report the exact failing line — do not
   claim a Verdict that was not produced.
