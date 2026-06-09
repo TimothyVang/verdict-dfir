@@ -259,6 +259,7 @@ the audit chain.
 | Env-var reference (~35 vars) | `docs/reference/environment-variables.md` |
 | How to run the product (flags, modes, output layout) | `docs/using/running-verdict.md` |
 | Fleet analysis (3-stage pipeline) | `docs/using/fleet-analysis.md` |
+| Whole-case local run (stage a corpus, run every host, no SIFT VM) | `docs/using/whole-case-local-run.md` |
 | Evidence staging / report customization | `docs/using/evidence-intake.md`, `docs/using/reports.md` |
 | Public test-dataset corpus, goldens, recall scoring | `docs/DATASET.md` |
 | Per-tool analyst playbooks + expected-failure table | `docs/analyst/tool-playbooks.md` |
