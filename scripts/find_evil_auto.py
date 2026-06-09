@@ -9345,6 +9345,21 @@ def main() -> int:
         "tmp/auto-runs/<case-id>/ so a launcher can deep-link the dashboard "
         "before the run starts.",
     )
+    p.add_argument(
+        "--parallel",
+        action="store_true",
+        help="Run independent tool calls (verify_finding re-runs and "
+        "disk-artifact parses) concurrently. Audit appends stay serialized, so "
+        "the verdict and the hash-chained log are unchanged.",
+    )
+    p.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        metavar="N",
+        help="Max concurrent lanes when --parallel is set (default: 4). Each "
+        "lane is its own findevil-mcp process; lower it on low-RAM hosts.",
+    )
     args = p.parse_args()
 
     global LOCAL_MODE
@@ -9367,6 +9382,8 @@ def main() -> int:
         signer=args.signer,
         force_fresh_replay=args.force_fresh_replay,
         case_id=args.case_id,
+        parallel=args.parallel,
+        workers=args.workers,
     )
 
     if not args.skip_preflight:
