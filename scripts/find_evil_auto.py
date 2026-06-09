@@ -6641,6 +6641,17 @@ class Investigation:
                 f"registry/UserAssist) corroborate execution."
             )
             self.execution_corroboration.setdefault(fid, []).append(corr_tcid)
+            # Cite the corroborating registry/UserAssist tool_call_id on the
+            # finding itself, not only in execution_corroboration. Without this
+            # the CONFIRMED finding's description claims "two artifact classes"
+            # while derived_from points at the prefetch call alone — a judge
+            # grepping the audit sees a single citation behind a 2-class claim.
+            # The primary tool_call_id (the prefetch replay) is untouched; the
+            # registry class is added as a second provenance citation.
+            derived = list(finding.get("derived_from") or [])
+            if corr_tcid not in derived:
+                derived.append(corr_tcid)
+            finding["derived_from"] = derived
             self._timeline_add(
                 ts or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "registry_query",
