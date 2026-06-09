@@ -238,6 +238,11 @@ the audit chain.
   gotcha, or "how do we usually…", call `mcp__qmd__query` (index `verdict-memory`) and ground the
   answer in what comes back. The SessionStart hook also injects the North Star + brain-topic index
   at the start of interactive sessions (it is gated OFF during `scripts/verdict` investigations).
+- **Check the brain notes before debugging.** Hard-won traps live in `obsidian-mind/brain/Gotchas.md`
+  (build/CI/crypto pins — yara-x/mft toolchain pins, RFC-8785 canonical JSON, the 3.10-engine
+  `execution_claim` mirror, the L3 OVA-name drift, the `tool_call_id`-only enforcement gap); recurring
+  engine/MCP mechanics in `Patterns.md`, the architecture "why" in `Key Decisions.md`, and runnable
+  scripts/components in `Skills.md`. Consult them before re-debugging a known build/CI/crypto issue.
 - **Capture durable facts.** When you learn something that will matter next session (a fix, a
   gotcha, a decision), write it to the right `obsidian-mind/brain/…` note — or run `/om-dump <fact>`
   — not into this file. The PostToolUse hook reindexes vault writes automatically.
