@@ -271,6 +271,26 @@ def selfscore_aggregate(verdicts: list[dict[str, Any]]) -> dict[str, Any]:
     return summary
 
 
+# psscan row accessors. The Rust `findevil-mcp` emits snake_case rows
+# (image_name/pid/ppid/create_time_iso); older/raw Volatility output used
+# PascalCase (ImageFileName/PID/PPID/CreateTime). Read either so the correlator
+# works regardless of which producer wrote psscan.json.
+def _proc_name(p: dict) -> str:
+    return (p.get("image_name") or p.get("ImageFileName") or "").strip()
+
+
+def _proc_pid(p: dict):
+    return p.get("pid", p.get("PID"))
+
+
+def _proc_ppid(p: dict):
+    return p.get("ppid", p.get("PPID"))
+
+
+def _proc_ctime(p: dict):
+    return p.get("create_time_iso") or p.get("CreateTime")
+
+
 def cross_host_processes(verdicts: list[dict[str, Any]]) -> dict[str, list[dict]]:
     """Return {process_name: [{host, pid, create_time}, ...]} for any
     uncommon name that appears on ≥2 hosts.
@@ -283,7 +303,7 @@ def cross_host_processes(verdicts: list[dict[str, Any]]) -> dict[str, list[dict]
     for v in verdicts:
         host = v["_host"]
         for p in v.get("_psscan", []):
-            name = (p.get("ImageFileName") or "").strip()
+            name = _proc_name(p)
             if not name:
                 continue
             if normalize_image_name(name) in _COMMON_TRUNCATED:
@@ -291,9 +311,9 @@ def cross_host_processes(verdicts: list[dict[str, Any]]) -> dict[str, list[dict]
             by_name[name].append(
                 {
                     "host": host,
-                    "pid": p.get("PID"),
-                    "ppid": p.get("PPID"),
-                    "create_time": p.get("CreateTime"),
+                    "pid": _proc_pid(p),
+                    "ppid": _proc_ppid(p),
+                    "create_time": _proc_ctime(p),
                 }
             )
     return {
@@ -310,7 +330,7 @@ def temporal_clusters(
     for v in verdicts:
         host = v["_host"]
         for p in v.get("_psscan", []):
-            ct = p.get("CreateTime")
+            ct = _proc_ctime(p)
             if not ct:
                 continue
             try:
@@ -345,8 +365,8 @@ def _cluster_to_dict(cluster: list[tuple[datetime, str, dict]]) -> dict[str, Any
             {
                 "host": h,
                 "create_time": dt.isoformat(),
-                "pid": p.get("PID"),
-                "name": p.get("ImageFileName"),
+                "pid": _proc_pid(p),
+                "name": _proc_name(p),
             }
             for dt, h, p in cluster
         ],
