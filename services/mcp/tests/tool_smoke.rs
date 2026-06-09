@@ -243,6 +243,38 @@ fn case_open_errors_on_directory_not_file() {
     assert!(matches!(err, CaseOpenError::ImageNotRegular(_)));
 }
 
+/// The input doc promises "the tool does not follow symlinks" — prove it.
+/// A symlink inside the evidence dir pointing at a file *outside* it must
+/// be refused, otherwise a crafted evidence drop could pull arbitrary
+/// host files (e.g. /etc/shadow) into the hashed chain of custody.
+#[cfg(unix)]
+#[test]
+fn case_open_refuses_symlinked_evidence_path() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let _home = HomeGuard::set(tmp.path());
+
+    // A real file outside the evidence drop zone...
+    let outside = tempfile::tempdir().expect("outside tempdir");
+    let target = outside.path().join("host-secret.bin");
+    fs::write(&target, b"not-your-evidence").unwrap();
+
+    // ...reached through a symlink placed where evidence would live.
+    let link = tmp.path().join("evidence.dd");
+    std::os::unix::fs::symlink(&target, &link).unwrap();
+
+    let input = CaseOpenInput {
+        image_path: link,
+        expected_sha256: None,
+        label: None,
+    };
+
+    let err = case_open(&input).unwrap_err();
+    assert!(
+        matches!(err, CaseOpenError::ImageNotRegular(_)),
+        "symlinked evidence must be refused, got: {err:?}"
+    );
+}
+
 #[test]
 fn case_open_hashes_match_known_vector() {
     // SHA-256("") = e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

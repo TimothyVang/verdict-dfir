@@ -125,10 +125,14 @@ pub enum CaseOpenError {
 /// `$HOME/.findevil` root. Pass it via tests to avoid stomping on
 /// the developer's real case store.
 pub fn case_open(input: &CaseOpenInput) -> Result<CaseHandle, CaseOpenError> {
-    // 1. Resolve + verify the image path.
+    // 1. Resolve + verify the image path. `symlink_metadata` (lstat) does
+    //    NOT follow symlinks, so a link planted in the evidence drop zone
+    //    pointing at an arbitrary host file is refused as not-regular —
+    //    enforcing the "does not follow symlinks" contract documented on
+    //    `CaseOpenInput::image_path`.
     let image_path = &input.image_path;
-    let meta =
-        fs::metadata(image_path).map_err(|_| CaseOpenError::ImageNotFound(image_path.clone()))?;
+    let meta = fs::symlink_metadata(image_path)
+        .map_err(|_| CaseOpenError::ImageNotFound(image_path.clone()))?;
     if !meta.is_file() {
         return Err(CaseOpenError::ImageNotRegular(image_path.clone()));
     }
