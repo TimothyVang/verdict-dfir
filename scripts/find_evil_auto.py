@@ -5499,6 +5499,11 @@ class Investigation:
         self._consecutive_failures = 0
         self._heartbeat_threshold = 2
         self._heartbeat_escalated = False
+        # Per-finding correlate_findings decisions (kept/downgraded/rejected),
+        # audited as ``correlation_outcomes`` and mirrored into verdict.json so
+        # the SOUL.md >=2-artifact rule is visible in the run record, not just
+        # in unit tests.
+        self.correlation_outcomes: list[dict[str, Any]] = []
 
     # ------------------------------------------------------------------
     # Audit chain + tool-call helpers
@@ -8232,14 +8237,7 @@ class Investigation:
 
         # correlate_findings (SOUL.md ≥2 rule)
         if merged:
-            c = py.call_tool("correlate_findings", {"findings": merged})
-            outcomes = c.get("outcomes", []) if "_error" not in c else []
-            refined = c.get("refined") if "_error" not in c else None
-            if isinstance(refined, list):
-                merged = refined
-            kept = sum(1 for o in outcomes if o.get("action") == "kept")
-            downgraded = sum(1 for o in outcomes if o.get("action") == "downgraded")
-            print(f"  correlator: {kept} kept, {downgraded} downgraded")
+            merged, kept, downgraded = self._correlate_merged(py, merged)
         else:
             kept = downgraded = 0
 
@@ -8256,6 +8254,34 @@ class Investigation:
         merged = normalize_hypothesis_prefix(merged)
 
         return merged, len(contras), kept, downgraded
+
+    def _correlate_merged(
+        self, py: SshMcpClient, merged: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], int, int]:
+        """Run correlate_findings and persist its per-finding decisions.
+
+        Emits one ``correlation_outcomes`` audit record (finding_id + action +
+        reason per finding) and stores the outcomes for the verdict.json
+        mirror. On a tool error nothing is audited or stored — absence of the
+        record is the honest signal that the correlator never ruled.
+        """
+        c = py.call_tool("correlate_findings", {"findings": merged})
+        if "_error" in c:
+            return merged, 0, 0
+        outcomes = c.get("outcomes", [])
+        refined = c.get("refined")
+        if isinstance(refined, list):
+            merged = refined
+        kept = sum(1 for o in outcomes if o.get("action") == "kept")
+        downgraded = sum(1 for o in outcomes if o.get("action") == "downgraded")
+        self.correlation_outcomes = outcomes
+        self._audit(
+            py,
+            "correlation_outcomes",
+            {"outcomes": outcomes, "kept": kept, "downgraded": downgraded},
+        )
+        print(f"  correlator: {kept} kept, {downgraded} downgraded")
+        return merged, kept, downgraded
 
     def _build_report_metadata(
         self, merged: list[dict[str, Any]], verdict: str
@@ -8855,6 +8881,7 @@ class Investigation:
                 "contradictions_surfaced": contras,
                 "soul_md_kept": kept,
                 "soul_md_downgraded": downgraded,
+                "correlation_outcomes": self.correlation_outcomes,
             },
             "findings": merged,
             "tool_calls": self.tool_calls,
