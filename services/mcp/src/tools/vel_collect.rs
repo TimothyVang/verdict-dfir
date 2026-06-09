@@ -263,34 +263,21 @@ fn parse_rows(
         });
     }
 
-    // Disambiguate JSONL vs single JSON array up-front by the leading
-    // non-whitespace byte. An array would otherwise be a valid single
-    // "JSONL row" and silently swallow all output.
-    let all_rows: Vec<serde_json::Value> = if trimmed.starts_with('[') {
-        let parsed: serde_json::Value = serde_json::from_str(trimmed)
-            .map_err(|e| VelCollectError::OutputParse(e.to_string()))?;
-        match parsed {
-            serde_json::Value::Array(items) => items,
-            other => {
-                return Err(VelCollectError::OutputParse(format!(
-                    "expected JSONL or JSON array, got {}",
-                    json_kind(&other)
-                )));
-            }
+    // We invoke Velociraptor with `--format jsonl` (one object per line), but
+    // parse defensively for any whitespace-separated sequence of JSON values:
+    // a single array `[...]` (flattened to its elements), single-line JSONL, or
+    // pretty-printed concatenated objects. A streaming `Deserializer` covers all
+    // three, so a future format-flag drift can't silently kill the lane the way
+    // a line-by-line parser dies on a pretty-printed object's bare `{`.
+    let mut all_rows: Vec<serde_json::Value> = Vec::new();
+    let stream = serde_json::Deserializer::from_str(trimmed).into_iter::<serde_json::Value>();
+    for item in stream {
+        match item {
+            Ok(serde_json::Value::Array(items)) => all_rows.extend(items),
+            Ok(value) => all_rows.push(value),
+            Err(e) => return Err(VelCollectError::OutputParse(e.to_string())),
         }
-    } else {
-        let mut rows = Vec::new();
-        for line in trimmed.lines() {
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
-            let v: serde_json::Value = serde_json::from_str(line)
-                .map_err(|e| VelCollectError::OutputParse(e.to_string()))?;
-            rows.push(v);
-        }
-        rows
-    };
+    }
 
     let rows_seen = all_rows.len();
     let mut out = Vec::with_capacity(rows_seen.min(limit));
@@ -311,16 +298,6 @@ fn parse_rows(
     })
 }
 
-const fn json_kind(v: &serde_json::Value) -> &'static str {
-    match v {
-        serde_json::Value::Null => "null",
-        serde_json::Value::Bool(_) => "bool",
-        serde_json::Value::Number(_) => "number",
-        serde_json::Value::String(_) => "string",
-        serde_json::Value::Array(_) => "array",
-        serde_json::Value::Object(_) => "object",
-    }
-}
 
 fn truncate_to(mut s: String, max: usize) -> String {
     if s.len() > max {
@@ -407,6 +384,17 @@ mod tests {
     #[test]
     fn parse_rows_handles_array_fallback() {
         let stdout = r#"[{"a":1},{"a":2}]"#;
+        let out = parse_rows(stdout, "TestArtifact", 100, String::new()).unwrap();
+        assert_eq!(out.rows_seen, 2);
+        assert_eq!(out.rows.len(), 2);
+    }
+
+    #[test]
+    fn parse_rows_handles_pretty_printed_concatenated_objects() {
+        // Defensive: if Velociraptor's format ever drifts to pretty-printed
+        // multi-line objects (the shape that silently killed the hayabusa lane),
+        // the streaming parser still reads them instead of dying on a bare `{`.
+        let stdout = "{\n  \"a\": 1\n}\n{\n  \"a\": 2\n}\n";
         let out = parse_rows(stdout, "TestArtifact", 100, String::new()).unwrap();
         assert_eq!(out.rows_seen, 2);
         assert_eq!(out.rows.len(), 2);
