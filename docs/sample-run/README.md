@@ -6,12 +6,14 @@ Requirement #8) and can verify the chain of custody **offline**. Every file here
 byte-for-byte output of an actual run — nothing was edited, because editing any record would
 break the hash chain (which is the point).
 
-Two runs are included because they show the two halves of the agent's epistemic discipline:
+Three runs are included. The first two show the two halves of the agent's epistemic discipline;
+the third shows the ≥2-artifact-class rule escalating the *same* case once a second class is available:
 
 | Run | Evidence | Verdict | Findings | What it demonstrates |
 |---|---|---|---|---|
 | [`attack-samples-evtx/`](attack-samples-evtx/) | EVTX attack-sample set | **SUSPICIOUS** | 3 (1 CONFIRMED + 2 `hypothesis:`) | Catching evil head-on: a directly-observed Security **EID 1102 audit-log-clear** (T1070.001) confirmed, with weaker leads honestly held at HYPOTHESIS. |
-| [`nist-hacking-case/`](nist-hacking-case/) | NIST CFReDS `SCHARDT.dd` (public domain) | **INDETERMINATE** | 9 (8 INFERRED + 1 HYPOTHESIS) | Anti-overclaim discipline: 8 hacking tools (cain, netstumbler, mirc, ethereal, lookatlan) recovered from Prefetch are labeled **INFERRED, not CONFIRMED** — Prefetch alone is one artifact class, and an execution claim needs ≥2. The verdict stays INDETERMINATE rather than overstating coverage. |
+| [`nist-hacking-case/`](nist-hacking-case/) | NIST CFReDS `SCHARDT.dd` (public domain), Prefetch only | **INDETERMINATE** | 9 (8 INFERRED + 1 HYPOTHESIS) | Anti-overclaim discipline: 8 hacking tools (cain, netstumbler, mirc, ethereal, lookatlan) recovered from Prefetch are labeled **INFERRED, not CONFIRMED** — Prefetch alone is one artifact class, and an execution claim needs ≥2. The verdict stays INDETERMINATE rather than overstating coverage. |
+| [`nist-hacking-case-sift/`](nist-hacking-case-sift/) | Same `SCHARDT.dd`, run under `--sift` (Prefetch **+** registry/UserAssist) | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | The other direction of the same rule: with the NTUSER.DAT **UserAssist** hive also parsed, each hacking-tool execution is corroborated by **two independent artifact classes** (Prefetch + registry/UserAssist), so the leads escalate to **CONFIRMED**. Each CONFIRMED finding's `derived_from` cites *both* `tool_call_id`s (a `prefetch_parse` and a `registry_query`), so the 2-class claim is greppable, not prose. |
 
 ## Files in each run (lean set)
 
@@ -81,4 +83,9 @@ finding (or one), and exits non-zero if any finding fails to resolve.
   secrets.
 - **The NIST run is deliberately INDETERMINATE.** It is the standard for *honest coverage*, not a
   miss: the agent recovered the hacking tools but declined to escalate Prefetch-only execution to
-  CONFIRMED. See `nist-hacking-case/REPORT.md`.
+  CONFIRMED. See `nist-hacking-case/REPORT.md`. `nist-hacking-case-sift/` is the same evidence with
+  a second artifact class available (UserAssist), and *that* run does escalate to CONFIRMED — the
+  ≥2-class rule cutting both ways on identical evidence.
+- **The two NIST runs share evidence, not a case id.** They are independent investigations of
+  `SCHARDT.dd` (one Prefetch-only, one with the registry hive too), so their `case_id`s, audit
+  chains, and Merkle roots differ — each verifies standalone.

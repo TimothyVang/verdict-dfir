@@ -208,9 +208,9 @@ of your Project.
 **STATUS: SATISFIED**
 
 > **Committed sample runs (self-contained on a fresh clone):**
-> [`docs/sample-run/`](docs/sample-run/) ships two real, completed investigations — their
+> [`docs/sample-run/`](docs/sample-run/) ships three real, completed investigations — their
 > `audit.jsonl`, `run.manifest.json`, `verdict.json`, `manifest_verify.json`, and `REPORT.md`.
-> Both verify **offline** (`manifest_verify` returns `overall: true`), and
+> All verify **offline** (`manifest_verify` returns `overall: true`), and
 > [`docs/sample-run/README.md`](docs/sample-run/README.md) walks a single finding all the way
 > back to the tool execution and Merkle leaf that produced it. Every live investigation also
 > produces the same `audit.jsonl` in its case run directory.
@@ -254,10 +254,11 @@ of your Project.
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
 | 9 | Accuracy report | [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED |
-| 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (2 committed runs, verify offline) | SATISFIED |
+| 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (3 committed runs, verify offline) | SATISFIED |
 
 ---
 
-*Last verified: 2026-06-09 — execution-log deliverable (#10) now ships two committed,
-offline-verifiable runs under [`docs/sample-run/`](docs/sample-run/); both return
-`manifest_verify overall: true`.*
+*Last verified: 2026-06-09 — execution-log deliverable (#10) now ships three committed,
+offline-verifiable runs under [`docs/sample-run/`](docs/sample-run/); all return
+`manifest_verify overall: true`. The two NIST SCHARDT runs (Prefetch-only INDETERMINATE vs.
+`--sift` Prefetch+UserAssist CONFIRMED) show the ≥2-artifact-class rule cutting both ways.*
