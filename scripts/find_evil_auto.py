@@ -1751,10 +1751,7 @@ def build_attack_coverage(
             gap = "finding-level evidence exists; preserve cited tool output"
         elif observed_tools:
             status = "covered_no_finding"
-            gap = (
-                "target-specific tools ran without qualifying evidence; this is "
-                "limited coverage, not proof of absence"
-            )
+            gap = "limited coverage — not proof of absence"
         elif target_classes & available_classes:
             status = "available_not_examined"
             gap = "required evidence class was available but no target tool ran"
@@ -3190,6 +3187,248 @@ def _technique_profile(technique: Any) -> dict[str, Any]:
     return TECHNIQUE_PROFILE.get(base, _GENERIC_PROFILE)
 
 
+# Named-technique knowledge overlay: behavioral signatures keyed on a finding's
+# MITRE technique + description text (the same details the finding already cites).
+# First match wins, so specific named-exploit entries precede the general
+# technique entry. Each match adds an analyst interpretation, a concrete next
+# pivot, an optional named technique/exploit, and any CVE ids — the domain
+# expertise a practitioner brings that generic MITRE phrasing does not. These are
+# SCOPED signature matches ("consistent with…"), never attribution or a
+# confirmed-execution claim.
+SIGNATURE_PROFILE: tuple[dict[str, Any], ...] = (
+    {
+        "id": "spoolfool",
+        "technique": "T1543.003",
+        "any_keywords": ("spoolfool",),
+        "named_technique": "SpoolFool — Windows Print Spooler privilege escalation",
+        "cves": ("CVE-2022-21999",),
+        "analyst_note": (
+            "A service named 'spoolfool' with a shell image is the public signature of "
+            "the SpoolFool exploit (CVE-2022-21999), which abuses the Print Spooler's "
+            "SpoolDirectory handling to drop a DLL and execute as SYSTEM. The service is "
+            "the persistence / payload-delivery artifact, not the exploit primitive."
+        ),
+        "next_pivot": (
+            "Pull the Spooler driver directory (C:\\Windows\\System32\\spool\\drivers), the "
+            "spoolsv.exe child-process tree, and System EIDs 7045/7000/7009 around this "
+            "time; hash the service image and check Amcache/Prefetch for execution."
+        ),
+    },
+    {
+        "id": "service-shell-exec",
+        "technique": "T1543.003",
+        "any_keywords": ("cmd.exe", "powershell", "rundll32", "mshta", "\\temp\\"),
+        "named_technique": "Service-based execution / lateral movement (T1543.003 + T1059)",
+        "analyst_note": (
+            "A Windows service whose image is a shell or LOLBin runs as SYSTEM at start — "
+            "the classic PsExec / remote-service lateral-movement and persistence pattern, "
+            "not a normal service."
+        ),
+        "next_pivot": (
+            "Correlate with a preceding 4624 Type 3 logon from the source host (PsExec "
+            "authenticates first), the service ImagePath / command line, and 4697/7045 on "
+            "the target; recover the binary and its hash."
+        ),
+    },
+    {
+        "id": "service-install",
+        "technique": "T1543.003",
+        "named_technique": "Windows service installation (T1543.003)",
+        "analyst_note": (
+            "A newly installed Windows service grants durable, SYSTEM-level execution and "
+            "is a common persistence and lateral-movement mechanism. Benign software also "
+            "installs services, so the image path and origin decide intent."
+        ),
+        "next_pivot": (
+            "Verify the service ImagePath and its hash, the installing account, and any "
+            "preceding remote logon; check 7045/4697 and the binary on disk."
+        ),
+    },
+    {
+        "id": "remote-wmi",
+        "technique": "T1047",
+        "named_technique": "Remote WMI process execution (T1047)",
+        "analyst_note": (
+            "A process whose parent is WmiPrvSE.exe is the signature of remote WMI "
+            "execution (Win32_Process.Create, e.g. `wmic /node` or Invoke-WmiMethod) — a "
+            "largely fileless, hands-on-keyboard lateral-movement technique."
+        ),
+        "next_pivot": (
+            "Pull Microsoft-Windows-WMI-Activity/Operational for the originating host and "
+            "user, the 4624 Type 3 logon immediately preceding this 4688, and the child "
+            "command line; check the source host for the initiating wmic/powershell."
+        ),
+    },
+    {
+        "id": "log-clear",
+        "technique": "T1070.001",
+        "named_technique": "Security event-log clearing / anti-forensics (T1070.001)",
+        "analyst_note": (
+            "Clearing the Windows Security log removes the local record of activity "
+            "before it — a defense-evasion / anti-forensics act. Event 1102 is itself "
+            "written AFTER the clear, so the action is recorded even though what it "
+            "erased is not; the interval before this record is the blind window."
+        ),
+        "next_pivot": (
+            "Recover the erased window from WEF/SIEM-forwarded copies, EDR telemetry, or a "
+            "VSS/backup of the EVTX predating it; check 4719 (audit-policy change) and the "
+            "account's other logons around this time."
+        ),
+    },
+    {
+        "id": "rdp-logon",
+        "technique": "T1021.001",
+        "named_technique": "Remote Desktop (RDP) interactive logon (T1021.001)",
+        "analyst_note": (
+            "A Type 10 (RemoteInteractive) logon is a hands-on RDP session — interactive "
+            "remote access used for lateral movement. Source host and time separate "
+            "operator/admin RDP from intrusion."
+        ),
+        "next_pivot": (
+            "Pull TerminalServices-RemoteConnectionManager / LocalSessionManager "
+            "(1149/21/22/25), the source IP's other logons, and in-session 4688 process "
+            "creation for what the session did."
+        ),
+    },
+    {
+        "id": "brute-force",
+        "technique": "T1110",
+        "named_technique": "Password spray / brute-force (T1110)",
+        "analyst_note": (
+            "A burst of 4625 failures (optionally followed by a 4624 success) is a "
+            "credential-access attempt — password spray or brute force. A success after "
+            "the burst is the pivot to investigate first."
+        ),
+        "next_pivot": (
+            "Check for a 4624 success from the same source/account immediately after the "
+            "burst, the targeted account's privilege, and lockout (4740); look for the "
+            "source IP across other hosts."
+        ),
+    },
+    {
+        "id": "powershell",
+        "technique": "T1059.001",
+        "named_technique": "Suspicious PowerShell (T1059.001)",
+        "analyst_note": (
+            "Encoded or download-cradle PowerShell (EncodedCommand / DownloadString / IEX) "
+            "is a common execution and delivery technique. The script block is a lead — "
+            "decode it before acting."
+        ),
+        "next_pivot": (
+            "Decode the EncodedCommand/base64, pull Microsoft-Windows-PowerShell/Operational "
+            "4103/4104 around it, and check for the spawned process and network egress."
+        ),
+    },
+    {
+        "id": "scheduled-task",
+        "technique": "T1053.005",
+        "named_technique": "Scheduled task persistence (T1053.005)",
+        "analyst_note": (
+            "A scheduled task with a suspicious action is a persistence/execution "
+            "mechanism; tasks can run as SYSTEM and survive reboot."
+        ),
+        "next_pivot": (
+            "Pull \\Windows\\System32\\Tasks\\<task> XML, the TaskCache registry keys, and "
+            "4698/4702 around this time; check the action's binary and command line."
+        ),
+    },
+)
+
+
+# Compact, copy-pasteable hunt logic per signature (detection-engineering reuse).
+_HUNT_BY_SIGNATURE: dict[str, str] = {
+    "spoolfool": "Security 7045 where ServiceName like 'spool%' and ImagePath has cmd.exe/powershell; System 7000/7009 spoolsv failures; new DLLs under \\spool\\drivers",
+    "service-shell-exec": "Security 7045/4697 where ImagePath has cmd.exe/powershell/rundll32, preceded by 4624 LogonType=3 from the same source IP",
+    "service-install": "Security 7045/4697 where ServiceName not in baseline and the ImagePath hash is not allow-listed",
+    "remote-wmi": "Security 4688 where ParentProcessName endswith WmiPrvSE.exe and NewProcessName not in {wmiprvse.exe, scrcons.exe}; WMI-Activity/Operational 5857-5861",
+    "log-clear": "Security 1102 (security-log clearing) and 4719 (audit-policy change); EventRecordID gaps immediately before the 1102",
+    "rdp-logon": "Security 4624 where LogonType=10 and IpAddress not in admin subnets; TS-RemoteConnectionManager 1149",
+    "brute-force": "Security 4625 count() > 5 by IpAddress within 5m, then 4624 success for the same IP/account; 4740 lockout",
+    "powershell": "PowerShell/Operational 4104 where ScriptBlockText has -enc / FromBase64String / IEX / DownloadString",
+    "scheduled-task": "Security 4698/4702 where the task action runs a shell/LOLBin; new keys under TaskCache\\Tree",
+}
+
+
+def _signature_for_finding(finding: dict[str, Any]) -> dict[str, Any] | None:
+    """First SIGNATURE_PROFILE entry whose technique + keywords match the finding."""
+    technique = str(finding.get("mitre_technique") or "")
+    base = technique.split(".")[0]
+    text = str(finding.get("description") or "").lower()
+    for entry in SIGNATURE_PROFILE:
+        want = entry["technique"]
+        if technique != want and base != want and not technique.startswith(want):
+            continue
+        keywords = entry.get("any_keywords")
+        if keywords and not any(kw in text for kw in keywords):
+            continue
+        return entry
+    return None
+
+
+def apply_signature_profiles(findings: list[dict[str, Any]]) -> None:
+    """Attach analyst interpretation, next-pivot, named technique, and CVEs to each
+    finding from SIGNATURE_PROFILE, in place. Post-verification (like host/CVE
+    tagging); leaves findings without a signature to the generic TECHNIQUE_PROFILE.
+    """
+    for finding in findings:
+        entry = _signature_for_finding(finding)
+        if not entry:
+            continue
+        finding["named_technique"] = entry["named_technique"]
+        finding["analyst_note"] = entry["analyst_note"]
+        finding["next_pivot"] = entry["next_pivot"]
+        hunt = _HUNT_BY_SIGNATURE.get(entry["id"])
+        if hunt:
+            finding["hunt"] = hunt
+        cves = set(finding.get("cves") or []) | set(entry.get("cves", ()))
+        if cves:
+            finding["cves"] = sorted(cves)
+
+
+# Kill-chain phase ordering so the per-host narrative reads as an attack lifecycle
+# (got in -> ran code -> persisted -> escalated -> evaded -> moved laterally -> ...)
+# rather than in finding order. Maps a MITRE technique (or its base) to a phase.
+_KILL_CHAIN_PHASES: tuple[str, ...] = (
+    "Initial Access",
+    "Execution",
+    "Persistence",
+    "Privilege Escalation",
+    "Defense Evasion",
+    "Credential Access",
+    "Discovery",
+    "Lateral Movement",
+    "Collection",
+    "Command & Control",
+    "Exfiltration",
+    "Impact",
+)
+_TECHNIQUE_PHASE: dict[str, int] = {
+    "T1078": 0, "T1190": 0, "T1133": 0, "T1566": 0, "T1200": 0,
+    "T1059": 1, "T1203": 1, "T1204": 1, "T1106": 1, "T1569": 1,
+    "T1543": 2, "T1053": 2, "T1547": 2, "T1546": 2, "T1136": 2, "T1505": 2,
+    "T1068": 3, "T1134": 3, "T1484": 3, "T1548": 3,
+    "T1055": 4, "T1014": 4, "T1070": 4, "T1027": 4, "T1112": 4, "T1562": 4,
+    "T1110": 5, "T1003": 5, "T1558": 5, "T1552": 5,
+    "T1087": 6, "T1082": 6, "T1083": 6, "T1018": 6, "T1057": 6,
+    "T1021": 7, "T1047": 7, "T1570": 7, "T1550": 7,
+    "T1005": 8, "T1560": 8, "T1114": 8,
+    "T1071": 9, "T1105": 9, "T1090": 9, "T1572": 9,
+    "T1041": 10, "T1048": 10, "T1567": 10, "T1020": 10,
+    "T1486": 11, "T1490": 11, "T1489": 11,
+}
+
+
+def _phase_for_technique(technique: Any) -> tuple[int, str]:
+    """(phase_index, phase_label) for a MITRE technique; unknown sorts last."""
+    key = str(technique or "")
+    idx = _TECHNIQUE_PHASE.get(key)
+    if idx is None:
+        idx = _TECHNIQUE_PHASE.get(key.split(".")[0])
+    if idx is None:
+        return len(_KILL_CHAIN_PHASES), "Other"
+    return idx, _KILL_CHAIN_PHASES[idx]
+
+
 # Per missing artifact class: (why we cannot conclude, how to recover).
 GAP_REASON: dict[str, tuple[str, str]] = {
     "disk/filesystem": (
@@ -3215,18 +3454,15 @@ _GAP_PRIORITY = ("disk/filesystem", "network", "memory", "evtx")
 
 _CERTAINTY_BY_CONFIDENCE: dict[str, str] = {
     "CONFIRMED": (
-        "High — reproducible from the cited tool call (the verifier re-runs it and "
-        "matches the SHA-256) and sealed in the signed run manifest. This does not "
-        "authenticate the source artifact upstream of this engine, nor does it prove "
-        "intent or a breach."
+        "High — the cited tool output is reproducible (the verifier re-ran it and the "
+        "SHA-256 matched). The confidence is in the artifact, not in intent or actor."
     ),
     "INFERRED": (
-        "Moderate — derived from at least two corroborating, reproducible facts; the "
-        "conclusion is an inference and should be confirmed by an analyst."
+        "Moderate — drawn from two or more corroborating, reproducible facts; an "
+        "analyst should confirm."
     ),
     "HYPOTHESIS": (
-        "Low — a single-source triage lead; treat it as a direction for further "
-        "collection, not a conclusion."
+        "Low — a single-source lead; a direction to pursue, not a conclusion."
     ),
 }
 
@@ -3264,6 +3500,121 @@ def _lead_entities(events: list[dict[str, Any]]) -> tuple[str, str]:
 def _cap_first(text: str) -> str:
     text = str(text or "")
     return text[:1].upper() + text[1:] if text else text
+
+
+def _events_by_finding(
+    normalized_timeline: dict[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
+    """Map finding_id -> the timeline events that cite it."""
+    out: dict[str, list[dict[str, Any]]] = {}
+    for event in (normalized_timeline or {}).get("events", []):
+        for fid in event.get("linked_finding_ids", []) or []:
+            out.setdefault(str(fid), []).append(event)
+    return out
+
+
+def _evidence_label(path: Any) -> str:
+    """Basename of an evidence path, for host fallback / source display."""
+    name = str(path or "").replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+    return name or "supplied evidence"
+
+
+def tag_finding_hosts(
+    findings: list[dict[str, Any]], normalized_timeline: dict[str, Any]
+) -> None:
+    """Denormalize the originating host onto each finding, in place.
+
+    Uses the finding's earliest linked event carrying a host/workstation entity
+    (the EVTX ``Computer`` field), falling back to the evidence file name when no
+    host is recorded. Runs after the verifier (which forbids unknown finding
+    fields) — the same post-verification stage as ``_tag_finding_cves``.
+    """
+    events_by_finding = _events_by_finding(normalized_timeline)
+    for index, finding in enumerate(findings, 1):
+        _actor, host = _lead_entities(
+            events_by_finding.get(_finding_id(finding, index), [])
+        )
+        finding["host"] = host or _evidence_label(finding.get("artifact_path"))
+
+
+def _event_host(event: dict[str, Any], finding_host: dict[str, str]) -> str:
+    entities = event.get("entities") or {}
+    host = str(entities.get("host") or entities.get("workstation") or "")
+    if host:
+        return host
+    for fid in event.get("linked_finding_ids", []) or []:
+        if finding_host.get(str(fid)):
+            return finding_host[str(fid)]
+    return ""
+
+
+def build_host_groups(
+    findings: list[dict[str, Any]], normalized_timeline: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Group findings (and their timeline events) by host, strongest host first.
+
+    A directory case is a set of separate evidence files that may belong to
+    different hosts and dates. Presenting findings per host stops the report from
+    narrating unrelated hosts as one incident — the scope-honesty an analyst
+    applies before writing a single story.
+    """
+    finding_host: dict[str, str] = {}
+    groups: dict[str, dict[str, Any]] = {}
+    for index, finding in enumerate(findings, 1):
+        fid = _finding_id(finding, index)
+        host = finding.get("host") or "unknown host"
+        finding_host[fid] = host
+        group = groups.setdefault(
+            host,
+            {
+                "host": host,
+                "finding_ids": [],
+                "evidence_sources": set(),
+                "by_confidence": {"CONFIRMED": 0, "INFERRED": 0, "HYPOTHESIS": 0},
+                "event_count": 0,
+                "timestamps": [],
+            },
+        )
+        group["finding_ids"].append(fid)
+        conf = finding.get("confidence", "HYPOTHESIS")
+        group["by_confidence"][conf] = group["by_confidence"].get(conf, 0) + 1
+        if finding.get("artifact_path"):
+            group["evidence_sources"].add(_evidence_label(finding["artifact_path"]))
+
+    for event in normalized_timeline.get("events", []):
+        host = _event_host(event, finding_host)
+        if host not in groups:
+            continue
+        group = groups[host]
+        group["event_count"] += 1
+        if event.get("timestamp_utc"):
+            group["timestamps"].append(event["timestamp_utc"])
+
+    ordered: list[dict[str, Any]] = []
+    for group in groups.values():
+        stamps = sorted(group.pop("timestamps"))
+        group["first_seen"] = stamps[0] if stamps else None
+        group["last_seen"] = stamps[-1] if stamps else None
+        group["evidence_sources"] = sorted(group["evidence_sources"])
+        group["finding_count"] = len(group["finding_ids"])
+        group["top_confidence"] = next(
+            (
+                c
+                for c in ("CONFIRMED", "INFERRED", "HYPOTHESIS")
+                if group["by_confidence"].get(c)
+            ),
+            "HYPOTHESIS",
+        )
+        ordered.append(group)
+    ordered.sort(
+        key=lambda g: (
+            CONFIDENCE_RANK.get(g["top_confidence"], 0),
+            g["finding_count"],
+            g["first_seen"] or "",
+        ),
+        reverse=True,
+    )
+    return ordered
 
 
 _RAW_TOOL_ERROR_MARKERS = ("tools/call:", "exited ", "Usage:", "--help", "Traceback")
@@ -3385,30 +3736,42 @@ def build_executive_attack_story(
         confidence = finding.get("confidence", "HYPOTHESIS")
         beat_actor, beat_host = _lead_entities(events)
         beat_profile = _technique_profile(finding.get("mitre_technique"))
-        caveat = {
-            "CONFIRMED": "Confirmed means the cited tool output is reproducible; it does not imply attribution or complete scope.",
-            "INFERRED": "Inferred means the story beat is derived from corroborated facts and still needs expert review.",
-            "HYPOTHESIS": "Hypothesis means a triage lead that should not drive response without more corroboration.",
-        }.get(confidence, "Expert review required before acting.")
+        phase_index, phase = _phase_for_technique(finding.get("mitre_technique"))
+        # Prefer the named-technique signature (WS2); fall back to generic profile.
+        analyst_note = finding.get("analyst_note") or (
+            f"{beat_profile.get('evil', '')} {beat_profile.get('honest_caveat', '')}".strip()
+        )
         beats.append(
             {
                 "order": order,
                 "finding_id": finding_id,
                 "timestamp_utc": timestamp,
+                "phase": phase,
+                "phase_index": phase_index,
                 "title": str(finding.get("description") or "Finding")[:110],
                 "summary": str(finding.get("description") or "")[:260],
                 "confidence": confidence,
                 "mitre_technique": finding.get("mitre_technique"),
+                "named_technique": finding.get("named_technique")
+                or beat_profile.get("name", ""),
+                "cves": finding.get("cves") or [],
                 "tool_call_id": finding.get("tool_call_id"),
                 "artifact_classes": artifact_classes,
                 "actor": beat_actor,
-                "host": beat_host,
+                "host": finding.get("host") or beat_host,
                 "action": beat_profile.get("action", ""),
                 "source_event_ids": [event.get("event_id") for event in events[:5]],
-                "why_it_matters": "This is part of the customer-facing attack story only because it is backed by a cited Finding.",
-                "caveat": caveat,
+                "analyst_note": analyst_note,
+                "next_pivot": finding.get("next_pivot", ""),
+                "hunt": finding.get("hunt", ""),
+                "why_it_matters": analyst_note,
             }
         )
+
+    # Order the chain as an attack lifecycle, not in finding order.
+    beats.sort(key=lambda b: (b.get("phase_index", 99), b.get("timestamp_utc") or ""))
+    for new_order, beat in enumerate(beats, 1):
+        beat["order"] = new_order
 
     distribution = _confidence_distribution(findings)
     touched = sorted(_touched_artifact_classes(case_completeness))
@@ -3420,13 +3783,20 @@ def build_executive_attack_story(
     lead_conf = (lead or {}).get("confidence", "")
     profile = _technique_profile((lead or {}).get("mitre_technique"))
     actor, host = _lead_entities(lead_events)
-    lead_ts = next(
+    lead_ts_raw = next(
         (
             event.get("timestamp_utc")
             for event in sorted(lead_events, key=lambda e: e.get("timestamp_utc") or "")
             if event.get("timestamp_utc")
         ),
         None,
+    )
+    # Trim sub-second precision for the narrative sentence (full precision is in
+    # the timeline export).
+    lead_ts = (
+        re.sub(r"(\dT\d{2}:\d{2}:\d{2})\.\d+(Z?)", r"\1\2", lead_ts_raw)
+        if lead_ts_raw
+        else lead_ts_raw
     )
 
     if lead is None:
@@ -3465,8 +3835,11 @@ def build_executive_attack_story(
         customer_summary = (
             f"The supplied evidence shows {action}{where}{who}{when}."
         ).strip()
-        assessment = (
-            f"{profile.get('evil', '')} {profile.get('honest_caveat', '')}"
+        # Prefer the lead finding's named-technique analyst note (the practitioner
+        # voice) over the generic technique profile.
+        assessment = str(
+            (lead or {}).get("analyst_note")
+            or f"{profile.get('evil', '')} {profile.get('honest_caveat', '')}"
         ).strip()
 
     certainty = _CERTAINTY_BY_CONFIDENCE.get(
@@ -3500,8 +3873,8 @@ def build_executive_attack_story(
     cannot_say: list[str] = [
         "Who operated the activity — this report does not assert attribution; naming "
         "an account reflects a record field, not the human behind it.",
-        "That unexamined artifact classes would produce the same result.",
-        "That this single-evidence run covers the whole environment.",
+        "Whether the wider environment is affected — this run examined the supplied "
+        "evidence only.",
     ]
     for question, reason, recovery in profile.get("cannot", []):
         cannot_say.append(
@@ -3521,6 +3894,23 @@ def build_executive_attack_story(
     # rendered in the technical Limitations section, not folded into the executive
     # narrative — keeping raw tool failures out of the Bottom Line Up Front.
 
+    # Entry vector: the earliest-phase access/lateral beat, when derivable.
+    access_beat = next(
+        (
+            b
+            for b in beats
+            if b.get("phase") in ("Initial Access", "Lateral Movement")
+            and b.get("named_technique")
+        ),
+        None,
+    )
+    how_they_got_in = (
+        f"{access_beat['named_technique']}"
+        + (f" on {access_beat['host']}" if access_beat.get("host") else "")
+        if access_beat
+        else ""
+    )
+
     return {
         "version": 1,
         "headline": headline,
@@ -3536,7 +3926,7 @@ def build_executive_attack_story(
             "artifact_classes_touched": touched,
             "coverage_summary": case_completeness.get("summary", ""),
         },
-        "how_they_got_in": "",
+        "how_they_got_in": how_they_got_in,
         "root_cause": "",
         "business_impact": "",
         "attack_chain": beats,
@@ -7501,6 +7891,12 @@ class Investigation:
             timeline, merged, self.execution_corroboration
         )
         self.normalized_timeline = normalized_timeline
+        # Analyst enrichment (post-verification, like _tag_finding_cves): attribute
+        # each finding to its host and group the case per host so the report does
+        # not narrate separate hosts as one incident.
+        tag_finding_hosts(merged, normalized_timeline)
+        apply_signature_profiles(merged)
+        host_groups = build_host_groups(merged, normalized_timeline)
         entity_index = build_entity_index(normalized_timeline["events"], merged)
         indicators = build_indicators(
             normalized_timeline["events"], merged, self.malware_triage
@@ -7577,6 +7973,7 @@ class Investigation:
             "next_actions": next_actions,
             "source_bibliography": source_bibliography,
             "normalized_timeline": normalized_timeline,
+            "host_groups": host_groups,
             "entity_index": entity_index,
             "indicators": indicators,
             "event_narratives": event_narratives,
@@ -8103,6 +8500,7 @@ class Investigation:
             },
             "expert_signoff_packet": expert_signoff_packet,
             "attack_story": meta["attack_story"],
+            "host_groups": meta.get("host_groups", []),
             "malware_triage": self.malware_triage,
             "normalized_timeline": normalized_timeline,
             "entity_index": entity_index,

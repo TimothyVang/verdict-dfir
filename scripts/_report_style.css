@@ -178,6 +178,11 @@ td {
   color: var(--ink);
   vertical-align: top;
 }
+/* Wide data tables (e.g. the 10-column event ledger) carry long unbreakable
+   tokens — file paths, hostnames, timestamps. Let cells wrap so the table fits
+   the reading column instead of overflowing to the right (and so it fits the
+   narrower PDF page). */
+th, td { overflow-wrap: anywhere; word-break: break-word; }
 tr:nth-child(even) td { background: rgba(236, 230, 218, 0.025); }
 
 hr { border: none; border-top: 1px solid var(--hairline); margin: 2.4em 0; }

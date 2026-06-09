@@ -203,16 +203,35 @@ def main() -> int:
             "attack_chain": [
                 {
                     "order": 1,
+                    "phase": "Defense Evasion",
+                    "phase_index": 4,
                     "title": "Process-view divergence consistent with DKOM",
                     "timestamp_utc": "2026-05-09T00:00:30Z",
                     "confidence": "INFERRED",
                     "mitre_technique": "T1014",
+                    "named_technique": "Rootkit / DKOM process hiding (T1014)",
                     "tool_call_id": "tc-psscan",
+                    "host": "DC01",
                     "artifact_classes": ["memory"],
-                    "caveat": "Inferred evidence needs expert review.",
+                    "analyst_note": "Process-view divergence is a DKOM/rootkit signal.",
+                    "next_pivot": "Compare pslist vs psscan vs psxview and pull the driver list.",
+                    "hunt": "psscan-only EPROCESS not in pslist; unsigned recently-loaded drivers",
                 }
             ],
         }
+        host_groups = [
+            {
+                "host": "DC01",
+                "finding_ids": ["f-dkom"],
+                "evidence_sources": ["memory.img"],
+                "by_confidence": {"CONFIRMED": 0, "INFERRED": 1, "HYPOTHESIS": 0},
+                "event_count": 1,
+                "first_seen": "2026-05-09T00:00:30Z",
+                "last_seen": "2026-05-09T00:00:30Z",
+                "finding_count": 1,
+                "top_confidence": "INFERRED",
+            }
+        ]
         miss_ledger = case_dir / "expert_misses.jsonl"
         miss_ledger.write_text(
             json.dumps(
@@ -358,8 +377,17 @@ def main() -> int:
             event_narratives=event_narratives,
             practitioner_coverage=practitioner_coverage,
             has_attack_story_fig=True,
+            host_groups=host_groups,
         )
-        text = md_path.read_text(encoding="utf-8")
+        main_text = md_path.read_text(encoding="utf-8")
+        internal_md = md_path.parent / "REPORT-internal.md"
+        internal_text = (
+            internal_md.read_text(encoding="utf-8") if internal_md.is_file() else ""
+        )
+        # The internal QA/signoff gates now ship as a companion REPORT-internal file;
+        # the combined text keeps the existing section-marker assertions valid while
+        # the split itself is checked separately below.
+        text = main_text + "\n" + internal_text
         public_text = "\n".join(
             [
                 (REPO / "README.md").read_text(encoding="utf-8"),
@@ -439,7 +467,11 @@ def main() -> int:
         ("analysis doctrine heading", "## Analysis Doctrine" in text),
         ("verdict rebrand title", "# VERDICT — Forensic Investigation Report" in text),
         ("bottom line up front heading", "## Bottom Line Up Front" in text),
-        ("timeline heading", "## Timeline" in text),
+        ("host analysis heading", "## Host Analysis" in text),
+        ("per-host section rendered", "### DC01" in text),
+        ("named technique in host analysis", "Rootkit / DKOM process hiding" in text),
+        ("per-finding next pivot rendered", "*Next:*" in text),
+        ("per-finding hunt query rendered", "*Hunt:*" in text),
         ("full event timeline heading", "## Full Event Timeline" in text),
         (
             "observed entities heading",
@@ -452,8 +484,19 @@ def main() -> int:
         ),
         ("technical report tier divider", "# Technical Report {.tier-break}" in text),
         (
-            "internal gates tier divider",
-            "# Internal — QA & Release Gates" in text,
+            "internal gates shipped as companion packet",
+            "# VERDICT — Internal QA & Release Gates" in internal_text,
+        ),
+        (
+            "internal gates removed from main customer/technical report",
+            "## QA / Expert Signoff" not in main_text
+            and "## Customer Release Gate" not in main_text
+            and "## Analysis Doctrine" not in main_text
+            and "## Readiness State" not in main_text,
+        ),
+        (
+            "main report references the internal packet",
+            "REPORT-internal" in main_text,
         ),
         ("legacy practitioner heading removed", "## Practitioner Coverage" not in text),
         (

@@ -188,9 +188,10 @@ def validate_report_text(text: str) -> CheckResult:
             False, f"report.html missing required marker(s): {', '.join(missing)}"
         )
     offline_release = "verdict card" in lowered
+    # The QA / expert-signoff and customer-release-gate sections ship in the
+    # companion REPORT-internal packet, not the customer/technical report, so they
+    # are no longer required markers of the main report.
     investigation_required = (
-        "qa / expert signoff",
-        "customer release gate",
         "findings",
         "chain of custody",
         "tool_call_id",
@@ -206,7 +207,11 @@ def validate_report_text(text: str) -> CheckResult:
             + ", ".join(missing_investigation),
         )
 
-    hits = placeholder_hits(text)
+    # Strip embedded base64 resources (data: URIs from pandoc --embed-resources)
+    # before scanning for placeholder words — short tokens like "stub" or "todo"
+    # occur by chance inside base64 image data and are not real placeholders.
+    scan_text = re.sub(r"data:[^\s\"')]+", "", text)
+    hits = placeholder_hits(scan_text)
     if "stub" in hits and has_disclosed_stub_signer(text):
         hits = [hit for hit in hits if hit != "stub"]
     if hits:

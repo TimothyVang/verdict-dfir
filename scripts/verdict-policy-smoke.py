@@ -2763,6 +2763,103 @@ def main() -> int:
         failures += 1
     cve_checks = 1
 
+    # Host grouping + named-technique signatures (analyst rework). Pure functions
+    # over synthetic findings + a normalized timeline.
+    host_checks = 0
+    hg_findings = [
+        {
+            "finding_id": "f-A-evtx-audit-log-cleared",
+            "confidence": "CONFIRMED",
+            "mitre_technique": "T1070.001",
+            "tool_call_id": "tc-002",
+            "artifact_path": "/ev/DE_1102.evtx",
+            "description": "EVTX contains Security EID 1102 audit-log clear event (record 1).",
+        },
+        {
+            "finding_id": "f-B-evtx-service-install",
+            "confidence": "HYPOTHESIS",
+            "mitre_technique": "T1543.003",
+            "tool_call_id": "tc-003",
+            "artifact_path": "/ev/LM_7045.evtx",
+            "description": "EVTX EID 7045 records installation of service 'spoolfool' (image cmd.exe) (record 1).",
+        },
+        {
+            "finding_id": "f-B-evtx-wmi-exec",
+            "confidence": "HYPOTHESIS",
+            "mitre_technique": "T1047",
+            "tool_call_id": "tc-004",
+            "artifact_path": "/ev/LM_WMI.evtx",
+            "description": "EVTX Security EID 4688 shows calc.exe with WmiPrvSE.exe as its parent process (record 6).",
+        },
+    ]
+    hg_timeline = {
+        "events": [
+            {
+                "timestamp_utc": "2019-03-19T23:35:07Z",
+                "entities": {"host": "PC01"},
+                "linked_finding_ids": ["f-A-evtx-audit-log-cleared"],
+            },
+            {
+                "timestamp_utc": "2019-03-03T09:20:28Z",
+                "entities": {"host": "WIN-7"},
+                "linked_finding_ids": ["f-B-evtx-service-install"],
+            },
+            {
+                "timestamp_utc": "2019-03-18T22:15:49Z",
+                "entities": {"host": "WIN-7"},
+                "linked_finding_ids": ["f-B-evtx-wmi-exec"],
+            },
+        ]
+    }
+    fea.tag_finding_hosts(hg_findings, hg_timeline)
+    fea.apply_signature_profiles(hg_findings)
+    hg_groups = fea.build_host_groups(hg_findings, hg_timeline)
+    spool = next(f for f in hg_findings if f["mitre_technique"] == "T1543.003")
+    host_cases = [
+        ("finding host denormalized from linked event", hg_findings[0].get("host"), "PC01"),
+        (
+            "spoolfool recognized as SpoolFool",
+            "SpoolFool" in (spool.get("named_technique") or ""),
+            True,
+        ),
+        (
+            "spoolfool tags CVE-2022-21999",
+            "CVE-2022-21999" in (spool.get("cves") or []),
+            True,
+        ),
+        ("spoolfool carries a hunt query", bool(spool.get("hunt")), True),
+        ("host_groups splits into two hosts", len(hg_groups), 2),
+        (
+            "strongest (CONFIRMED) host ordered first",
+            hg_groups[0]["host"] if hg_groups else None,
+            "PC01",
+        ),
+        (
+            "WMI maps to Lateral Movement phase",
+            fea._phase_for_technique("T1047")[1],
+            "Lateral Movement",
+        ),
+        (
+            "log-clear maps to Defense Evasion phase",
+            fea._phase_for_technique("T1070.001")[1],
+            "Defense Evasion",
+        ),
+        (
+            "unknown technique gets no signature",
+            fea._signature_for_finding({"mitre_technique": "T1234", "description": "x"}),
+            None,
+        ),
+    ]
+    for label, actual, expected in host_cases:
+        host_checks += 1
+        ok = actual == expected
+        marker = "OK  " if ok else "FAIL"
+        print(f"  [{marker}] host: {label}")
+        if not ok:
+            print(f"         expected: {expected!r}")
+            print(f"         actual  : {actual!r}")
+            failures += 1
+
     print()
     print("=" * 60)
     total = (
@@ -2775,6 +2872,7 @@ def main() -> int:
         + matrix_checks
         + contradiction_checks
         + cve_checks
+        + host_checks
     )
     if failures == 0:
         print(f"OK - all {total} verdict + evidence/process cases pass.")

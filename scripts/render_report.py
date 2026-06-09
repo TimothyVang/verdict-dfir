@@ -496,7 +496,7 @@ def fig_attack_story_timeline(attack_story: dict[str, Any], out: Path) -> bool:
         )
         tcid = beat.get("tool_call_id") or "?"
         mitre = beat.get("mitre_technique") or "n/a"
-        ts = beat.get("timestamp_utc") or "time not normalized"
+        ts = _fmt_ts(beat.get("timestamp_utc")) or "time not normalized"
         ax.text(
             1.1, y + 0.13, title, ha="left", va="center", fontsize=9, fontweight="bold"
         )
@@ -550,6 +550,22 @@ def fig_process_view_comparison(tool_calls: list[dict[str, Any]], out: Path) -> 
 # ---------------------------------------------------------------------------
 # Markdown report template
 # ---------------------------------------------------------------------------
+
+
+_TS_DISPLAY_RE = re.compile(
+    r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})?$"
+)
+
+
+def _fmt_ts(value: Any) -> str:
+    """Trim sub-second precision from an ISO timestamp for table display.
+
+    Microsecond precision is column-width noise in the report; the full-precision
+    timestamps remain in `timeline.csv`/`timeline.json`.
+    """
+    text = str(value or "")
+    match = _TS_DISPLAY_RE.match(text)
+    return match.group(1) + (match.group(2) or "Z") if match else text
 
 
 def md_cell(value: Any) -> str:
@@ -777,7 +793,6 @@ def build_readiness_section(
     blockers = (release_gate or {}).get("release_blockers") or (report_qa or {}).get(
         "customer_release_blockers", []
     )
-    why_not_ready = (report_qa or {}).get("why_not_ready", [])
     expert_decision = (release_gate or {}).get(
         "expert_decision", (report_qa or {}).get("expert_decision", "pending")
     )
@@ -794,7 +809,6 @@ def build_readiness_section(
     blocker_lines = "\n".join(f"* {md_cell(item)}" for item in blockers)
     warning_lines = "\n".join(f"* {md_cell(item)}" for item in warnings)
     failed_lines = "\n".join(f"* {md_cell(item)}" for item in failed)
-    why_lines = "\n".join(f"* {md_cell(item)}" for item in why_not_ready)
     return (
         "\n## Readiness State\n\n"
         f"* Packet state: `{md_cell(packet_state)}`\n"
@@ -808,8 +822,6 @@ def build_readiness_section(
         + (failed_lines or "* No failed checks were recorded by the QA gate.")
         + "\n\n### Warnings\n\n"
         + (warning_lines or "* No warning checks were recorded by the QA gate.")
-        + "\n\n### Why This Is Not Ready, If Applicable\n\n"
-        + (why_lines or "* No additional readiness caveats were recorded.")
         + "\n\n"
     )
 
@@ -956,7 +968,7 @@ def html_event_sequence(events: list[dict[str, Any]]) -> str:
         sub = " &nbsp;·&nbsp; ".join(_h(v) for v in (who, tcid) if v)
         rows.append(
             f'<li class="vseq-item {kind}"><span class="vseq-dot"></span>'
-            f'<span class="vseq-time">{_h(event.get("timestamp_utc") or "—")}</span>'
+            f'<span class="vseq-time">{_h(_fmt_ts(event.get("timestamp_utc")) or "—")}</span>'
             f'<div class="vseq-body"><div class="vseq-action">{_h((event.get("summary") or "")[:130])} {flag}</div>'
             f'<div class="vseq-who">{sub}</div></div></li>'
         )
@@ -973,6 +985,7 @@ def build_bluf_section(
     attack_story: dict[str, Any] | None,
     verdict: str,
     merged: list[dict[str, Any]],
+    host_groups: list[dict[str, Any]] | None = None,
 ) -> str:
     """Bottom Line Up Front: verdict + one-line story + the top next step."""
     story = attack_story or {}
@@ -989,6 +1002,19 @@ def build_bluf_section(
         f"**Verdict: {md_cell(verdict)}.** {md_cell(story.get('headline', ''))}\n\n",
         f"{md_cell(story.get('customer_summary', ''))}\n\n",
     ]
+    # Scope honesty: when findings span more than one host, name them and say the
+    # evidence does not establish them as a single incident.
+    groups = host_groups or []
+    if len(groups) > 1:
+        spans = "; ".join(
+            f"{g.get('host')} ({str(g.get('top_confidence', '')).lower()})"
+            for g in groups
+        )
+        parts.append(
+            f"**Scope:** findings span {len(groups)} hosts — {md_cell(spans)}. Each is "
+            "assessed separately below; the evidence does not establish them as one "
+            "incident.\n\n"
+        )
     if story.get("assessment"):
         parts.append(f"**Assessment:** {md_cell(story['assessment'])}\n\n")
     if story.get("certainty"):
@@ -1005,6 +1031,108 @@ def build_bluf_section(
         f"{counts['INFERRED']} inferred, {counts['HYPOTHESIS']} hypothesis.\n"
         f"* Most important next step: {md_cell(top)}\n\n"
     )
+    return "".join(parts)
+
+
+def _fmt_window(first: Any, last: Any) -> str:
+    start, end = _fmt_ts(first), _fmt_ts(last)
+    if start and end and start != end:
+        return f"{start} → {end}"
+    return start or end or "time not recorded"
+
+
+def build_host_sections(
+    host_groups: list[dict[str, Any]] | None,
+    attack_story: dict[str, Any] | None,
+    normalized_timeline: dict[str, Any] | None,
+) -> str:
+    """Per-host analyst narrative.
+
+    Each host gets its findings as a phase-ordered chain (named technique, CVE,
+    analyst note, next pivot) plus that host's key events. A multi-host case is
+    presented per host so unrelated hosts are not narrated as one incident.
+    """
+    groups = host_groups or []
+    if not groups:
+        return ""
+    beats = (attack_story or {}).get("attack_chain", []) or []
+    beats_by_host: dict[str, list[dict[str, Any]]] = {}
+    for beat in beats:
+        beats_by_host.setdefault(str(beat.get("host") or ""), []).append(beat)
+    all_events = (normalized_timeline or {}).get("events", []) or []
+
+    parts = ["\n## Host Analysis\n\n"]
+    if len(groups) > 1:
+        parts.append(
+            "Findings span more than one host; each is assessed on its own "
+            "evidence below. The evidence does not establish them as a single "
+            "incident.\n\n"
+        )
+    for group in groups:
+        host = str(group.get("host") or "unknown host")
+        host_beats = beats_by_host.get(host, [])
+        counts = group.get("by_confidence", {})
+        srcs = ", ".join(group.get("evidence_sources", []) or [])
+        parts.append(f"### {md_cell(host)}\n\n")
+        parts.append(
+            f"*{group.get('finding_count', len(host_beats))} finding(s) — "
+            f"{counts.get('CONFIRMED', 0)} confirmed, {counts.get('INFERRED', 0)} "
+            f"inferred, {counts.get('HYPOTHESIS', 0)} hypothesis · "
+            f"{group.get('event_count', 0)} events · "
+            f"{_fmt_window(group.get('first_seen'), group.get('last_seen'))}"
+            + (f" · source: {md_cell(srcs)}" if srcs else "")
+            + "*\n\n"
+        )
+        if not host_beats:
+            parts.append("No findings attributed to this host.\n\n")
+        for beat in host_beats:
+            named = (
+                beat.get("named_technique")
+                or beat.get("mitre_technique")
+                or "Finding"
+            )
+            cves = beat.get("cves") or []
+            cve_txt = f" — {', '.join(cves)}" if cves else ""
+            parts.append(
+                f"**{md_cell(beat.get('phase', 'Finding'))}: {md_cell(named)}"
+                f"{md_cell(cve_txt)}** `[{md_cell(beat.get('confidence', ''))}]` "
+                f"`{md_cell(beat.get('tool_call_id', ''))}`\n\n"
+            )
+            if beat.get("analyst_note"):
+                parts.append(f"{md_cell(beat['analyst_note'])}\n\n")
+            if beat.get("next_pivot"):
+                parts.append(f"*Next:* {md_cell(beat['next_pivot'])}\n\n")
+            if beat.get("hunt"):
+                parts.append(f"*Hunt:* `{beat['hunt']}`\n\n")
+        finding_ids = {str(fid) for fid in (group.get("finding_ids", []) or [])}
+        host_events = [
+            event
+            for event in all_events
+            if str(
+                (event.get("entities") or {}).get("host")
+                or (event.get("entities") or {}).get("workstation")
+                or ""
+            )
+            == host
+            or any(
+                str(fid) in finding_ids
+                for fid in (event.get("linked_finding_ids") or [])
+            )
+        ]
+        key_events = _select_key_events(host_events, cap=8)
+        if key_events:
+            parts.append(
+                "| Time (UTC) | Event | Account | Tool Call |\n|---|---|---|---|\n"
+            )
+            for event in key_events:
+                ent = event.get("entities") or {}
+                parts.append(
+                    f"| {md_cell(_fmt_ts(event.get('timestamp_utc')))} "
+                    f"| {md_cell((event.get('summary') or '')[:80])} "
+                    f"| {md_cell(_format_account_display(ent) or '—')} "
+                    f"| `{md_cell(event.get('tool_call_id', ''))}` |\n"
+                )
+            parts.append("\n")
     return "".join(parts)
 
 
@@ -1075,7 +1203,7 @@ def build_timeline_of_events_section(
             entities = event.get("entities") or {}
             rows.append(
                 "| {ts} | {ev} | {acct} | {host} | {ip} | `{tcid}` |".format(
-                    ts=md_cell(event.get("timestamp_utc") or "?"),
+                    ts=md_cell(_fmt_ts(event.get("timestamp_utc")) or "?"),
                     ev=md_cell((event.get("summary") or "")[:90]),
                     acct=md_cell(_format_account_display(entities) or "—"),
                     host=md_cell(_entity_cell(entities, "host", "workstation") or "—"),
@@ -1110,21 +1238,51 @@ def build_detailed_event_timeline_section(
         "Process/PID | Conf. | Tool Call |",
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
-    for event in timeline[:40]:
+
+    def _content_key(ev: dict[str, Any]) -> tuple:
+        ent = ev.get("entities") or {}
+        return (
+            (ev.get("summary") or ev.get("description") or "")[:110],
+            _format_account_display(ent) or "",
+            _entity_cell(ent, "host", "workstation") or "",
+            _entity_cell(ent, "source_ip", "destination_ip") or "",
+            _entity_cell(ent, "process") or "",
+            str(ev.get("tool_call_id") or ""),
+            bool(ev.get("linked_finding_ids")),
+        )
+
+    # Collapse consecutive same-content events (e.g. an object-access 4663 burst
+    # with distinct sub-second timestamps) into one row with an [Nx] count, so the
+    # preview keeps distinct events visible. Finding-backed events never collapse
+    # into context (the key includes linked_finding_ids). Full data is in the CSV.
+    collapsed: list[dict[str, Any]] = []
+    for event in timeline:
+        if collapsed and _content_key(collapsed[-1]["ev"]) == _content_key(event):
+            collapsed[-1]["count"] += 1
+        else:
+            collapsed.append({"ev": event, "count": 1})
+
+    shown = collapsed[:40]
+    for entry in shown:
+        event = entry["ev"]
+        count = entry["count"]
         entities = event.get("entities") or {}
         process = _entity_cell(entities, "process")
         pid = _entity_cell(entities, "pid")
         process_pid = (
             f"{process} ({pid})" if process and pid else (process or pid or "")
         )
+        summary = (event.get("summary") or event.get("description") or "")[:110]
+        if count > 1:
+            summary = f"[{count}x] {summary}"
         rows.append(
             "| {ts} | {ac} | {ev} | {acct} | {host} | {ip} | {logon} | {pp} | "
             "{conf} | `{tcid}` |".format(
-                ts=md_cell(event.get("timestamp_utc") or event.get("ts") or "?"),
-                ac=md_cell(event.get("artifact_class", "?")),
-                ev=md_cell(
-                    (event.get("summary") or event.get("description") or "")[:80]
+                ts=md_cell(
+                    _fmt_ts(event.get("timestamp_utc") or event.get("ts")) or "?"
                 ),
+                ac=md_cell(event.get("artifact_class", "?")),
+                ev=md_cell(summary),
                 acct=md_cell(_format_account_display(entities) or "—"),
                 host=md_cell(_entity_cell(entities, "host", "workstation") or "—"),
                 ip=md_cell(
@@ -1145,10 +1303,18 @@ def build_detailed_event_timeline_section(
             )
         )
     fig_block = ""
+    collapsed_note = (
+        " (consecutive identical events collapsed with an [Nx] count)"
+        if len(collapsed) < len(timeline)
+        else ""
+    )
     return (
         "\n## Full Event Timeline\n\n"
-        f"Normalized timeline events: {len(timeline)}. First 40 shown below; full "
-        f"data is in {exports}.\n\n" + fig_block + "\n".join(rows) + "\n\n"
+        f"Normalized timeline events: {len(timeline)}. First {len(shown)} rows shown "
+        f"below{collapsed_note}; full data is in {exports}.\n\n"
+        + fig_block
+        + "\n".join(rows)
+        + "\n\n"
     )
 
 
@@ -1181,8 +1347,8 @@ def build_cast_of_characters_section(entity_index: dict[str, Any] | None) -> str
                 "| {value} | {count} | {first} | {last} | {findings} |".format(
                     value=md_cell(row.get("value", "")),
                     count=row.get("event_count", 0),
-                    first=md_cell(row.get("first_seen") or "—"),
-                    last=md_cell(row.get("last_seen") or "—"),
+                    first=md_cell(_fmt_ts(row.get("first_seen")) or "—"),
+                    last=md_cell(_fmt_ts(row.get("last_seen")) or "—"),
                     findings=md_cell(row.get("linked_finding_ids") or []) or "—",
                 )
             )
@@ -1266,6 +1432,7 @@ def write_markdown(
     has_attack_story_fig: bool = False,
     has_process_view_fig: bool = False,
     has_entity_timeline_fig: bool = False,
+    host_groups: list[dict[str, Any]] | None = None,
 ) -> Path:
     md = case_dir / "REPORT.md"
     fa = manifest["audit_log_final_hash"]
@@ -1413,11 +1580,16 @@ def write_markdown(
             "|---|---|---|---|",
         ]
         for finding in merged:
+            # The Confidence column already states the tier, so strip the doctrinal
+            # "hypothesis:" prose prefix here to avoid saying it twice in one row.
+            desc = str(finding.get("description", ""))
+            if desc.lower().startswith("hypothesis:"):
+                desc = desc[len("hypothesis:") :].lstrip()
             findings_summary_rows.append(
                 f"| {md_cell(finding.get('confidence', ''))} "
                 f"| {md_cell(finding.get('pool_origin', ''))} "
                 f"| {md_cell(finding.get('mitre_technique', '') or '—')} "
-                f"| {md_cell(finding.get('description', ''))} |"
+                f"| {md_cell(desc)} |"
             )
         findings_summary_table = "\n".join(findings_summary_rows)
     else:
@@ -1605,8 +1777,15 @@ def write_markdown(
         )
 
     # Single authoritative Limitations section: the justified unknowns (from the
-    # attack story's what_we_cannot_say) plus any run-specific analysis limitations.
-    limitation_items = list(cannot_say) + list(analysis_limitations or [])
+    # attack story's what_we_cannot_say) plus any run-specific analysis limitations,
+    # de-duplicated so an item that appears in both lists renders only once.
+    limitation_items: list[str] = []
+    _seen_limitations: set[str] = set()
+    for item in list(cannot_say) + list(analysis_limitations or []):
+        key = str(item)
+        if key not in _seen_limitations:
+            _seen_limitations.add(key)
+            limitation_items.append(item)
     limitations_section = ""
     if limitation_items:
         limitations_section = (
@@ -1616,13 +1795,25 @@ def write_markdown(
             + "\n\n"
         )
 
-    bluf_section = build_bluf_section(attack_story, verdict, merged)
+    bluf_section = build_bluf_section(attack_story, verdict, merged, host_groups)
     timeline_of_events_section = build_timeline_of_events_section(
         normalized_timeline,
         event_narratives,
         has_entity_timeline_fig,
         has_timeline_fig,
     )
+    # Analyst-first lead: per-host narrative when the case is host-grouped; fall
+    # back to the curated timeline + findings table otherwise.
+    host_sections = build_host_sections(host_groups, attack_story, normalized_timeline)
+    if host_sections:
+        analysis_section = host_sections
+    else:
+        analysis_section = (
+            timeline_of_events_section
+            + "\n## Findings Summary\n\n"
+            + findings_summary_table
+            + "\n"
+        )
     detailed_timeline_section = build_detailed_event_timeline_section(
         timeline, timeline_csv_exists, has_timeline_fig
     )
@@ -1683,15 +1874,13 @@ def write_markdown(
             )
         sources_section = "\n## References\n\n" + "\n".join(rows) + "\n\n"
 
-    caveats = build_false_positive_caveats(merged, completeness, attack_coverage)
-    caveat_section = (
-        "\n## False-Positive Considerations\n\n"
-        + "\n".join(f"* {c}" for c in caveats)
-        + "\n\n"
-    )
-    scope_interpretation_section = build_scope_interpretation_section(
-        completeness, attack_coverage
-    )
+    # "False-Positive Considerations" and "Scope & Coverage Caveats" were generic
+    # boilerplate that restated the coverage tables and the Limitations section in
+    # every run. They are omitted so the report stays focused on case-specific
+    # findings; the one case-relevant false-positive note (e.g. log clearing also
+    # occurs during legitimate administration) is carried in the BLUF assessment.
+    caveat_section = ""
+    scope_interpretation_section = ""
     readiness_section = build_readiness_section(report_qa, release_gate)
 
     md.write_text(
@@ -1716,27 +1905,9 @@ def write_markdown(
 
 ---
 
-## Case Summary
-
-* **Total merged findings:** {len(merged)}
-* **By confidence:**
-  - CONFIRMED: {sum(1 for m in merged if m.get("confidence") == "CONFIRMED")}
-  - INFERRED:  {sum(1 for m in merged if m.get("confidence") == "INFERRED")}
-  - HYPOTHESIS: {sum(1 for m in merged if m.get("confidence") == "HYPOTHESIS")}
-* **Contradictions surfaced (Pool A vs Pool B):** {contras}
-* **SOUL.md correlator:** {kept} kept, {downgraded} downgraded
-
----
-
 {bluf_section}
 
-{attack_story_section}
-
-{timeline_of_events_section}
-
-## Findings Summary
-
-{findings_summary_table}
+{analysis_section}
 
 {decisions_section}
 
@@ -1748,6 +1919,16 @@ The sections below are the full analyst-grade record: every finding with its
 `tool_call_id` and confidence, the complete event timeline, the entity rollup
 and indicators, coverage matrices, triage, sources, and the reproducibility and
 chain-of-custody appendices.
+
+## Case Summary
+
+* **Total merged findings:** {len(merged)}
+* **By confidence:**
+  - CONFIRMED: {sum(1 for m in merged if m.get("confidence") == "CONFIRMED")}
+  - INFERRED:  {sum(1 for m in merged if m.get("confidence") == "INFERRED")}
+  - HYPOTHESIS: {sum(1 for m in merged if m.get("confidence") == "HYPOTHESIS")}
+* **Contradictions surfaced (Pool A vs Pool B):** {contras}
+* **SOUL.md correlator:** {kept} kept, {downgraded} downgraded
 
 ## Detailed Findings
 
@@ -1779,8 +1960,6 @@ chain-of-custody appendices.
 
 {caveat_section}
 
-{expert_section}
-
 {actions_section}
 
 {replay_appendix}
@@ -1809,8 +1988,8 @@ The verifier rebuilds:
 1. The audit chain by walking `prev_hash` SHA-256 links (catches backdated edits).
 2. The Merkle tree from the manifest's `leaves[]` array (catches selective redaction).
 3. The signature bundle metadata recorded in the manifest. Full signature and
-   transparency-log validation must be performed separately when a non-stub signer
-   is used.
+   transparency-log validation must be performed separately when a production
+   signer is used.
 
 A tamper test against this manifest's `merkle_root_hex` was not run automatically.
 To execute it, copy the manifest, overwrite `merkle_root_hex` with `ff` repeated
@@ -1822,23 +2001,42 @@ python -c "import json,pathlib;p=pathlib.Path('run.manifest.tamper.json');d=json
 uv run --directory services/agent python -c "from pathlib import Path; from findevil_agent.crypto.manifest import verify_manifest; print(verify_manifest(Path('PATH/TO/run.manifest.tamper.json'), audit_log_path=Path('PATH/TO/audit.jsonl')).model_dump_json(indent=2))"
 ```
 
-# Internal — QA & Release Gates (not customer narrative) {{.tier-break}}
-
-These sections are the automated expert-review packet's internal gates. They are
-not part of the customer narrative above.
-
-{qa_section}
-
-{release_gate_section}
-
-{readiness_section}
-
 ---
 
 *Produced by `find-evil-auto` (the VERDICT automated investigation orchestrator).
 The cryptographic attestation values shown are the actual outputs of this run; every
 quantitative claim above is independently verifiable from the artifacts in this
-directory (`audit.jsonl`, `run.manifest.json`, `verdict.json`).*
+directory (`audit.jsonl`, `run.manifest.json`, `verdict.json`). The automated
+QA / expert-signoff gates for this run are in the companion `REPORT-internal` packet.*
+""",
+        encoding="utf-8",
+    )
+
+    # The QA / expert-signoff gates are the product's internal expert-review packet,
+    # not customer narrative — they ship as a companion file so the shared report
+    # ends with the forensic content.
+    internal_md = case_dir / "REPORT-internal.md"
+    internal_md.write_text(
+        f"""[VERDICT · Internal QA & Release Gates]{{.kicker}}
+
+# VERDICT — Internal QA & Release Gates
+
+[Expert-signoff packet · not customer narrative]{{.tagline}}
+
+**Case ID:** `{md_cell(manifest.get("case_id", "unknown"))}`
+**Run ID:** `{md_cell(manifest.get("run_id", "unknown"))}`
+**Verdict:** **{md_cell(verdict)}**
+
+> These sections are the automated expert-review packet's internal gates. They are
+> not part of the customer report (`REPORT.html`); they exist so a human expert can
+> see the machine QA status, release blockers, and the doctrine the engine enforced
+> before approving customer release.
+
+---
+{expert_section}
+{qa_section}
+{release_gate_section}
+{readiness_section}
 """,
         encoding="utf-8",
     )
@@ -1920,8 +2118,8 @@ def render_html_pdf(
     md_path: Path, figures: dict[str, str] | None = None
 ) -> tuple[Path, Path | None]:
     case_dir = md_path.parent
-    html = case_dir / "REPORT.html"
-    pdf = case_dir / "REPORT.pdf"
+    html = case_dir / f"{md_path.stem}.html"
+    pdf = case_dir / f"{md_path.stem}.pdf"
 
     style_path = Path(__file__).resolve().parent / "_report_style.css"
     if not style_path.exists():
@@ -2049,6 +2247,7 @@ th { background:rgba(155,89,182,0.16); color:var(--accent-light); font-family:va
   text-transform:uppercase; letter-spacing:0.4px; font-weight:600; font-size:0.95em;
   padding:0.55em 0.8em; border:1px solid var(--hairline); text-align:left; }
 td { padding:0.5em 0.8em; border:1px solid var(--hairline); color:var(--ink); vertical-align:top; }
+th, td { overflow-wrap:anywhere; word-break:break-word; }
 tr:nth-child(even) td { background:rgba(236,230,218,0.025); }
 hr { border:none; border-top:1px solid var(--hairline); margin:2.4em 0; }
 .kicker { font-family:var(--grotesk); text-transform:uppercase; letter-spacing:5px;
@@ -2211,8 +2410,13 @@ def render_report(
         has_attack_story_fig=has_attack_story_fig,
         has_process_view_fig=has_process_view_fig,
         has_entity_timeline_fig=has_entity_timeline_fig,
+        host_groups=verdict_obj.get("host_groups", []),
     )
     html, pdf = render_html_pdf(md, figures=figures_html)
+    # Render the companion internal QA/signoff packet (no figure placeholders).
+    internal_md = case_dir / "REPORT-internal.md"
+    if internal_md.is_file():
+        render_html_pdf(internal_md)
     return pdf if pdf else html
 
 
