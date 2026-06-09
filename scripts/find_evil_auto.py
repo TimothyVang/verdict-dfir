@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
 import hashlib
@@ -5332,6 +5333,10 @@ class Investigation:
         # remain deterministic regardless of completion timing.
         self.parallel = parallel
         self.workers = max(1, workers)
+        # Factory for extra findevil-mcp connections used to fan out independent
+        # read-only tool calls in parallel mode (set in run(); the Rust server is
+        # one-request-at-a-time, so concurrency comes from extra processes).
+        self._rust_factory: Callable[[], SshMcpClient] | None = None
         # The launcher can pin the case_id so it can deep-link the dashboard to
         # the case dir BEFORE the run starts (live watching). Else a fresh uuid.
         self.case_id = case_id or f"auto-{uuid.uuid4()}"
@@ -6579,10 +6584,19 @@ class Investigation:
                 },
             )
 
-        for entry in by_class["mft"][:3]:
+        mft_entries = by_class["mft"][:3]
+        mft_specs: list[tuple[str, dict[str, Any]]] = [
+            (
+                "mft_timeline",
+                {"case_id": self.handle["id"], "mft_path": str(e["path"]), "limit": 5000},
+            )
+            for e in mft_entries
+        ]
+        mft_outs = self._parallel_tool_calls(rust, mft_specs, timeout=1800.0)
+        for entry, (_name, args), out in zip(
+            mft_entries, mft_specs, mft_outs, strict=True
+        ):
             path = str(entry["path"])
-            args = {"case_id": self.handle["id"], "mft_path": path, "limit": 5000}
-            out = rust.call_tool("mft_timeline", args, timeout=1800.0)
             error = out.get("_error", {}).get("message") if "_error" in out else None
             if error:
                 self.analysis_limitations.append(
@@ -6645,10 +6659,19 @@ class Investigation:
                 )
             print(f"  mft_timeline: {path} rows={len(rows)}")
 
-        for entry in by_class["usnjrnl"][:3]:
+        usn_entries = by_class["usnjrnl"][:3]
+        usn_specs: list[tuple[str, dict[str, Any]]] = [
+            (
+                "usnjrnl_query",
+                {"case_id": self.handle["id"], "usnjrnl_path": str(e["path"]), "limit": 5000},
+            )
+            for e in usn_entries
+        ]
+        usn_outs = self._parallel_tool_calls(rust, usn_specs, timeout=1800.0)
+        for entry, (_name, args), out in zip(
+            usn_entries, usn_specs, usn_outs, strict=True
+        ):
             path = str(entry["path"])
-            args = {"case_id": self.handle["id"], "usnjrnl_path": path, "limit": 5000}
-            out = rust.call_tool("usnjrnl_query", args, timeout=1800.0)
             error = out.get("_error", {}).get("message") if "_error" in out else None
             if error:
                 self.analysis_limitations.append(
@@ -6709,10 +6732,16 @@ class Investigation:
                 )
             print(f"  usnjrnl_query: {path} rows={len(rows)}")
 
-        for entry in by_class["prefetch"][:50]:
+        prefetch_entries = by_class["prefetch"][:50]
+        prefetch_specs: list[tuple[str, dict[str, Any]]] = [
+            ("prefetch_parse", {"case_id": self.handle["id"], "prefetch_path": str(e["path"])})
+            for e in prefetch_entries
+        ]
+        prefetch_outs = self._parallel_tool_calls(rust, prefetch_specs, timeout=600.0)
+        for entry, (_name, args), out in zip(
+            prefetch_entries, prefetch_specs, prefetch_outs, strict=True
+        ):
             path = str(entry["path"])
-            args = {"case_id": self.handle["id"], "prefetch_path": path}
-            out = rust.call_tool("prefetch_parse", args)
             error = out.get("_error", {}).get("message") if "_error" in out else None
             if error:
                 self.analysis_limitations.append(
@@ -7615,6 +7644,53 @@ class Investigation:
             for tc in self.tool_calls
             if tc.get("tool_call_id") and tc.get("tool") and tc.get("output_hash")
         }
+
+    def _parallel_tool_calls(
+        self,
+        rust: SshMcpClient,
+        specs: list[tuple[str, dict[str, Any]]],
+        *,
+        timeout: float = 1800.0,
+    ) -> list[dict[str, Any]]:
+        """Run independent, read-only findevil-mcp tool calls concurrently and
+        return their results in the SAME order as ``specs``.
+
+        The Rust server processes one request at a time, so concurrency comes
+        from extra server processes: each lane leases its own fresh connection
+        from ``self._rust_factory``. The caller records audit/findings serially
+        afterward (in spec order), so tool_call_ids and the hash-chained audit
+        log stay deterministic regardless of completion timing. Falls back to
+        sequential calls on the primary connection when parallel mode is off,
+        there is no factory, or there is a single call."""
+        if not self.parallel or self._rust_factory is None or len(specs) <= 1:
+            return [rust.call_tool(name, args, timeout=timeout) for name, args in specs]
+        lanes = min(self.workers, len(specs))
+        clients = [self._rust_factory() for _ in range(lanes)]
+        free: Queue[SshMcpClient] = Queue()
+        for client in clients:
+            free.put(client)
+        results: list[dict[str, Any]] = [{} for _ in specs]
+
+        def _run(idx: int, name: str, args: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+            client = free.get()
+            try:
+                return idx, client.call_tool(name, args, timeout=timeout)
+            finally:
+                free.put(client)
+
+        try:
+            with ThreadPoolExecutor(max_workers=lanes) as pool:
+                futures = [
+                    pool.submit(_run, idx, name, args)
+                    for idx, (name, args) in enumerate(specs)
+                ]
+                for future in as_completed(futures):
+                    idx, result = future.result()
+                    results[idx] = result
+        finally:
+            for client in clients:
+                client.close()
+        return results
 
     def _verify_pool(
         self, py: SshMcpClient, findings: list[dict[str, Any]]
@@ -8887,6 +8963,27 @@ class Investigation:
         else:
             rust = SshMcpClient(PY_LAUNCHER, "rust-mcp")
             py = SshMcpClient(PY_MCP_LAUNCHER, "py-mcp")
+
+        def _spawn_rust() -> SshMcpClient:
+            # A fresh, initialized findevil-mcp connection for a parallel lane.
+            client = (
+                StdioMcpClient(_local_rust_command(), "rust-mcp")
+                if LOCAL_MODE
+                else SshMcpClient(PY_LAUNCHER, "rust-mcp")
+            )
+            client.call(
+                "initialize",
+                {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "find-evil-auto", "version": "1"},
+                },
+            )
+            client.notify("notifications/initialized")
+            return client
+
+        self._rust_factory = _spawn_rust
+
         try:
             # Initialize handshakes
             for client in (rust, py):
