@@ -64,10 +64,18 @@ Case      : tmp/auto-runs/<case-id>/   ·   REPORT.html / REPORT.pdf
 - Be honest about coverage: an `INDETERMINATE` on a custody-only or thin Case is a correct,
   honest result — never inflate it to `NO_EVIL`/"safe".
 
-### 6. Offer to open the artifacts
-- Offer to open the live dashboard (`http://localhost:3000/?case=<case-dir>`) and the
-  `REPORT.html` via the browser MCP (`mcp__playwright__browser_navigate`) — offer, don't
-  auto-open beyond what the launcher already opens.
+### 6. Show the dashboard AND the report at the end
+Unless the operator passed `--no-dashboard`, surface both:
+- **Dashboard:** `scripts/verdict` already auto-opens the live dashboard deep-linked to
+  the Case (`http://localhost:3000/?case=<case-dir>`). If it did not open (headless, or
+  the dev server was slow), open it via the browser MCP
+  (`mcp__playwright__browser_navigate`).
+- **Report:** open the generated `REPORT.html` from the Case dir
+  (`tmp/auto-runs/<case-id>/REPORT.html`) via the browser MCP so the operator sees the
+  full analyst report, not just the status block. (`REPORT.pdf` is alongside it.)
+- Always also print the paths — dashboard URL, `REPORT.html`/`REPORT.pdf`, `verdict.json`
+  — so they are reachable even when no browser MCP is wired.
+- If `--no-dashboard` was passed, skip opening but still print the paths.
 
 ## Notes
 - `--sift` runs the DFIR tools inside the SANS SIFT VM; in that mode the n8n/grounding steps
