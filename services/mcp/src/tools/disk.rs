@@ -238,32 +238,60 @@ pub fn disk_extract_artifacts(
     if mount.status != "mounted" {
         return Err(DiskError::MountNotMounted(input.mount_id.clone()));
     }
-    let fs_root = mount
-        .fs_root
+    // Read artifacts straight from the image with The Sleuth Kit (fls/icat)
+    // instead of walking a live mount: libtsk reads EWF + raw images directly,
+    // so extraction is stateless and survives --sift mode's per-tool SSH
+    // sessions (a FUSE mount's daemon does not). The filesystem mount, if any,
+    // is irrelevant here — only the image path disk_mount recorded matters.
+    let image_path = mount
+        .image_path
         .ok_or_else(|| DiskError::MountNotMounted(input.mount_id.clone()))?;
-    if !fs_root.is_dir() {
-        return Err(DiskError::MountRootNotFound(fs_root));
+    if !image_path.is_file() {
+        return Err(DiskError::ImageNotFound(image_path));
     }
 
     let extract_id = format!("disk-extract-{}", Uuid::new_v4());
     let output_dir = case_dir.join("extracted").join("disk").join(&extract_id);
     create_dir(&output_dir)?;
     let wanted = wanted_kinds(&input.artifact_kinds);
+    let sector_offset = first_partition_sector_offset(&image_path);
+
+    // Enumerate every file once, keep the wanted classes, and extract in class
+    // priority (MFT/registry/prefetch first, broad yara targets last) so the
+    // high-value artifacts are never crowded out by `limit`.
+    let mut candidates: Vec<(u8, &'static str, String, String)> =
+        tsk_list(&image_path, sector_offset)?
+            .into_iter()
+            .filter_map(|(inode, path)| {
+                let class = classify_artifact_path(&path)?;
+                wanted.get(class).copied().unwrap_or(false).then_some((
+                    class_priority(class),
+                    class,
+                    inode,
+                    path,
+                ))
+            })
+            .collect();
+    candidates.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.3.cmp(&b.3)));
+
     let mut artifacts = Vec::new();
     let mut artifacts_skipped_oversize = 0;
-    let collection = ArtifactCollection {
-        root: &fs_root,
-        output_dir: &output_dir,
-        wanted: &wanted,
-        limit: input.limit,
-        max_artifact_bytes: input.max_artifact_bytes,
-    };
-    collect_artifacts(
-        &collection,
-        &fs_root,
-        &mut artifacts,
-        &mut artifacts_skipped_oversize,
-    )?;
+    for (_priority, class, inode, path) in candidates {
+        if artifacts.len() >= input.limit {
+            break;
+        }
+        tsk_extract(
+            &image_path,
+            sector_offset,
+            &inode,
+            &path,
+            class,
+            &output_dir,
+            input.max_artifact_bytes,
+            &mut artifacts,
+            &mut artifacts_skipped_oversize,
+        )?;
+    }
 
     let now = now_iso();
     ledger.resources.push(SessionResource {
@@ -272,17 +300,14 @@ pub fn disk_extract_artifacts(
         status: "extracted".to_string(),
         created_at: now.clone(),
         updated_at: now,
-        image_path: mount.image_path,
+        image_path: Some(image_path),
         mount_point: mount.mount_point,
-        fs_root: Some(fs_root),
+        fs_root: mount.fs_root,
         parent_id: Some(input.mount_id.clone()),
         output_dir: Some(output_dir.clone()),
         artifacts: artifacts.clone(),
-        command: vec![
-            "internal".to_string(),
-            "copy_selected_artifacts".to_string(),
-        ],
-        note: "copied selected disk artifacts from mounted read-only view".to_string(),
+        command: vec!["fls".to_string(), "icat".to_string()],
+        note: "extracted disk artifacts directly from the image via The Sleuth Kit".to_string(),
     });
     write_ledger(&ledger_path, &ledger)?;
 
@@ -312,6 +337,14 @@ pub fn disk_unmount(input: &DiskUnmountInput) -> Result<DiskUnmountOutput, DiskE
         .mount_point
         .clone()
         .ok_or_else(|| DiskError::MountNotMounted(input.mount_id.clone()))?;
+    // fs_root tells the teardown which layout this is: a nested EWF+NTFS mount
+    // (fs_root == <mp>/fs), an EWF container only (fs_root == <mp>/ewf), or a
+    // raw image mounted at the mount point. Default to the mount point for
+    // older ledger rows that predate fs_root.
+    let fs_root = ledger.resources[idx]
+        .fs_root
+        .clone()
+        .unwrap_or_else(|| mount_point.clone());
 
     let (status, command, stderr_tail) = match input.mode {
         DiskMode::Mock => (
@@ -319,7 +352,7 @@ pub fn disk_unmount(input: &DiskUnmountInput) -> Result<DiskUnmountOutput, DiskE
             vec!["mock".to_string(), "disk_unmount".to_string()],
             String::new(),
         ),
-        DiskMode::Auto => auto_unmount(&mount_point)?,
+        DiskMode::Auto => auto_unmount(&mount_point, &fs_root)?,
     };
     ledger.resources[idx].status.clone_from(&status);
     ledger.resources[idx].updated_at = now_iso();
@@ -369,21 +402,109 @@ fn auto_mount_ewf(
         image_path.to_string_lossy().to_string(),
         ewf_dir.to_string_lossy().to_string(),
     ];
-    let result = run_fixed(&bin, &args)?;
+    // ewfmount must run as root: /etc/fuse.conf has no `user_allow_other`, so a
+    // user-owned FUSE device is unreadable by the (root) loop/mount syscalls.
+    let result = run_sudo_fixed(&bin, &args)?;
     if !result.0 {
         return Err(DiskError::SubprocessFailed {
             status: result.1,
             stderr_tail: result.2,
         });
     }
-    Ok((
-        "mounted".to_string(),
-        ewf_dir,
-        std::iter::once(bin).chain(args).collect(),
-        result.2,
-        "mounted EWF container read-only; filesystem volume may require SIFT loop/TSK extraction"
-            .to_string(),
-    ))
+    let ewf_cmd: Vec<String> = vec!["sudo".to_string(), "-n".to_string(), bin]
+        .into_iter()
+        .chain(args)
+        .collect();
+    let ewf_stderr = result.2;
+
+    // ewfmount exposes the combined image as a single raw device named `ewf1`.
+    // The NTFS volume inside still has to be loop-mounted before any files are
+    // reachable. Use the kernel `ntfs3` driver (ntfs-3g refuses volumes whose
+    // recorded size exceeds the image — common for acquired partitions) at
+    // offset 0 for a bare volume image, or the first-partition offset for a full
+    // disk. If it can't be mounted, fall back to custody-only on the container —
+    // never worse than mounting nothing.
+    let ewf_raw = ewf_dir.join("ewf1");
+    let fs_dir = mount_point.join("fs");
+    create_dir(&fs_dir)?;
+    if let Ok((fs_cmd, fs_stderr)) = mount_ntfs_ro(&ewf_raw, &fs_dir) {
+        let mut command = ewf_cmd;
+        command.push("&&".to_string());
+        command.extend(fs_cmd);
+        Ok((
+            "mounted".to_string(),
+            fs_dir,
+            command,
+            fs_stderr,
+            "mounted EWF container + NTFS filesystem read-only".to_string(),
+        ))
+    } else {
+        let _ = fs::remove_dir(&fs_dir);
+        Ok((
+            "mounted".to_string(),
+            ewf_dir,
+            ewf_cmd,
+            ewf_stderr,
+            "mounted EWF container read-only; NTFS volume could not be mounted (custody-only)"
+                .to_string(),
+        ))
+    }
+}
+
+/// Loop-mount an NTFS volume read-only with the kernel `ntfs3` driver, under
+/// sudo (the EWF device is root-owned). Tries offset 0 (bare volume image) then
+/// the first filesystem-partition offset from `mmls` (full disk image).
+fn mount_ntfs_ro(device: &Path, mount_point: &Path) -> Result<(Vec<String>, String), DiskError> {
+    let mount_bin = std::env::var("FINDEVIL_MOUNT_BIN").unwrap_or_else(|_| "mount".to_string());
+    let mut offsets = vec![0u64];
+    if let Some(offset) = first_partition_byte_offset_sudo(device) {
+        offsets.push(offset);
+    }
+    let mut last_status = String::new();
+    let mut last_stderr = String::new();
+    for offset in offsets {
+        let opts = if offset == 0 {
+            "ro,loop".to_string()
+        } else {
+            format!("ro,loop,offset={offset}")
+        };
+        let args = vec![
+            "-t".to_string(),
+            "ntfs3".to_string(),
+            "-o".to_string(),
+            opts,
+            device.to_string_lossy().to_string(),
+            mount_point.to_string_lossy().to_string(),
+        ];
+        let result = run_sudo_fixed(&mount_bin, &args)?;
+        if result.0 {
+            let command: Vec<String> = vec!["sudo".to_string(), "-n".to_string(), mount_bin]
+                .into_iter()
+                .chain(args)
+                .collect();
+            return Ok((command, result.2));
+        }
+        last_status = result.1;
+        last_stderr = result.2;
+    }
+    Err(DiskError::SubprocessFailed {
+        status: last_status,
+        stderr_tail: last_stderr,
+    })
+}
+
+/// `mmls` first-filesystem-partition byte offset, run under sudo because the
+/// EWF device is root-owned. None when the image is a bare volume (no table).
+fn first_partition_byte_offset_sudo(image_path: &Path) -> Option<u64> {
+    let output = Command::new("sudo")
+        .args(["-n", "mmls"])
+        .arg(image_path)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    parse_mmls_first_partition_offset(&String::from_utf8_lossy(&output.stdout))
 }
 
 fn auto_mount_raw(
@@ -522,45 +643,88 @@ fn matches_filesystem_description(line: &str) -> bool {
         || line.contains("apfs")
 }
 
-fn auto_unmount(mount_point: &Path) -> Result<(String, Vec<String>, String), DiskError> {
+/// Plan the teardown commands for a mount, newest layer first. Pure so the
+/// ordering (the nested NTFS loop is released before the EWF container) is
+/// unit-tested without touching real mounts. Both EWF and NTFS mounts are
+/// root-owned (`sudo ewfmount` / `sudo mount`), so `umount` releases both —
+/// `auto_unmount` retries each step under sudo.
+fn unmount_steps(
+    mount_point: &Path,
+    fs_root: &Path,
+    umount_bin: &str,
+) -> Vec<(String, Vec<String>)> {
+    let ewf_dir = mount_point.join("ewf");
+    let fs_dir = mount_point.join("fs");
+    if fs_root == fs_dir {
+        // EWF container with a nested NTFS loop mount: drop the loop first, then
+        // release the EWF container it sits on.
+        vec![
+            (
+                umount_bin.to_string(),
+                vec![fs_dir.to_string_lossy().to_string()],
+            ),
+            (
+                umount_bin.to_string(),
+                vec![ewf_dir.to_string_lossy().to_string()],
+            ),
+        ]
+    } else if fs_root == ewf_dir {
+        // EWF container only (filesystem could not be mounted).
+        vec![(
+            umount_bin.to_string(),
+            vec![ewf_dir.to_string_lossy().to_string()],
+        )]
+    } else {
+        // Raw image mounted directly at the mount point.
+        vec![(
+            umount_bin.to_string(),
+            vec![mount_point.to_string_lossy().to_string()],
+        )]
+    }
+}
+
+fn auto_unmount(
+    mount_point: &Path,
+    fs_root: &Path,
+) -> Result<(String, Vec<String>, String), DiskError> {
     if cfg!(windows) {
         return Err(DiskError::UnsupportedPlatform);
     }
-    let bin = std::env::var("FINDEVIL_UMOUNT_BIN").unwrap_or_else(|_| "umount".to_string());
-    let args = vec![mount_point.to_string_lossy().to_string()];
-    let result = run_fixed(&bin, &args)?;
-    if !result.0 {
-        if bin == "umount" {
-            let sudo_result = run_sudo_fixed(&bin, &args)?;
-            if sudo_result.0 {
-                return Ok((
-                    "unmounted".to_string(),
-                    std::iter::once("sudo".to_string())
-                        .chain(std::iter::once("-n".to_string()))
-                        .chain(std::iter::once(bin))
-                        .chain(args)
-                        .collect(),
-                    sudo_result.2,
-                ));
-            }
-            return Err(DiskError::SubprocessFailed {
-                status: sudo_result.1,
-                stderr_tail: format!(
-                    "umount failed ({}): {}\nsudo umount failed: {}",
-                    result.1, result.2, sudo_result.2
-                ),
-            });
+    let umount_bin = std::env::var("FINDEVIL_UMOUNT_BIN").unwrap_or_else(|_| "umount".to_string());
+    let steps = unmount_steps(mount_point, fs_root, &umount_bin);
+
+    let mut commands: Vec<String> = Vec::new();
+    let mut stderr_tail = String::new();
+    for (idx, (bin, args)) in steps.iter().enumerate() {
+        if idx > 0 {
+            commands.push("&&".to_string());
+        }
+        let result = run_fixed(bin, args)?;
+        if result.0 {
+            commands.push(bin.clone());
+            commands.extend(args.iter().cloned());
+            stderr_tail = result.2;
+            continue;
+        }
+        // Privileged mounts need sudo -n; harmless for fusermount on own mounts.
+        let sudo_result = run_sudo_fixed(bin, args)?;
+        if sudo_result.0 {
+            commands.push("sudo".to_string());
+            commands.push("-n".to_string());
+            commands.push(bin.clone());
+            commands.extend(args.iter().cloned());
+            stderr_tail = sudo_result.2;
+            continue;
         }
         return Err(DiskError::SubprocessFailed {
-            status: result.1,
-            stderr_tail: result.2,
+            status: sudo_result.1,
+            stderr_tail: format!(
+                "{bin} failed ({}): {}\nsudo {bin} failed: {}",
+                result.1, result.2, sudo_result.2
+            ),
         });
     }
-    Ok((
-        "unmounted".to_string(),
-        std::iter::once(bin).chain(args).collect(),
-        result.2,
-    ))
+    Ok(("unmounted".to_string(), commands, stderr_tail))
 }
 
 fn run_sudo_fixed(bin: &str, args: &[String]) -> Result<(bool, String, String), DiskError> {
@@ -584,123 +748,165 @@ fn run_fixed(bin: &str, args: &[String]) -> Result<(bool, String, String), DiskE
     ))
 }
 
-struct ArtifactCollection<'a> {
-    root: &'a Path,
-    output_dir: &'a Path,
-    wanted: &'a BTreeMap<&'static str, bool>,
-    limit: usize,
-    max_artifact_bytes: u64,
+/// Sector offset of the first filesystem partition for `fls`/`icat -o`, or None
+/// for a bare volume image (TSK reads it at offset 0). mmls reports the start
+/// sector; the byte helper multiplies by 512, so divide it back to sectors.
+fn first_partition_sector_offset(image_path: &Path) -> Option<u64> {
+    first_partition_byte_offset(image_path).map(|bytes| bytes / 512)
 }
 
-fn collect_artifacts(
-    collection: &ArtifactCollection<'_>,
-    dir: &Path,
-    out: &mut Vec<ExtractedDiskArtifact>,
-    skipped_oversize: &mut usize,
-) -> Result<(), DiskError> {
-    if out.len() >= collection.limit {
-        return Ok(());
+/// Enumerate every live regular file in the image via `fls -r -p`, returning
+/// `(inode, relative_path)` pairs. Reads the image directly (no mount).
+fn tsk_list(
+    image_path: &Path,
+    sector_offset: Option<u64>,
+) -> Result<Vec<(String, String)>, DiskError> {
+    let bin = std::env::var("FINDEVIL_FLS_BIN").unwrap_or_else(|_| "fls".to_string());
+    let mut command = Command::new(&bin);
+    command.args(["-r", "-p"]);
+    if let Some(offset) = sector_offset {
+        command.arg("-o").arg(offset.to_string());
     }
-    for entry in fs::read_dir(dir).map_err(|source| DiskError::Io {
-        path: dir.to_path_buf(),
+    command.arg(image_path);
+    let output = command.output().map_err(|source| DiskError::Io {
+        path: PathBuf::from(&bin),
         source,
-    })? {
-        let entry = entry.map_err(|source| DiskError::Io {
-            path: dir.to_path_buf(),
-            source,
-        })?;
-        let path = entry.path();
-        let ft = entry.file_type().map_err(|source| DiskError::Io {
-            path: path.clone(),
-            source,
-        })?;
-        if ft.is_dir() {
-            collect_artifacts(collection, &path, out, skipped_oversize)?;
-        } else if ft.is_file() {
-            if let Some(class) = classify_artifact(collection.root, &path) {
-                if collection.wanted.get(class).copied().unwrap_or(false) {
-                    copy_artifact(
-                        collection.root,
-                        &path,
-                        collection.output_dir,
-                        class,
-                        collection.max_artifact_bytes,
-                        out,
-                        skipped_oversize,
-                    )?;
-                    if out.len() >= collection.limit {
-                        return Ok(());
-                    }
-                }
-            }
-        }
+    })?;
+    if !output.status.success() {
+        return Err(DiskError::SubprocessFailed {
+            status: output.status.to_string(),
+            stderr_tail: tail_utf8_lossy(&output.stderr),
+        });
     }
-    Ok(())
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(parse_fls_line)
+        .collect())
 }
 
-fn copy_artifact(
-    root: &Path,
-    source: &Path,
-    output_dir: &Path,
+/// Parse one `fls -p` line into `(inode, relative_path)` for a live regular
+/// file. Lines look like `r/r 380861-128-4:\tWindows/System32/config/SYSTEM`.
+/// Returns None for directories, deleted entries (marked `*`), and non-files.
+fn parse_fls_line(line: &str) -> Option<(String, String)> {
+    let (kind, rest) = line.split_once(char::is_whitespace)?;
+    if !kind.starts_with("r/r") {
+        return None;
+    }
+    let rest = rest.trim_start();
+    if rest.starts_with('*') {
+        // deleted entry — not reliably recoverable, skip.
+        return None;
+    }
+    let (inode, path) = rest.split_once(':')?;
+    let inode = inode.trim();
+    let path = path.trim();
+    if inode.is_empty() || path.is_empty() {
+        return None;
+    }
+    Some((inode.to_string(), path.to_string()))
+}
+
+/// Extract order: forensically critical classes first, broad yara targets last,
+/// so the `limit` never crowds out registry/MFT/prefetch.
+fn class_priority(class: &str) -> u8 {
+    match class {
+        "mft" => 0,
+        "registry" => 1,
+        "prefetch" => 2,
+        "usnjrnl" => 3,
+        "evtx" => 4,
+        _ => 5,
+    }
+}
+
+/// `icat` one inode out of the image into `output_dir/<class>/<rel_path>`,
+/// streaming to disk (no in-memory buffering) and enforcing the size cap.
+/// A failed `icat` (unreadable inode) is skipped, not fatal.
+#[allow(clippy::too_many_arguments)]
+fn tsk_extract(
+    image_path: &Path,
+    sector_offset: Option<u64>,
+    inode: &str,
+    rel_path: &str,
     class: &str,
+    output_dir: &Path,
     max_artifact_bytes: u64,
     out: &mut Vec<ExtractedDiskArtifact>,
     skipped_oversize: &mut usize,
 ) -> Result<(), DiskError> {
-    let source_size = fs::metadata(source)
-        .map_err(|source_err| DiskError::Io {
-            path: source.to_path_buf(),
-            source: source_err,
-        })?
-        .len();
-    if source_size > max_artifact_bytes {
-        *skipped_oversize += 1;
-        return Ok(());
-    }
-    let rel = source.strip_prefix(root).unwrap_or(source);
-    let dest = output_dir.join(class).join(rel);
+    let dest = safe_join(&output_dir.join(class), rel_path);
     if let Some(parent) = dest.parent() {
         create_dir(parent)?;
     }
-    fs::copy(source, &dest).map_err(|source_err| DiskError::Io {
-        path: source.to_path_buf(),
-        source: source_err,
+    let bin = std::env::var("FINDEVIL_ICAT_BIN").unwrap_or_else(|_| "icat".to_string());
+    let mut command = Command::new(&bin);
+    if let Some(offset) = sector_offset {
+        command.arg("-o").arg(offset.to_string());
+    }
+    command.arg(image_path).arg(inode);
+    let file = fs::File::create(&dest).map_err(|source| DiskError::Io {
+        path: dest.clone(),
+        source,
     })?;
+    let status = command
+        .stdout(file)
+        .status()
+        .map_err(|source| DiskError::Io {
+            path: PathBuf::from(&bin),
+            source,
+        })?;
+    if !status.success() {
+        let _ = fs::remove_file(&dest);
+        return Ok(());
+    }
     let size = fs::metadata(&dest)
-        .map_err(|source_err| DiskError::Io {
+        .map_err(|source| DiskError::Io {
             path: dest.clone(),
-            source: source_err,
+            source,
         })?
         .len();
+    if size > max_artifact_bytes {
+        let _ = fs::remove_file(&dest);
+        *skipped_oversize += 1;
+        return Ok(());
+    }
     out.push(ExtractedDiskArtifact {
         artifact_class: class.to_string(),
-        source_path: source.to_path_buf(),
+        source_path: PathBuf::from(rel_path),
         extracted_path: dest,
         size_bytes: size,
     });
     Ok(())
 }
 
-fn classify_artifact(root: &Path, path: &Path) -> Option<&'static str> {
-    let name = path.file_name()?.to_string_lossy().to_ascii_lowercase();
-    let rel = path
-        .strip_prefix(root)
-        .unwrap_or(path)
-        .to_string_lossy()
-        .replace('\\', "/")
-        .to_ascii_lowercase();
+/// Join an image-internal path under `base`, keeping only normal components so a
+/// hostile image filename can't escape the output directory.
+fn safe_join(base: &Path, rel: &str) -> PathBuf {
+    let mut dest = base.to_path_buf();
+    for part in rel.replace('\\', "/").split('/') {
+        if part.is_empty() || part == "." || part == ".." {
+            continue;
+        }
+        dest.push(part);
+    }
+    dest
+}
+
+fn classify_artifact_path(rel: &str) -> Option<&'static str> {
+    let rel = rel.replace('\\', "/").to_ascii_lowercase();
+    let name = rel.rsplit('/').next().unwrap_or(rel.as_str());
     if name == "$mft" || name == "mft" {
         Some("mft")
-    } else if name == "$j" || rel.contains("$usnjrnl") || has_extension(&name, "usn") {
+    } else if name == "$j" || rel.contains("$usnjrnl") || has_extension(name, "usn") {
         Some("usnjrnl")
-    } else if has_extension(&name, "pf") {
+    } else if has_extension(name, "pf") {
         Some("prefetch")
     } else if matches!(
-        name.as_str(),
+        name,
         "software" | "system" | "sam" | "security" | "ntuser.dat" | "usrclass.dat"
     ) {
         Some("registry")
-    } else if has_extension(&name, "evtx") {
+    } else if has_extension(name, "evtx") {
         Some("evtx")
     } else if rel.starts_with("users/")
         || rel.contains("/users/")
@@ -831,7 +1037,94 @@ fn tail_utf8_lossy(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_mmls_first_partition_offset;
+    use super::{
+        class_priority, classify_artifact_path, parse_fls_line, parse_mmls_first_partition_offset,
+        unmount_steps,
+    };
+    use std::path::Path;
+
+    #[test]
+    fn parse_fls_line_extracts_inode_and_path_for_live_files() {
+        assert_eq!(
+            parse_fls_line("r/r 380861-128-4:\tWindows/System32/config/SYSTEM"),
+            Some((
+                "380861-128-4".to_string(),
+                "Windows/System32/config/SYSTEM".to_string(),
+            ))
+        );
+    }
+
+    #[test]
+    fn parse_fls_line_skips_dirs_deleted_and_blanks() {
+        assert_eq!(parse_fls_line("d/d 282867-144-5:\tUsers"), None);
+        assert_eq!(
+            parse_fls_line("r/r * 999-128-1:\tWindows/Prefetch/x.pf"),
+            None
+        );
+        assert_eq!(parse_fls_line(""), None);
+    }
+
+    #[test]
+    fn classify_artifact_path_matches_forensic_classes() {
+        assert_eq!(
+            classify_artifact_path("Windows/System32/config/SYSTEM"),
+            Some("registry")
+        );
+        assert_eq!(
+            classify_artifact_path("Windows/Prefetch/CMD.EXE-1234.pf"),
+            Some("prefetch")
+        );
+        assert_eq!(classify_artifact_path("$MFT"), Some("mft"));
+        assert_eq!(
+            classify_artifact_path("Users/bob/NTUSER.DAT"),
+            Some("registry")
+        );
+        assert_eq!(
+            classify_artifact_path("Users/bob/Desktop/evil.txt"),
+            Some("yara_target")
+        );
+        assert_eq!(
+            classify_artifact_path("Windows/System32/kernel32.dll"),
+            None
+        );
+    }
+
+    #[test]
+    fn class_priority_orders_high_value_before_yara() {
+        assert!(class_priority("mft") < class_priority("registry"));
+        assert!(class_priority("registry") < class_priority("prefetch"));
+        assert!(class_priority("prefetch") < class_priority("yara_target"));
+    }
+
+    #[test]
+    fn unmount_steps_ewf_plus_ntfs_releases_loop_then_container() {
+        let mp = Path::new("/m");
+        let steps = unmount_steps(mp, &mp.join("fs"), "umount");
+        assert_eq!(
+            steps,
+            vec![
+                ("umount".to_string(), vec!["/m/fs".to_string()]),
+                ("umount".to_string(), vec!["/m/ewf".to_string()]),
+            ]
+        );
+    }
+
+    #[test]
+    fn unmount_steps_ewf_only_releases_container() {
+        let mp = Path::new("/m");
+        let steps = unmount_steps(mp, &mp.join("ewf"), "umount");
+        assert_eq!(
+            steps,
+            vec![("umount".to_string(), vec!["/m/ewf".to_string()])]
+        );
+    }
+
+    #[test]
+    fn unmount_steps_raw_umounts_the_mount_point() {
+        let mp = Path::new("/m");
+        let steps = unmount_steps(mp, mp, "umount");
+        assert_eq!(steps, vec![("umount".to_string(), vec!["/m".to_string()])]);
+    }
 
     #[test]
     fn mmls_parser_returns_first_filesystem_partition_offset() {
