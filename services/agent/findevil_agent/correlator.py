@@ -19,11 +19,10 @@ inputs.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
 from dataclasses import dataclass
 
 from findevil_agent.events import Finding
-from findevil_agent.execution_claim import is_execution_claim, is_execution_corroborated
+from findevil_agent.execution_claim import is_execution_claim
 from findevil_agent.judge import _classify_artifact
 
 # Amcache-only execution evidence — the SOUL.md / MEMORY.md
@@ -50,22 +49,13 @@ class CorrelationOutcome:
 
 def correlate(
     findings: list[Finding],
-    *,
-    tool_classes: Mapping[str, str] | None = None,
 ) -> tuple[list[Finding], list[CorrelationOutcome]]:
     """Walk findings and apply SOUL.md cross-artifact rules.
 
     Returns a tuple of (refined_findings, outcomes). ``outcomes`` is
     one entry per input Finding describing what the correlator did.
-
-    When ``tool_classes`` (a ``tool_call_id -> artifact_class`` map, e.g. built
-    from ``find_evil_auto.TOOL_ARTIFACT_CLASSES``) is supplied, an execution
-    claim's corroboration is derived from the STRUCTURED classes of the tools it
-    cites (``tool_call_id`` + ``derived_from``) — the same basis the report-QA
-    gate uses — instead of description-prose regex. Without it (or with an empty
-    map) the correlator falls back to the legacy prose heuristic.
     """
-    # Index artifact classes the run touched, for the legacy prose cross-check.
+    # Index artifact classes the run touched, for cross-checks.
     classes_in_run: set[str] = {c for f in findings if (c := _classify_artifact(f)) is not None}
 
     refined: list[Finding] = []
@@ -81,37 +71,7 @@ def correlate(
             )
             continue
 
-        # Preferred: structural corroboration from the tools this finding cites,
-        # not its prose. A single-artifact claim can no longer ride on an unrelated
-        # finding's class elsewhere in the run.
-        if tool_classes:
-            cited = {f.tool_call_id, *(f.derived_from or [])}
-            classes = {tool_classes[t] for t in cited if t and t in tool_classes}
-            classes.discard("custody")  # case_open custody is not execution evidence
-            if is_execution_corroborated(classes):
-                refined.append(f)
-                outcomes.append(
-                    CorrelationOutcome(
-                        finding_id=f.finding_id,
-                        action="kept",
-                        reason=f"execution claim corroborated by cited artifact classes {sorted(classes)}",
-                    )
-                )
-            else:
-                refined.append(_downgrade(f))
-                outcomes.append(
-                    CorrelationOutcome(
-                        finding_id=f.finding_id,
-                        action="downgraded",
-                        reason=(
-                            f"execution claim cites artifact class(es) {sorted(classes)}; "
-                            "SOUL.md needs ≥2 non-weak classes from the cited tools"
-                        ),
-                    )
-                )
-            continue
-
-        # Legacy fallback — prose-based cross-artifact rule.
+        # Execution claim — apply cross-artifact rule.
         own_class = _classify_artifact(f)
         has_other_class = bool(classes_in_run - ({own_class} if own_class else set()))
 

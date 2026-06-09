@@ -24,16 +24,6 @@ class CorrelateFindingsInput(BaseModel):
         ...,
         description="Findings to correlate (typically the judge's merged output).",
     )
-    tool_classes: dict[str, str] | None = Field(
-        default=None,
-        description=(
-            "Optional tool_call_id -> artifact_class map (e.g. from "
-            "find_evil_auto.TOOL_ARTIFACT_CLASSES). When supplied, execution "
-            "corroboration is derived from the tools each finding cites instead of "
-            "its description prose, closing the single-artifact over-claim. Omit to "
-            "use the legacy prose heuristic."
-        ),
-    )
 
 
 class CorrelationRecord(BaseModel):
@@ -60,7 +50,7 @@ class CorrelateFindingsOutput(BaseModel):
 async def _handle(inp: BaseModel) -> CorrelateFindingsOutput:
     assert isinstance(inp, CorrelateFindingsInput)
     findings = [Finding.model_validate(f) for f in inp.findings]
-    refined, outcomes = correlate(findings, tool_classes=inp.tool_classes)
+    refined, outcomes = correlate(findings)
     return CorrelateFindingsOutput(
         refined=[f.model_dump() for f in refined],
         outcomes=[
@@ -83,9 +73,7 @@ SPEC = ToolSpec(
         "downgrade because Amcache LastModified is catalog-registration time, NOT "
         "execution time. Strong corroboration (Prefetch + Amcache/Shimcache pair, OR "
         "Sysmon/Carbon Black/CrowdStrike telemetry mentioned in the description) keeps "
-        "the original confidence. Supply tool_classes (a tool_call_id -> artifact_class "
-        "map) to corroborate from the cited tools' structured classes (>=2 distinct, "
-        "non-weak) instead of description prose. Pass the judge's merged output here (ideally; the "
+        "the original confidence. Pass the judge's merged output here (ideally; the "
         "tool also handles raw pool findings). Returns refined[] (same length as "
         "input; confidence may be lower) plus outcomes[] (one CorrelationOutcome per "
         "finding describing the action taken and why)."

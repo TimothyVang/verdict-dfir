@@ -48,6 +48,7 @@ host. Each version below is the script's **default** and is overridable by env v
 | `hayabusa` | `2.19.0` | AGPL-3.0 | `hayabusa_scan` | BinaryNotFound (Sigma scan skipped) |
 | `chainsaw` | `2.13.0` | Elastic License 2.0 | optional EVTX hunting (not a core tool) | n/a |
 | `velociraptor` | `0.74.6` | Apache-2.0 | `vel_collect` | BinaryNotFound |
+| `sleuthkit` (`fls`/`icat`/`mmls`) | system pkg | IPL-1.0 / CPL-1.0 | `disk_extract_artifacts` reads `.e01`/`.dd` content directly; `mmls` resolves the partition offset | disk evidence stays custody-only (no registry/MFT/prefetch) |
 | `pandoc` | `3.1.11.1` | GPL-2.0 | report HTML/PDF (`render_report.py`) | HTML/PDF render skipped |
 | `tshark` | system pkg | GPL-2.0 | `pcap_triage` (preferred) | falls back to zeek |
 | `zeek` | system pkg | BSD-3-Clause | `zeek_summary`, `pcap_triage` (fallback) | env-limit, not evidence-absence |

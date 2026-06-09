@@ -113,6 +113,14 @@ command -v vol.py >/dev/null 2>&1 && log "  vol.py: $(command -v vol.py)" || tru
 # YARA — almost always present in SIFT.
 command -v yara >/dev/null 2>&1 && log "  yara: $(command -v yara)" || warn "  yara absent — yara_scan still works in-process via yara-x crate"
 
+# Sleuthkit (fls/icat/mmls) — ships with SIFT; disk_extract_artifacts reads
+# .e01/.dd content directly with it. Verify, apt-install if somehow missing.
+if ! command -v fls >/dev/null 2>&1; then
+  log "  installing sleuthkit via apt..."
+  sudo -n apt-get install -y sleuthkit >/dev/null 2>&1 || warn "  sleuthkit install failed; disk_extract_artifacts on .e01/.dd will fail"
+fi
+command -v fls >/dev/null 2>&1 && log "  sleuthkit: $(command -v fls)" || true
+
 # Hayabusa — not in SIFT; pull a release binary.
 HAYABUSA_VERSION="${HAYABUSA_VERSION:-2.18.0}"
 if ! command -v hayabusa >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/hayabusa" ]]; then

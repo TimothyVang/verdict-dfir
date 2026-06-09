@@ -122,6 +122,7 @@ Rust crate behind `yara_scan` (not a subprocess).
 | `volatility3` | `vol_pslist/psscan/psxview/malfind` | Volatility Software License (BSD-2-style) | BinaryNotFound |
 | `hayabusa` | `hayabusa_scan` | AGPL-3.0 | BinaryNotFound |
 | `velociraptor` | `vel_collect` | Apache-2.0 | BinaryNotFound |
+| `sleuthkit` (`fls`/`icat`/`mmls`) | `disk_extract_artifacts` (`.e01`/`.dd` content) | IPL-1.0 / CPL-1.0 | disk stays custody-only |
 | `tshark` | `pcap_triage` (preferred) | GPL-2.0 | falls back to zeek, else env-limit |
 | `zeek` | `zeek_summary`, `pcap_triage` (fallback) | BSD-3-Clause | env-limit |
 | `chainsaw` | optional EVTX hunting (not a core tool) | Elastic-2.0 | n/a |

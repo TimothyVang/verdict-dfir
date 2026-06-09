@@ -66,22 +66,3 @@ def mitre_claims_execution(mitre_technique: str | None) -> bool:
 def is_execution_claim(text: str | None, mitre_technique: str | None = None) -> bool:
     """Unified execution-claim predicate: execution prose OR an execution MITRE id."""
     return text_claims_execution(text) or mitre_claims_execution(mitre_technique)
-
-
-# Artifact classes too weak to corroborate an execution claim on their own. A
-# finding whose cited classes are ALL within this set is not corroborated even if
-# there are two of them — execution needs a disk-family class (prefetch, registry,
-# mft, usnjrnl, ...). Mirrors the `weak_only` set in
-# find_evil_auto.build_report_qa_signoff so the correlator and the report-QA gate
-# apply the same SOUL.md >=2-artifact-class rule.
-WEAK_EXECUTION_CLASSES: frozenset[str] = frozenset({"memory", "yara", "evtx"})
-
-
-def is_execution_corroborated(artifact_classes: set[str]) -> bool:
-    """True if a set of cited artifact classes satisfies the SOUL.md execution rule:
-    at least two DISTINCT classes, and not all of them weak.
-
-    The classes are the structured artifact classes of the tools a finding cites
-    (see ``TOOL_ARTIFACT_CLASSES``), NOT keywords scraped from its description.
-    """
-    return len(artifact_classes) >= 2 and not (artifact_classes <= WEAK_EXECUTION_CLASSES)

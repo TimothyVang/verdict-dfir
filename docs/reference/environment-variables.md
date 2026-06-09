@@ -43,6 +43,7 @@
 | `HAYABUSA_BIN` | `hayabusa_scan` | then `hayabusa` on PATH |
 | `VELOCIRAPTOR_BIN` | `vel_collect` | then `velociraptor` on PATH |
 | `TSHARK_BIN` / `ZEEK_BIN` | `pcap_triage` / `zeek_summary` | then `tshark` / `zeek` on PATH |
+| `FINDEVIL_FLS_BIN` / `FINDEVIL_ICAT_BIN` | `disk_extract_artifacts` (Sleuth Kit enumerate/extract) | then `fls` / `icat` on PATH |
 | `FIND_EVIL_MEMORY_YARA_RULES` | `yara_scan` (memory) | optional rule-file override |
 | `FIND_EVIL_DISK_YARA_RULES` | `yara_scan` (disk) | optional rule-file override |
 

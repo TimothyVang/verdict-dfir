@@ -248,6 +248,8 @@ dfir "velociraptor" VELOCIRAPTOR_BIN "download from https://github.com/Velocidex
      -- velociraptor
 dfir "tshark/zeek"  TSHARK_BIN      "sudo apt-get install -y tshark   (pcap_triage; or set \$TSHARK_BIN/\$ZEEK_BIN)" \
      -- tshark zeek
+dfir "sleuthkit"    SLEUTHKIT_BIN   "sudo apt-get install -y sleuthkit   (disk_extract_artifacts on .e01/.dd; fls/icat/mmls)" \
+     -- fls
 
 # ---------------------------------------------------------------------------
 # Reporting + demo-recording helpers (warn-only).

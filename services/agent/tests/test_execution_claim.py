@@ -16,11 +16,7 @@ import sys
 from pathlib import Path
 from typing import ClassVar
 
-from findevil_agent.execution_claim import (
-    WEAK_EXECUTION_CLASSES,
-    is_execution_claim,
-    is_execution_corroborated,
-)
+from findevil_agent.execution_claim import is_execution_claim
 
 _SCRIPTS = Path(__file__).resolve().parents[3] / "scripts"
 if str(_SCRIPTS) not in sys.path:
@@ -96,28 +92,3 @@ class TestEngineCorrelatorParity:
             finding = _finding(description, mitre)
             expected = is_execution_claim(fea._finding_text(finding), mitre)
             assert fea._claims_execution(finding) is expected, (description, mitre)
-
-
-class TestExecutionCorroboration:
-    """The SOUL.md >=2-artifact-class rule over the STRUCTURED classes a finding cites."""
-
-    def test_two_strong_classes_corroborated(self) -> None:
-        assert is_execution_corroborated({"prefetch", "registry"}) is True
-
-    def test_single_class_not_corroborated(self) -> None:
-        assert is_execution_corroborated({"registry"}) is False
-        assert is_execution_corroborated({"prefetch"}) is False
-
-    def test_empty_not_corroborated(self) -> None:
-        assert is_execution_corroborated(set()) is False
-
-    def test_two_weak_classes_not_corroborated(self) -> None:
-        # memory + evtx are both weak — needs a disk-family class to anchor execution.
-        assert is_execution_corroborated({"memory", "evtx"}) is False
-
-    def test_weak_plus_strong_corroborated(self) -> None:
-        assert is_execution_corroborated({"memory", "prefetch"}) is True
-
-    def test_weak_set_matches_qa_gate(self) -> None:
-        # Must stay identical to build_report_qa_signoff's weak_only set.
-        assert frozenset({"memory", "yara", "evtx"}) == WEAK_EXECUTION_CLASSES

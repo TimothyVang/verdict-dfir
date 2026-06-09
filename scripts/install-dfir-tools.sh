@@ -135,6 +135,15 @@ else
   warn "tshark absent (pcap_triage only). System package: sudo apt-get install -y tshark"
 fi
 
+# --- sleuthkit (disk_extract_artifacts / disk_mount) — system package ---
+# fls/icat read .e01/.dd content directly; mmls resolves the partition offset.
+# Without it, disk evidence stays custody-only (no registry/MFT/prefetch).
+if have fls && have icat && have mmls; then
+  ok "sleuthkit present (fls/icat/mmls)."
+else
+  warn "sleuthkit absent (disk_extract_artifacts on .e01/.dd → custody-only). System package: sudo apt-get install -y sleuthkit"
+fi
+
 echo
 if [ "${BIN_ON_PATH}" -eq 0 ]; then
   warn "${LOCAL_BIN} is not on your PATH — claude/doctor won't find these tools."
