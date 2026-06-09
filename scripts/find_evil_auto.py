@@ -289,36 +289,23 @@ class SshMcpClient:
             encoding="utf-8",
             bufsize=1,
         )
+        self._wire()
+
+    def _wire(self) -> None:
+        """Initialise per-request routing state and start the reader thread.
+
+        Responses are demultiplexed by JSON-RPC id so many ``call()``s can be in
+        flight concurrently over the single stdio connection (parallel
+        investigation/verification). Shared by both client subclasses.
+        """
         self._next_id = 1
-        self._q: Queue[str | None] = Queue()
+        self._lock = threading.Lock()
+        self._waiters: dict[int, Queue[dict[str, Any] | None]] = {}
+        self._closed = False
         threading.Thread(target=self._reader, daemon=True).start()
 
     def _reader(self) -> None:
         for line in iter(self.proc.stdout.readline, ""):
-            self._q.put(line)
-        self._q.put(None)
-
-    def call(
-        self, method: str, params: dict[str, Any] | None = None, timeout: float = 600.0
-    ) -> dict[str, Any]:
-        i = self._next_id
-        self._next_id += 1
-        msg = {"jsonrpc": "2.0", "id": i, "method": method, "params": params or {}}
-        try:
-            self.proc.stdin.write(json.dumps(msg, separators=(",", ":")) + "\n")
-            self.proc.stdin.flush()
-        except OSError as exc:
-            raise RuntimeError(f"{self.label} {method}: server stdin closed") from exc
-        deadline = time.monotonic() + timeout
-        while True:
-            try:
-                line = self._q.get(timeout=max(0.1, deadline - time.monotonic()))
-            except Empty as exc:
-                raise RuntimeError(
-                    f"{self.label} {method}: timed out after {timeout:.0f}s"
-                ) from exc
-            if line is None:
-                raise RuntimeError(f"{self.label}: server closed stdout")
             line = line.strip()
             if not line:
                 continue
@@ -326,11 +313,59 @@ class SshMcpClient:
                 env = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if "error" in env:
+            msg_id = env.get("id")
+            if msg_id is None:
+                continue  # notification / non-response line — no waiter to route to
+            with self._lock:
+                waiter = self._waiters.get(msg_id)
+            if waiter is not None:
+                waiter.put(env)
+        # stdout closed: wake every blocked caller so none hangs forever.
+        with self._lock:
+            self._closed = True
+            waiters = list(self._waiters.values())
+        for waiter in waiters:
+            waiter.put(None)
+
+    def call(
+        self, method: str, params: dict[str, Any] | None = None, timeout: float = 600.0
+    ) -> dict[str, Any]:
+        waiter: Queue[dict[str, Any] | None] = Queue(maxsize=1)
+        msg = {"jsonrpc": "2.0", "method": method, "params": params or {}}
+        # Hold the lock only across id assignment + the write so concurrent
+        # callers can't interleave bytes on the wire or reuse an id; release it
+        # before blocking on the response so calls actually run in parallel.
+        with self._lock:
+            if self._closed:
+                raise RuntimeError(f"{self.label}: server closed stdout")
+            i = self._next_id
+            self._next_id += 1
+            msg["id"] = i
+            self._waiters[i] = waiter
+            try:
+                self.proc.stdin.write(json.dumps(msg, separators=(",", ":")) + "\n")
+                self.proc.stdin.flush()
+            except OSError as exc:
+                self._waiters.pop(i, None)
                 raise RuntimeError(
-                    f"{self.label} {method}: {env['error'].get('message', env['error'])}"
-                )
-            return env.get("result", {})
+                    f"{self.label} {method}: server stdin closed"
+                ) from exc
+        try:
+            env = waiter.get(timeout=timeout)
+        except Empty as exc:
+            raise RuntimeError(
+                f"{self.label} {method}: timed out after {timeout:.0f}s"
+            ) from exc
+        finally:
+            with self._lock:
+                self._waiters.pop(i, None)
+        if env is None:
+            raise RuntimeError(f"{self.label}: server closed stdout")
+        if "error" in env:
+            raise RuntimeError(
+                f"{self.label} {method}: {env['error'].get('message', env['error'])}"
+            )
+        return env.get("result", {})
 
     def call_tool(
         self, name: str, args: dict[str, Any], timeout: float = 600.0
@@ -354,8 +389,9 @@ class SshMcpClient:
 
     def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
         msg = {"jsonrpc": "2.0", "method": method, "params": params or {}}
-        self.proc.stdin.write(json.dumps(msg, separators=(",", ":")) + "\n")
-        self.proc.stdin.flush()
+        with self._lock:
+            self.proc.stdin.write(json.dumps(msg, separators=(",", ":")) + "\n")
+            self.proc.stdin.flush()
 
     def close(self) -> None:
         if self.proc.stdin and not self.proc.stdin.closed:
@@ -385,9 +421,7 @@ class StdioMcpClient(SshMcpClient):
             encoding="utf-8",
             bufsize=1,
         )
-        self._next_id = 1
-        self._q: Queue[str | None] = Queue()
-        threading.Thread(target=self._reader, daemon=True).start()
+        self._wire()
 
 
 # ---------------------------------------------------------------------------
