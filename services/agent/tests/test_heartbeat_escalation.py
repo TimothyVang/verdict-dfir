@@ -84,6 +84,26 @@ def test_success_resets_the_streak() -> None:
     assert "heartbeat_failure" not in _kinds(py)
 
 
+def test_failed_tool_record_does_not_reset_streak() -> None:
+    # Real failure pattern at every tool site: _course_correct increments the
+    # streak, then the failed tool's error-PLACEHOLDER output is recorded via
+    # _record_tool (extra carries an "error" key). That placeholder record must
+    # NOT reset the streak — otherwise two consecutive tool failures could
+    # never reach the HEARTBEAT threshold (the terminator would be dead code
+    # on the tool-failure path).
+    inv = _inv()
+    py = _FakePy()
+    inv._course_correct(py, "vol_pslist", "boom", "defer")
+    inv._record_tool(py, "vol_pslist", "a" * 64, {"error": "boom"})
+    inv._course_correct(py, "vol_psscan", "boom again", "defer")
+    inv._record_tool(py, "vol_psscan", "b" * 64, {"error": "boom again"})
+
+    hb = [p for k, p in py.audits if k == "heartbeat_failure"]
+    assert len(hb) == 1
+    assert hb[0]["consecutive_failures"] == 2
+    assert inv._heartbeat_escalated is True
+
+
 # ---------------------------------------------------------------------------
 # Terminator: the escalated flag must have consequences (it used to be set
 # and never read — a heartbeat-escalated run with no findings could still

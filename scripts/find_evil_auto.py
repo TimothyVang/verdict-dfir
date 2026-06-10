@@ -5764,9 +5764,15 @@ class Investigation:
         extra: dict[str, Any] | None = None,
         arguments: dict[str, Any] | None = None,
     ) -> str:
-        # A successful tool call breaks any consecutive-failure streak, so a
-        # single transient error never trips the HEARTBEAT escalation.
-        self._consecutive_failures = 0
+        # A SUCCESSFUL tool call breaks any consecutive-failure streak, so a
+        # single transient error never trips the HEARTBEAT escalation. A
+        # *failed* tool still records its error-placeholder output here (every
+        # failure site tags ``extra["error"]`` before calling _record_tool), and
+        # that placeholder record must NOT reset the streak — otherwise two
+        # consecutive tool failures could never reach the threshold and the
+        # HEARTBEAT terminator would be dead code on the tool-failure path.
+        if not (extra or {}).get("error"):
+            self._consecutive_failures = 0
         tcid = self._next_tcid()
         self._audit(
             py,
