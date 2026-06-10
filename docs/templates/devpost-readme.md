@@ -16,7 +16,7 @@
 
 Find Evil! automates repeatable Windows host DFIR mechanics for memory captures, EVTX logs, mounted/extracted disk artifacts, and raw disk-image custody registration. It produces an evidence-bound verdict (`SUSPICIOUS` / `INDETERMINATE` / `NO_EVIL`) plus an expert-signoff packet with four load-bearing properties. Raw disk images supplied alone are custody-registered today; disk-content conclusions require mounted or extracted artifacts.
 
-1. **A typed MCP tool surface, no `execute_shell`.** 31 narrow Pydantic-validated tools — 19 Rust DFIR (`case_open`, `disk_mount`/`disk_extract_artifacts`/`disk_unmount`, `evtx_query`, `vol_pslist`/`vol_psscan`/`vol_psxview`, `vol_malfind`, `mft_timeline`, `hayabusa_scan`, `yara_scan`, `usnjrnl_query`, `registry_query`, `prefetch_parse`, `vel_collect`, `sysmon_network_query`, `zeek_summary`, `pcap_triage`) plus 12 Python crypto/ACH/memory/handoff/expert-feedback tools. EVTX parsed in-process via the omerbenamram/evtx Rust crate (~1600× faster than python-evtx); AGPL/GPL tools (Hayabusa, Volatility3, Velociraptor) invoked through subprocess boundaries only — Apache-2.0 submission tree stays clean.
+1. **A typed MCP tool surface, no `execute_shell`.** 32 narrow Pydantic-validated tools — 20 Rust DFIR (`case_open`, `disk_mount`/`disk_extract_artifacts`/`disk_unmount`, `evtx_query`, `vol_pslist`/`vol_psscan`/`vol_psxview`, `vol_malfind`, `mft_timeline`, `hayabusa_scan`, `yara_scan`, `usnjrnl_query`, `registry_query`, `prefetch_parse`, `vel_collect`, `browser_history`, `sysmon_network_query`, `zeek_summary`, `pcap_triage`) plus 12 Python crypto/ACH/memory/handoff/expert-feedback tools. EVTX parsed in-process via the omerbenamram/evtx Rust crate (~1600× faster than python-evtx); AGPL/GPL tools (Hayabusa, Volatility3, Velociraptor) invoked through subprocess boundaries only — Apache-2.0 submission tree stays clean.
 
 2. **Cryptographic chain of custody supporting a FRE 902(14) self-authenticating-evidence claim.** Three composed primitives: hash-chained audit JSONL (`prev_hash` per record) → `rs_merkle` Merkle root over canonical-JSON tool outputs → manifest signature metadata. Production signing can use Sigstore/Rekor; local offline automation may use a clearly identified stub signer and is not customer-releasable without expert approval. `manifest_verify` verifies the audit chain and Merkle root offline. (Pre-A5 the chain tail-anchored to Bitcoin via OpenTimestamps; removed because judges scoring offline can't exercise the network call. Trade-off: `docs/cryptographic-attestation.md`.)
 
@@ -32,7 +32,7 @@ Five trust boundaries (see `docs/architecture.md` for Mermaid diagrams):
 Evidence vault (read-only .e01)
   → SIFT tool subprocesses (unprivileged, sandboxed)
   → Two typed MCP servers
-      • findevil-mcp (Rust)         — 19 DFIR tools, no execute_shell
+      • findevil-mcp (Rust)         — 20 DFIR tools, no execute_shell
       • findevil-agent-mcp (Python) — 12 crypto/ACH/memory/ACP/expert-feedback tools
   → Claude Code agent loop (supervisor + forked Pool A/B subagents
     + verifier + judge + correlator + contradiction surface)

@@ -15,10 +15,7 @@ import json
 from pathlib import Path
 
 _RUN_DIR = (
-    Path(__file__).resolve().parents[3]
-    / "docs"
-    / "sample-run"
-    / "fault-injection-redispatch"
+    Path(__file__).resolve().parents[3] / "docs" / "sample-run" / "fault-injection-redispatch"
 )
 _TARGET_FRAGMENT = "prefetch-cain-exe"
 
@@ -62,15 +59,11 @@ def test_showcase_verdict_unchanged_and_finding_recovered() -> None:
     assert verdict["verdict"] == "SUSPICIOUS"
 
     recovered = [
-        f
-        for f in verdict["findings"]
-        if _TARGET_FRAGMENT in str(f.get("finding_id") or "")
+        f for f in verdict["findings"] if _TARGET_FRAGMENT in str(f.get("finding_id") or "")
     ]
     assert len(recovered) == 1
     assert recovered[0].get("tool_call_id")
 
     redispatches = verdict["findings_summary"]["verifier_redispatches"]
-    target = next(
-        v for k, v in redispatches.items() if _TARGET_FRAGMENT in k
-    )
+    target = next(v for k, v in redispatches.items() if _TARGET_FRAGMENT in k)
     assert target["recovered"] is True
