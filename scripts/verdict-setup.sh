@@ -7,7 +7,8 @@
 # is solved by preparing the VM, not by installing those binaries on the host.
 # This script:
 #   1. builds the two MCP servers (the "app") via install.sh if missing;
-#   2. brings up n8n (post-verdict automation) best-effort;
+#   2. uses n8n (post-verdict automation) only if already up — never started on
+#      the default path; opt in with FINDEVIL_ENABLE_N8N=1;
 #   3. prepares the SIFT VM: resolves its current IP (DHCP-safe via vmrun),
 #      powers it on if needed, waits for SSH + the forensic toolchain.
 #
@@ -36,16 +37,20 @@ else
   fi
 fi
 
-# 2. n8n (post-verdict automation) --------------------------------------------
+# 2. n8n (post-verdict automation) — optional, OFF the default path -----------
+# n8n is a post-verdict SOAR hook, not part of the proven DFIR flow. The default
+# turnkey run never spends time starting it (an empty n8n with no deployed
+# workflow just reports "skipped" anyway): it is used only if one is ALREADY up.
+# Opt in with FINDEVIL_ENABLE_N8N=1 to actively start a local n8n and wait.
 if healthz; then
-  ok "n8n up (:5678)"
-elif command -v n8n >/dev/null 2>&1; then
-  log "starting n8n in the background…"
+  ok "n8n already up (:5678) — post-verdict automation available"
+elif [ "${FINDEVIL_ENABLE_N8N:-}" = "1" ] && command -v n8n >/dev/null 2>&1; then
+  log "FINDEVIL_ENABLE_N8N=1 — starting n8n in the background…"
   ( n8n start >/tmp/verdict-n8n-server.log 2>&1 & ) || true
   for _ in $(seq 1 20); do healthz 2 && break; sleep 1; done
   healthz 2 && ok "n8n up" || warn "n8n not reachable — automation/grounding will be skipped"
 else
-  warn "n8n not installed — automation/grounding will be skipped (non-fatal)"
+  log "n8n not running — post-verdict automation/grounding skipped (optional; FINDEVIL_ENABLE_N8N=1 to enable)"
 fi
 
 # 3. SIFT VM (the forensic toolchain) -----------------------------------------

@@ -13,7 +13,7 @@
   "status": "pending_manual_walkthrough",
   "case_id": "sans-starter",
   "source_url": "SANS_STARTER_URL",
-  "license": "SANS Institute — competition use only",
+  "license": "VERDICT-authored schema stub — no SANS dataset content (populate locally via scripts/fetch-fixtures.sh)",
   "verdict": "UNKNOWN",
   "min_recall_percent": null,
   "findings": []

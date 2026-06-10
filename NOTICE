@@ -1,0 +1,27 @@
+VERDICT
+Copyright 2026 The VERDICT authors.
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+------------------------------------------------------------------------------
+Third-party components
+------------------------------------------------------------------------------
+
+Bundled source (in-tree):
+- obsidian-mind/ — dev/operator memory vault scaffold.
+  MIT License, Copyright (c) 2026 Brenno Ferrari. See obsidian-mind/LICENSE.
+
+External DFIR engines invoked as SUBPROCESSES only (never linked or bundled).
+Their licenses apply to the upstream binaries the operator installs, not to
+this tree:
+- Hayabusa        — AGPL-3.0
+- Chainsaw        — Elastic-2.0
+- Volatility 3    — Volatility Software License (BSD-2-style)
+- Velociraptor    — Apache-2.0
+- pandoc, tshark  — GPL-2.0
+- Zeek            — BSD-3-Clause
+
+In-process libraries:
+- yara-x (Rust)   — BSD-3-Clause / Apache-2.0 (NOT the GPL libyara FFI)
+
+See docs/reference/dependencies.md for the full dependency and license matrix.

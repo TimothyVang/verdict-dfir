@@ -20,9 +20,9 @@ party can verify offline**. It runs as a [Claude Code](https://claude.com/claude
 narrow, typed tool surface, so every conclusion cites the exact tool call that produced it.
 
 <p align="center">
-  <a href="https://github.com/TimothyVang/sans-hackathon/releases/latest/download/find-evil-demo.mp4"><img src="assets/screenshots/demo.gif" alt="VERDICT live investigation dashboard streaming a case" width="760"></a>
+  <img src="assets/screenshots/demo.gif" alt="VERDICT live investigation dashboard streaming a case" width="760">
 </p>
-<p align="center"><sub>The live dashboard streams every tool call and finding as the case runs. <a href="https://github.com/TimothyVang/sans-hackathon/releases/latest/download/find-evil-demo.mp4">Watch the full walkthrough →</a></sub></p>
+<p align="center"><sub>The live dashboard streams every tool call and finding as the case runs.</sub></p>
 
 ## What you get
 
@@ -47,8 +47,9 @@ Three ideas, exercised end-to-end on every CI run:
 1. **A typed MCP tool surface — no `execute_shell`.** 32 narrow, schema-validated tools: 20 Rust
    DFIR tools (`case_open`, `vol_pslist`/`psscan`/`psxview`, `mft_timeline`, `evtx_query`,
    `hayabusa_scan`, `yara_scan`, `registry_query`, `prefetch_parse`, `pcap_triage`, …) + 12 Python
-   crypto/analysis tools. AGPL/GPL engines (Volatility, Hayabusa, Velociraptor) are invoked as
-   subprocesses only, so the Apache-2.0 tree stays license-clean.
+   crypto/analysis tools. Copyleft / source-available engines (Hayabusa, pandoc, tshark) and the
+   permissively licensed Volatility 3 and Velociraptor are invoked as subprocesses only, so the
+   Apache-2.0 tree stays license-clean.
 
 2. **A cryptographic chain of custody.** Hash-chained audit log → `rs_merkle` Merkle root over
    canonical-JSON tool outputs → a manifest signature (Sigstore/Rekor in production; a clearly
@@ -134,10 +135,11 @@ repo), just type:
 /verdict <path-to-evidence>
 ```
 
-The skill **bootstraps everything for you** — builds the MCP servers (`install.sh` if needed),
-brings up n8n, and prepares the SANS SIFT VM so disk images fully extract — then runs the whole
-pipeline, attempts the post-verdict n8n + grounding automation (skipped unless you've deployed the
-workflows), and prints the Verdict plus every workflow that ran (and opens the dashboard + report). You never run `install.sh`/`doctor.sh` or
+The skill **bootstraps everything for you** — builds the MCP servers (`install.sh` if needed)
+and prepares the SANS SIFT VM so disk images fully extract — then runs the whole pipeline,
+attempts the optional post-verdict n8n + grounding automation (off the default path — used only
+if n8n is already up, or set `FINDEVIL_ENABLE_N8N=1`), and prints the Verdict plus every workflow
+that ran (and opens the dashboard + report). You never run `install.sh`/`doctor.sh` or
 pass `--sift`/`--parallel` — the skill adds them. Full reference:
 [docs/using/running-verdict.md §`/verdict` skill](docs/using/running-verdict.md).
 

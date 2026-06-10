@@ -1,6 +1,6 @@
 ---
 name: verdict
-description: Turnkey end-to-end DFIR — type /verdict <evidence> and it bootstraps everything (builds the MCP servers, brings up n8n, prepares the SIFT VM) then runs the full pipeline with no flags. Use when the operator says /verdict, "run verdict", "investigate <path> end to end", "is there evil here", or wants the whole investigation + automation + report in one go. Auto-selects the SIFT VM (full forensic toolchain) so disk images fully extract, attempts post-verdict n8n + grounding automation, and surfaces the Verdict + every workflow that ran.
+description: Turnkey end-to-end DFIR — type /verdict <evidence> and it bootstraps everything (builds the MCP servers, prepares the SIFT VM) then runs the full pipeline with no flags. Use when the operator says /verdict, "run verdict", "investigate <path> end to end", "is there evil here", or wants the whole investigation + automation + report in one go. Auto-selects the SIFT VM (full forensic toolchain) so disk images fully extract, attempts post-verdict n8n + grounding automation, and surfaces the Verdict + every workflow that ran.
 ---
 
 # VERDICT — turnkey one-shot DFIR + a unified "what ran" report
@@ -30,13 +30,14 @@ and shows the dashboard + report — then reports everything that fired.
 ### 2. Bootstrap everything (no manual installs, no flags for the operator)
 - Run `bash scripts/verdict-setup.sh` and read its two stdout lines:
   `FIND_EVIL_GUEST_IP=<ip>` and `SIFT_OK=<0|1>`.
-- It builds the MCP servers (via `install.sh`) if missing, brings up n8n, and prepares the
+- It builds the MCP servers (via `install.sh`) if missing and prepares the
   SIFT VM — resolves its **current** DHCP IP (the hardcoded default is often stale), powers it
   on if it is off, and confirms the forensic toolchain (`ewfmount` etc.). The SIFT VM is where
   Volatility/Hayabusa/ewfmount/TSK live pre-installed, so this is how "install everything" is
-  satisfied without installing forensic binaries on the host.
-- Surface its progress lines to the operator. It is non-fatal: a missing n8n just means
-  automation is skipped; a missing VM falls back to local mode.
+  satisfied without installing forensic binaries on the host. (n8n is **not** brought up on the
+  default path — it is used only if already running; `FINDEVIL_ENABLE_N8N=1` starts one.)
+- Surface its progress lines to the operator. It is non-fatal: n8n is optional and off the
+  default path, so its automation is normally skipped; a missing VM falls back to local mode.
 
 ### 3. Run the full pipeline — auto-SIFT, parallel, n8n + grounding, all in one go
 The operator types only `/verdict <evidence>`; **this skill adds the right flags.**

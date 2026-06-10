@@ -106,13 +106,18 @@ coverage/
 /.playwright-mcp/
 # obsidian-mind is VENDORED into the repo as the dev/operator memory layer (no
 # longer a separate clone). See docs/runbooks/obsidian-mind-memory.md + CLAUDE.md
-# §8.5. Track the vault content; ignore derived state + heavy template marketing.
+# §8.5. Track the framework (templates, CLAUDE.md, README); the operator's OWN
+# notes — brain/ and active work — are private and must NEVER be published.
 /obsidian-mind/.obsidian/
 /obsidian-mind/node_modules/
 /obsidian-mind/obsidian-mind-demo.gif
 /obsidian-mind/README.ja.md
 /obsidian-mind/README.ko.md
 /obsidian-mind/README.zh-CN.md
+/obsidian-mind/brain/
+/obsidian-mind/work/active/*.md
+/obsidian-mind/work/archive/
+/obsidian-mind/work/incidents/
 # n8n research clones (8 repos: n8n-io/n8n, n8n-docs, czlonkowski/n8n-mcp +
 # n8n-skills, Zie619/n8n-workflows, enescingoz/awesome-n8n-templates,
 # nusquama/n8nworkflows.xyz, djeknet/n8n-master-workflows); see
@@ -155,6 +160,9 @@ coverage/
 # .claude/settings.json beside it IS committed (it's the
 # project-scoped permissions config referenced by CLAUDE.md / Spec #4).
 /.claude/scheduled_tasks.lock
+# Operator-local Claude Code session permissions (blanket allows + session state)
+# — not for publication. The project-scoped .claude/settings.json IS committed.
+/.claude/settings.local.json
 
 # Isolated dev worktrees created by superpowers:using-git-worktrees
 # during subagent-driven development. Each subdir is a sibling
