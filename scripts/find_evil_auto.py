@@ -29,7 +29,7 @@ same SHA-256 (chain of custody) but a fresh case_id and fresh manifest.
 from __future__ import annotations
 
 import argparse
-from collections import Counter
+from collections import Counter, deque
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
@@ -340,7 +340,27 @@ class SshMcpClient:
         self._lock = threading.Lock()
         self._waiters: dict[int, Queue[dict[str, Any] | None]] = {}
         self._closed = False
+        # Keep the last N stderr lines for diagnostics without unbounded growth.
+        self._stderr_tail: deque[str] = deque(maxlen=400)
         threading.Thread(target=self._reader, daemon=True).start()
+        # Drain stderr continuously. The server's stderr is a PIPE; if nothing
+        # reads it, a verbose tool (e.g. registry_query parsing a 100 MB SOFTWARE
+        # hive) fills the 64 KB pipe buffer, the server blocks on write(stderr),
+        # and — because it can no longer emit its stdout response — the whole
+        # investigation deadlocks (the reader waits on a response that never
+        # comes). Draining stderr in its own thread keeps the pipe empty so the
+        # server never blocks. See the rocba-cdrive.e01 registry-phase hang.
+        threading.Thread(target=self._drain_stderr, daemon=True).start()
+
+    def _drain_stderr(self) -> None:
+        if self.proc.stderr is None:
+            return
+        try:
+            for line in iter(self.proc.stderr.readline, ""):
+                self._stderr_tail.append(line.rstrip("\n"))
+        except (ValueError, OSError):
+            # Pipe closed underneath us during shutdown — nothing to drain.
+            return
 
     def _reader(self) -> None:
         for line in iter(self.proc.stdout.readline, ""):
@@ -457,6 +477,14 @@ class SshMcpClient:
             self.proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             self.proc.kill()
+        # Close the stdout/stderr pipes too so their fds and the reader/drain
+        # threads' file objects don't leak across a long run's many clients.
+        for stream in (self.proc.stdout, self.proc.stderr):
+            if stream and not stream.closed:
+                try:
+                    stream.close()
+                except OSError:
+                    pass
 
 
 class StdioMcpClient(SshMcpClient):
