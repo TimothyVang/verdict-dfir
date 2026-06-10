@@ -117,7 +117,7 @@ in `agent-config/TOOLS.md`.
 
 | Server | Lang | Count | Scope |
 |---|---|---|---|
-| `findevil-mcp` | Rust (`services/mcp/`) | 19 | DFIR primitives: `case_open`, disk mount/extract/unmount, evtx/mft/usnjrnl/registry/prefetch, hayabusa, vol_pslist/psscan/psxview/malfind, yara, vel_collect, sysmon/zeek/pcap. Read-only on evidence; SHA-256 every output. |
+| `findevil-mcp` | Rust (`services/mcp/`) | 20 | DFIR primitives: `case_open`, disk mount/extract/unmount, evtx/mft/usnjrnl/registry/prefetch, hayabusa, vol_pslist/psscan/psxview/malfind, yara, vel_collect, browser_history, sysmon/zeek/pcap. Read-only on evidence; SHA-256 every output. |
 | `findevil-agent-mcp` | Python (`services/agent_mcp/`) | 12 | Crypto/ACH: audit_append/verify, manifest_finalize/verify, verify_finding, detect_contradictions, judge_findings, correlate_findings. Memory: memory_remember/recall. ACP: pool_handoff. Expert: expert_miss_capture. |
 
 `.mcp.json` registers **4 additional non-product servers** — `n8n-mcp` (post-verdict automation),
