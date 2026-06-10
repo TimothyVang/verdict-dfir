@@ -577,7 +577,7 @@
         "disk/filesystem"
       ],
       "coverage_summary": "1/5 artifact classes touched; 1/5 directly available from supplied evidence",
-      "evidence_path": "/home/sansforensics/SCHARDT.dd",
+      "evidence_path": "/home/sansforensics/evidence/SCHARDT.dd",
       "evidence_type": "disk"
     },
     "expert_decision": "pending",
@@ -964,10 +964,10 @@
     "summary": "1/5 artifact classes touched; 1/5 directly available from supplied evidence",
     "touched_classes": 1
   },
-  "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+  "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
   "cryptographic_attestation": {
     "manifest_finalized_after_verdict": true,
-    "manifest_path": "/home/sansforensics/find-evil/tmp/auto-171ce33f-8732-42f2-94b0-2cd082667bd5/run.manifest.json",
+    "manifest_path": "/home/sansforensics/find-evil/tmp/auto-607e4454-dc11-4bf9-881f-3a8e0e99e2dd/run.manifest.json",
     "packet_attestation": {
       "customer_releasable": false,
       "customer_release_candidate": false,
@@ -983,9 +983,9 @@
         "f-B-prefetch-netstumblerinstaller-0-4-0-ex"
       ],
       "packet_state": "EXPERT_REVIEW_DRAFT",
-      "release_gate_sha256": "ec603472b2851ceec77116bec1cc790df9246710a19f891c6159ce8e829b33c5",
+      "release_gate_sha256": "6c7968287cb65f54f7bd93588a5a1b8de41f4b28241744931efb2ca176b22083",
       "report_qa_sha256": "7b448247f216bb61271169c078167d998ee4c4ce0235b2ed1f8632cfdd695756",
-      "verdict_packet_sha256": "5a310be564db008c1758902e0d7f3070d78853a53f9552fa546a514404ab46fd"
+      "verdict_packet_sha256": "5e558d42a2a47ea5c615801f1a90f2b17d0eae32645f450d120f62977a6e8b07"
     }
   },
   "disk_artifact_summary": {
@@ -1034,7 +1034,7 @@
     "tool_summaries": {
       "mft_timeline": [
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/mft/$MFT",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/mft/$MFT",
           "parse_errors": 0,
           "records_seen": 5000,
           "row_count": 5000,
@@ -1050,7 +1050,7 @@
       ],
       "prefetch_parse": [
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/123WASP_SETUP.EXE-333BB1F4.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/123WASP_SETUP.EXE-333BB1F4.pf",
           "executable_name": "123WASP_SETUP.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:12:54Z"
@@ -1059,7 +1059,7 @@
           "tool_call_id": "tc-005"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/30.EXE-02F7CFE8.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/30.EXE-02F7CFE8.pf",
           "executable_name": "30.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:08:54Z"
@@ -1068,7 +1068,7 @@
           "tool_call_id": "tc-006"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/A32-19.EXE-311D8B04.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/A32-19.EXE-311D8B04.pf",
           "executable_name": "A32-19.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:08:02Z"
@@ -1077,7 +1077,7 @@
           "tool_call_id": "tc-007"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/AGENT.EXE-07F13C20.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/AGENT.EXE-07F13C20.pf",
           "executable_name": "AGENT.EXE",
           "last_run_times_iso": [
             "2004-08-25T15:55:36Z"
@@ -1086,7 +1086,7 @@
           "tool_call_id": "tc-008"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/AGENTSVR.EXE-002E45AB.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/AGENTSVR.EXE-002E45AB.pf",
           "executable_name": "AGENTSVR.EXE",
           "last_run_times_iso": [
             "2004-08-25T16:20:35Z"
@@ -1095,7 +1095,7 @@
           "tool_call_id": "tc-009"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf",
           "executable_name": "CAIN.EXE",
           "last_run_times_iso": [
             "2004-08-27T15:33:03Z"
@@ -1104,7 +1104,7 @@
           "tool_call_id": "tc-010"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf",
           "executable_name": "CAIN25B45.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:05:52Z"
@@ -1113,7 +1113,7 @@
           "tool_call_id": "tc-011"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CMD.EXE-087B4001.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CMD.EXE-087B4001.pf",
           "executable_name": "CMD.EXE",
           "last_run_times_iso": [
             "2004-08-27T15:14:58Z"
@@ -1122,7 +1122,7 @@
           "tool_call_id": "tc-012"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CUTE3032.EXE-1F409A25.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CUTE3032.EXE-1F409A25.pf",
           "executable_name": "CUTE3032.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:08:37Z"
@@ -1131,7 +1131,7 @@
           "tool_call_id": "tc-013"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DAEMON_MGM.EXE-3B573ED8.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DAEMON_MGM.EXE-3B573ED8.pf",
           "executable_name": "DAEMON_MGM.EXE",
           "last_run_times_iso": [
             "2004-08-27T15:15:18Z"
@@ -1140,7 +1140,7 @@
           "tool_call_id": "tc-014"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DEFRAG.EXE-273F131E.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DEFRAG.EXE-273F131E.pf",
           "executable_name": "DEFRAG.EXE",
           "last_run_times_iso": [
             "2004-08-26T15:46:18Z"
@@ -1149,7 +1149,7 @@
           "tool_call_id": "tc-015"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DFRGNTFS.EXE-269967DF.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DFRGNTFS.EXE-269967DF.pf",
           "executable_name": "DFRGNTFS.EXE",
           "last_run_times_iso": [
             "2004-08-26T15:46:18Z"
@@ -1158,7 +1158,7 @@
           "tool_call_id": "tc-016"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DRWTSN32.EXE-2B4B52AC.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DRWTSN32.EXE-2B4B52AC.pf",
           "executable_name": "DRWTSN32.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:25:44Z"
@@ -1167,7 +1167,7 @@
           "tool_call_id": "tc-017"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DUMPREP.EXE-1B46F901.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DUMPREP.EXE-1B46F901.pf",
           "executable_name": "DUMPREP.EXE",
           "last_run_times_iso": [
             "2004-08-25T15:25:47Z"
@@ -1176,7 +1176,7 @@
           "tool_call_id": "tc-018"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DWWIN.EXE-30875ADC.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DWWIN.EXE-30875ADC.pf",
           "executable_name": "DWWIN.EXE",
           "last_run_times_iso": [
             "2004-08-25T15:25:50Z"
@@ -1185,7 +1185,7 @@
           "tool_call_id": "tc-019"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf",
           "executable_name": "ETHEREAL-SETUP-0.10.6.EXE",
           "last_run_times_iso": [
             "2004-08-27T15:28:36Z"
@@ -1194,7 +1194,7 @@
           "tool_call_id": "tc-020"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf",
           "executable_name": "ETHEREAL.EXE",
           "last_run_times_iso": [
             "2004-08-27T15:34:54Z"
@@ -1203,7 +1203,7 @@
           "tool_call_id": "tc-021"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/EXPLORER.EXE-082F38A9.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/EXPLORER.EXE-082F38A9.pf",
           "executable_name": "EXPLORER.EXE",
           "last_run_times_iso": [
             "2004-08-19T23:04:12Z"
@@ -1212,7 +1212,7 @@
           "tool_call_id": "tc-022"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/FABER TOYS.EXE-286A3C88.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/FABER TOYS.EXE-286A3C88.pf",
           "executable_name": "FABER TOYS.EXE",
           "last_run_times_iso": [
             "2004-08-25T15:27:27Z"
@@ -1221,7 +1221,7 @@
           "tool_call_id": "tc-023"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/FABERTOYS_FULLSETUP.EXE-316A62F8.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/FABERTOYS_FULLSETUP.EXE-316A62F8.pf",
           "executable_name": "FABERTOYS_FULLSETUP.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:06:45Z"
@@ -1230,7 +1230,7 @@
           "tool_call_id": "tc-024"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/FTINIT.EXE-0441E9C9.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/FTINIT.EXE-0441E9C9.pf",
           "executable_name": "FTINIT.EXE",
           "last_run_times_iso": [
             "2004-08-25T15:26:55Z"
@@ -1239,7 +1239,7 @@
           "tool_call_id": "tc-025"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/GLJ15.TMP-2FFB7B2A.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/GLJ15.TMP-2FFB7B2A.pf",
           "executable_name": "GLJ15.TMP",
           "last_run_times_iso": [
             "2004-08-20T15:13:11Z"
@@ -1248,7 +1248,7 @@
           "tool_call_id": "tc-026"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/HELPSVC.EXE-2878DDA2.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/HELPSVC.EXE-2878DDA2.pf",
           "executable_name": "HELPSVC.EXE",
           "last_run_times_iso": [
             "2004-08-26T15:51:43Z"
@@ -1257,7 +1257,7 @@
           "tool_call_id": "tc-027"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/HH.EXE-2D1A70B3.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/HH.EXE-2D1A70B3.pf",
           "executable_name": "HH.EXE",
           "last_run_times_iso": [
             "2004-08-27T15:12:18Z"
@@ -1266,7 +1266,7 @@
           "tool_call_id": "tc-028"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ICWCONN1.EXE-24884676.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ICWCONN1.EXE-24884676.pf",
           "executable_name": "ICWCONN1.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:25:32Z"
@@ -1275,7 +1275,7 @@
           "tool_call_id": "tc-029"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/IE4UINIT.EXE-169A5A39.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/IE4UINIT.EXE-169A5A39.pf",
           "executable_name": "IE4UINIT.EXE",
           "last_run_times_iso": [
             "2004-08-19T23:04:14Z"
@@ -1284,7 +1284,7 @@
           "tool_call_id": "tc-030"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/IEXPLORE.EXE-27122324.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/IEXPLORE.EXE-27122324.pf",
           "executable_name": "IEXPLORE.EXE",
           "last_run_times_iso": [
             "2004-08-27T15:42:41Z"
@@ -1293,7 +1293,7 @@
           "tool_call_id": "tc-031"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/INS6.TMP-22CFFAF5.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/INS6.TMP-22CFFAF5.pf",
           "executable_name": "INS6.TMP",
           "last_run_times_iso": [
             "2004-08-20T15:06:46Z"
@@ -1302,7 +1302,7 @@
           "tool_call_id": "tc-032"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/IRSETUP.EXE-2E1C7790.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/IRSETUP.EXE-2E1C7790.pf",
           "executable_name": "IRSETUP.EXE",
           "last_run_times_iso": [
             "2004-08-25T15:55:32Z"
@@ -1311,7 +1311,7 @@
           "tool_call_id": "tc-033"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LALSETUP250.EXE-36C95679.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LALSETUP250.EXE-36C95679.pf",
           "executable_name": "LALSETUP250.EXE",
           "last_run_times_iso": [
             "2004-08-25T15:55:26Z"
@@ -1320,7 +1320,7 @@
           "tool_call_id": "tc-034"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOGON.SCR-151EFAEA.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOGON.SCR-151EFAEA.pf",
           "executable_name": "LOGON.SCR",
           "last_run_times_iso": [
             "2004-08-26T15:25:03Z"
@@ -1329,7 +1329,7 @@
           "tool_call_id": "tc-035"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOGONUI.EXE-0AF22957.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOGONUI.EXE-0AF22957.pf",
           "executable_name": "LOGONUI.EXE",
           "last_run_times_iso": [
             "2004-08-27T15:46:17Z"
@@ -1338,7 +1338,7 @@
           "tool_call_id": "tc-036"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOOKATHOST.EXE-34BB6F8B.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOOKATHOST.EXE-34BB6F8B.pf",
           "executable_name": "LOOKATHOST.EXE",
           "last_run_times_iso": [
             "2004-08-25T15:56:33Z"
@@ -1347,7 +1347,7 @@
           "tool_call_id": "tc-037"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf",
           "executable_name": "LOOKATLAN.EXE",
           "last_run_times_iso": [
             "2004-08-26T15:06:14Z"
@@ -1356,7 +1356,7 @@
           "tool_call_id": "tc-038"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LSASS.EXE-20DB6D1B.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LSASS.EXE-20DB6D1B.pf",
           "executable_name": "LSASS.EXE",
           "last_run_times_iso": [
             "2004-08-19T22:53:05Z"
@@ -1365,7 +1365,7 @@
           "tool_call_id": "tc-039"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf",
           "executable_name": "MIRC.EXE",
           "last_run_times_iso": [
             "2004-08-25T16:20:34Z"
@@ -1374,7 +1374,7 @@
           "tool_call_id": "tc-040"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf",
           "executable_name": "MIRC612.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:09:46Z"
@@ -1383,7 +1383,7 @@
           "tool_call_id": "tc-041"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSIEXEC.EXE-2F8A8CAE.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSIEXEC.EXE-2F8A8CAE.pf",
           "executable_name": "MSIEXEC.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:12:05Z"
@@ -1392,7 +1392,7 @@
           "tool_call_id": "tc-042"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSIMN.EXE-38BA891D.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSIMN.EXE-38BA891D.pf",
           "executable_name": "MSIMN.EXE",
           "last_run_times_iso": [
             "2004-08-20T21:13:23Z"
@@ -1401,7 +1401,7 @@
           "tool_call_id": "tc-043"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSMSGS.EXE-2B6052DE.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSMSGS.EXE-2B6052DE.pf",
           "executable_name": "MSMSGS.EXE",
           "last_run_times_iso": [
             "2004-08-19T23:05:04Z"
@@ -1410,7 +1410,7 @@
           "tool_call_id": "tc-044"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSOOBE.EXE-30411B02.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSOOBE.EXE-30411B02.pf",
           "executable_name": "MSOOBE.EXE",
           "last_run_times_iso": [
             "2004-08-19T22:53:19Z"
@@ -1419,7 +1419,7 @@
           "tool_call_id": "tc-045"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSTINIT.EXE-39813B24.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSTINIT.EXE-39813B24.pf",
           "executable_name": "MSTINIT.EXE",
           "last_run_times_iso": [
             "2004-08-19T23:05:03Z"
@@ -1428,7 +1428,7 @@
           "tool_call_id": "tc-046"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf",
           "executable_name": "NETSTUMBLER.EXE",
           "last_run_times_iso": [
             "2004-08-27T15:12:35Z"
@@ -1437,7 +1437,7 @@
           "tool_call_id": "tc-047"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf",
           "executable_name": "NETSTUMBLERINSTALLER_0_4_0.EX",
           "last_run_times_iso": [
             "2004-08-27T15:12:11Z"
@@ -1446,7 +1446,7 @@
           "tool_call_id": "tc-048"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NOTEPAD.EXE-336351A9.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NOTEPAD.EXE-336351A9.pf",
           "executable_name": "NOTEPAD.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:50:40Z"
@@ -1455,7 +1455,7 @@
           "tool_call_id": "tc-049"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NPF_MGM.EXE-189CE5D1.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NPF_MGM.EXE-189CE5D1.pf",
           "executable_name": "NPF_MGM.EXE",
           "last_run_times_iso": [
             "2004-08-27T15:15:17Z"
@@ -1464,7 +1464,7 @@
           "tool_call_id": "tc-050"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NTOSBOOT-B00DFAAD.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NTOSBOOT-B00DFAAD.pf",
           "executable_name": "NTOSBOOT",
           "last_run_times_iso": [
             "2004-08-27T15:08:04Z"
@@ -1473,7 +1473,7 @@
           "tool_call_id": "tc-051"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/PING.EXE-31216D26.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/PING.EXE-31216D26.pf",
           "executable_name": "PING.EXE",
           "last_run_times_iso": [
             "2004-08-25T15:23:53Z"
@@ -1482,7 +1482,7 @@
           "tool_call_id": "tc-052"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/POWERTOYSETUP.EXE-312B2326.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/POWERTOYSETUP.EXE-312B2326.pf",
           "executable_name": "POWERTOYSETUP.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:11:56Z"
@@ -1491,7 +1491,7 @@
           "tool_call_id": "tc-053"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/REGSVR32.EXE-25EEFE2F.pf",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/REGSVR32.EXE-25EEFE2F.pf",
           "executable_name": "REGSVR32.EXE",
           "last_run_times_iso": [
             "2004-08-20T15:13:06Z"
@@ -1502,7 +1502,7 @@
       ],
       "registry_query": [
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Default User/NTUSER.DAT",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Default User/NTUSER.DAT",
           "entries_returned": 1,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
           "keys_visited": 1,
@@ -1513,7 +1513,7 @@
           "tool_call_id": "tc-055"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Default User/NTUSER.DAT",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Default User/NTUSER.DAT",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
           "keys_visited": 0,
@@ -1522,7 +1522,7 @@
           "tool_call_id": "tc-056"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
           "keys_visited": 0,
@@ -1531,7 +1531,7 @@
           "tool_call_id": "tc-057"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
           "keys_visited": 0,
@@ -1540,7 +1540,7 @@
           "tool_call_id": "tc-058"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/NTUSER.DAT",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/NTUSER.DAT",
           "entries_returned": 1,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
           "keys_visited": 1,
@@ -1551,7 +1551,7 @@
           "tool_call_id": "tc-059"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/NTUSER.DAT",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/NTUSER.DAT",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
           "keys_visited": 0,
@@ -1560,7 +1560,7 @@
           "tool_call_id": "tc-060"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
           "keys_visited": 0,
@@ -1569,7 +1569,7 @@
           "tool_call_id": "tc-061"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
           "keys_visited": 0,
@@ -1578,7 +1578,7 @@
           "tool_call_id": "tc-062"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
           "entries_returned": 1,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
           "keys_visited": 1,
@@ -1589,7 +1589,7 @@
           "tool_call_id": "tc-063"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
           "keys_visited": 0,
@@ -1598,7 +1598,7 @@
           "tool_call_id": "tc-064"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
           "keys_visited": 0,
@@ -1607,7 +1607,7 @@
           "tool_call_id": "tc-065"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
           "keys_visited": 0,
@@ -1616,7 +1616,7 @@
           "tool_call_id": "tc-066"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/NTUSER.DAT",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/NTUSER.DAT",
           "entries_returned": 1,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
           "keys_visited": 1,
@@ -1627,7 +1627,7 @@
           "tool_call_id": "tc-067"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/NTUSER.DAT",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/NTUSER.DAT",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
           "keys_visited": 0,
@@ -1636,7 +1636,7 @@
           "tool_call_id": "tc-068"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/ntuser.dat",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/ntuser.dat",
           "entries_returned": 1,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
           "keys_visited": 1,
@@ -1647,7 +1647,7 @@
           "tool_call_id": "tc-069"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/ntuser.dat",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/ntuser.dat",
           "entries_returned": 0,
           "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
           "keys_visited": 0,
@@ -1656,7 +1656,7 @@
           "tool_call_id": "tc-070"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/sam",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/sam",
           "entries_returned": 1,
           "key_path": "",
           "keys_visited": 1,
@@ -1667,7 +1667,7 @@
           "tool_call_id": "tc-071"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/security",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/security",
           "entries_returned": 1,
           "key_path": "",
           "keys_visited": 1,
@@ -1678,7 +1678,7 @@
           "tool_call_id": "tc-072"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/software",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/software",
           "entries_returned": 1,
           "key_path": "Microsoft\\Windows\\CurrentVersion\\Run",
           "keys_visited": 1,
@@ -1689,7 +1689,7 @@
           "tool_call_id": "tc-073"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/software",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/software",
           "entries_returned": 1,
           "key_path": "Microsoft\\Windows\\CurrentVersion\\RunOnce",
           "keys_visited": 1,
@@ -1700,7 +1700,7 @@
           "tool_call_id": "tc-074"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/software",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/software",
           "entries_returned": 1,
           "key_path": "Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options",
           "keys_visited": 1,
@@ -1711,7 +1711,7 @@
           "tool_call_id": "tc-075"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/system",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/system",
           "entries_returned": 1,
           "key_path": "ControlSet001\\Services",
           "keys_visited": 1,
@@ -1722,7 +1722,7 @@
           "tool_call_id": "tc-076"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/SAM",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/SAM",
           "entries_returned": 1,
           "key_path": "",
           "keys_visited": 1,
@@ -1733,7 +1733,7 @@
           "tool_call_id": "tc-077"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/SECURITY",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/SECURITY",
           "entries_returned": 1,
           "key_path": "",
           "keys_visited": 1,
@@ -1744,7 +1744,7 @@
           "tool_call_id": "tc-078"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/software",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/software",
           "entries_returned": 1,
           "key_path": "Microsoft\\Windows\\CurrentVersion\\Run",
           "keys_visited": 1,
@@ -1755,7 +1755,7 @@
           "tool_call_id": "tc-079"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/software",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/software",
           "entries_returned": 1,
           "key_path": "Microsoft\\Windows\\CurrentVersion\\RunOnce",
           "keys_visited": 1,
@@ -1766,7 +1766,7 @@
           "tool_call_id": "tc-080"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/software",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/software",
           "entries_returned": 1,
           "key_path": "Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options",
           "keys_visited": 1,
@@ -1777,7 +1777,7 @@
           "tool_call_id": "tc-081"
         },
         {
-          "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/system",
+          "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/system",
           "entries_returned": 1,
           "key_path": "ControlSet001\\Services",
           "keys_visited": 1,
@@ -1905,7 +1905,7 @@
     }
   ],
   "evidence_inventory": null,
-  "evidence_path": "/home/sansforensics/SCHARDT.dd",
+  "evidence_path": "/home/sansforensics/evidence/SCHARDT.dd",
   "evidence_type": "disk",
   "evtx_summary": null,
   "expert_doctrine": {
@@ -2059,18 +2059,18 @@
     },
     "feedback_items": [],
     "referenced_hashes": {
-      "release_gate_sha256": "ec603472b2851ceec77116bec1cc790df9246710a19f891c6159ce8e829b33c5",
+      "release_gate_sha256": "6c7968287cb65f54f7bd93588a5a1b8de41f4b28241744931efb2ca176b22083",
       "report_qa_sha256": "7b448247f216bb61271169c078167d998ee4c4ce0235b2ed1f8632cfdd695756",
       "run_manifest_sha256": null,
-      "verdict_packet_sha256": "5a310be564db008c1758902e0d7f3070d78853a53f9552fa546a514404ab46fd"
+      "verdict_packet_sha256": "5e558d42a2a47ea5c615801f1a90f2b17d0eae32645f450d120f62977a6e8b07"
     },
     "referenced_paths": {
-      "run_manifest": "/home/sansforensics/find-evil/tmp/auto-171ce33f-8732-42f2-94b0-2cd082667bd5/run.manifest.json",
-      "verdict": "/home/sansforensics/find-evil/tmp/auto-171ce33f-8732-42f2-94b0-2cd082667bd5/verdict.json"
+      "run_manifest": "/home/sansforensics/find-evil/tmp/auto-607e4454-dc11-4bf9-881f-3a8e0e99e2dd/run.manifest.json",
+      "verdict": "/home/sansforensics/find-evil/tmp/auto-607e4454-dc11-4bf9-881f-3a8e0e99e2dd/verdict.json"
     },
     "release_blockers": [
       "ATT&CK coverage includes blind spots that require expert awareness.",
-      "customer release requires manifest_finalize signer=sigstore; stub signatures are dev/offline only",
+      "customer release requires an effective manifest_finalize signer=sigstore; stub signatures (including a sigstore request that degraded to stub) are dev/offline only",
       "explicit human expert approval is required before customer release",
       "finalized manifest signature metadata must be present before customer release",
       "manifest_verify must pass before customer release"
@@ -2092,15 +2092,15 @@
   "findings": [
     {
       "artifact_offset": null,
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf",
-      "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf",
+      "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
       "confidence": "CONFIRMED",
       "derived_from": [
         "tc-010",
         "tc-085"
       ],
       "description": "cain.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
-      "event_id": "c2249da2-36b4-4b86-95f7-5a0067194d68",
+      "event_id": "38c6160f-89dd-4f6b-8c6c-f2e57dc1e610",
       "event_type": "Finding",
       "finding_id": "f-B-prefetch-cain-exe",
       "host": "CAIN.EXE-23D61279.pf",
@@ -2110,38 +2110,38 @@
       "replay_actual_sha256": "b2e14c91aaa2765b77fde1fb865b6c1e4b75e0787616a84d2b05e8eca48682a3",
       "replay_artifact": {
         "actual_sha256": "b2e14c91aaa2765b77fde1fb865b6c1e4b75e0787616a84d2b05e8eca48682a3",
-        "arguments_sha256": "727bb6d6461727715743e4aea8660b2a0b12ec7f5b2ac3d57b973b2a727e1b43",
+        "arguments_sha256": "79e31bed2de9835488b3842979e189a4522bc820fa31686fcc57f78c863f8f13",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "b2e14c91aaa2765b77fde1fb865b6c1e4b75e0787616a84d2b05e8eca48682a3",
         "matched": true,
-        "replay_tool_call_id": "1fcf4868-af84-42aa-a768-78dcb1ad58b2",
+        "replay_tool_call_id": "ebbc7a6a-7220-4b1e-be41-efae82121d89",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-010",
         "tool_name": "prefetch_parse",
-        "wall_clock_ms": 2
+        "wall_clock_ms": 1
       },
       "replay_error": null,
       "replay_expected_sha256": "b2e14c91aaa2765b77fde1fb865b6c1e4b75e0787616a84d2b05e8eca48682a3",
       "replay_matched": true,
-      "replay_record_sha256": "63efd3e7e64697b38f27bfd657980399e5af58530f3414b36f1fe1a6682ad9dd",
+      "replay_record_sha256": "f2ba64f28ccfa3e508d9f60963b1ef5f1a78a81f719e05df340430b04badecab",
       "replay_tool_name": "prefetch_parse",
       "tool_call_id": "tc-010",
-      "ts": "2026-06-09T14:07:46Z",
+      "ts": "2026-06-10T14:44:23Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf",
-      "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf",
+      "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
       "confidence": "CONFIRMED",
       "derived_from": [
         "tc-011",
         "tc-085"
       ],
       "description": "cain25b45.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
-      "event_id": "01f22cef-4165-43d3-8bfc-17820851e840",
+      "event_id": "f81fe1a0-d376-4086-8242-5d962165d762",
       "event_type": "Finding",
       "finding_id": "f-B-prefetch-cain25b45-exe",
       "host": "CAIN25B45.EXE-056F3A6E.pf",
@@ -2151,13 +2151,13 @@
       "replay_actual_sha256": "76ae3ea8345e5c99d0702f42724c6b5d97b996c7cf1a4f21ab40171765af2a5f",
       "replay_artifact": {
         "actual_sha256": "76ae3ea8345e5c99d0702f42724c6b5d97b996c7cf1a4f21ab40171765af2a5f",
-        "arguments_sha256": "26843d5877ac79058cf0a4419c2c0c0545a2a5716c9722fc2f5346230db72128",
+        "arguments_sha256": "4ab882f0b194fb672abf3939b992433a1d429b60b1dbc5c12839f752c8392b2f",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "76ae3ea8345e5c99d0702f42724c6b5d97b996c7cf1a4f21ab40171765af2a5f",
         "matched": true,
-        "replay_tool_call_id": "1594d49d-58af-4164-bb81-61c9db1901a8",
+        "replay_tool_call_id": "978e3fe0-37d6-4b35-8a64-43d6b6f547c3",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-011",
         "tool_name": "prefetch_parse",
@@ -2166,23 +2166,23 @@
       "replay_error": null,
       "replay_expected_sha256": "76ae3ea8345e5c99d0702f42724c6b5d97b996c7cf1a4f21ab40171765af2a5f",
       "replay_matched": true,
-      "replay_record_sha256": "c39e3669e5976ec5c2cb877d49127a96a861faa773c96352fef27c34fe42137e",
+      "replay_record_sha256": "728582140309b43fed49da8764da06ca6a77347a3a5ee1bf665bf266d023d145",
       "replay_tool_name": "prefetch_parse",
       "tool_call_id": "tc-011",
-      "ts": "2026-06-09T14:07:46Z",
+      "ts": "2026-06-10T14:44:23Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf",
-      "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf",
+      "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
       "confidence": "CONFIRMED",
       "derived_from": [
         "tc-020",
         "tc-085"
       ],
       "description": "ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
-      "event_id": "bc6fafca-c6a2-4104-ae43-7ee7056dc075",
+      "event_id": "67f8e85e-0b83-4174-8103-e22de1e6e0ec",
       "event_type": "Finding",
       "finding_id": "f-B-prefetch-ethereal-setup-0-10-6-exe",
       "host": "ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf",
@@ -2192,13 +2192,13 @@
       "replay_actual_sha256": "eba2574fcda278c78c3ff0a661f9c561dce39f4de1faaa409c190bb2b4862c9b",
       "replay_artifact": {
         "actual_sha256": "eba2574fcda278c78c3ff0a661f9c561dce39f4de1faaa409c190bb2b4862c9b",
-        "arguments_sha256": "8ac9f3c6e8209aff80e763a3649ddae645bb562ac96d9cfdeaa3250b1126ef13",
+        "arguments_sha256": "87d58fe62714d269c4c3963a378014155472defcd903f9cc43d824b15afb6f72",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "eba2574fcda278c78c3ff0a661f9c561dce39f4de1faaa409c190bb2b4862c9b",
         "matched": true,
-        "replay_tool_call_id": "b870d20c-224d-41ff-9b43-506ba0536de7",
+        "replay_tool_call_id": "61ec3d1d-7eab-4a33-97f2-b9a20a6c6a21",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-020",
         "tool_name": "prefetch_parse",
@@ -2207,23 +2207,23 @@
       "replay_error": null,
       "replay_expected_sha256": "eba2574fcda278c78c3ff0a661f9c561dce39f4de1faaa409c190bb2b4862c9b",
       "replay_matched": true,
-      "replay_record_sha256": "746569890006e31b999a5bd23dbf207105ef69aa120694ad4f97c7a08b764cd0",
+      "replay_record_sha256": "4e3cd1dac0ff94d0dc1bb6e334a2332917101cf5c02cb0a75fef74384a8e69cf",
       "replay_tool_name": "prefetch_parse",
       "tool_call_id": "tc-020",
-      "ts": "2026-06-09T14:07:46Z",
+      "ts": "2026-06-10T14:44:23Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf",
-      "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf",
+      "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
       "confidence": "CONFIRMED",
       "derived_from": [
         "tc-021",
         "tc-085"
       ],
       "description": "ethereal.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
-      "event_id": "4bddf7ff-7f05-4451-9d79-cbd5f4f2824e",
+      "event_id": "3a11e19f-a486-44f2-a69c-e23032e960fe",
       "event_type": "Finding",
       "finding_id": "f-B-prefetch-ethereal-exe",
       "host": "ETHEREAL.EXE-1C148EEF.pf",
@@ -2233,38 +2233,38 @@
       "replay_actual_sha256": "cf2fcec98191056334ece6aabcd0b07325cf86154817764b7c219a979fcd6558",
       "replay_artifact": {
         "actual_sha256": "cf2fcec98191056334ece6aabcd0b07325cf86154817764b7c219a979fcd6558",
-        "arguments_sha256": "58346a753ed5a0b14e78782f1e582db5e8c8c228524dd34df61a4f71f4daeec9",
+        "arguments_sha256": "df0dde5ccd38433d75763c548fd38019590b0e131f910cc8b0ff7c6abcfae151",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "cf2fcec98191056334ece6aabcd0b07325cf86154817764b7c219a979fcd6558",
         "matched": true,
-        "replay_tool_call_id": "badfc143-2bc4-43df-b95f-a4aa098f8c5f",
+        "replay_tool_call_id": "304fe8b4-5526-41d2-8b01-1cc8f259419e",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-021",
         "tool_name": "prefetch_parse",
-        "wall_clock_ms": 2
+        "wall_clock_ms": 1
       },
       "replay_error": null,
       "replay_expected_sha256": "cf2fcec98191056334ece6aabcd0b07325cf86154817764b7c219a979fcd6558",
       "replay_matched": true,
-      "replay_record_sha256": "bfd7098e2b8f4af35c42e65a965fddeb103fcaa2d11a5d4ff03cf4dd6c0317cf",
+      "replay_record_sha256": "beda96daa790cd080501c75ce8aa64898ede3039e46ac1fa40bcfd65e07b121c",
       "replay_tool_name": "prefetch_parse",
       "tool_call_id": "tc-021",
-      "ts": "2026-06-09T14:07:46Z",
+      "ts": "2026-06-10T14:44:23Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf",
-      "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf",
+      "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
       "confidence": "CONFIRMED",
       "derived_from": [
         "tc-038",
         "tc-085"
       ],
       "description": "lookatlan.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
-      "event_id": "9aa866a5-2075-4692-b10e-cb4029d39e7b",
+      "event_id": "0ceef434-b7a0-4888-bffb-7278cfb1d767",
       "event_type": "Finding",
       "finding_id": "f-B-prefetch-lookatlan-exe",
       "host": "LOOKATLAN.EXE-1F991DD9.pf",
@@ -2274,38 +2274,38 @@
       "replay_actual_sha256": "9a10d59745b30f7505526f3a70df1456cde8a57ea320f7cce029b12da5354336",
       "replay_artifact": {
         "actual_sha256": "9a10d59745b30f7505526f3a70df1456cde8a57ea320f7cce029b12da5354336",
-        "arguments_sha256": "9d51048efd6db0cd6c59081fd08b7643f185e52d87839510880fc5626002c9d9",
+        "arguments_sha256": "fcb67a8bab7e6abafa57e45a4fbfaffbffe5d7f225233f3cdbb244dff408be60",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "9a10d59745b30f7505526f3a70df1456cde8a57ea320f7cce029b12da5354336",
         "matched": true,
-        "replay_tool_call_id": "c62eba7c-daed-4be8-9310-c47961de48dc",
+        "replay_tool_call_id": "888c6852-52ff-4791-85a6-574a0375c9d0",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-038",
         "tool_name": "prefetch_parse",
-        "wall_clock_ms": 1
+        "wall_clock_ms": 2
       },
       "replay_error": null,
       "replay_expected_sha256": "9a10d59745b30f7505526f3a70df1456cde8a57ea320f7cce029b12da5354336",
       "replay_matched": true,
-      "replay_record_sha256": "d2a6ec387c5ffb0ba3e9c28970110f2843d399d9dcbb7385f3947414e2a1d2dd",
+      "replay_record_sha256": "07b512d1c86cc0357a2eb5b291d70668cf034f5746e902b2da1087ee24819e4e",
       "replay_tool_name": "prefetch_parse",
       "tool_call_id": "tc-038",
-      "ts": "2026-06-09T14:07:46Z",
+      "ts": "2026-06-10T14:44:23Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf",
-      "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf",
+      "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
       "confidence": "CONFIRMED",
       "derived_from": [
         "tc-040",
         "tc-085"
       ],
       "description": "mirc.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
-      "event_id": "637cb31f-d4fe-4c8f-9206-bbc7d8c5415e",
+      "event_id": "0d12e015-a447-4566-912e-01fa234ca28f",
       "event_type": "Finding",
       "finding_id": "f-B-prefetch-mirc-exe",
       "host": "MIRC.EXE-0661EC22.pf",
@@ -2315,38 +2315,38 @@
       "replay_actual_sha256": "b035f2359a0523514f899087a12e82e76e1222752d7b1f11dc7d64ebb12ca5c5",
       "replay_artifact": {
         "actual_sha256": "b035f2359a0523514f899087a12e82e76e1222752d7b1f11dc7d64ebb12ca5c5",
-        "arguments_sha256": "94c181ba37a1850a436f5354dc1b188239f62c6fbc8a38724c47c379f76e308f",
+        "arguments_sha256": "a8f27f3d846f0e642d8a0798bab51cc951751e47eeb47277e9cdd1fb5a2dbacb",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "b035f2359a0523514f899087a12e82e76e1222752d7b1f11dc7d64ebb12ca5c5",
         "matched": true,
-        "replay_tool_call_id": "cb596a32-07a3-434c-9aa2-16f194f49029",
+        "replay_tool_call_id": "bb6fb291-ce16-4e83-af23-65719f48ca62",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-040",
         "tool_name": "prefetch_parse",
-        "wall_clock_ms": 3
+        "wall_clock_ms": 1
       },
       "replay_error": null,
       "replay_expected_sha256": "b035f2359a0523514f899087a12e82e76e1222752d7b1f11dc7d64ebb12ca5c5",
       "replay_matched": true,
-      "replay_record_sha256": "149fa143ff2bf25b2ddac178931d49e80e7ee3c1af1cd3ad7935856e383e1949",
+      "replay_record_sha256": "313f88637e291e18a3cc59e43c92756639f763618982fa1258c96090d78be0df",
       "replay_tool_name": "prefetch_parse",
       "tool_call_id": "tc-040",
-      "ts": "2026-06-09T14:07:46Z",
+      "ts": "2026-06-10T14:44:23Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf",
-      "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf",
+      "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
       "confidence": "CONFIRMED",
       "derived_from": [
         "tc-041",
         "tc-085"
       ],
       "description": "mirc612.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
-      "event_id": "5b71075e-b46f-4059-ad42-c49cbb98df8a",
+      "event_id": "288b40b3-48c0-4b30-b30f-61ed153d0ced",
       "event_type": "Finding",
       "finding_id": "f-B-prefetch-mirc612-exe",
       "host": "MIRC612.EXE-02791C37.pf",
@@ -2356,13 +2356,13 @@
       "replay_actual_sha256": "b36f1b611dd33dba3acfd57925c07bcea028f8c85c59893cb64983b25e85bf89",
       "replay_artifact": {
         "actual_sha256": "b36f1b611dd33dba3acfd57925c07bcea028f8c85c59893cb64983b25e85bf89",
-        "arguments_sha256": "b37209dde4db8ed0af274015a28e9474b79584c1b06356f31575cc480528d1c6",
+        "arguments_sha256": "4a521dec2c4ad86c8bfcc4953518cc03bda1651e1e498cddd9b9b8fb6190f6bd",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "b36f1b611dd33dba3acfd57925c07bcea028f8c85c59893cb64983b25e85bf89",
         "matched": true,
-        "replay_tool_call_id": "6cf94191-f0ae-474f-9e47-d37397ec00d7",
+        "replay_tool_call_id": "d9132433-d36c-41a2-b0a6-a9bc7c7cc44c",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-041",
         "tool_name": "prefetch_parse",
@@ -2371,23 +2371,23 @@
       "replay_error": null,
       "replay_expected_sha256": "b36f1b611dd33dba3acfd57925c07bcea028f8c85c59893cb64983b25e85bf89",
       "replay_matched": true,
-      "replay_record_sha256": "3c6b6a2dc32ca63a166ccf425234df2b81c87607616ef2539d25818e14231d53",
+      "replay_record_sha256": "5713705cb63a107b5f2a3fd947dcd8ae60462da3f7ca10bfc01bea343128f227",
       "replay_tool_name": "prefetch_parse",
       "tool_call_id": "tc-041",
-      "ts": "2026-06-09T14:07:46Z",
+      "ts": "2026-06-10T14:44:23Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf",
-      "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf",
+      "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
       "confidence": "CONFIRMED",
       "derived_from": [
         "tc-047",
         "tc-085"
       ],
       "description": "netstumbler.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
-      "event_id": "602b7f91-c21a-40de-93d3-c93119c877b4",
+      "event_id": "8344cb0d-6936-4feb-a2a5-ba5c1968f62e",
       "event_type": "Finding",
       "finding_id": "f-B-prefetch-netstumbler-exe",
       "host": "NETSTUMBLER.EXE-0BFEE568.pf",
@@ -2397,37 +2397,37 @@
       "replay_actual_sha256": "c912d93baf9bf81ce4deb9b8b0a94862e2edcdfa5fdb7b4be32d9e3d1d13019b",
       "replay_artifact": {
         "actual_sha256": "c912d93baf9bf81ce4deb9b8b0a94862e2edcdfa5fdb7b4be32d9e3d1d13019b",
-        "arguments_sha256": "531b84996e39bf6899c79d67f25964d4bdf4bcdb0dd0712ace0569eab69e6132",
+        "arguments_sha256": "5f90b95c78a2471566317053a1a362e9f2861cadca7948897c926b236ec7b2a2",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "c912d93baf9bf81ce4deb9b8b0a94862e2edcdfa5fdb7b4be32d9e3d1d13019b",
         "matched": true,
-        "replay_tool_call_id": "c206efe1-f0f4-4934-aec4-9c5e4867bcd1",
+        "replay_tool_call_id": "be091e30-3e9c-4057-8ee9-144ad070211b",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-047",
         "tool_name": "prefetch_parse",
-        "wall_clock_ms": 1
+        "wall_clock_ms": 3
       },
       "replay_error": null,
       "replay_expected_sha256": "c912d93baf9bf81ce4deb9b8b0a94862e2edcdfa5fdb7b4be32d9e3d1d13019b",
       "replay_matched": true,
-      "replay_record_sha256": "ecd80a325be842eb5f224d6f9748e1b7276b59960559ad4ec047535052cd7403",
+      "replay_record_sha256": "ae10a946401dbdd989930ad8dbe814f5d882bca2955277b31020b7b2f3c152bb",
       "replay_tool_name": "prefetch_parse",
       "tool_call_id": "tc-047",
-      "ts": "2026-06-09T14:07:46Z",
+      "ts": "2026-06-10T14:44:23Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf",
-      "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf",
+      "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
       "confidence": "HYPOTHESIS",
       "derived_from": [
         "tc-048"
       ],
       "description": "hypothesis: Windows Prefetch contains NETSTUMBLERINSTALLER_0_4_0.EX with run_count=1; NetStumbler wireless discovery tool is a NIST Hacking Case triage lead. Treat this as a disk-artifact lead that needs corroboration before any standalone activity claim.",
-      "event_id": "8c27a5b3-b775-47e5-9531-571f0ce32892",
+      "event_id": "b9855ba2-c0eb-4717-9ccf-2fc77f54cc5c",
       "event_type": "Finding",
       "finding_id": "f-B-prefetch-netstumblerinstaller-0-4-0-ex",
       "host": "NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf",
@@ -2437,25 +2437,25 @@
       "replay_actual_sha256": "80850ecc397c7f70d417ea436915819bcf2279578d4d2b7435b5cb1d06cf646f",
       "replay_artifact": {
         "actual_sha256": "80850ecc397c7f70d417ea436915819bcf2279578d4d2b7435b5cb1d06cf646f",
-        "arguments_sha256": "6191c93e02cbb4c373bb5a37125f6b534ee482812b3b9c57c01f8974c3e9dbb4",
+        "arguments_sha256": "fea39b0fa5dd9be4830f4842b922812d93ed49eec1908e1072e75945099637cf",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "80850ecc397c7f70d417ea436915819bcf2279578d4d2b7435b5cb1d06cf646f",
         "matched": true,
-        "replay_tool_call_id": "906d06c2-cabd-44e3-a7ab-d1af150b24ea",
+        "replay_tool_call_id": "63b72aa2-423a-477a-b412-6c6622ef8b32",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-048",
         "tool_name": "prefetch_parse",
-        "wall_clock_ms": 2
+        "wall_clock_ms": 1
       },
       "replay_error": null,
       "replay_expected_sha256": "80850ecc397c7f70d417ea436915819bcf2279578d4d2b7435b5cb1d06cf646f",
       "replay_matched": true,
-      "replay_record_sha256": "d7b60d8bdde88e4d842999b2b91168410ed387994ea1f69321b45d603dba4d21",
+      "replay_record_sha256": "fd10c562a7b9ff0e2c61477593f07ef5fa05cc01a8f98596197c2ed41ed69f3c",
       "replay_tool_name": "prefetch_parse",
       "tool_call_id": "tc-048",
-      "ts": "2026-06-09T14:07:46Z",
+      "ts": "2026-06-10T14:44:23Z",
       "verifier_action": "approved"
     }
   ],
@@ -2466,9 +2466,62 @@
       "INFERRED": 0
     },
     "contradictions_surfaced": 0,
+    "correlation_outcomes": [
+      {
+        "action": "kept",
+        "finding_id": "f-B-prefetch-cain-exe",
+        "reason": "execution corroborated in-finding by prefetch+registry pair or EDR telemetry"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-prefetch-cain25b45-exe",
+        "reason": "execution corroborated in-finding by prefetch+registry pair or EDR telemetry"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-prefetch-ethereal-setup-0-10-6-exe",
+        "reason": "execution corroborated in-finding by prefetch+registry pair or EDR telemetry"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-prefetch-ethereal-exe",
+        "reason": "execution corroborated in-finding by prefetch+registry pair or EDR telemetry"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-prefetch-lookatlan-exe",
+        "reason": "execution corroborated in-finding by prefetch+registry pair or EDR telemetry"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-prefetch-mirc-exe",
+        "reason": "execution corroborated in-finding by prefetch+registry pair or EDR telemetry"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-prefetch-mirc612-exe",
+        "reason": "execution corroborated in-finding by prefetch+registry pair or EDR telemetry"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-prefetch-netstumbler-exe",
+        "reason": "execution corroborated in-finding by prefetch+registry pair or EDR telemetry"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-prefetch-netstumblerinstaller-0-4-0-ex",
+        "reason": "non-execution claim"
+      }
+    ],
     "soul_md_downgraded": 0,
     "soul_md_kept": 9,
-    "total_merged": 9
+    "total_merged": 9,
+    "verifier_redispatches": {}
+  },
+  "heartbeat": {
+    "consecutive_failures": 0,
+    "escalated": false,
+    "terminated_partial": false
   },
   "host_groups": [
     {
@@ -12068,7 +12121,7 @@
         "source_record_ref": "disk_extract_artifacts:573",
         "summary": "supported disk artifacts extracted for typed parsing",
         "timestamp_source": "source timestamp",
-        "timestamp_utc": "2026-06-09T14:07:45Z",
+        "timestamp_utc": "2026-06-10T14:44:22Z",
         "tool_call_id": "tc-003"
       }
     ],
@@ -12108,7 +12161,7 @@
     "ready_for_customer_pdf": false,
     "release_blockers": [
       "ATT&CK coverage includes blind spots that require expert awareness.",
-      "customer release requires manifest_finalize signer=sigstore; stub signatures are dev/offline only",
+      "customer release requires an effective manifest_finalize signer=sigstore; stub signatures (including a sigstore request that degraded to stub) are dev/offline only",
       "explicit human expert approval is required before customer release",
       "finalized manifest signature metadata must be present before customer release",
       "manifest_verify must pass before customer release"
@@ -12116,6 +12169,7 @@
     "report_render_allowed": true,
     "signer": "stub",
     "signer_customer_release_ok": false,
+    "signer_effective": "stub",
     "warning_checks": [
       "attack_coverage_blind_spots"
     ]
@@ -12503,7 +12557,7 @@
       "ATT&CK coverage includes blind spots that require expert awareness."
     ]
   },
-  "run_id": "auto-1781014059",
+  "run_id": "auto-1781102649",
   "source_bibliography": [
     {
       "accessed_utc": "2026-05-04T00:00:00Z",
@@ -12614,7 +12668,7 @@
       "url": "https://github.com/mandiant/capa"
     }
   ],
-  "started_at": "2026-06-09T14:07:39Z",
+  "started_at": "2026-06-10T14:44:09Z",
   "timeline_summary": {
     "artifact_classes": [
       "disk/filesystem",
@@ -12628,15 +12682,15 @@
       "timeline.csv"
     ],
     "first_ts": "1601-01-01T00:00:00Z",
-    "last_ts": "2026-06-09T14:07:45Z"
+    "last_ts": "2026-06-10T14:44:22Z"
   },
   "tool_calls": [
     {
       "arguments": {
-        "image_path": "/home/sansforensics/SCHARDT.dd",
-        "label": "sansforensics"
+        "image_path": "/home/sansforensics/evidence/SCHARDT.dd",
+        "label": "evidence"
       },
-      "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+      "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
       "evidence_type": "disk",
       "output_hash": "65e2002fed0b286f49541c7e97dcec0dda913d51a063ceeed86782bdacda2312",
       "size_bytes": 4871301120,
@@ -12645,39 +12699,39 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "image_path": "/home/sansforensics/SCHARDT.dd",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "image_path": "/home/sansforensics/evidence/SCHARDT.dd",
         "mode": "auto"
       },
-      "artifact_path": "/home/sansforensics/SCHARDT.dd",
-      "fs_root": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/mounts/disk-mount-36a7f079-2f58-46cd-829d-95cf24c9f4a2",
-      "mount_id": "disk-mount-36a7f079-2f58-46cd-829d-95cf24c9f4a2",
-      "output_hash": "4fe2a06ddb6c7ee3df80c97781108d854747c1edb9bbce2c15d9883a37330470",
+      "artifact_path": "/home/sansforensics/evidence/SCHARDT.dd",
+      "fs_root": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/mounts/disk-mount-bdb09e20-8b89-432c-aada-1401f3774cba",
+      "mount_id": "disk-mount-bdb09e20-8b89-432c-aada-1401f3774cba",
+      "output_hash": "e507fc886ed6258c28b29629ef6d4084a84f8bb51147cce552afe85eb265a6d7",
       "status": "mounted",
       "tool": "disk_mount",
       "tool_call_id": "tc-002"
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
         "limit": 500,
-        "mount_id": "disk-mount-36a7f079-2f58-46cd-829d-95cf24c9f4a2"
+        "mount_id": "disk-mount-bdb09e20-8b89-432c-aada-1401f3774cba"
       },
       "artifact_count": 98,
       "artifacts_skipped_oversize": 0,
       "max_artifact_bytes": 536870912,
-      "mount_id": "disk-mount-36a7f079-2f58-46cd-829d-95cf24c9f4a2",
-      "output_hash": "2065eb93d66b668c7331f2e2537646accd636055e69a8dba44de601759b1dc29",
+      "mount_id": "disk-mount-bdb09e20-8b89-432c-aada-1401f3774cba",
+      "output_hash": "a1a2267b8556e5150736d83b58e1cf20c3d73fa172b5284eb4200912873690cc",
       "tool": "disk_extract_artifacts",
       "tool_call_id": "tc-003"
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
         "limit": 5000,
-        "mft_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/mft/$MFT"
+        "mft_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/mft/$MFT"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/mft/$MFT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/mft/$MFT",
       "output_hash": "9dbbbd01e4952495fd9f0bc779170d26147405b6385e882e031bc280c10204e7",
       "parse_errors": 0,
       "records_seen": 5000,
@@ -12687,10 +12741,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/123WASP_SETUP.EXE-333BB1F4.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/123WASP_SETUP.EXE-333BB1F4.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/123WASP_SETUP.EXE-333BB1F4.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/123WASP_SETUP.EXE-333BB1F4.pf",
       "executable_name": "123WASP_SETUP.EXE",
       "output_hash": "7aa8e6f533a6ae738ff835a03fa584cfb049f688a3b62450b0dc176bfa8aac59",
       "run_count": 1,
@@ -12699,10 +12753,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/30.EXE-02F7CFE8.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/30.EXE-02F7CFE8.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/30.EXE-02F7CFE8.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/30.EXE-02F7CFE8.pf",
       "executable_name": "30.EXE",
       "output_hash": "c3c67d32050cd5628a2396e3f4f939bb53a28d16f89ee111ef2213f37611233c",
       "run_count": 1,
@@ -12711,10 +12765,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/A32-19.EXE-311D8B04.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/A32-19.EXE-311D8B04.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/A32-19.EXE-311D8B04.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/A32-19.EXE-311D8B04.pf",
       "executable_name": "A32-19.EXE",
       "output_hash": "0e453e9a8668b928ac56b878d5d2376b2e4aef113da819fe839e48c3667c8f55",
       "run_count": 1,
@@ -12723,10 +12777,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/AGENT.EXE-07F13C20.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/AGENT.EXE-07F13C20.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/AGENT.EXE-07F13C20.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/AGENT.EXE-07F13C20.pf",
       "executable_name": "AGENT.EXE",
       "output_hash": "a0d9c501dab5e2d7fd1ac98c3a0f85850e8cdd7c2ea5d431e810d4f358074e60",
       "run_count": 2,
@@ -12735,10 +12789,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/AGENTSVR.EXE-002E45AB.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/AGENTSVR.EXE-002E45AB.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/AGENTSVR.EXE-002E45AB.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/AGENTSVR.EXE-002E45AB.pf",
       "executable_name": "AGENTSVR.EXE",
       "output_hash": "d8fc9ebc32cf4cc22d3eb3d2aa24df0008dcf266548fc1d306da766f72bb4502",
       "run_count": 4,
@@ -12747,10 +12801,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf",
       "executable_name": "CAIN.EXE",
       "output_hash": "b2e14c91aaa2765b77fde1fb865b6c1e4b75e0787616a84d2b05e8eca48682a3",
       "run_count": 2,
@@ -12759,10 +12813,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf",
       "executable_name": "CAIN25B45.EXE",
       "output_hash": "76ae3ea8345e5c99d0702f42724c6b5d97b996c7cf1a4f21ab40171765af2a5f",
       "run_count": 1,
@@ -12771,10 +12825,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CMD.EXE-087B4001.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CMD.EXE-087B4001.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CMD.EXE-087B4001.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CMD.EXE-087B4001.pf",
       "executable_name": "CMD.EXE",
       "output_hash": "114fff24b0ccffdc443754243f4358e40bacc3760d08b6702bc018a0eba49875",
       "run_count": 2,
@@ -12783,10 +12837,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CUTE3032.EXE-1F409A25.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CUTE3032.EXE-1F409A25.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CUTE3032.EXE-1F409A25.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CUTE3032.EXE-1F409A25.pf",
       "executable_name": "CUTE3032.EXE",
       "output_hash": "d00731eac477ddaf333f97cdb2bfba2ae27fb39c0311cfdc7218469671b879c0",
       "run_count": 1,
@@ -12795,10 +12849,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DAEMON_MGM.EXE-3B573ED8.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DAEMON_MGM.EXE-3B573ED8.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DAEMON_MGM.EXE-3B573ED8.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DAEMON_MGM.EXE-3B573ED8.pf",
       "executable_name": "DAEMON_MGM.EXE",
       "output_hash": "9ccee9287b972b45a9de7a9197901c8824c045dd37fca549efb52a08172d7f1a",
       "run_count": 3,
@@ -12807,10 +12861,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DEFRAG.EXE-273F131E.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DEFRAG.EXE-273F131E.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DEFRAG.EXE-273F131E.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DEFRAG.EXE-273F131E.pf",
       "executable_name": "DEFRAG.EXE",
       "output_hash": "caefe057dc9b394d096cbe40d88fceb424ddeba6f9cd4a889539f068eceaa15e",
       "run_count": 1,
@@ -12819,10 +12873,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DFRGNTFS.EXE-269967DF.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DFRGNTFS.EXE-269967DF.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DFRGNTFS.EXE-269967DF.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DFRGNTFS.EXE-269967DF.pf",
       "executable_name": "DFRGNTFS.EXE",
       "output_hash": "8f370d7a5063474fa4c6dc4a1298ca6f1001b49d313400d3c1775c733dc0534b",
       "run_count": 1,
@@ -12831,10 +12885,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DRWTSN32.EXE-2B4B52AC.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DRWTSN32.EXE-2B4B52AC.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DRWTSN32.EXE-2B4B52AC.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DRWTSN32.EXE-2B4B52AC.pf",
       "executable_name": "DRWTSN32.EXE",
       "output_hash": "3ef011c0474aeb3f6dfb48c27761caf699046a065d15d67339c06735e6a827d1",
       "run_count": 1,
@@ -12843,10 +12897,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DUMPREP.EXE-1B46F901.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DUMPREP.EXE-1B46F901.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DUMPREP.EXE-1B46F901.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DUMPREP.EXE-1B46F901.pf",
       "executable_name": "DUMPREP.EXE",
       "output_hash": "e3561ec131f236b5990acd3eee8aeee8f6aac51fc4fe662741d208693393b15b",
       "run_count": 1,
@@ -12855,10 +12909,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DWWIN.EXE-30875ADC.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DWWIN.EXE-30875ADC.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/DWWIN.EXE-30875ADC.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/DWWIN.EXE-30875ADC.pf",
       "executable_name": "DWWIN.EXE",
       "output_hash": "d471d52725ac3ddc26190bff97f4589d333dd20cd4b8c5f6a7026ba06330bdb5",
       "run_count": 2,
@@ -12867,10 +12921,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf",
       "executable_name": "ETHEREAL-SETUP-0.10.6.EXE",
       "output_hash": "eba2574fcda278c78c3ff0a661f9c561dce39f4de1faaa409c190bb2b4862c9b",
       "run_count": 1,
@@ -12879,10 +12933,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf",
       "executable_name": "ETHEREAL.EXE",
       "output_hash": "cf2fcec98191056334ece6aabcd0b07325cf86154817764b7c219a979fcd6558",
       "run_count": 1,
@@ -12891,10 +12945,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/EXPLORER.EXE-082F38A9.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/EXPLORER.EXE-082F38A9.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/EXPLORER.EXE-082F38A9.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/EXPLORER.EXE-082F38A9.pf",
       "executable_name": "EXPLORER.EXE",
       "output_hash": "a7f441ff1792b00ba6a51b80e2d552740cef804bb245b1297905265fc6e53e5c",
       "run_count": 1,
@@ -12903,10 +12957,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/FABER TOYS.EXE-286A3C88.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/FABER TOYS.EXE-286A3C88.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/FABER TOYS.EXE-286A3C88.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/FABER TOYS.EXE-286A3C88.pf",
       "executable_name": "FABER TOYS.EXE",
       "output_hash": "2dc4d79a36f00e7d70d2d59ddf2fe5fa7bd6c7c25a470619050f64ac1560636b",
       "run_count": 2,
@@ -12915,10 +12969,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/FABERTOYS_FULLSETUP.EXE-316A62F8.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/FABERTOYS_FULLSETUP.EXE-316A62F8.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/FABERTOYS_FULLSETUP.EXE-316A62F8.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/FABERTOYS_FULLSETUP.EXE-316A62F8.pf",
       "executable_name": "FABERTOYS_FULLSETUP.EXE",
       "output_hash": "be9547f5dccf15d1c3fc548332fab931e358457483f7aa041cd7d94d6be21667",
       "run_count": 1,
@@ -12927,10 +12981,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/FTINIT.EXE-0441E9C9.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/FTINIT.EXE-0441E9C9.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/FTINIT.EXE-0441E9C9.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/FTINIT.EXE-0441E9C9.pf",
       "executable_name": "FTINIT.EXE",
       "output_hash": "224e99531cd859066eceeef39d9d4e25135994d261abdd6658e428ad8f81635a",
       "run_count": 1,
@@ -12939,10 +12993,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/GLJ15.TMP-2FFB7B2A.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/GLJ15.TMP-2FFB7B2A.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/GLJ15.TMP-2FFB7B2A.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/GLJ15.TMP-2FFB7B2A.pf",
       "executable_name": "GLJ15.TMP",
       "output_hash": "ef00873262ccf95b4d6ae7292c9377a20601c5418f3593fd072e4ced4493b45d",
       "run_count": 8,
@@ -12951,10 +13005,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/HELPSVC.EXE-2878DDA2.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/HELPSVC.EXE-2878DDA2.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/HELPSVC.EXE-2878DDA2.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/HELPSVC.EXE-2878DDA2.pf",
       "executable_name": "HELPSVC.EXE",
       "output_hash": "23afe9e15a4f00912adae75446fb4c91ddb89eac479c38ad05204aeee7d226b3",
       "run_count": 1,
@@ -12963,10 +13017,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/HH.EXE-2D1A70B3.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/HH.EXE-2D1A70B3.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/HH.EXE-2D1A70B3.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/HH.EXE-2D1A70B3.pf",
       "executable_name": "HH.EXE",
       "output_hash": "51baef1bd97a0fdbdf2d3524614aa52ac49a98420c795ae78f13715f04c827e6",
       "run_count": 1,
@@ -12975,10 +13029,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ICWCONN1.EXE-24884676.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ICWCONN1.EXE-24884676.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ICWCONN1.EXE-24884676.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ICWCONN1.EXE-24884676.pf",
       "executable_name": "ICWCONN1.EXE",
       "output_hash": "6dfa118c33c2108cfa4347d125148b8d199c166697b7cd11c67d477a043fd7fc",
       "run_count": 1,
@@ -12987,10 +13041,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/IE4UINIT.EXE-169A5A39.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/IE4UINIT.EXE-169A5A39.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/IE4UINIT.EXE-169A5A39.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/IE4UINIT.EXE-169A5A39.pf",
       "executable_name": "IE4UINIT.EXE",
       "output_hash": "d1f7ee94672d1b0e969e7c85837e19600b3d1feae105ae58f97606b98f97640e",
       "run_count": 1,
@@ -12999,10 +13053,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/IEXPLORE.EXE-27122324.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/IEXPLORE.EXE-27122324.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/IEXPLORE.EXE-27122324.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/IEXPLORE.EXE-27122324.pf",
       "executable_name": "IEXPLORE.EXE",
       "output_hash": "31fd7b9192f57bc7a46b66e95e52acb76afc9463af80d244b2ffce185aee4f47",
       "run_count": 18,
@@ -13011,10 +13065,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/INS6.TMP-22CFFAF5.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/INS6.TMP-22CFFAF5.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/INS6.TMP-22CFFAF5.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/INS6.TMP-22CFFAF5.pf",
       "executable_name": "INS6.TMP",
       "output_hash": "97a89e46802d9a87953d75d59454c05eb7cd6ebfb4f1f696c4f9c082f9a4b61c",
       "run_count": 1,
@@ -13023,10 +13077,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/IRSETUP.EXE-2E1C7790.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/IRSETUP.EXE-2E1C7790.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/IRSETUP.EXE-2E1C7790.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/IRSETUP.EXE-2E1C7790.pf",
       "executable_name": "IRSETUP.EXE",
       "output_hash": "b0694e74dd234e9720d3211d5e5151bc8152e807f999018020d5ca6e1835ce1a",
       "run_count": 1,
@@ -13035,10 +13089,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LALSETUP250.EXE-36C95679.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LALSETUP250.EXE-36C95679.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LALSETUP250.EXE-36C95679.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LALSETUP250.EXE-36C95679.pf",
       "executable_name": "LALSETUP250.EXE",
       "output_hash": "49c5b71f5584c68202db61071a58472fa22bfee62a8ff31b8a6ad7adb52f60a1",
       "run_count": 1,
@@ -13047,10 +13101,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOGON.SCR-151EFAEA.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOGON.SCR-151EFAEA.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOGON.SCR-151EFAEA.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOGON.SCR-151EFAEA.pf",
       "executable_name": "LOGON.SCR",
       "output_hash": "8a483512dd25eb1032c99468f0a7d423a72bc22d0de93264aae74cce05e1b631",
       "run_count": 4,
@@ -13059,10 +13113,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOGONUI.EXE-0AF22957.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOGONUI.EXE-0AF22957.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOGONUI.EXE-0AF22957.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOGONUI.EXE-0AF22957.pf",
       "executable_name": "LOGONUI.EXE",
       "output_hash": "0aa64ee390b512746e944fa8fab358231a6d1f1ac1f10b81f8ef61d4ecad5bbf",
       "run_count": 7,
@@ -13071,10 +13125,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOOKATHOST.EXE-34BB6F8B.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOOKATHOST.EXE-34BB6F8B.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOOKATHOST.EXE-34BB6F8B.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOOKATHOST.EXE-34BB6F8B.pf",
       "executable_name": "LOOKATHOST.EXE",
       "output_hash": "e4f10aa93c95a1757318f6d4c0f3e75681b3942c4c43d95eaa330656f28677a3",
       "run_count": 1,
@@ -13083,10 +13137,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf",
       "executable_name": "LOOKATLAN.EXE",
       "output_hash": "9a10d59745b30f7505526f3a70df1456cde8a57ea320f7cce029b12da5354336",
       "run_count": 2,
@@ -13095,10 +13149,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LSASS.EXE-20DB6D1B.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LSASS.EXE-20DB6D1B.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LSASS.EXE-20DB6D1B.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LSASS.EXE-20DB6D1B.pf",
       "executable_name": "LSASS.EXE",
       "output_hash": "9994cdc2bf325c94e4c7eb0218e9037aad0bd8b5cbf5d98d2fc84f39763320eb",
       "run_count": 1,
@@ -13107,10 +13161,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf",
       "executable_name": "MIRC.EXE",
       "output_hash": "b035f2359a0523514f899087a12e82e76e1222752d7b1f11dc7d64ebb12ca5c5",
       "run_count": 3,
@@ -13119,10 +13173,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf",
       "executable_name": "MIRC612.EXE",
       "output_hash": "b36f1b611dd33dba3acfd57925c07bcea028f8c85c59893cb64983b25e85bf89",
       "run_count": 1,
@@ -13131,10 +13185,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSIEXEC.EXE-2F8A8CAE.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSIEXEC.EXE-2F8A8CAE.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSIEXEC.EXE-2F8A8CAE.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSIEXEC.EXE-2F8A8CAE.pf",
       "executable_name": "MSIEXEC.EXE",
       "output_hash": "824e412a4e1fe6848aa99356ec7229bb000d5d96961a8bff7b6bd827e3807b60",
       "run_count": 3,
@@ -13143,10 +13197,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSIMN.EXE-38BA891D.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSIMN.EXE-38BA891D.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSIMN.EXE-38BA891D.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSIMN.EXE-38BA891D.pf",
       "executable_name": "MSIMN.EXE",
       "output_hash": "88360a6043552496f56b1b822f87eb521fcd969b5ac8196be3db1af97c0dd320",
       "run_count": 1,
@@ -13155,10 +13209,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSMSGS.EXE-2B6052DE.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSMSGS.EXE-2B6052DE.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSMSGS.EXE-2B6052DE.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSMSGS.EXE-2B6052DE.pf",
       "executable_name": "MSMSGS.EXE",
       "output_hash": "c819b697cc74619cfd7477a11eab389abdd739658e7beaf0392c8dd14c3e21ce",
       "run_count": 1,
@@ -13167,10 +13221,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSOOBE.EXE-30411B02.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSOOBE.EXE-30411B02.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSOOBE.EXE-30411B02.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSOOBE.EXE-30411B02.pf",
       "executable_name": "MSOOBE.EXE",
       "output_hash": "5d03a8bf03bb6ea3dad6bc7b657567ca89184fbc2dd127151ddb45b37080a04b",
       "run_count": 1,
@@ -13179,10 +13233,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSTINIT.EXE-39813B24.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSTINIT.EXE-39813B24.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MSTINIT.EXE-39813B24.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MSTINIT.EXE-39813B24.pf",
       "executable_name": "MSTINIT.EXE",
       "output_hash": "09bcf1896b0ac3c85f749e6214fe2b1de408b6a37be68bf77501c77efc82b11e",
       "run_count": 1,
@@ -13191,10 +13245,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf",
       "executable_name": "NETSTUMBLER.EXE",
       "output_hash": "c912d93baf9bf81ce4deb9b8b0a94862e2edcdfa5fdb7b4be32d9e3d1d13019b",
       "run_count": 1,
@@ -13203,10 +13257,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf",
       "executable_name": "NETSTUMBLERINSTALLER_0_4_0.EX",
       "output_hash": "80850ecc397c7f70d417ea436915819bcf2279578d4d2b7435b5cb1d06cf646f",
       "run_count": 1,
@@ -13215,10 +13269,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NOTEPAD.EXE-336351A9.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NOTEPAD.EXE-336351A9.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NOTEPAD.EXE-336351A9.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NOTEPAD.EXE-336351A9.pf",
       "executable_name": "NOTEPAD.EXE",
       "output_hash": "567b543e1acfdac3e2954d2a4fb831dbe2fb8fdae23c30587bc4e07168730263",
       "run_count": 2,
@@ -13227,10 +13281,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NPF_MGM.EXE-189CE5D1.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NPF_MGM.EXE-189CE5D1.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NPF_MGM.EXE-189CE5D1.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NPF_MGM.EXE-189CE5D1.pf",
       "executable_name": "NPF_MGM.EXE",
       "output_hash": "7aaf8d33c3b0bd3e3adcc633f5f6c492233bc0efdaf68366c343dcc310d7f3f3",
       "run_count": 3,
@@ -13239,10 +13293,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NTOSBOOT-B00DFAAD.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NTOSBOOT-B00DFAAD.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NTOSBOOT-B00DFAAD.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NTOSBOOT-B00DFAAD.pf",
       "executable_name": "NTOSBOOT",
       "output_hash": "166bffc06276b83dd8450fea3ee7069ed7be2475f3504412822ddbe8358ee0d6",
       "run_count": 4,
@@ -13251,10 +13305,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/PING.EXE-31216D26.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/PING.EXE-31216D26.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/PING.EXE-31216D26.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/PING.EXE-31216D26.pf",
       "executable_name": "PING.EXE",
       "output_hash": "387e528249f046e78187f9664bf85ae1975620ad5ce373718f6d0287784661cc",
       "run_count": 1,
@@ -13263,10 +13317,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/POWERTOYSETUP.EXE-312B2326.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/POWERTOYSETUP.EXE-312B2326.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/POWERTOYSETUP.EXE-312B2326.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/POWERTOYSETUP.EXE-312B2326.pf",
       "executable_name": "POWERTOYSETUP.EXE",
       "output_hash": "42fed338eec4938ba378be6567f5dadf09f1f6bc05e8f30411524ffee23ced65",
       "run_count": 1,
@@ -13275,10 +13329,10 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "prefetch_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/REGSVR32.EXE-25EEFE2F.pf"
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "prefetch_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/REGSVR32.EXE-25EEFE2F.pf"
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/REGSVR32.EXE-25EEFE2F.pf",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/REGSVR32.EXE-25EEFE2F.pf",
       "executable_name": "REGSVR32.EXE",
       "output_hash": "2fbf30c711143c9dea088e0b7163630ec45a654c7e1ba1a33eb11c869e216511",
       "run_count": 3,
@@ -13287,13 +13341,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Default User/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Default User/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Default User/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Default User/NTUSER.DAT",
       "entries_returned": 1,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
       "keys_visited": 1,
@@ -13304,13 +13358,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Default User/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Default User/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Default User/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Default User/NTUSER.DAT",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
       "keys_visited": 0,
@@ -13321,13 +13375,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
       "keys_visited": 0,
@@ -13338,13 +13392,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
       "keys_visited": 0,
@@ -13355,13 +13409,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/NTUSER.DAT",
       "entries_returned": 1,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
       "keys_visited": 1,
@@ -13372,13 +13426,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/NTUSER.DAT",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
       "keys_visited": 0,
@@ -13389,13 +13443,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
       "keys_visited": 0,
@@ -13406,13 +13460,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
       "keys_visited": 0,
@@ -13423,13 +13477,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
       "entries_returned": 1,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
       "keys_visited": 1,
@@ -13440,13 +13494,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
       "keys_visited": 0,
@@ -13457,13 +13511,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
       "keys_visited": 0,
@@ -13474,13 +13528,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/Local Settings/Application Data/Microsoft/Windows/UsrClass.dat",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
       "keys_visited": 0,
@@ -13491,13 +13545,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/NTUSER.DAT",
       "entries_returned": 1,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
       "keys_visited": 1,
@@ -13508,13 +13562,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/NTUSER.DAT",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
       "keys_visited": 0,
@@ -13525,13 +13579,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/ntuser.dat",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/ntuser.dat",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/ntuser.dat",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/ntuser.dat",
       "entries_returned": 1,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
       "keys_visited": 1,
@@ -13542,13 +13596,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/ntuser.dat",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/ntuser.dat",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/ntuser.dat",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/ntuser.dat",
       "entries_returned": 0,
       "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
       "keys_visited": 0,
@@ -13559,13 +13613,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/sam",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/sam",
         "key_path": "",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/sam",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/sam",
       "entries_returned": 1,
       "key_path": "",
       "keys_visited": 1,
@@ -13576,13 +13630,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/security",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/security",
         "key_path": "",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/security",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/security",
       "entries_returned": 1,
       "key_path": "",
       "keys_visited": 1,
@@ -13593,13 +13647,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/software",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/software",
         "key_path": "Microsoft\\Windows\\CurrentVersion\\Run",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/software",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/software",
       "entries_returned": 1,
       "key_path": "Microsoft\\Windows\\CurrentVersion\\Run",
       "keys_visited": 1,
@@ -13610,13 +13664,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/software",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/software",
         "key_path": "Microsoft\\Windows\\CurrentVersion\\RunOnce",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/software",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/software",
       "entries_returned": 1,
       "key_path": "Microsoft\\Windows\\CurrentVersion\\RunOnce",
       "keys_visited": 1,
@@ -13627,13 +13681,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/software",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/software",
         "key_path": "Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/software",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/software",
       "entries_returned": 1,
       "key_path": "Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options",
       "keys_visited": 1,
@@ -13644,13 +13698,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/system",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/system",
         "key_path": "ControlSet001\\Services",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/system",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/system",
       "entries_returned": 1,
       "key_path": "ControlSet001\\Services",
       "keys_visited": 1,
@@ -13661,13 +13715,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/SAM",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/SAM",
         "key_path": "",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/SAM",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/SAM",
       "entries_returned": 1,
       "key_path": "",
       "keys_visited": 1,
@@ -13678,13 +13732,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/SECURITY",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/SECURITY",
         "key_path": "",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/SECURITY",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/SECURITY",
       "entries_returned": 1,
       "key_path": "",
       "keys_visited": 1,
@@ -13695,13 +13749,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/software",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/software",
         "key_path": "Microsoft\\Windows\\CurrentVersion\\Run",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/software",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/software",
       "entries_returned": 1,
       "key_path": "Microsoft\\Windows\\CurrentVersion\\Run",
       "keys_visited": 1,
@@ -13712,13 +13766,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/software",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/software",
         "key_path": "Microsoft\\Windows\\CurrentVersion\\RunOnce",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/software",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/software",
       "entries_returned": 1,
       "key_path": "Microsoft\\Windows\\CurrentVersion\\RunOnce",
       "keys_visited": 1,
@@ -13729,13 +13783,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/software",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/software",
         "key_path": "Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/software",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/software",
       "entries_returned": 1,
       "key_path": "Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options",
       "keys_visited": 1,
@@ -13746,13 +13800,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/system",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/system",
         "key_path": "ControlSet001\\Services",
         "limit": 200,
         "recursive": false
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/system32/config/system",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/system32/config/system",
       "entries_returned": 1,
       "key_path": "ControlSet001\\Services",
       "keys_visited": 1,
@@ -13763,13 +13817,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Default User/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Default User/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist",
         "limit": 500,
         "recursive": true
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Default User/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Default User/NTUSER.DAT",
       "entries_returned": 0,
       "key_path": "UserAssist",
       "output_hash": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
@@ -13778,13 +13832,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist",
         "limit": 500,
         "recursive": true
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/LocalService/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/LocalService/NTUSER.DAT",
       "entries_returned": 0,
       "key_path": "UserAssist",
       "output_hash": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
@@ -13793,13 +13847,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist",
         "limit": 500,
         "recursive": true
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
       "entries_returned": 5,
       "key_path": "UserAssist",
       "output_hash": "93d0a7858a3ca0b85e93189c91b6d34cc27d9bdde56d87a78d69d7b2bb430aa3",
@@ -13808,13 +13862,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/NTUSER.DAT",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/NTUSER.DAT",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist",
         "limit": 500,
         "recursive": true
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/Documents and Settings/NetworkService/NTUSER.DAT",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/Documents and Settings/NetworkService/NTUSER.DAT",
       "entries_returned": 0,
       "key_path": "UserAssist",
       "output_hash": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
@@ -13823,13 +13877,13 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
-        "hive_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/ntuser.dat",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
+        "hive_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/ntuser.dat",
         "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist",
         "limit": 500,
         "recursive": true
       },
-      "artifact_path": "/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/registry/WINDOWS/repair/ntuser.dat",
+      "artifact_path": "/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/registry/WINDOWS/repair/ntuser.dat",
       "entries_returned": 0,
       "key_path": "UserAssist",
       "output_hash": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
@@ -13838,12 +13892,12 @@
     },
     {
       "arguments": {
-        "case_id": "7a5ed45e-5880-4f83-8c07-9fded49f385f",
+        "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
         "mode": "auto",
-        "mount_id": "disk-mount-36a7f079-2f58-46cd-829d-95cf24c9f4a2"
+        "mount_id": "disk-mount-bdb09e20-8b89-432c-aada-1401f3774cba"
       },
-      "mount_id": "disk-mount-36a7f079-2f58-46cd-829d-95cf24c9f4a2",
-      "output_hash": "eeaabdf7310e7ae662214b8d0684ce886d1d7dc657cb9f9fca93ccfb09d8f8ce",
+      "mount_id": "disk-mount-bdb09e20-8b89-432c-aada-1401f3774cba",
+      "output_hash": "cdc43dbed9401eb906040f6e45ead907f86ef12ee1e68f4fba8d40a93eaf33d7",
       "status": "unmounted",
       "tool": "disk_unmount",
       "tool_call_id": "tc-088"

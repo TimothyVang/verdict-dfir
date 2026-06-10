@@ -4,18 +4,18 @@
 
 [DFIR at machine speed · sigstore-signed chain of custody]{.tagline}
 
-**Case ID:** `7a5ed45e-5880-4f83-8c07-9fded49f385f`
-**Run ID:** `auto-1781014059`
-**Started:** 2026-06-09T14:07:39Z
-**Finalized:** 2026-06-09T14:07:47Z
-**Evidence:** `/home/sansforensics/SCHARDT.dd`
+**Case ID:** `782d9a9b-b783-4dee-81cb-a98e11677013`
+**Run ID:** `auto-1781102649`
+**Started:** 2026-06-10T14:44:09Z
+**Finalized:** 2026-06-10T14:44:23Z
+**Evidence:** `/home/sansforensics/evidence/SCHARDT.dd`
 **Verdict:** **SUSPICIOUS**
 
 > **Cryptographic attestation:**
-> Merkle root `d2b2ffabd5ba52f66eb7913cbe7a3f2b5ab474af8bd0ff9ee2722143448e42cf`
-> Audit log final hash `9d63ca27985737c11737f1d58beb651519e3e30a98bd57fbacbec7a2fbf50b1d`
-> Sigstore signature SHA-256 `6371fa9272f1b2e9a301b8ee4b327b2b3e370784251b69abd86af93b5403a3b2`
-> Cert fingerprint `dc8201db142803e8761ef3d946015413b8cce435e7bfc7c390449b176f85d807`
+> Merkle root `3c89e39b42710ff33653df9b3bab036e9d96691f62cabc5bf82090d369d22120`
+> Audit log final hash `1936fbb2105c78643786b6764ac4bc2ec9259e4fc873405044be50c638e06425`
+> Sigstore signature SHA-256 `ccd360bcee958c378dff7e66daffb3aa302a44201b85e19862368f6134296078`
+> Cert fingerprint `bb6201bf2784861f6b28d5de8ce8d4a2cb80b83620a7ca7fa27c0ec298f636c1`
 
 ---
 
@@ -268,7 +268,7 @@ chain-of-custody appendices.
 cain.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-010`
-- artifact: `/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf`
+- artifact: `/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
 ### Finding 2 — confidence: CONFIRMED, pool: B, MITRE: T1588.002, replay: exact_match (match)
@@ -276,7 +276,7 @@ cain.exe executed on this host: Windows Prefetch records its execution and the U
 cain25b45.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-011`
-- artifact: `/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf`
+- artifact: `/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
 ### Finding 3 — confidence: CONFIRMED, pool: B, MITRE: T1040, replay: exact_match (match)
@@ -284,7 +284,7 @@ cain25b45.exe executed on this host: Windows Prefetch records its execution and 
 ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-020`
-- artifact: `/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf`
+- artifact: `/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
 ### Finding 4 — confidence: CONFIRMED, pool: B, MITRE: T1040, replay: exact_match (match)
@@ -292,7 +292,7 @@ ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch records its ex
 ethereal.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-021`
-- artifact: `/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf`
+- artifact: `/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
 ### Finding 5 — confidence: CONFIRMED, pool: B, MITRE: T1046, replay: exact_match (match)
@@ -300,7 +300,7 @@ ethereal.exe executed on this host: Windows Prefetch records its execution and t
 lookatlan.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-038`
-- artifact: `/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf`
+- artifact: `/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
 ### Finding 6 — confidence: CONFIRMED, pool: B, MITRE: T1071.001, replay: exact_match (match)
@@ -308,7 +308,7 @@ lookatlan.exe executed on this host: Windows Prefetch records its execution and 
 mirc.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-040`
-- artifact: `/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf`
+- artifact: `/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
 ### Finding 7 — confidence: CONFIRMED, pool: B, MITRE: T1071.001, replay: exact_match (match)
@@ -316,7 +316,7 @@ mirc.exe executed on this host: Windows Prefetch records its execution and the U
 mirc612.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-041`
-- artifact: `/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf`
+- artifact: `/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
 ### Finding 8 — confidence: CONFIRMED, pool: B, MITRE: T1046, replay: exact_match (match)
@@ -324,7 +324,7 @@ mirc612.exe executed on this host: Windows Prefetch records its execution and th
 netstumbler.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-047`
-- artifact: `/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf`
+- artifact: `/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
 ### Finding 9 — confidence: HYPOTHESIS, pool: B, MITRE: T1046, replay: exact_match (match)
@@ -332,7 +332,7 @@ netstumbler.exe executed on this host: Windows Prefetch records its execution an
 hypothesis: Windows Prefetch contains NETSTUMBLERINSTALLER_0_4_0.EX with run_count=1; NetStumbler wireless discovery tool is a NIST Hacking Case triage lead. Treat this as a disk-artifact lead that needs corroboration before any standalone activity claim.
 
 - `tool_call_id`: `tc-048`
-- artifact: `/home/sansforensics/.findevil/cases/7a5ed45e-5880-4f83-8c07-9fded49f385f/extracted/disk/disk-extract-4a3dea15-71a7-4655-b100-500d790133e0/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf`
+- artifact: `/home/sansforensics/.findevil/cases/782d9a9b-b783-4dee-81cb-a98e11677013/extracted/disk/disk-extract-e3e4a1db-05a9-4a2c-9c69-0e9c2650519f/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf`
 - confidence: Hypothesis — a single-source triage lead; corroborate before any response action.
 
 
