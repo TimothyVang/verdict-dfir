@@ -7,7 +7,7 @@ once the first `v0.x` is cut on the `v-submit` tag.
 
 > **Pre-submission:** all changes below are on `master`. The first
 > tagged release will be `v-submit` cut on or before the SANS Find
-> Evil! deadline (2026-06-15 22:45 CDT).
+> Evil! deadline (2026-06-15 11:45 PM EDT = 22:45 CDT).
 
 ## [Unreleased]
 

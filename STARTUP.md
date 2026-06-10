@@ -10,7 +10,7 @@ New-member onboarding. Do all of these in order. Source: PUG's kickoff message.
 
 The community's mission: **sharpen this proof of concept into a production-grade capability.**
 
-**Final deadline: 2026-06-15 22:45 CDT.**
+**Final deadline: 2026-06-15 11:45 PM EDT** (= 22:45 CDT).
 
 ---
 
