@@ -8281,6 +8281,12 @@ class Investigation:
             if drift in self._NON_REDISPATCHABLE_DRIFT:
                 continue
             finding_id = str(finding.get("finding_id") or "unknown")
+            # Surface the self-correction in the live terminal, not only the
+            # audit chain — every other lane prints its progress, and this is
+            # the moment that proves the agent reasons about its own failures.
+            print(
+                f"  verify_finding rejected {finding_id} — re-dispatching once (fresh replay)"
+            )
             self._audit(
                 py,
                 "verifier_redispatch",
@@ -8309,11 +8315,15 @@ class Investigation:
             }
             out[idx] = retry
             if recovered:
+                print(f"  verify_finding recovered {finding_id} on re-dispatch ✓")
                 self.analysis_limitations.append(
                     f"verify_finding for {finding_id} recovered on re-dispatch "
                     f"(first attempt: {first_reason[:200]})"
                 )
             else:
+                print(
+                    f"  verify_finding still rejected {finding_id} after re-dispatch — dropping"
+                )
                 self._course_correct(
                     py,
                     "verify_finding",

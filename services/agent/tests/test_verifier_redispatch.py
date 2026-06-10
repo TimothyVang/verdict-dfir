@@ -266,3 +266,33 @@ def test_recovered_redispatch_is_not_a_replay_failure_blocker() -> None:
 def test_persistent_rejection_still_fails_replay_qa() -> None:
     qa = _qa_for(["verify_finding rejected or failed for f-02: tool re-run failed"])
     assert _qa_status(qa, "verify_finding_replay_failures") == "FAIL"
+
+
+# ---------------------------------------------------------------------------
+# The re-dispatch must be VISIBLE in the live terminal (not only the audit
+# chain) — the self-correction is the demo's headline moment and every other
+# lane prints its progress. capsys asserts the recovery/drop is on stdout.
+# ---------------------------------------------------------------------------
+
+
+def test_redispatch_recovery_prints_to_stdout(capsys) -> None:
+    py = _FakePy({"f-01": [_rejected("f-01"), _approved("f-01")]})
+    inv = _inv()
+
+    inv._verify_pool(py, [_finding("f-01")])
+
+    out = capsys.readouterr().out.lower()
+    assert "f-01" in out
+    assert "re-dispatch" in out
+    assert "recover" in out
+
+
+def test_persistent_rejection_prints_drop_to_stdout(capsys) -> None:
+    py = _FakePy({"f-02": [_rejected("f-02")]})
+    inv = _inv()
+
+    inv._verify_pool(py, [_finding("f-02")])
+
+    out = capsys.readouterr().out.lower()
+    assert "re-dispatch" in out
+    assert "f-02" in out
