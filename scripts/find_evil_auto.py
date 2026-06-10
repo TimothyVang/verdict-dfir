@@ -5416,9 +5416,11 @@ class Investigation:
         signer: str = "stub",
         force_fresh_replay: bool = False,
         case_id: str | None = None,
-        parallel: bool = False,
-        workers: int = 4,
+        parallel: bool = True,
+        workers: int = 2,
     ) -> None:
+        # NOTE: parallel defaults ON (validated parity vs serial on EVTX + the
+        # 23GB rocba disk via SIFT). --no-parallel is the serial escape hatch.
         self.evidence = evidence_path
         # In local mode, pin the evidence to an absolute path so every consumer
         # resolves it identically regardless of cwd. The verifier's fresh replay
@@ -7816,10 +7818,13 @@ class Investigation:
             )
         if not entries:
             self.analysis_limitations.append(
-                "Velociraptor zip contained no supported EVTX/Prefetch/Registry/MFT/USN/network artifacts for typed parsing."
+                "Velociraptor zip contained no supported EVTX/Prefetch/Registry/MFT/USN/memory/network artifacts for typed parsing."
             )
             return
 
+        memory_entries = [
+            entry for entry in entries if entry.get("evidence_type") == "memory"
+        ]
         evtx_entries = [
             entry for entry in entries if entry.get("evidence_type") == "evtx"
         ]
@@ -7842,6 +7847,8 @@ class Investigation:
             if parent and parent != "." and count >= 2
         ]
 
+        for entry in memory_entries[:3]:
+            self.investigate_memory(rust, py, str(entry["path"]))
         for entry in evtx_entries[:50]:
             self.investigate_evtx(rust, py, str(entry["path"]))
         for evtx_dir in hayabusa_dirs[:5]:
@@ -9650,6 +9657,25 @@ def main() -> int:
         "tmp/auto-runs/<case-id>/ so a launcher can deep-link the dashboard "
         "before the run starts.",
     )
+    p.add_argument(
+        "--parallel",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Run independent tool calls (verify_finding re-runs and "
+        "disk-artifact parses) concurrently (default). Use --no-parallel for "
+        "fully serial execution. Audit appends stay serialized either way, so "
+        "the verdict and the hash-chained log are identical to serial.",
+    )
+    p.add_argument(
+        "--workers",
+        type=int,
+        default=2,
+        metavar="N",
+        help="Max concurrent lanes when --parallel is set (default: 2). Each "
+        "lane is its own findevil-mcp process, so on a RAM-constrained host "
+        "(e.g. the SIFT VM) a higher count can over-subscribe memory and make "
+        "registry hive loads fail; raise it only after a parity check.",
+    )
     args = p.parse_args()
 
     global LOCAL_MODE
@@ -9672,6 +9698,8 @@ def main() -> int:
         signer=args.signer,
         force_fresh_replay=args.force_fresh_replay,
         case_id=args.case_id,
+        parallel=args.parallel,
+        workers=args.workers,
     )
 
     if not args.skip_preflight:

@@ -40,6 +40,67 @@ These hooks are additive — they do not change the per-evidence-type tool seque
 
 ---
 
+## Two execution paths (keep them in sync)
+
+This file is read by **agent mode** (interactive `claude` → "investigate `<path>`"): *you*, the
+supervisor, read these sequences and run the tools. The **headless engine**
+(`scripts/verdict` → `scripts/find_evil_auto.py`) does **not** read this file — it implements the
+same sequences hardcoded in its `investigate_*` methods. **When you change a sequence here, change
+the matching `investigate_*` method too, or the two paths drift.**
+
+---
+
+## Tool inventory (31 product tools)
+
+The complete typed surface both paths can drive. Argument/output shapes live in `TOOLS.md`; this is
+the at-a-glance map of *what exists* and *when it runs*.
+
+### Rust `findevil-mcp` (19) — DFIR primitives, read-only on evidence, SHA-256 every output
+
+| Tool | What | Runs for |
+|---|---|---|
+| `case_open` | SHA-256 the evidence, open the Case, derive `case_id` | **every** run (first call) |
+| `disk_mount` | Loop/EWF-mount a disk image read-only (`ewfmount`+inner volume via TSK) | disk |
+| `disk_extract_artifacts` | Carve MFT/USN/Prefetch/Registry/yara-targets from the mount | disk |
+| `disk_unmount` | Release the mount (finally-block) | disk |
+| `mft_timeline` | `$MFT` timeline, `$SI` vs `$FN` timestomp detection | disk |
+| `usnjrnl_query` | `$UsnJrnl` change log — corroborates MFT, surfaces deletes | disk |
+| `prefetch_parse` | Per-binary execution evidence (run_count, last-run times) | disk |
+| `registry_query` | Run/RunOnce/IFEO/Services/WMI/Tasks keys | disk |
+| `evtx_query` | Parse a single `.evtx` (EID histogram, 4624/4625/4688/7045…) | evtx, disk, velo |
+| `hayabusa_scan` | Sigma rules over an EVTX **directory** (dir-based; not single files) | evtx-dir, velo, disk-extracted |
+| `yara_scan` | YARA over a memory image or extracted disk yara-targets | memory, disk (if targets) |
+| `vol_pslist` | Active-list process walk | memory |
+| `vol_psscan` | EPROCESS pool signature scan (DKOM detection vs pslist) | memory |
+| `vol_psxview` | Cross-view process enumeration (conditional on pslist≠psscan) | memory |
+| `vol_malfind` | RWX VADs / injected MZ headers | memory |
+| `sysmon_network_query` | Sysmon network-connection events | network |
+| `zeek_summary` | Zeek conn/dns/http summaries | network |
+| `pcap_triage` | PCAP/PCAPNG triage (can drive Zeek internally) | network |
+| `vel_collect` | Velociraptor live-collection (note: velo **zips** are unzipped + re-dispatched locally, not via this tool) | velociraptor |
+
+### Python `findevil-agent-mcp` (12) — reasoning, crypto/custody, memory; run in the reason/seal phase
+
+| Tool | What | When |
+|---|---|---|
+| `audit_append` | Append a record to the hash-chained `audit.jsonl` | every tool call / decision |
+| `audit_verify` | Standalone replay-verify of the chain | offline (not in the in-run flow) |
+| `detect_contradictions` | Surface Pool A ↔ Pool B disagreements | after both pools |
+| `verify_finding` | Re-run a Finding's cited tool, compare SHA-256 | per Finding |
+| `judge_findings` | Credibility-weighted merge of verified Findings | after verify |
+| `correlate_findings` | Enforce the ≥2-artifact-class rule, downgrade unsupported | after judge |
+| `manifest_finalize` | Build the Merkle tree, sign — terminal, seals the Case | last |
+| `manifest_verify` | Verify the signed manifest in-run | after finalize |
+| `memory_recall` | Hermes FTS5 recall before a Finding (`prior_observations`, non-evidentiary) | pre-Finding |
+| `memory_remember` | Remember a CONFIRMED Finding's IOC/TTP for future cases | post-judge, CONFIRMED only |
+| `pool_handoff` | Structured ACP handoff (verifier→judge, pool_a→pool_b) | per handoff |
+| `expert_miss_capture` | Record a 1% expert correction as a future playbook/gate | on expert edit |
+
+The 4 **non-product** MCP servers (`n8n-mcp`, `playwright`, `puppeteer`, `qmd`) never touch evidence
+and never emit Findings — they are not in this inventory.
+
+---
+
 ## Evidence-type playbooks
 
 Pick the one whose extension matches the input. If multiple apply (e.g., a case directory containing both an `.e01` and a `.mem`), run them in order and let the case_id thread them together.
@@ -53,14 +114,25 @@ Note: `scripts/find-evil-auto` intentionally deviates today for raw disk images:
 | Order | Tool | Purpose | Pool |
 |---|---|---|---|
 | 1 | `case_open` | SHA-256 + case_id | both |
-| 2 | `mft_timeline` | Master File Table — what existed when, with timestomp detection (`$SI` vs `$FN`) | both |
-| 3 | `prefetch_parse` | Per-binary execution evidence (run_count, last 8 run times) | A |
-| 4 | `usnjrnl_query` | Filesystem mutation log — corroborates MFT, surfaces deletes | both |
-| 5 | `registry_query` | Run / RunOnce / IFEO / Services / WMI consumers / Scheduled Tasks | A |
-| 6 | `evtx_query` | Security.evtx (4624/4625/4688/7045), System.evtx, Application.evtx | A |
-| 7 | `hayabusa_scan` | Sigma rules over the EVTX dir — surfaces persistence + lateral movement patterns | A |
-| 8 | `yara_scan` | YARA-Forge rules over `\Users\*\AppData\Roaming\` and any `.exe`/`.dll` newer than 30d | B |
-| 9 | `vel_collect` (optional) | Pull additional OS-level artifacts the wrappers above don't cover (browser history, scheduled tasks raw) | both |
+| 2 | `disk_mount` | Mount read-only — EWF container via `ewfmount`, then the inner volume via TSK. **Local mode mounts the container only; the inner-volume mount needs the SIFT VM (`--sift`).** | both |
+| 3 | `disk_extract_artifacts` | Carve MFT/USN/Prefetch/Registry (and yara-targets, if any) to the work dir | both |
+| 4 | `mft_timeline` | Master File Table — what existed when, timestomp detection (`$SI` vs `$FN`) | both |
+| 5 | `prefetch_parse` | Per-binary execution evidence (run_count, last 8 run times) | A |
+| 6 | `usnjrnl_query` | Filesystem mutation log — corroborates MFT, surfaces deletes | both |
+| 7 | `registry_query` | Run / RunOnce / IFEO / Services / WMI consumers / Scheduled Tasks | A |
+| 8 | `evtx_query` | Security.evtx (4624/4625/4688/7045), System.evtx, Application.evtx | A |
+| 9 | `hayabusa_scan` | Sigma rules over the **extracted EVTX directory** (dir-based) | A |
+| 10 | `yara_scan` | YARA over extracted yara-target files — **skipped when extraction yields no yara-targets** (see gap note) | B |
+| 11 | `vel_collect` (optional) | Additional OS-level artifacts the wrappers don't cover | both |
+| 12 | `disk_unmount` | Release the mount (finally-block) | both |
+
+The headless engine runs steps 4-7 **in parallel** across a pool of `findevil-mcp` connections
+(`--parallel`, default on; `--workers 2`); records stay serial so the verdict is identical to serial.
+
+> **Coverage gap (yara on disk).** `yara_scan` runs only over files `disk_extract_artifacts`
+> classified as yara-targets; on a stock image that can be 0, so yara is skipped. A fallback that
+> recursively YARA-scans the whole mount is *possible* but perf-sensitive on large images (a 23GB
+> mount) — left as a deliberate follow-up, not bolted on.
 
 ### `.mem` / `.raw` / `.dmp` / `.vmem` — memory image
 
@@ -89,6 +161,25 @@ The lightweight case (matches our `--real-evidence` smoke flow).
 | 2 | `evtx_query` | Parse the log; pull EID histogram | both |
 | 3 | `hayabusa_scan` (optional, if a `.evtx` directory is available) | Sigma rule scan | A |
 
+A **single** `.evtx` file gets `evtx_query` only. `hayabusa_scan` is **directory-based** (it walks a
+folder), so it runs only when an EVTX *directory* is supplied — e.g. a Velociraptor zip's `Logs/`, or
+a mixed case dir with ≥2 logs in one folder. To get Sigma coverage on one log, put it in a directory
+and point the run there. (This is a deliberate design choice, not a missing tool.)
+
+### `.pcap` / `.pcapng` / Sysmon-EVTX / Zeek logs — network evidence
+
+What talked to what. The engine runs `investigate_network_artifacts`; each tool fires only when its
+artifact class is present.
+
+| Order | Tool | Purpose | Pool |
+|---|---|---|---|
+| 1 | `case_open` | SHA-256 + case_id | both |
+| 2 | `sysmon_network_query` | Sysmon EID 3 network-connection events (needs a Sysmon EVTX) | both |
+| 3 | `zeek_summary` | Zeek conn/dns/http summaries (needs Zeek logs) | both |
+| 4 | `pcap_triage` | PCAP/PCAPNG triage — can drive Zeek internally for protocol summaries | both |
+
+Pool B leans on outbound endpoints / exfil patterns; Pool A on C2 beaconing.
+
 ### Velociraptor `.zip` collection
 
 Triage zips produced by `velociraptor` collection.
@@ -97,11 +188,18 @@ Triage zips produced by `velociraptor` collection.
 |---|---|---|---|
 | 1 | `case_open` | SHA-256 + case_id | both |
 | 2 | Velociraptor zip extraction | Safely extract supported contained artifacts to the case work dir; reject zip-slip and oversized members | both |
-| 3 | Per-artifact tools | E.g. if the zip contains a Prefetch artifact, run `prefetch_parse` against the extracted file; if it contains EVTX, run `evtx_query` / `hayabusa_scan` | both |
+| 3 | Per-artifact re-dispatch | Route each extracted artifact to its type playbook: **memory** → `vol_pslist/psscan/psxview/malfind`+`yara_scan`; **EVTX** → `evtx_query` (+ `hayabusa_scan` on folders with ≥2 logs); **disk** artifacts → `mft_timeline`/`usnjrnl_query`/`prefetch_parse`/`registry_query`; **network** → `sysmon_network_query`/`zeek_summary`/`pcap_triage` | both |
 
-### Mixed case directory (most realistic)
+### Mixed case directory (most realistic) — the breadth path
 
-A case dir contains a disk image, a memory image, a Velociraptor zip, and a few EVTX files extracted out-of-band. Run each per its type playbook above; the supervisor stitches case_ids together via the `case_id` argument every tool accepts.
+A case dir holding a disk image, a memory image, a Velociraptor zip, and EVTX/PCAP files is how you
+exercise the **whole** tool surface in one run. The engine's directory/inventory mode
+(`case_open_directory` → `investigate_inventory`) classifies every artifact and dispatches each to its
+type playbook above — memory → `vol_*`, disk → mount/extract/parse, evtx → `evtx_query` + hayabusa-on-dirs,
+network → sysmon/zeek/pcap, velociraptor → unzip + re-dispatch (now including any **memory** dumps
+inside the zip). **A single-file input can only ever trigger that one type's branch — point `/verdict`
+at a mixed directory for full breadth.** The supervisor stitches case_ids together via the `case_id`
+argument every tool accepts.
 
 ---
 
