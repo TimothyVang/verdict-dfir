@@ -109,3 +109,29 @@ class TestManifestVerify:
         assert result.merkle_root_ok is False
         assert result.merkle_root_detail is not None
         assert "ff" in result.merkle_root_detail
+
+
+class TestCitationGateAtToolBoundary:
+    async def test_finalize_refuses_uncited_finding(self, tmp_path: Path) -> None:
+        import pytest
+        from findevil_agent.crypto.audit_log import AuditLog
+        from findevil_agent.crypto.manifest import UncitedFindingError
+
+        log_path = tmp_path / "audit.jsonl"
+        log = AuditLog(log_path)
+        log.append("tool_call_start", {"tool_call_id": "tc-1", "tool": "evtx_query"})
+        log.append("tool_call_output", {"tool_call_id": "tc-1", "output_hash": "a" * 64})
+        log.append("finding_approved", {"finding_id": "f-uncited"})
+
+        with pytest.raises(UncitedFindingError, match="f-uncited"):
+            await FINALIZE_SPEC.handler(
+                ManifestFinalizeInput(
+                    case_id="case-gate",
+                    run_id="run-gate",
+                    started_at="2026-04-25T00:00:00Z",
+                    audit_log_path=str(log_path),
+                    output_path=str(tmp_path / "run.manifest.json"),
+                    signer="stub",
+                )
+            )
+        assert not (tmp_path / "run.manifest.json").exists()

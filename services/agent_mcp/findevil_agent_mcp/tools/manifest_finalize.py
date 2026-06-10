@@ -22,7 +22,7 @@ from typing import Any, Literal
 
 from findevil_agent.crypto.audit_log import AuditLog
 from findevil_agent.crypto.manifest import build_manifest, write_manifest
-from findevil_agent.crypto.signer import Signer, StubSigner, make_signer
+from findevil_agent.crypto.signer import FallbackSigner, Signer, StubSigner, make_signer
 from pydantic import BaseModel, ConfigDict, Field
 
 from findevil_agent_mcp.tools._base import ToolSpec
@@ -64,15 +64,31 @@ class ManifestFinalizeOutput(BaseModel):
         default=None,
         description="Fulcio cert fingerprint when signer=sigstore; null for stub.",
     )
+    signer_effective: str = Field(
+        default="stub",
+        description=(
+            "Signer that ACTUALLY sealed the run ('sigstore' or 'stub'). May differ "
+            "from the requested signer: a sigstore request honestly degrades to stub "
+            "when Fulcio/Rekor or an OIDC token is unavailable."
+        ),
+    )
+    fallback_reason: str | None = Field(
+        default=None,
+        description="Why a sigstore request degraded to stub, when it did; null otherwise.",
+    )
 
 
 async def _handle(inp: BaseModel) -> ManifestFinalizeOutput:
     assert isinstance(inp, ManifestFinalizeInput)
     log = AuditLog(Path(inp.audit_log_path))
-    # sigstore lazy-imports identity token from $SIGSTORE_ID_TOKEN inside
-    # the signer; stub is deterministic and offline-friendly for tests.
+    # sigstore lazy-imports its identity token from $SIGSTORE_ID_TOKEN inside
+    # the signer; stub is deterministic and offline-friendly for tests. A
+    # sigstore request is wrapped so an unreachable Fulcio/Rekor (or a missing
+    # token) honestly degrades to stub and is recorded — never crashes the run.
     signer: Signer = (
-        StubSigner(run_id=inp.run_id) if inp.signer == "stub" else make_signer(kind="sigstore")
+        StubSigner(run_id=inp.run_id)
+        if inp.signer == "stub"
+        else FallbackSigner(make_signer(kind="sigstore"), StubSigner(run_id=inp.run_id))
     )
 
     manifest = build_manifest(
@@ -96,6 +112,8 @@ async def _handle(inp: BaseModel) -> ManifestFinalizeOutput:
         signature_cert_fingerprint=(
             str(sig.get("cert_fingerprint")) if sig.get("cert_fingerprint") else None
         ),
+        signer_effective=str(sig.get("kind") or "stub"),
+        fallback_reason=(str(sig.get("fallback_reason")) if sig.get("fallback_reason") else None),
     )
 
 
@@ -111,7 +129,10 @@ SPEC = ToolSpec(
         "signer='stub' for offline/test runs (deterministic, no network); "
         "signer='sigstore' for production (keyless Fulcio/Rekor — requires "
         "$SIGSTORE_ID_TOKEN). This is the terminal step — once the manifest is signed "
-        "the run is closed. "
+        "the run is closed. REFUSES to seal a run containing any finding_approved "
+        "record without a tool_call_id recorded earlier in the audit chain — the "
+        "'every Finding cites a tool_call_id' invariant is enforced here in code, "
+        "not just by prompts. "
         "On error: most common cause is the audit_log_path doesn't exist or has been "
         "tampered with — run audit_verify first to confirm the chain is clean."
     ),

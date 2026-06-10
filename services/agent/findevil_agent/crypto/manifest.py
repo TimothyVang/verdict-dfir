@@ -41,6 +41,14 @@ from findevil_agent.crypto.signer import SignedBundle, Signer, StubSigner
 MANIFEST_VERSION = "1"
 
 
+class UncitedFindingError(ValueError):
+    """Refusal to seal: a ``finding_approved`` record does not cite a
+    ``tool_call_id`` recorded earlier in the audit chain. Sealing is the
+    last code-enforced citation gate ("every Finding cites a
+    tool_call_id"), independent of prompt discipline in interactive
+    mode."""
+
+
 # ---------------------------------------------------------------------------
 # Dataclasses (frozen — manifests are immutable once finalized).
 # ---------------------------------------------------------------------------
@@ -97,6 +105,23 @@ class RunManifest:
 # ---------------------------------------------------------------------------
 # Build path.
 # ---------------------------------------------------------------------------
+
+
+def _uncited_findings(audit_log: AuditLog) -> list[str]:
+    """finding_approved records whose tool_call_id is absent from the chain
+    so far. Chain order matters: a finding cannot cite a future tool call."""
+    seen_tool_calls: set[str] = set()
+    uncited: list[str] = []
+    for record in audit_log.iter_records():
+        if record.kind == "tool_call_output":
+            tcid = str(record.payload.get("tool_call_id") or "")
+            if tcid:
+                seen_tool_calls.add(tcid)
+        elif record.kind == "finding_approved":
+            cited = str(record.payload.get("tool_call_id") or "")
+            if not cited or cited not in seen_tool_calls:
+                uncited.append(str(record.payload.get("finding_id") or f"seq-{record.seq}"))
+    return uncited
 
 
 def _walk_audit_log(audit_log: AuditLog) -> tuple[list[ManifestLeaf], int, str]:
@@ -158,7 +183,17 @@ def build_manifest(
 
     Caller is responsible for not appending to the audit log after
     this returns — manifests describe a snapshot.
+
+    Raises :class:`UncitedFindingError` when the log contains a
+    ``finding_approved`` record without a ``tool_call_id`` recorded
+    earlier in the chain — an uncited finding must never be sealed.
     """
+    uncited = _uncited_findings(audit_log)
+    if uncited:
+        raise UncitedFindingError(
+            "refusing to seal: finding(s) without a tool_call_id recorded "
+            f"earlier in the audit chain: {', '.join(uncited[:5])}"
+        )
     leaves, record_count, final_hash = _walk_audit_log(audit_log)
 
     tree = MerkleTree()
@@ -437,6 +472,7 @@ __all__ = [
     "ManifestLeaf",
     "ManifestVerification",
     "RunManifest",
+    "UncitedFindingError",
     "build_manifest",
     "verify_manifest",
     "write_manifest",

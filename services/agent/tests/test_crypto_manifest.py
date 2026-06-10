@@ -453,3 +453,48 @@ class TestTamperEvidence:
         result = verify_manifest(self._sealed(tmp_path))
         assert result.audit_chain_ok is True, result.audit_chain_ok
         assert result.overall is True
+
+
+class TestCitationGate:
+    """Sealing is the last code-enforced citation gate: a run containing a
+    finding_approved record that does not cite a tool_call_id recorded
+    earlier in the chain must refuse to finalize (CLAUDE.md invariant —
+    every Finding cites a tool_call_id), independent of prompt discipline."""
+
+    def _log_with(self, tmp_path: Path, finding_payload: dict) -> AuditLog:
+        log = AuditLog(tmp_path / "audit.jsonl")
+        log.append("tool_call_start", {"tool_call_id": "tc-1", "tool": "evtx_query"})
+        log.append("tool_call_output", {"tool_call_id": "tc-1", "output_hash": "a" * 64})
+        log.append("finding_approved", finding_payload)
+        return log
+
+    def _seal(self, log: AuditLog) -> None:
+        build_manifest(
+            case_id="case-gate",
+            run_id="gate-1",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=StubSigner(run_id="gate-1"),
+        )
+
+    def test_seal_refuses_finding_without_citation(self, tmp_path: Path) -> None:
+        import pytest
+
+        from findevil_agent.crypto.manifest import UncitedFindingError
+
+        log = self._log_with(tmp_path, {"finding_id": "f-uncited"})
+        with pytest.raises(UncitedFindingError, match="f-uncited"):
+            self._seal(log)
+
+    def test_seal_refuses_citation_missing_from_chain(self, tmp_path: Path) -> None:
+        import pytest
+
+        from findevil_agent.crypto.manifest import UncitedFindingError
+
+        log = self._log_with(tmp_path, {"finding_id": "f-ghost", "tool_call_id": "tc-ghost"})
+        with pytest.raises(UncitedFindingError, match="f-ghost"):
+            self._seal(log)
+
+    def test_seal_accepts_cited_finding(self, tmp_path: Path) -> None:
+        log = self._log_with(tmp_path, {"finding_id": "f-ok", "tool_call_id": "tc-1"})
+        self._seal(log)  # must not raise
