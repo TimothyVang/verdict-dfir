@@ -1,0 +1,158 @@
+"""Tests for the audit-labeled verifier fault-injection hook.
+
+``FIND_EVIL_FAULT_INJECT=verifier_reject_once:<finding-id-fragment>`` corrupts
+the cited ``tool_call_index`` entry's tool_name for the FIRST verify attempt of
+the first matching finding — and nothing else. The rejection then flows through
+the production verifier path and the Task-1 re-dispatch recovers it, which is
+what the committed showcase run demonstrates. The injection is never silent: a
+``fault_injection`` audit record lands in the chain before any verifier action.
+
+- F1: the fault corrupts attempt 1 only; re-dispatch (attempt 2) gets a clean
+      index and recovers; the fault_injection record precedes verifier_action.
+- F2: the fragment matches by substring (directory-mode finding ids carry an
+      8-hex suffix).
+- F3: env unset -> byte-identical behavior, no fault_injection records.
+- F4: the fault fires at most once per run, even across pools.
+"""
+
+from __future__ import annotations
+
+import sys
+import threading
+from pathlib import Path
+
+_SCRIPTS = Path(__file__).resolve().parents[3] / "scripts"
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+
+import find_evil_auto as fea  # noqa: E402
+
+_SENTINEL = "__fault_injected__"
+
+
+class _FakePy:
+    """verify_finding approves unless the cited index entry was corrupted;
+    records every call and every audit_append (kind, payload)."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict]] = []
+        self.audits: list[tuple[str, dict]] = []
+        self._lock = threading.Lock()
+
+    def call_tool(self, name: str, args: dict, timeout: float = 600.0) -> dict:
+        with self._lock:
+            self.calls.append((name, args))
+            if name == "audit_append":
+                self.audits.append((args["kind"], args["payload"]))
+                return {}
+        if name == "verify_finding":
+            fid = str(args["finding"]["finding_id"])
+            tcid = str(args["finding"].get("tool_call_id") or "")
+            entry = args["tool_call_index"].get(tcid) or {}
+            if str(entry.get("tool_name") or "").startswith(_SENTINEL):
+                return {
+                    "finding_id": fid,
+                    "action": "rejected",
+                    "reason": "tool re-run failed: unknown tool",
+                    "replay_matched": False,
+                    "replay_error": "tool re-run failed: unknown tool",
+                    "replay_artifact": {"drift_class": "replay_error"},
+                }
+            return {
+                "finding_id": fid,
+                "action": "approved",
+                "reason": "replay matched",
+                "replay_matched": True,
+                "replay_tool_name": entry.get("tool_name"),
+                "replay_expected_sha256": "abc",
+                "replay_actual_sha256": "abc",
+                "replay_artifact": {"drift_class": "exact_match"},
+            }
+        return {}
+
+    def verify_calls(self, fid: str) -> list[dict]:
+        return [
+            args
+            for name, args in self.calls
+            if name == "verify_finding" and str(args["finding"]["finding_id"]) == fid
+        ]
+
+    def kinds(self) -> list[str]:
+        return [kind for kind, _ in self.audits]
+
+
+def _inv() -> fea.Investigation:
+    inv = fea.Investigation("/tmp/does-not-exist-evidence", case_id="case-fault")
+    inv.handle = {"id": "case-test"}
+    inv.parallel = False
+    return inv
+
+
+def _with_tool_call(inv: fea.Investigation, fid: str) -> dict:
+    tcid = f"tc-{fid}"
+    inv.tool_calls.append({"tool_call_id": tcid, "tool": "evtx_query", "output_hash": "abc"})
+    return {"finding_id": fid, "tool_call_id": tcid, "description": f"d-{fid}"}
+
+
+def test_fault_injects_first_verify_attempt_only(monkeypatch) -> None:
+    monkeypatch.setenv("FIND_EVIL_FAULT_INJECT", "verifier_reject_once:f-01")
+    inv = _inv()
+    finding = _with_tool_call(inv, "f-01")
+    py = _FakePy()
+
+    actions = inv._verify_pool(py, [finding])
+
+    verify_calls = py.verify_calls("f-01")
+    assert len(verify_calls) == 2  # rejected once, re-dispatched once
+    first_entry = verify_calls[0]["tool_call_index"]["tc-f-01"]
+    second_entry = verify_calls[1]["tool_call_index"]["tc-f-01"]
+    assert str(first_entry["tool_name"]).startswith(_SENTINEL)
+    assert second_entry["tool_name"] == "evtx_query"
+
+    kinds = py.kinds()
+    assert kinds.count("fault_injection") == 1
+    assert kinds.index("fault_injection") < kinds.index("verifier_action")
+
+    assert [a["action"] for a in actions] == ["approved"]
+    assert inv.verifier_redispatches["f-01"]["recovered"] is True
+
+
+def test_fault_matches_by_substring(monkeypatch) -> None:
+    monkeypatch.setenv("FIND_EVIL_FAULT_INJECT", "verifier_reject_once:audit-log")
+    inv = _inv()
+    finding = _with_tool_call(inv, "f-A-evtx-audit-log-cleared-1a2b3c4d")
+    py = _FakePy()
+
+    inv._verify_pool(py, [finding])
+
+    assert py.kinds().count("fault_injection") == 1
+
+
+def test_no_env_no_behavior_change(monkeypatch) -> None:
+    monkeypatch.delenv("FIND_EVIL_FAULT_INJECT", raising=False)
+    inv = _inv()
+    finding = _with_tool_call(inv, "f-01")
+    py = _FakePy()
+
+    actions = inv._verify_pool(py, [finding])
+
+    verify_calls = py.verify_calls("f-01")
+    assert len(verify_calls) == 1
+    assert verify_calls[0]["tool_call_index"] == inv._tool_call_index()
+    assert "fault_injection" not in py.kinds()
+    assert [a["action"] for a in actions] == ["approved"]
+
+
+def test_fault_fires_at_most_once_per_run(monkeypatch) -> None:
+    monkeypatch.setenv("FIND_EVIL_FAULT_INJECT", "verifier_reject_once:f-aa")
+    inv = _inv()
+    pool_a = [_with_tool_call(inv, "f-aa-1")]
+    pool_b = [_with_tool_call(inv, "f-aa-2")]
+    py = _FakePy()
+
+    inv._verify_pool(py, pool_a)
+    inv._verify_pool(py, pool_b)
+
+    assert py.kinds().count("fault_injection") == 1
+    assert len(py.verify_calls("f-aa-1")) == 2  # faulted + re-dispatched
+    assert len(py.verify_calls("f-aa-2")) == 1  # untouched

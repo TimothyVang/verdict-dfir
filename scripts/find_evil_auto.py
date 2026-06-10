@@ -142,6 +142,23 @@ _FINDING_MODEL_FIELDS = frozenset(
 )
 
 
+def fault_inject_spec() -> tuple[str, str] | None:
+    """Parse FIND_EVIL_FAULT_INJECT, the reproducible fault-injection hook.
+
+    ``verifier_reject_once:<finding-id-fragment>`` corrupts the cited
+    tool_call_index entry for the FIRST verify attempt of the first finding
+    whose id contains the fragment, driving a genuine rejection through the
+    production verifier path (and letting the re-dispatch loop recover it).
+    The injection is chain-visible as a ``fault_injection`` audit record —
+    a faulted run can never be mistaken for a clean one. Any other value is
+    ignored (inert by default)."""
+    raw = os.environ.get("FIND_EVIL_FAULT_INJECT", "")
+    mode, sep, fragment = raw.partition(":")
+    if sep and mode == "verifier_reject_once" and fragment:
+        return mode, fragment
+    return None
+
+
 def finding_for_verifier(finding: dict[str, Any]) -> dict[str, Any]:
     """Project a finding to just its typed Finding fields for verify_finding.
 
@@ -5547,6 +5564,9 @@ class Investigation:
         # (HEARTBEAT.md: reason about the failure and try again). Keyed by
         # finding_id; mirrored into verdict.json findings_summary.
         self.verifier_redispatches: dict[str, dict[str, Any]] = {}
+        # FIND_EVIL_FAULT_INJECT bookkeeping: the hook fires at most once per
+        # run, so a faulted showcase corrupts exactly one verify attempt.
+        self._faults_consumed: set[str] = set()
         self.evidence_inventory: dict[str, Any] | None = None
         self.velociraptor_zip_extractions: list[dict[str, Any]] = []
         self.expert_signoff_packet: dict[str, Any] | None = None
@@ -8105,12 +8125,48 @@ class Investigation:
         # then (B) record the verifier actions to the hash-chained audit log in
         # finding order (strictly serial so prev_hash and the verifier->judge
         # handoffs stay deterministic regardless of Stage A completion timing).
-        results = self._verify_findings_parallel(py, findings)
+        # A serial pre-pass consumes FIND_EVIL_FAULT_INJECT (inert by default).
+        fault_targets = self._consume_fault_targets(py, findings)
+        results = self._verify_findings_parallel(
+            py, findings, fault_targets=fault_targets
+        )
         results = self._redispatch_rejections(py, findings, results)
         return self._record_verify_actions(py, findings, results)
 
-    def _verify_findings_parallel(
+    def _consume_fault_targets(
         self, py: SshMcpClient, findings: list[dict[str, Any]]
+    ) -> set[str]:
+        """Serial pre-pass for FIND_EVIL_FAULT_INJECT: pick the first matching
+        finding (at most once per run) and audit the injection BEFORE any
+        verifier action, so the chain itself declares the fault."""
+        spec = fault_inject_spec()
+        if spec is None or self._faults_consumed:
+            return set()
+        mode, fragment = spec
+        for finding in findings:
+            finding_id = str(finding.get("finding_id") or "")
+            if fragment in finding_id:
+                self._faults_consumed.add(finding_id)
+                self._audit(
+                    py,
+                    "fault_injection",
+                    {
+                        "finding_id": finding_id,
+                        "mode": mode,
+                        "detail": (
+                            "tool_call_index tool_name corrupted for the first "
+                            "verify attempt (FIND_EVIL_FAULT_INJECT)"
+                        ),
+                    },
+                )
+                return {finding_id}
+        return set()
+
+    def _verify_findings_parallel(
+        self,
+        py: SshMcpClient,
+        findings: list[dict[str, Any]],
+        fault_targets: set[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Stage A: re-run each finding's cited tool. verify_finding spawns its
         own fresh findevil-mcp subprocess per call, so the re-runs are
@@ -8120,9 +8176,21 @@ class Investigation:
         tool_call_index = self._tool_call_index()
 
         def _run(finding: dict[str, Any]) -> dict[str, Any]:
+            index = tool_call_index
+            finding_id = str(finding.get("finding_id") or "")
+            if fault_targets and finding_id in fault_targets:
+                # Per-call copy: the corruption hits only this finding's first
+                # attempt; parallel siblings and the re-dispatch (which builds
+                # a fresh index) see the real entries.
+                index = {tcid: dict(entry) for tcid, entry in tool_call_index.items()}
+                entry = index.get(str(finding.get("tool_call_id") or ""))
+                if entry is not None:
+                    entry["tool_name"] = "__fault_injected__" + str(
+                        entry.get("tool_name") or ""
+                    )
             verify_args: dict[str, Any] = {
                 "finding": finding_for_verifier(finding),
-                "tool_call_index": tool_call_index,
+                "tool_call_index": index,
                 "findevil_mcp_command": rust_replay_command(),
             }
             if self.force_fresh_replay:
@@ -9480,6 +9548,13 @@ class Investigation:
             etype = "directory"
         print(f"  evidence_type   = {etype}")
         print(f"  signer          = {self.signer}")
+        if fault_inject_spec() is not None:
+            print(
+                "\n  !! FAULT INJECTION ACTIVE (FIND_EVIL_FAULT_INJECT) — this "
+                "run deliberately corrupts one verifier replay; the injection "
+                "is labeled fault_injection in the audit chain",
+                file=sys.stderr,
+            )
 
         if LOCAL_MODE:
             rust = StdioMcpClient(_local_rust_command(), "rust-mcp")
