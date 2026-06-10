@@ -749,6 +749,12 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "usnjrnl_query",
         }
+    if lower_name in {"history", "places.sqlite"} or lower_name.endswith(".sqlite"):
+        return {
+            "artifact_class": "browser_history",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "browser_history",
+        }
     if lower_name.endswith(YARA_TARGET_EXTS):
         return {
             "artifact_class": "yara_target",
@@ -7252,6 +7258,69 @@ class Investigation:
                 # this lead to a CONFIRMED, two-artifact-class execution finding.
                 exe_base = PurePosixPath(str(exe).replace("\\", "/")).name.lower()
                 self._prefetch_exec_findings.append((exe_base, prefetch_finding))
+
+        browser_entries = by_class["browser_history"][:20]
+        browser_specs: list[tuple[str, dict[str, Any]]] = [
+            (
+                "browser_history",
+                {
+                    "case_id": self.handle["id"],
+                    "history_path": str(e["path"]),
+                    "limit": 500,
+                },
+            )
+            for e in browser_entries
+        ]
+        browser_outs = self._parallel_tool_calls(rust, browser_specs, timeout=600.0)
+        for entry, (_name, args), out in zip(
+            browser_entries, browser_specs, browser_outs, strict=True
+        ):
+            path = str(entry["path"])
+            error = out.get("_error", {}).get("message") if "_error" in out else None
+            if error:
+                self.analysis_limitations.append(
+                    f"browser_history failed for {path}: {error}"
+                )
+                out = {"_error": {"message": error}, "rows": [], "rows_seen": 0}
+            rows = out.get("rows", []) or []
+            tcid = self._record_tool(
+                py,
+                "browser_history",
+                self._output_hash(out),
+                {
+                    "artifact_path": path,
+                    "browser_family": out.get("browser_family"),
+                    "rows_seen": out.get("rows_seen", 0),
+                    **({"error": error} if error else {}),
+                },
+                arguments=args,
+            )
+            _merge_disk_tool_summary(
+                disk_summary,
+                "browser_history",
+                tcid,
+                {
+                    "artifact_path": path,
+                    "browser_family": out.get("browser_family"),
+                    "rows_seen": out.get("rows_seen", 0),
+                    **({"error": error} if error else {}),
+                },
+            )
+            for row in rows[:8]:
+                ts = row.get("last_visit_time_iso")
+                if ts:
+                    self._timeline_add(
+                        ts,
+                        "browser_history",
+                        "browser_history",
+                        f"browser visit: {str(row.get('url', ''))[:80]}",
+                        tcid,
+                        {"visit_count": row.get("visit_count"), "history_path": path},
+                    )
+            print(
+                f"  browser_history: {path} family={out.get('browser_family')} "
+                f"rows={out.get('rows_seen', 0)}"
+            )
 
         registry_calls = 0
         for entry in by_class["registry"][:20]:

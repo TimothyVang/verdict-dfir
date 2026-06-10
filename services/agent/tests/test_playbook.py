@@ -80,6 +80,9 @@ class TestClassifyArtifactPath:
             ("$UsnJrnl", "usnjrnl", "usnjrnl_query"),
             ("malware.exe", "yara_target", "yara_scan"),
             ("collection.zip", "velociraptor", "vel_collect"),
+            ("History", "browser_history", "browser_history"),
+            ("places.sqlite", "browser_history", "browser_history"),
+            ("Archived History.sqlite", "browser_history", "browser_history"),
             ("readme.txt", "unknown", None),
         ],
     )

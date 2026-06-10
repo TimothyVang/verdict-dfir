@@ -242,6 +242,12 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "usnjrnl_query",
         }
+    if name in {"history", "places.sqlite"} or name.endswith(".sqlite"):
+        return {
+            "artifact_class": "browser_history",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "browser_history",
+        }
     if name.endswith(YARA_TARGET_EXTS):
         return {
             "artifact_class": "yara_target",
