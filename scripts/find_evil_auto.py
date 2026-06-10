@@ -6561,16 +6561,40 @@ class Investigation:
             "limit": 500,
         }
         out = rust.call_tool("evtx_query", evtx_args)
+        evtx_error = None
         if "_error" in out:
-            raise RuntimeError(f"evtx_query failed: {out['_error']}")
+            # A corrupt/unreadable EVTX must not crash the run — every other
+            # lane course-corrects and continues, so this one does too. The
+            # failure is recorded (error-tagged so it feeds the HEARTBEAT
+            # streak), surfaced as a limitation, and the lane yields no events.
+            evtx_error = str(out["_error"].get("message", "evtx_query failed"))
+            print(f"  evtx_query error: {evtx_error[:80]}")
+            self.analysis_limitations.append(
+                f"evtx_query failed for {evidence_path}: {evtx_error}"
+            )
+            self._course_correct(
+                py,
+                "evtx_query",
+                f"{evidence_path}: {evtx_error}",
+                "defer (no EVTX events parsed; continue remaining lanes)",
+            )
+            out = {
+                "_error": {"message": evtx_error},
+                "rows": [],
+                "records_seen": 0,
+                "parse_errors": 0,
+            }
         rows = out.get("rows", [])
         seen = out.get("records_seen", 0)
         pe = out.get("parse_errors", 0)
+        evtx_extra = {"row_count": len(rows), "records_seen": seen, "parse_errors": pe}
+        if evtx_error:
+            evtx_extra["error"] = evtx_error
         tcid = self._record_tool(
             py,
             "evtx_query",
             self._output_hash(out),
-            {"row_count": len(rows), "records_seen": seen, "parse_errors": pe},
+            evtx_extra,
             arguments=evtx_args,
         )
         print(f"  evtx_query: {len(rows)}/{seen} rows, {pe} parse errors")
@@ -8784,7 +8808,16 @@ class Investigation:
         ]
         expert_decision = str(report_qa.get("expert_decision", "pending"))
         machine_qa_passed = report_qa.get("status") == "PASS"
-        signer_customer_ok = self.signer == "sigstore"
+        # Read the EFFECTIVE signer from the finalized manifest, not the
+        # REQUESTED one: a sigstore request that honestly degraded to stub (no
+        # Fulcio/Rekor reachability or OIDC token) records kind="stub" in the
+        # signature block, and the gate must treat that as NOT customer-
+        # releasable — never pass on intent. Falls back to the requested signer
+        # only for the preliminary gates that run before the manifest exists.
+        signer_effective = str(
+            (manifest or {}).get("signature", {}).get("kind") or self.signer
+        )
+        signer_customer_ok = signer_effective == "sigstore"
         manifest_verified = bool((manifest_verification or {}).get("overall"))
         manifest_signature_present = bool((manifest or {}).get("signature"))
         expert_approved = expert_decision == "approved"
@@ -8798,7 +8831,8 @@ class Investigation:
         release_blockers = list(report_qa.get("customer_release_blockers", []))
         if not signer_customer_ok:
             release_blockers.append(
-                "customer release requires manifest_finalize signer=sigstore; stub signatures are dev/offline only"
+                "customer release requires an effective manifest_finalize signer=sigstore; "
+                "stub signatures (including a sigstore request that degraded to stub) are dev/offline only"
             )
         if not expert_approved:
             release_blockers.append(
@@ -8822,6 +8856,7 @@ class Investigation:
             "ready_for_customer_pdf": customer_releasable,
             "report_render_allowed": report_qa.get("ready_for_expert_signoff", False),
             "signer": self.signer,
+            "signer_effective": signer_effective,
             "signer_customer_release_ok": signer_customer_ok,
             "manifest_verified": manifest_verified,
             "manifest_signature_present": manifest_signature_present,
