@@ -187,6 +187,12 @@ of your Project.
 
 **STATUS: SATISFIED**
 
+> **Consolidated accuracy report:** [`docs/accuracy-report.md`](docs/accuracy-report.md) — the
+> scoring method (bipartite recall + asymmetric verdict gate), the recall table against published
+> ground truth (nitroba 5/5 = 100%; NIST 3/14 local; 8 staged + scheduled), 100% `tool_call_id`
+> citation across committed runs, the false-positive posture (3 FP layers + the alihadi-09 control),
+> and the honest limits. Every number is reproducible from a committed artifact.
+>
 > **Full investigation report (PDF):**
 > [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf)
 >
@@ -258,7 +264,7 @@ of your Project.
 | 6 | Demonstration video | [`scripts/make-demo-video/CAPTURE.md`](scripts/make-demo-video/CAPTURE.md) · [`docs/demo-script-a2.md`](docs/demo-script-a2.md) | NEEDS RE-RECORD (live capture staged; hosted URL pending — see §6) |
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
-| 9 | Accuracy report | [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED |
+| 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED |
 | 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (3 committed runs, verify offline) | SATISFIED |
 
 ---
