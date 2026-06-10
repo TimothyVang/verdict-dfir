@@ -52,17 +52,109 @@ CHROME = _resolve_bin(
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
 )
 
+# --------------------------------------------------------------------------- #
+# Design tokens — the dark "forensic case file" theme, in sync with
+# scripts/_report_style.css so the figures sit flush inside the dark report
+# (white-background charts looked out of place against the cream-on-near-black
+# paper). Editorial / threat-intel-briefing figure language.
+# --------------------------------------------------------------------------- #
+PAPER = "#0e0c10"
+SURFACE = "#161318"
+INSET = "#0b0a0d"
+INK = "#ece6da"
+MUTED = "#8c8576"
+FAINT = "#544f48"
+HAIRLINE = "#2b2620"
+ACCENT = "#9b59b6"        # purple brand
+ACCENT_LIGHT = "#b98fce"
+ALERT = "#d6452f"         # red — strongest signal
+INFERRED = "#c79a4a"      # amber
+HYPOTHESIS = "#6f93b8"    # blue
+CONFIRMED = "#7fae6e"     # green
+FIG_BG = SURFACE          # margins included, so the PNG is dark to the edge
+
+SANS = "DejaVu Sans"
+MONO = "DejaVu Sans Mono"
+
 plt.rcParams.update(
     {
-        "font.family": "DejaVu Sans",
-        "font.size": 10,
-        "axes.titlesize": 12,
-        "axes.titleweight": "bold",
-        "savefig.dpi": 140,
+        "font.family": SANS,
+        "font.size": 11,
+        "text.color": INK,
+        "axes.edgecolor": HAIRLINE,
+        "axes.labelcolor": INK,
+        "xtick.color": MUTED,
+        "ytick.color": MUTED,
+        "savefig.dpi": 150,
         "savefig.bbox": "tight",
-        "figure.facecolor": "white",
+        "figure.facecolor": FIG_BG,
+        "axes.facecolor": FIG_BG,
+        "savefig.facecolor": FIG_BG,
     }
 )
+
+import matplotlib.font_manager as _fm  # noqa: E402
+
+
+def _mono() -> _fm.FontProperties:
+    return _fm.FontProperties(family=MONO)
+
+
+def _severity_color(host_count: int) -> str:
+    """>=10 hosts alert-red, 5-9 amber, 2-4 hypothesis-blue."""
+    if host_count >= 10:
+        return ALERT
+    if host_count >= 5:
+        return INFERRED
+    return HYPOTHESIS
+
+
+def _verdict_color(word: str) -> str:
+    w = (word or "").upper()
+    if w.startswith("SUSP") or w == "EVIL":
+        return ALERT
+    if w.startswith("NO_") or w == "CLEAN":
+        return CONFIRMED
+    return INFERRED  # INDETERMINATE / unknown -> amber
+
+
+_VERDICT_GLOSS = {
+    "INDETERMINATE": "leads seen, not yet corroborated — triage when convenient",
+    "SUSPICIOUS": "found something — triage now",
+    "NO_EVIL": "scoped-clean within what was examined — never 'definitely safe'",
+}
+
+
+def _cross_host_counts(corr: dict) -> list[tuple[str, int]]:
+    chp = corr.get("cross_host_processes", {})
+    counts = {n: len({e["host"] for e in ev}) for n, ev in chp.items()}
+    return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
+def _kicker(fig, x, y, text):
+    fig.text(x, y, text.upper(), color=ACCENT_LIGHT, fontsize=9.5,
+             fontweight="bold", family=SANS, ha="left", va="baseline")
+
+
+def _headline(fig, x, y, text, size=23):
+    fig.text(x, y, text, color=INK, fontsize=size, fontweight="bold",
+             family=SANS, ha="left", va="baseline")
+
+
+def _caption(fig, x, y, text, size=9.5, color=MUTED, ha="left"):
+    fig.text(x, y, text, color=color, fontsize=size, family=SANS, ha=ha,
+             va="baseline")
+
+
+def _rule(fig, x0, x1, y, color=HAIRLINE, lw=0.8):
+    fig.add_artist(plt.Line2D([x0, x1], [y, y], color=color, lw=lw,
+                              transform=fig.transFigure, solid_capstyle="butt"))
+
+
+def _save(fig, fig_path: Path) -> None:
+    fig.savefig(fig_path, dpi=150, bbox_inches="tight", facecolor=FIG_BG,
+                edgecolor="none")
+    plt.close(fig)
 
 
 def latest_fleet_dir() -> Path | None:
@@ -81,152 +173,388 @@ def latest_fleet_dir() -> Path | None:
 
 
 def fig_verdict_distribution(corr: dict, fig_path: Path) -> None:
-    distrib = corr.get("verdict_distribution", {})
-    if not distrib:
+    """Big-number callout + proportional segmented strip. Reads intentionally
+    even for a single verdict category (no absurd full-width single bar)."""
+    dist = corr.get("verdict_distribution", {})
+    if not dist:
         return
-    fig, ax = plt.subplots(figsize=(8, 4.5))
-    labels = list(distrib.keys())
-    counts = [distrib[k] for k in labels]
-    palette = {
-        "SUSPICIOUS": "#c62828",
-        "INDETERMINATE": "#ef6c00",
-        "NO_EVIL": "#2e7d32",
-    }
-    colors = [palette.get(label, "#546e7a") for label in labels]
-    ax.bar(labels, counts, color=colors, edgecolor="black", linewidth=0.5)
-    ax.set_ylabel("Hosts")
-    ax.set_title(
-        f"Fleet verdict distribution ({sum(counts)} hosts)\n"
-        "SUSPICIOUS hosts are the analyst's priority queue"
-    )
-    for i, c in enumerate(counts):
-        ax.text(i, c + 0.05, str(c), ha="center", fontweight="bold", fontsize=12)
-    ax.set_ylim(0, max(counts) * 1.15)
-    ax.grid(True, axis="y", alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(fig_path)
-    plt.close(fig)
+    host_count = corr.get("host_count", sum(dist.values()) or 1)
+    total = sum(dist.values()) or 1
+    items = sorted(dist.items(), key=lambda kv: -kv[1])
+
+    fig = plt.figure(figsize=(11, 4.6))
+    fig.patch.set_facecolor(FIG_BG)
+    _kicker(fig, 0.055, 0.86, "Fleet verdict")
+    _headline(fig, 0.055, 0.74, "What the fleet concluded", size=24)
+    _caption(fig, 0.055, 0.665,
+             f"{host_count} hosts examined  ·  verdict per host, merged fleet-wide")
+
+    dominant_word, dominant_n = items[0]
+    dcolor = _verdict_color(dominant_word)
+    fig.text(0.055, 0.305, f"{dominant_n}", color=dcolor, fontsize=104,
+             fontweight="bold", family=SANS, ha="left", va="baseline")
+    fig.text(0.26, 0.40, f"/ {total}", color=MUTED, fontsize=20, family=MONO,
+             ha="left", va="baseline")
+    fig.text(0.26, 0.305, "hosts", color=MUTED, fontsize=12.5, family=SANS,
+             ha="left", va="baseline")
+    fig.text(0.057, 0.205, dominant_word.upper(), color=dcolor, fontsize=19,
+             fontweight="bold", family=SANS, ha="left", va="baseline")
+
+    strip_x0, strip_x1 = 0.40, 0.945
+    strip_y, strip_h = 0.36, 0.135
+    width = strip_x1 - strip_x0
+    fig.add_artist(mpatches.FancyBboxPatch(
+        (strip_x0, strip_y), width, strip_h,
+        boxstyle="round,pad=0,rounding_size=0.012", transform=fig.transFigure,
+        facecolor=INSET, edgecolor=HAIRLINE, lw=0.8, mutation_aspect=2.4))
+    gap = 0.004 if len(items) > 1 else 0.0
+    cx = strip_x0
+    for i, (word, n) in enumerate(items):
+        seg_w = width * (n / total)
+        if i == len(items) - 1:
+            seg_w = (strip_x0 + width) - cx
+        fig.add_artist(mpatches.FancyBboxPatch(
+            (cx + (gap if i else 0), strip_y + 0.012),
+            max(seg_w - gap, 0.001), strip_h - 0.024,
+            boxstyle="round,pad=0,rounding_size=0.010", transform=fig.transFigure,
+            facecolor=_verdict_color(word), edgecolor="none",
+            mutation_aspect=2.4, alpha=0.92))
+        if seg_w > 0.06:
+            fig.text(cx + seg_w / 2, strip_y + strip_h / 2, word.upper(),
+                     color=INSET, fontsize=11.5, fontweight="bold", family=SANS,
+                     ha="center", va="center")
+        cx += seg_w
+
+    pct = 100.0 * dominant_n / total
+    gloss = _VERDICT_GLOSS.get(dominant_word.upper(), "")
+    _caption(fig, strip_x0, strip_y - 0.085,
+             f"{pct:.0f}% {dominant_word.upper()}" + (f"  —  {gloss}" if gloss else ""),
+             color=MUTED)
+    _caption(fig, strip_x0, strip_y - 0.165,
+             "Each host's verdict is independently signed; this is the merged view.",
+             color=FAINT, size=8.8)
+    _rule(fig, 0.055, 0.945, 0.07)
+    _caption(fig, 0.055, 0.035, "VERDICT  ·  fleet correlation", color=FAINT, size=8.2)
+    _save(fig, fig_path)
+
+
+# Offline ATT&CK technique labels so a tile can carry a human name with no
+# network dependency. Extend as new techniques surface in fleet runs.
+_MITRE_NAMES = {
+    "T1003": "OS Credential Dumping",
+    "T1014": "Rootkit",
+    "T1021": "Remote Services",
+    "T1047": "Windows Management Instrumentation",
+    "T1053": "Scheduled Task / Job",
+    "T1055": "Process Injection",
+    "T1059": "Command & Scripting Interpreter",
+    "T1078": "Valid Accounts",
+    "T1105": "Ingress Tool Transfer",
+    "T1543": "Create or Modify System Process",
+    "T1547": "Boot or Logon Autostart Execution",
+    "T1569": "System Services",
+}
 
 
 def fig_mitre_density(corr: dict, fig_path: Path) -> None:
-    mitre = corr.get("mitre_technique_density", {})
-    if not mitre:
+    """Compact severity-tiled technique row (one tile per technique); reads
+    intentionally even for a single technique."""
+    density = corr.get("mitre_technique_density", {})
+    if not density:
         return
-    fig, ax = plt.subplots(figsize=(9, max(3, 0.4 * len(mitre) + 1.5)))
-    items = sorted(mitre.items(), key=lambda kv: -kv[1])
-    techniques = [t for t, _ in items]
-    counts = [c for _, c in items]
-    ax.barh(
-        techniques,
-        counts,
-        color=[
-            "#c62828" if c >= 3 else "#ef6c00" if c >= 2 else "#1565c0" for c in counts
-        ],
-        edgecolor="black",
-        linewidth=0.4,
-    )
-    ax.invert_yaxis()
-    ax.set_xlabel("Distinct hosts where this technique was observed")
-    host_count = corr.get("host_count", 0)
-    ax.set_title(
-        f"MITRE ATT&CK technique density across the fleet\n"
-        f"{len(techniques)} techniques observed across {host_count} hosts "
-        "(bars show distinct-host count per technique)"
-    )
-    for i, c in enumerate(counts):
-        ax.text(c + 0.1, i, str(c), va="center", fontsize=9)
-    fig.tight_layout()
-    fig.savefig(fig_path)
-    plt.close(fig)
+    host_count = corr.get("host_count", 22)
+    items = sorted(density.items(), key=lambda kv: -kv[1])
+    n = len(items)
+
+    fig = plt.figure(figsize=(11, 3.9))
+    fig.patch.set_facecolor(FIG_BG)
+    _kicker(fig, 0.055, 0.86, "ATT&CK technique density")
+    _headline(fig, 0.055, 0.72, "Where the fleet's evil concentrates", size=22)
+    _caption(fig, 0.055, 0.645,
+             f"distinct hosts exhibiting each technique · {n} "
+             f"technique{'s' if n != 1 else ''} observed")
+
+    left, right, gap, max_tile = 0.055, 0.945, 0.022, 0.30
+    tile_w = min(max_tile, ((right - left) - gap * (n - 1)) / max(n, 1))
+    tiles_total = tile_w * n + gap * (n - 1)
+    tile_y, tile_h = 0.16, 0.34
+
+    for i, (tid, hosts) in enumerate(items):
+        tx = left + i * (tile_w + gap)
+        col = _severity_color(hosts)
+        fig.add_artist(mpatches.FancyBboxPatch(
+            (tx, tile_y), tile_w, tile_h,
+            boxstyle="round,pad=0,rounding_size=0.012", transform=fig.transFigure,
+            facecolor=INSET, edgecolor=HAIRLINE, lw=0.9))
+        fig.add_artist(mpatches.FancyBboxPatch(
+            (tx, tile_y), 0.008, tile_h,
+            boxstyle="round,pad=0,rounding_size=0.004", transform=fig.transFigure,
+            facecolor=col, edgecolor="none"))
+        pad = 0.028
+        fig.text(tx + pad, tile_y + tile_h * 0.52, f"{hosts}", color=col,
+                 fontsize=46, fontweight="bold", family=SANS, ha="left", va="center")
+        fig.text(tx + pad + 0.072, tile_y + tile_h * 0.62, f"/ {host_count}",
+                 color=MUTED, fontsize=13, family=MONO, ha="left", va="center")
+        fig.text(tx + pad + 0.072, tile_y + tile_h * 0.42, "hosts", color=MUTED,
+                 fontsize=10, family=SANS, ha="left", va="center")
+        fig.text(tx + pad, tile_y + tile_h - 0.045, tid, color=INK,
+                 fontsize=13.5, fontweight="bold", family=MONO, ha="left", va="top")
+        fig.text(tx + pad, tile_y + 0.052, _MITRE_NAMES.get(tid, "technique"),
+                 color=MUTED, fontsize=9.6, family=SANS, ha="left", va="baseline")
+
+    if n <= 2:
+        note_x = left + tiles_total + 0.05
+        if note_x < right:
+            lead_tid, lead_hosts = items[0]
+            fig.text(note_x, tile_y + tile_h * 0.68, "Single dominant technique.",
+                     color=INK, fontsize=12.5, fontweight="bold", family=SANS,
+                     ha="left", va="center")
+            fig.text(note_x, tile_y + tile_h * 0.30,
+                     f"{_MITRE_NAMES.get(lead_tid, lead_tid)} appears on {lead_hosts}\n"
+                     f"of {host_count} hosts — a focused, not\nscattered, signature.",
+                     color=MUTED, fontsize=9.8, family=SANS, ha="left", va="center",
+                     linespacing=1.4)
+
+    _rule(fig, 0.055, 0.945, 0.075)
+    _caption(fig, 0.055, 0.035, "MITRE ATT&CK  ·  fleet correlation", color=FAINT, size=8.2)
+    _caption(fig, 0.945, 0.035, "severity: red ≥10  ·  amber 5–9  ·  blue 2–4",
+             color=FAINT, size=8.2, ha="right")
+    _save(fig, fig_path)
 
 
 def fig_cross_host_processes(corr: dict, fig_path: Path) -> None:
-    procs = corr.get("cross_host_processes", {})
-    if not procs:
+    """Editorial horizontal bars — the single most-shared image dominates and
+    carries an annotation callout; the rest are thinner + muted."""
+    counts = _cross_host_counts(corr)
+    if not counts:
         return
-    by_host_count = sorted(
-        procs.items(),
-        key=lambda kv: -len({h["host"] for h in kv[1]}),
-    )[:25]
-    if not by_host_count:
-        return
-    fig, ax = plt.subplots(figsize=(11, max(4, 0.35 * len(by_host_count) + 1.5)))
-    names = [n for n, _ in by_host_count]
-    counts = [len({h["host"] for h in hits}) for _, hits in by_host_count]
-    colors = [
-        "#c62828" if c >= 5 else "#ef6c00" if c >= 3 else "#1565c0" for c in counts
-    ]
-    ax.barh(names, counts, color=colors, edgecolor="black", linewidth=0.4)
-    ax.invert_yaxis()
-    ax.set_xlabel("Distinct hosts where this image name appears")
-    ax.set_title(
-        "Cross-host process-name correlation (top 25)\n"
-        "Red = ≥5 hosts (very strong lateral-movement signal); "
-        "Orange = 3-4 hosts; Blue = 2 hosts"
-    )
-    for i, c in enumerate(counts):
-        ax.text(c + 0.05, i, str(c), va="center", fontsize=8)
-    plt.setp(ax.get_yticklabels(), fontfamily="monospace", fontsize=8)
-    fig.tight_layout()
-    fig.savefig(fig_path)
+    host_count = corr.get("host_count", 22)
+    top_n = 10
+    rows = list(reversed(counts[:top_n]))  # largest at top after barh
+    names = [r[0] for r in rows]
+    vals = [r[1] for r in rows]
+    lead_name, lead_val = counts[0]
+
+    fig = plt.figure(figsize=(11, 7.4))
+    fig.patch.set_facecolor(FIG_BG)
+    _kicker(fig, 0.055, 0.945, "Cross-host process reuse")
+    _headline(fig, 0.055, 0.875, "One image, almost the whole fleet", size=23)
+    _caption(fig, 0.055, 0.825,
+             f"distinct hosts running each image · top {min(top_n, len(counts))} of "
+             f"{len(counts)} shared images · {host_count} hosts total")
+
+    ax = fig.add_axes([0.30, 0.085, 0.63, 0.66])
+    ax.set_facecolor(FIG_BG)
+    for s in ("top", "right", "left", "bottom"):
+        ax.spines[s].set_visible(False)
+    ax.tick_params(length=0)
+    ax.set_axisbelow(True)
+    for gx in range(0, host_count + 1, 5):
+        ax.axvline(gx, color=HAIRLINE, lw=0.7, zorder=0)
+
+    is_lead = [n == lead_name for n in names]
+    for yi, (val, lead) in enumerate(zip(vals, is_lead)):
+        col = _severity_color(val)
+        ax.barh(yi, val, height=(0.74 if lead else 0.46), color=col,
+                alpha=(1.0 if lead else 0.62), edgecolor="none", zorder=3)
+        ax.text(val + 0.35, yi, f"{val}", va="center", ha="left",
+                color=(INK if lead else MUTED), fontsize=(15 if lead else 11),
+                fontweight=("bold" if lead else "normal"), family=MONO, zorder=4)
+
+    ax.set_yticks(range(len(rows)))
+    ax.set_yticklabels(names, fontproperties=_mono())
+    for tick, lead in zip(ax.get_yticklabels(), is_lead):
+        tick.set_color(INK if lead else MUTED)
+        tick.set_fontsize(12.5 if lead else 10.5)
+        if lead:
+            tick.set_fontweight("bold")
+
+    ax.set_xlim(0, host_count + 2.5)
+    ax.set_ylim(-0.7, len(rows) - 0.3)
+    ax.set_xticks(range(0, host_count + 1, 5))
+    ax.set_xticklabels([str(t) for t in range(0, host_count + 1, 5)], fontsize=9.5)
+    ax.set_xlabel("distinct hosts", color=MUTED, fontsize=10, labelpad=8)
+
+    lead_yi = names.index(lead_name)
+    ax.annotate(
+        f"{lead_val}/{host_count} hosts — fleet-wide\n{lead_name} is the dominant\n"
+        "shared image across the estate",
+        xy=(lead_val * 0.62, lead_yi - 0.28), xytext=(lead_val * 0.46, lead_yi - 1.55),
+        fontsize=11, color=INK, family=SANS, va="top", ha="left",
+        bbox=dict(boxstyle="round,pad=0.6", facecolor=INSET, edgecolor=ACCENT, lw=1.1),
+        arrowprops=dict(arrowstyle="-|>", color=ACCENT, lw=1.4,
+                        connectionstyle="arc3,rad=-0.18", shrinkA=4, shrinkB=6),
+        zorder=6)
+
+    lx, leg_y = 0.55, 0.775
+    _caption(fig, lx - 0.045, leg_y, "severity", color=FAINT, size=8.5)
+    for label, col in ((">=10 hosts", ALERT), ("5–9", INFERRED), ("2–4", HYPOTHESIS)):
+        fig.add_artist(mpatches.FancyBboxPatch(
+            (lx, leg_y - 0.004), 0.016, 0.014,
+            boxstyle="round,pad=0,rounding_size=0.004", transform=fig.transFigure,
+            facecolor=col, edgecolor="none"))
+        fig.text(lx + 0.022, leg_y, label, color=MUTED, fontsize=8.8, family=SANS,
+                 va="baseline")
+        lx += 0.022 + 0.012 * len(label) + 0.02
+
+    _rule(fig, 0.055, 0.945, 0.79)
+    _caption(fig, 0.055, 0.03, "CROSS-HOST  ·  fleet correlation", color=FAINT, size=8.2)
+    _save(fig, fig_path)
     plt.close(fig)
+
+
+def _temporal_band_color(hosts: int) -> str:
+    """Per-panel host band (cluster host_count tops out low): >=5 red, 3-4 amber, 2 blue."""
+    if hosts >= 5:
+        return ALERT
+    if hosts >= 3:
+        return INFERRED
+    return HYPOTHESIS
+
+
+def _dense_month_window(rows: list[dict]):
+    """Maximal contiguous run of months around the busiest one. Returns
+    (count_in_window, label, {month_keys}) or None."""
+    from collections import Counter
+
+    def mkey(dt):
+        return (dt.year, dt.month)
+
+    months = sorted({mkey(r["start"]) for r in rows})
+    if not months:
+        return None
+    mc = Counter(mkey(r["start"]) for r in rows)
+    peak = max(mc, key=lambda k: mc[k])
+    idx = months.index(peak)
+    thr = max(1, mc[peak] * 0.2)
+
+    def adj(a, b):
+        return (b[0] - a[0]) * 12 + (b[1] - a[1]) == 1
+
+    lo = hi = idx
+    while lo - 1 >= 0 and adj(months[lo - 1], months[lo]) and mc[months[lo - 1]] >= thr:
+        lo -= 1
+    while hi + 1 < len(months) and adj(months[hi], months[hi + 1]) and mc[months[hi + 1]] >= thr:
+        hi += 1
+    win = set(months[lo:hi + 1])
+    cnt = sum(1 for r in rows if mkey(r["start"]) in win)
+    a = datetime(months[lo][0], months[lo][1], 1).strftime("%b")
+    b = datetime(months[hi][0], months[hi][1], 1).strftime("%b %Y")
+    return cnt, (b if months[lo] == months[hi] else f"{a}–{b}"), win
 
 
 def fig_temporal_clusters(corr: dict, fig_path: Path) -> None:
+    """Single timeline ribbon — marker size = processes in the wave, color =
+    hosts touched; the heaviest wave and the densest window are annotated."""
     clusters = corr.get("temporal_clusters", [])
     if not clusters:
         return
-    fig, ax = plt.subplots(figsize=(12, 6))
-    # Plot each event as a point, x=time, y=cluster index, color by host
-    all_hosts = sorted({ev["host"] for cl in clusters for ev in cl["events"]})
-    host_color = {h: plt.cm.tab20(i % 20) for i, h in enumerate(all_hosts)}
-    for ci, cl in enumerate(clusters):
-        for ev in cl["events"]:
-            try:
-                dt = datetime.fromisoformat(ev["create_time"])
-            except ValueError:
-                continue
-            ax.scatter(
-                dt,
-                ci,
-                color=host_color[ev["host"]],
-                s=80,
-                edgecolor="black",
-                linewidth=0.4,
-                alpha=0.85,
-            )
-    ax.set_yticks(range(len(clusters)))
-    ax.set_yticklabels(
-        [
-            f"Cluster {i + 1}\n({cl['host_count']} hosts, "
-            f"{cl['duration_seconds']:.0f}s)"
-            for i, cl in enumerate(clusters)
-        ],
-        fontsize=8,
-    )
-    ax.invert_yaxis()
-    ax.set_xlabel("Process creation time (UTC)")
-    ax.set_title(
-        "Multi-host temporal clusters — possible lateral-movement waves\n"
-        "Each row is a cluster of process creations on ≥2 hosts within 60s; "
-        "color-coded by host"
-    )
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d %H:%M:%S"))
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
-    ax.grid(True, alpha=0.3)
-    handles = [mpatches.Patch(color=host_color[h], label=h) for h in all_hosts[:12]]
-    if handles:
-        ax.legend(
-            handles=handles,
-            fontsize=7,
-            loc="upper left",
-            ncol=2,
-            framealpha=0.9,
-            title="Hosts (first 12)",
-        )
-    fig.tight_layout()
-    fig.savefig(fig_path)
-    plt.close(fig)
+    rows = []
+    for c in clusters:
+        fe = c.get("first_event")
+        if not fe:
+            continue
+        try:
+            start = datetime.fromisoformat(fe)
+        except ValueError:
+            continue
+        rows.append({"start": start, "hosts": c.get("host_count", 0),
+                     "procs": len(c.get("events", [])),
+                     "dur": float(c.get("duration_seconds", 0.0))})
+    if not rows:
+        return
+    rows.sort(key=lambda r: r["start"])
+    n = len(rows)
+    total_procs = sum(r["procs"] for r in rows)
+    headline_row = max(rows, key=lambda r: r["procs"])
+    max_procs = max(r["procs"] for r in rows) or 1
+
+    fig = plt.figure(figsize=(11.4, 6.0))
+    fig.patch.set_facecolor(FIG_BG)
+    _kicker(fig, 0.05, 0.94, "Temporal clustering")
+    _headline(fig, 0.05, 0.865, "Waves of near-simultaneous process creation", size=22)
+    _caption(fig, 0.05, 0.81,
+             f"{n} clusters · {total_procs} processes · each mark = one wave "
+             "(≥2 hosts, seconds apart)")
+
+    ax = fig.add_axes([0.05, 0.40, 0.90, 0.30])
+    ax.set_facecolor(FIG_BG)
+    for s in ("top", "right", "left"):
+        ax.spines[s].set_visible(False)
+    ax.spines["bottom"].set_color(HAIRLINE)
+    ax.spines["bottom"].set_linewidth(0.9)
+
+    xs = [r["start"] for r in rows]
+    x0, x1 = min(xs), max(xs)
+    span = (x1 - x0).total_seconds() or 1.0
+
+    def fx(t):
+        return (t - x0).total_seconds() / span
+
+    ribbon_y = 0.5
+    ax.axhline(ribbon_y, color=HAIRLINE, lw=1.0, zorder=1)
+    for r in rows:
+        lead = r is headline_row
+        ax.scatter(fx(r["start"]), ribbon_y,
+                   s=18 + 340 * (r["procs"] / max_procs) ** 0.62,
+                   color=(ACCENT if lead else _temporal_band_color(r["hosts"])),
+                   alpha=(1.0 if lead else 0.6),
+                   edgecolors=(ACCENT_LIGHT if lead else "none"),
+                   linewidths=(1.4 if lead else 0), zorder=(6 if lead else 3))
+
+    ax.set_xlim(-0.03, 1.03)
+    ax.set_ylim(0, 1)
+    ax.set_yticks([])
+    seen, month_ticks = set(), []
+    for r in rows:
+        key = (r["start"].year, r["start"].month)
+        if key not in seen:
+            seen.add(key)
+            month_ticks.append((fx(r["start"]), r["start"].strftime("%b %Y")))
+    ax.set_xticks([t[0] for t in month_ticks])
+    ax.set_xticklabels([t[1] for t in month_ticks], fontsize=9.5, color=MUTED)
+    ax.tick_params(length=0, pad=10)
+
+    hx = fx(headline_row["start"])
+    ax.annotate(
+        f"{headline_row['hosts']} hosts · {headline_row['procs']} procs · "
+        f"{int(headline_row['dur'])}s\nheaviest synchronized burst\nlateral-movement wave",
+        xy=(hx, ribbon_y - 0.07), xytext=(0.045, ribbon_y - 0.82),
+        fontsize=11, color=INK, family=SANS, va="top", ha="left",
+        bbox=dict(boxstyle="round,pad=0.6", facecolor=INSET, edgecolor=ACCENT, lw=1.1),
+        arrowprops=dict(arrowstyle="-|>", color=ACCENT, lw=1.4,
+                        connectionstyle="arc3,rad=0.25", shrinkA=6, shrinkB=8),
+        annotation_clip=False, zorder=7)
+
+    window = _dense_month_window(rows)
+    if window and window[0] > 1:
+        cnt, label, win = window
+        band_rows = [r for r in rows if (r["start"].year, r["start"].month) in win]
+        band_x = sum(fx(r["start"]) for r in band_rows) / len(band_rows)
+        ax.annotate(f"{cnt} of {n} clusters fall in the\n{label} operational window",
+                    xy=(band_x, ribbon_y - 0.06), xytext=(band_x - 0.10, ribbon_y - 1.15),
+                    fontsize=9.8, color=MUTED, family=SANS, va="top", ha="center",
+                    arrowprops=dict(arrowstyle="-", color=FAINT, lw=0.9),
+                    annotation_clip=False, zorder=5)
+
+    leg_y = 0.10
+    fig.text(0.05, leg_y, "marker size → processes in wave", color=FAINT,
+             fontsize=8.8, family=SANS, va="baseline")
+    lx = 0.45
+    fig.text(lx, leg_y, "hosts involved:", color=FAINT, fontsize=8.8, family=SANS,
+             va="baseline")
+    lx += 0.105
+    for lbl, col in (("≥5", ALERT), ("3–4", INFERRED), ("2", HYPOTHESIS)):
+        fig.add_artist(mpatches.Circle((lx, leg_y + 0.005), 0.006,
+                                       transform=fig.transFigure, facecolor=col,
+                                       edgecolor="none"))
+        fig.text(lx + 0.013, leg_y, lbl, color=MUTED, fontsize=8.8, family=SANS,
+                 va="baseline")
+        lx += 0.013 + 0.012 * len(lbl) + 0.03
+
+    _rule(fig, 0.05, 0.95, 0.145)
+    _caption(fig, 0.05, 0.04, "TEMPORAL  ·  fleet correlation", color=FAINT, size=8.2)
+    _save(fig, fig_path)
 
 
 # ---------------------------------------------------------------------------
