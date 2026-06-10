@@ -1174,6 +1174,7 @@ dependencies = [
  "frnsc-prefetch",
  "hex",
  "mft",
+ "rusqlite",
  "schemars",
  "serde",
  "serde_json",

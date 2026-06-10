@@ -75,6 +75,12 @@ yara-x-proto = "=1.12.0"
 # detect file create/delete/rename activity over an incident window.
 usnjrnl-forensic = "=0.6.0"
 
+# rusqlite (MIT) parses browser-history SQLite DBs (Chrome/Edge `History`,
+# Firefox `places.sqlite`) read-only in the `browser_history` tool. `bundled`
+# vendors SQLite from source so a judge's fresh build needs no system
+# libsqlite3-dev (fully reproducible). Already resolved at 0.32.1 in the lock.
+rusqlite = { version = "=0.32.1", features = ["bundled"] }
+
 # UUID v4 for deterministic case_id generation.
 uuid = { version = "1", features = ["v4", "serde"] }
 
@@ -114,6 +120,9 @@ hex = "0.4"
 [dev-dependencies]
 # tempfile for per-test scratch dirs.
 tempfile = "3"
+# rusqlite in tests builds the Chrome/Firefox history fixtures the
+# browser_history smoke parses (same pin as the runtime dep).
+rusqlite = { version = "=0.32.1", features = ["bundled"] }
 
 [lints]
 workspace = true

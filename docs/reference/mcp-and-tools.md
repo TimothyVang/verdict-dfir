@@ -2,19 +2,19 @@
 
 > **Status: ACTIVE.** This is the single source of truth for *which MCP servers exist*, *which
 > tools they expose*, and *what is and is not in the audit chain*. `agent-config/TOOLS.md` is
-> the agent read-order catalog of the 31 typed **product** tools; this file is the wider map
+> the agent read-order catalog of the 32 typed **product** tools; this file is the wider map
 > (every registered server + the host/browser MCP). When the two disagree, the tool *counts* in
 > both must match — fix the drift, don't pick a winner.
 
 Two numbers that look like a contradiction but aren't:
 
-- **31** = the **product tool surface** (19 Rust + 12 Python). This is the narrow, typed,
+- **32** = the **product tool surface** (20 Rust + 12 Python). This is the narrow, typed,
   audit-chained verb set the investigation runs on. It does not change lightly.
 - **6** = the number of **MCP servers actually registered in `.mcp.json`**. Only the first two
   are product-default and in the audit chain; the other four are non-product conveniences
   (operator-runtime browser/automation + the `qmd` dev-memory recall server).
 
-Neither number contradicts the other: 31 counts *product tools*, 6 counts *registered servers*.
+Neither number contradicts the other: 32 counts *product tools*, 6 counts *registered servers*.
 
 ---
 
@@ -22,7 +22,7 @@ Neither number contradicts the other: 31 counts *product tools*, 6 counts *regis
 
 | # | Server | Transport / command | Role | In audit chain? | Emits Findings? |
 |---|---|---|---|---|---|
-| 1 | `findevil-mcp` | stdio · `bash scripts/run-mcp-rust.sh` | 19 typed Rust DFIR tools | **Yes** | **Yes** |
+| 1 | `findevil-mcp` | stdio · `bash scripts/run-mcp-rust.sh` | 20 typed Rust DFIR tools | **Yes** | **Yes** |
 | 2 | `findevil-agent-mcp` | stdio · `bash scripts/run-mcp-python.sh` | 12 Python crypto / ACH / memory / ACP / expert tools | **Yes** | **Yes** |
 | 3 | `n8n-mcp` | stdio · `npx -y n8n-mcp` (`MCP_MODE=stdio`) | Post-verdict finding-to-action automation (operator-local) | No | No |
 | 4 | `playwright` | stdio · `npx -y @playwright/mcp@latest` | Browser automation / dashboard verification | No | No |
@@ -57,12 +57,12 @@ operator-runtime servers, it is **not** part of the investigation surface.
 
 ---
 
-## 2. Product tools — 31 total (19 Rust + 12 Python)
+## 2. Product tools — 32 total (20 Rust + 12 Python)
 
 **Invariant: there is no `execute_shell` tool, ever.** This typed surface is the entire verb
 set the investigation has. The narrowness *is* the security pitch.
 
-### `findevil-mcp` — 19 Rust DFIR tools (`services/mcp/src/tools/`)
+### `findevil-mcp` — 20 Rust DFIR tools (`services/mcp/src/tools/`)
 
 | Tool | Purpose | Source |
 |---|---|---|
@@ -85,6 +85,7 @@ set the investigation has. The narrowness *is* the security pitch.
 | `vol_psxview` | Volatility3 `windows.psxview` (cross-view process compare) | `vol_psxview.rs` |
 | `vol_malfind` | Volatility3 `windows.malfind` (injected code, T1055) | `vol_malfind.rs` |
 | `vel_collect` | Run a Velociraptor artifact via subprocess, stream rows | `vel_collect.rs` |
+| `browser_history` | Read visited URLs from a Chrome/Edge `History` or Firefox `places.sqlite` (read-only, in-process via `rusqlite`) | `browser_history.rs` |
 
 ### `findevil-agent-mcp` — 12 Python tools (`services/agent_mcp/findevil_agent_mcp/tools/`)
 

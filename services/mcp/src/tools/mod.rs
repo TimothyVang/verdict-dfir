@@ -16,6 +16,7 @@
 //!   * Every tool is testable in isolation via integration tests
 //!     under `services/mcp/tests/`.
 
+pub mod browser_history;
 pub mod case_open;
 pub mod disk;
 pub mod evtx_query;
@@ -36,6 +37,10 @@ pub mod yara_scan;
 pub mod zeek_summary;
 
 /// Convenience re-exports.
+pub use browser_history::{
+    browser_history, path_looks_like_browser_history, BrowserHistoryError, BrowserHistoryInput,
+    BrowserHistoryOutput, BrowserHistoryRow,
+};
 pub use case_open::{case_open, CaseHandle, CaseOpenError, CaseOpenInput};
 pub use disk::{
     disk_extract_artifacts, disk_mount, disk_unmount, DiskError, DiskExtractArtifactsInput,

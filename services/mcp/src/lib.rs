@@ -33,6 +33,10 @@ pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 /// Re-exports for test + binary convenience.
 pub use crate::crypto::merkle::{verify_inclusion_proof, InclusionProof, MerkleError, MerkleTree};
+pub use crate::tools::browser_history::{
+    browser_history, path_looks_like_browser_history, BrowserHistoryError, BrowserHistoryInput,
+    BrowserHistoryOutput, BrowserHistoryRow,
+};
 pub use crate::tools::case_open::{case_open, CaseHandle, CaseOpenError, CaseOpenInput};
 pub use crate::tools::disk::{
     disk_extract_artifacts, disk_mount, disk_unmount, DiskError, DiskExtractArtifactsInput,

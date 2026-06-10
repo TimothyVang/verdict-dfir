@@ -40,6 +40,7 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 use crate::tools::{
+    browser_history::browser_history,
     case_open,
     disk::{disk_extract_artifacts, disk_mount, disk_unmount},
     evtx_query::evtx_query,
@@ -57,10 +58,10 @@ use crate::tools::{
     vol_psxview::vol_psxview,
     yara_scan::yara_scan,
     zeek_summary::zeek_summary,
-    CaseOpenInput, DiskExtractArtifactsInput, DiskMountInput, DiskUnmountInput, EvtxQueryInput,
-    HayabusaInput, MftInput, PcapTriageInput, PrefetchInput, RegistryInput, SysmonNetworkInput,
-    UsnJrnlInput, VelCollectInput, VolMalfindInput, VolPslistInput, VolPsscanInput,
-    VolPsxviewInput, YaraInput, ZeekSummaryInput,
+    BrowserHistoryInput, CaseOpenInput, DiskExtractArtifactsInput, DiskMountInput,
+    DiskUnmountInput, EvtxQueryInput, HayabusaInput, MftInput, PcapTriageInput, PrefetchInput,
+    RegistryInput, SysmonNetworkInput, UsnJrnlInput, VelCollectInput, VolMalfindInput,
+    VolPslistInput, VolPsscanInput, VolPsxviewInput, YaraInput, ZeekSummaryInput,
 };
 use crate::CRATE_VERSION;
 
@@ -683,6 +684,38 @@ fn build_registry() -> Vec<ToolEntry> {
             schema: || schema_for::<VelCollectInput>(),
             handler: |args| dispatch_vel_collect(args),
         },
+        ToolEntry {
+            name: "browser_history",
+            description: "Read visited URLs from an offline browser-history SQLite database — \
+                 Chrome/Edge `History` (…/User Data/Default/History) or Firefox \
+                 `places.sqlite`. POOL B exfil + triage surface: a downloaded-payload URL, a \
+                 credential-phishing visit, or a C2 panel opened in a browser lands here. \
+                 Use AFTER case_open with history_path pointing at the file extracted from the \
+                 mounted image (pass the extracted copy, not a live profile). Opened READ-ONLY \
+                 + immutable, so it never writes a -wal/-journal next to the evidence. \
+                 Auto-detects the browser by schema (Chrome urls/visits vs Firefox moz_places) \
+                 and normalizes timestamps to UTC ISO-8601Z from each native epoch (Chrome \
+                 WebKit µs-since-1601, Firefox µs-since-1970). Default limit 10000, newest \
+                 last-visit first. Returns browser_family, rows[] {url, title, \
+                 last_visit_time_iso, visit_count}, rows_seen. \
+                 HONEST SCOPE: a row CONFIRMS a URL was RECORDED AS VISITED at time T (a \
+                 browser-artifact fact) — it does NOT assert execution, so a single \
+                 browser_history Finding is a legitimate CONFIRMED browser fact and never \
+                 trips the ≥2-artifact-class execution rule; intent is a separate \
+                 'hypothesis:' layer. \
+                 ERRORS: NotFound (verify path), Unreadable (not openable), ParseFailed \
+                 (corrupt DB / unexpected column shape), UnknownSchema (a valid SQLite file \
+                 that is neither a Chrome nor a Firefox history DB).",
+            annotations: ToolAnnotations {
+                title: "Read Browser History",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<BrowserHistoryInput>(),
+            handler: |args| dispatch_browser_history(args),
+        },
     ]
 }
 
@@ -1109,6 +1142,23 @@ fn dispatch_vel_collect(args: Value) -> Result<Value, ToolError> {
     }
 }
 
+fn dispatch_browser_history(args: Value) -> Result<Value, ToolError> {
+    let input: BrowserHistoryInput = parse_args(args)?;
+    // NotFound / UnknownSchema are user-input territory (wrong path, or a file
+    // that isn't a browser history DB); surface as -32602. Unreadable/ParseFailed
+    // are corrupt-or-permission system issues → -32603.
+    match browser_history(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::BrowserHistoryError::NotFound(_)
+            | crate::tools::BrowserHistoryError::UnknownSchema(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("browser_history: {e}"))),
+    }
+}
+
 fn parse_args<T: DeserializeOwned>(args: Value) -> Result<T, ToolError> {
     serde_json::from_value(args).map_err(|e| ToolError::InvalidParams(format!("invalid args: {e}")))
 }
@@ -1214,6 +1264,7 @@ mod tests {
             "vol_psscan",
             "vol_psxview",
             "vel_collect",
+            "browser_history",
         ];
         assert_eq!(names.len(), expected.len());
         for want in expected {

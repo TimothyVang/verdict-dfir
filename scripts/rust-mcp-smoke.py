@@ -222,6 +222,7 @@ def main() -> int:
                 "vol_psscan",
                 "vol_psxview",
                 "vel_collect",
+                "browser_history",
             ]
         )
         if names != expected:

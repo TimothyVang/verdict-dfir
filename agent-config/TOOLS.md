@@ -4,7 +4,7 @@ The agent has access to two MCP servers, both auto-spawned by Claude Code via `.
 
 | Server | Lang | Tools |
 |---|---|---|
-| `findevil-mcp` | Rust (`services/mcp/`) | 19 typed DFIR tools |
+| `findevil-mcp` | Rust (`services/mcp/`) | 20 typed DFIR tools |
 | `findevil-agent-mcp` | Python (`services/agent_mcp/`) | 12 crypto + ACH + memory + ACP + expert-feedback tools (post-A5; the `ots_stamp` + `ots_verify` pair was removed) |
 
 Every successful tool call carries `_meta.output_sha256` (hex SHA-256 of the canonical JSON output). Findings cite tool calls by `tool_call_id`. The verifier vetoes any finding that doesn't.
@@ -100,6 +100,11 @@ Use when: hunting injected code (T1055). `mz_match=true` + RWX `protection` + no
 Args: `{case_id, artifact: str, args?: {str: str}, format?, limit?}`
 Returns: `{rows[], rows_seen, stderr_tail}` — `rows` are free-form (every Velociraptor artifact has its own column shape; typed-here would be hostile)
 Use when: any of Velociraptor's 200+ DFIR artifacts (`Windows.Forensics.Prefetch`, `Generic.Forensic.LocalHashes`, etc.). `artifact` validated against dotted-path pattern, `args` keys validated against `[A-Za-z_][A-Za-z0-9_]*` to block flag injection. Subprocess to `velociraptor` (Apache-2.0; env var `$VELOCIRAPTOR_BIN` first then PATH).
+
+### browser_history
+Args: `{case_id, history_path: str, limit?: int}`
+Returns: `{browser_family, rows[]: {url, title, last_visit_time_iso, visit_count}, rows_seen}`
+Use when: an extracted browser history DB — Chrome/Edge `History` or Firefox `places.sqlite` — is in scope (downloaded-payload URL, phishing visit, C2 panel). Opened read-only + `immutable=1` (no `-wal`/`-journal` write on evidence); browser auto-detected by schema; timestamps normalized to ISO-8601Z from each native epoch (Chrome WebKit µs-since-1601, Firefox µs-since-1970). HONEST SCOPE: a row CONFIRMS a URL was *recorded as visited* at T — a browser-artifact fact, NOT execution, so a single `browser_history` Finding is a legitimate CONFIRMED browser fact and never trips the ≥2-artifact-class rule; intent is a separate `hypothesis:` layer. In-process via `rusqlite` (MIT, vendored SQLite).
 
 ---
 
