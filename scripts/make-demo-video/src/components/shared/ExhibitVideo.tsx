@@ -28,6 +28,11 @@ import { C, GROTESK, MONO } from "./editorial";
 // per CAPTURE.md.
 export const CAPTURED: ReadonlySet<string> = new Set<string>([
   "dashboard-live.mp4",
+  // Reference cut: a genuine asciinema capture of the self-correction run
+  // (verifier rejects an injected replay → re-dispatches → recovers). Legible
+  // but rough (1.6× speed, EVTX fixture). Replace with the polished take per
+  // CAPTURE.md — same filename, no code change.
+  "terminal-investigation.mp4",
 ]);
 
 const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;

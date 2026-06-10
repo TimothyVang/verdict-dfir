@@ -110,29 +110,28 @@ of your Project.
 
 **Requirement:** Include a demonstration video of your Project.
 
-**STATUS: NEEDS RE-RECORD (live screencast) — explainer committed, hosted URL pending**
+**STATUS: REAL-FOOTAGE CUT RENDERS — polished take + hosted URL pending**
 
-> **What is committed today:** [`docs/find-evil-demo.mp4`](docs/find-evil-demo.mp4) is a
-> 3:59 narrated **Remotion motion-graphics explainer** (source:
-> `scripts/make-demo-video/`). It explains the architecture well, but it is **not a live
-> terminal screencast** — the terminal it shows is a simulated animated pane and the
-> dashboard is a static screenshot.
+> **What renders today — genuine capture, not animation.** The film
+> (`scripts/make-demo-video/`) now embeds **real screen recordings** as exhibits via the
+> `ExhibitVideo` component. The Beat 2 slot the audit flagged as a "simulated animated terminal"
+> plays an actual asciinema capture of a live investigation — including the verifier catching an
+> injected replay failure and **re-dispatching to recover** (`verify_finding rejected … —
+> re-dispatching once` → `recovered … on re-dispatch ✓`, printed live to the terminal). The
+> dashboard beat plays a real localhost capture. `pnpm render` produces a complete real-footage
+> cut.
 >
-> **The fix is staged — real-footage Remotion.** The film
-> (`scripts/make-demo-video/`) now embeds **genuine screen captures** as exhibits via the
-> `ExhibitVideo` component instead of an animated terminal pane. The flagged Beat 2 "simulated
-> terminal" is replaced by a real-capture slot, and the project renders today with on-brand
-> "AWAITING CAPTURE" placeholders so nothing breaks before footage is dropped in. The shot-list
-> — exact commands, target filenames, durations — is
-> [`scripts/make-demo-video/CAPTURE.md`](scripts/make-demo-video/CAPTURE.md).
+> **Honest status of the committed reference cut:** the Beat 2 clip is a genuine but rough
+> reference take (1.6× speed, EVTX fixture) — legible and real, meant to be replaced by a
+> polished take. Any slot without footage falls back to an on-brand "AWAITING CAPTURE"
+> placeholder, so the project always renders.
 >
-> **What must ship before the deadline:**
-> 1. Record the captures per [`scripts/make-demo-video/CAPTURE.md`](scripts/make-demo-video/CAPTURE.md):
->    the live terminal run **including the self-correction** (the `FIND_EVIL_FAULT_INJECT` recipe
->    makes the verifier catch + re-dispatch on camera — verdict unchanged), a richer dashboard
->    take, and optionally the `manifest_verify` one-byte-tamper. Drop them in `public/ui/`, add
->    each to the `CAPTURED` set, `pnpm render`.
-> 2. Host it (YouTube/Vimeo/Youku) and record the URL here and in the Devpost
+> **What still must ship before the deadline:**
+> 1. Replace the reference cut with a polished take per
+>    [`scripts/make-demo-video/CAPTURE.md`](scripts/make-demo-video/CAPTURE.md) (verified
+>    asciinema → agg → mp4 recipe): the NIST run incl. the self-correction, a richer dashboard
+>    take, optionally the `manifest_verify` one-byte-tamper. Same filenames → no code change.
+> 2. `pnpm render`, host it (YouTube/Vimeo/Youku), and record the URL here and in the Devpost
 >    submission URL field.
 >
 > **Hosted URL:** _pending capture + render_
