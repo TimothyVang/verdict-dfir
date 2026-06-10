@@ -39,6 +39,9 @@ class ManifestVerifyOutput(BaseModel):
     leaf_count_ok: bool
     leaf_count_detail: str | None
     signature_present: bool
+    signature_kind: str
+    signature_verified: bool
+    signature_verified_detail: str | None
 
 
 async def _handle(inp: BaseModel) -> ManifestVerifyOutput:
@@ -56,6 +59,7 @@ async def _handle(inp: BaseModel) -> ManifestVerifyOutput:
     audit_ok, audit_detail = _split(result.audit_chain_ok)
     merkle_ok, merkle_detail = _split(result.merkle_root_ok)
     count_ok, count_detail = _split(result.leaf_count_ok)
+    sig_verified, sig_verified_detail = _split(result.signature_verified)
     return ManifestVerifyOutput(
         overall=result.overall,
         audit_chain_ok=audit_ok,
@@ -65,6 +69,9 @@ async def _handle(inp: BaseModel) -> ManifestVerifyOutput:
         leaf_count_ok=count_ok,
         leaf_count_detail=count_detail,
         signature_present=result.signature_present,
+        signature_kind=result.signature_kind,
+        signature_verified=sig_verified,
+        signature_verified_detail=sig_verified_detail,
     )
 
 
