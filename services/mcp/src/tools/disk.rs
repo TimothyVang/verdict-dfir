@@ -254,6 +254,7 @@ pub fn disk_extract_artifacts(
     let output_dir = case_dir.join("extracted").join("disk").join(&extract_id);
     create_dir(&output_dir)?;
     let wanted = wanted_kinds(&input.artifact_kinds);
+
     let sector_offset = first_partition_sector_offset(&image_path);
 
     // Enumerate every file once and keep the wanted classes. Selection then
@@ -264,7 +265,24 @@ pub fn disk_extract_artifacts(
     // Microsoft-Windows-*/Operational tail). A single global priority sort
     // would otherwise let prefetch consume the whole budget and extract zero
     // event logs — the richest finding source on a disk.
-    let candidates: Vec<(&'static str, String, String)> = tsk_list(&image_path, sector_offset)?
+    //
+    // The Sleuth Kit reads the image directly (real images, and the faked
+    // fls/icat in tests). A `mock` mount whose "image" is the synthetic
+    // evidence the end-to-end smoke and Windows use is not a real filesystem,
+    // so TSK can't enumerate it; that case falls back to walking the directory
+    // tree disk_mount staged at fs_root. Auto mounts never fall back — a real
+    // image TSK can't read is a genuine error to surface, not silently skip.
+    let mock_root: Option<PathBuf> = (mount.command.first().map(String::as_str) == Some("mock"))
+        .then(|| mount.fs_root.clone())
+        .flatten();
+    let (listed, via_walk) = match tsk_list(&image_path, sector_offset) {
+        Ok(files) if !files.is_empty() => (files, false),
+        tsk_result => match &mock_root {
+            Some(root) => (mock_list(root)?, true),
+            None => (tsk_result?, false),
+        },
+    };
+    let candidates: Vec<(&'static str, String, String)> = listed
         .into_iter()
         .filter_map(|(inode, path)| {
             let class = classify_artifact_path(&path)?;
@@ -280,17 +298,28 @@ pub fn disk_extract_artifacts(
     let mut artifacts = Vec::new();
     let mut artifacts_skipped_oversize = 0;
     for (class, inode, path) in selected {
-        tsk_extract(
-            &image_path,
-            sector_offset,
-            &inode,
-            &path,
-            class,
-            &output_dir,
-            input.max_artifact_bytes,
-            &mut artifacts,
-            &mut artifacts_skipped_oversize,
-        )?;
+        match (via_walk, &mock_root) {
+            (true, Some(root)) => mock_extract(
+                root,
+                &path,
+                class,
+                &output_dir,
+                input.max_artifact_bytes,
+                &mut artifacts,
+                &mut artifacts_skipped_oversize,
+            )?,
+            _ => tsk_extract(
+                &image_path,
+                sector_offset,
+                &inode,
+                &path,
+                class,
+                &output_dir,
+                input.max_artifact_bytes,
+                &mut artifacts,
+                &mut artifacts_skipped_oversize,
+            )?,
+        }
     }
 
     let now = now_iso();
@@ -784,6 +813,81 @@ fn tsk_list(
         .collect())
 }
 
+/// Recursively list regular files under a mock mount's `fs_root`, returning
+/// `(placeholder_inode, relative_path)` pairs shaped exactly like [`tsk_list`]
+/// so they flow through the same classifier + fair-share selector. The inode
+/// slot is a placeholder — mock extraction copies by relative path, not inode.
+fn mock_list(fs_root: &Path) -> Result<Vec<(String, String)>, DiskError> {
+    let mut out = Vec::new();
+    mock_walk(fs_root, fs_root, &mut out)?;
+    Ok(out)
+}
+
+fn mock_walk(root: &Path, dir: &Path, out: &mut Vec<(String, String)>) -> Result<(), DiskError> {
+    for entry in fs::read_dir(dir).map_err(|source| DiskError::Io {
+        path: dir.to_path_buf(),
+        source,
+    })? {
+        let entry = entry.map_err(|source| DiskError::Io {
+            path: dir.to_path_buf(),
+            source,
+        })?;
+        let path = entry.path();
+        let ft = entry.file_type().map_err(|source| DiskError::Io {
+            path: path.clone(),
+            source,
+        })?;
+        if ft.is_dir() {
+            mock_walk(root, &path, out)?;
+        } else if ft.is_file() {
+            if let Ok(rel) = path.strip_prefix(root) {
+                out.push(("-".to_string(), rel.to_string_lossy().replace('\\', "/")));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Copy a mock artifact from `fs_root`/`rel_path` to the output dir, mirroring
+/// [`tsk_extract`]'s output record so the ledger and caller see identical
+/// shapes whether the mount was mock or real.
+fn mock_extract(
+    fs_root: &Path,
+    rel_path: &str,
+    class: &str,
+    output_dir: &Path,
+    max_artifact_bytes: u64,
+    out: &mut Vec<ExtractedDiskArtifact>,
+    skipped_oversize: &mut usize,
+) -> Result<(), DiskError> {
+    let src = safe_join(fs_root, rel_path);
+    let size = fs::metadata(&src)
+        .map_err(|source| DiskError::Io {
+            path: src.clone(),
+            source,
+        })?
+        .len();
+    if size > max_artifact_bytes {
+        *skipped_oversize += 1;
+        return Ok(());
+    }
+    let dest = safe_join(&output_dir.join(class), rel_path);
+    if let Some(parent) = dest.parent() {
+        create_dir(parent)?;
+    }
+    fs::copy(&src, &dest).map_err(|source| DiskError::Io {
+        path: dest.clone(),
+        source,
+    })?;
+    out.push(ExtractedDiskArtifact {
+        artifact_class: class.to_string(),
+        source_path: PathBuf::from(rel_path),
+        extracted_path: dest,
+        size_bytes: size,
+    });
+    Ok(())
+}
+
 /// Parse one `fls -p` line into `(inode, relative_path)` for a live regular
 /// file. Lines look like `r/r 380861-128-4:\tWindows/System32/config/SYSTEM`.
 /// Returns None for directories, deleted entries (marked `*`), and non-files.
@@ -1120,10 +1224,44 @@ fn tail_utf8_lossy(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        artifact_subrank, class_priority, classify_artifact_path, parse_fls_line,
+        artifact_subrank, class_priority, classify_artifact_path, mock_list, parse_fls_line,
         parse_mmls_first_partition_offset, select_artifacts, unmount_steps,
     };
     use std::path::Path;
+
+    #[test]
+    fn mock_list_walks_tree_and_keeps_relative_paths() {
+        // The mock disk-extract path (tests + Windows, no TSK) walks fs_root.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("Windows/Prefetch")).unwrap();
+        std::fs::create_dir_all(root.join("Windows/System32/config")).unwrap();
+        std::fs::write(root.join("$MFT"), b"mft").unwrap();
+        std::fs::write(root.join("Windows/Prefetch/CMD.EXE-1.pf"), b"pf").unwrap();
+        std::fs::write(root.join("Windows/System32/config/SOFTWARE"), b"hive").unwrap();
+
+        let mut listed = mock_list(root).expect("walk");
+        listed.sort();
+        let paths: Vec<&str> = listed.iter().map(|(_, p)| p.as_str()).collect();
+        assert!(paths.contains(&"$MFT"), "{paths:?}");
+        assert!(
+            paths.contains(&"Windows/Prefetch/CMD.EXE-1.pf"),
+            "{paths:?}"
+        );
+        assert!(
+            paths.contains(&"Windows/System32/config/SOFTWARE"),
+            "{paths:?}"
+        );
+        // Every listed entry classifies into a forensic class via the same
+        // classifier the TSK path uses.
+        let classes: std::collections::BTreeSet<_> = listed
+            .iter()
+            .filter_map(|(_, p)| classify_artifact_path(p))
+            .collect();
+        assert!(classes.contains("mft"));
+        assert!(classes.contains("prefetch"));
+        assert!(classes.contains("registry"));
+    }
 
     #[test]
     fn parse_fls_line_extracts_inode_and_path_for_live_files() {
