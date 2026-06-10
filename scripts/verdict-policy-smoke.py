@@ -2816,7 +2816,11 @@ def main() -> int:
     hg_groups = fea.build_host_groups(hg_findings, hg_timeline)
     spool = next(f for f in hg_findings if f["mitre_technique"] == "T1543.003")
     host_cases = [
-        ("finding host denormalized from linked event", hg_findings[0].get("host"), "PC01"),
+        (
+            "finding host denormalized from linked event",
+            hg_findings[0].get("host"),
+            "PC01",
+        ),
         (
             "spoolfool recognized as SpoolFool",
             "SpoolFool" in (spool.get("named_technique") or ""),
@@ -2846,7 +2850,9 @@ def main() -> int:
         ),
         (
             "unknown technique gets no signature",
-            fea._signature_for_finding({"mitre_technique": "T1234", "description": "x"}),
+            fea._signature_for_finding(
+                {"mitre_technique": "T1234", "description": "x"}
+            ),
             None,
         ),
     ]

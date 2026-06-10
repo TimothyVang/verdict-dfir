@@ -110,15 +110,13 @@ class _Server:
             return len(self.requests) >= n
 
     def respond(self, msg_id: object, result: dict) -> None:
-        self.stdout.feed(
-            json.dumps({"jsonrpc": "2.0", "id": msg_id, "result": result}) + "\n"
-        )
+        self.stdout.feed(json.dumps({"jsonrpc": "2.0", "id": msg_id, "result": result}) + "\n")
 
     def close_stdout(self) -> None:
         self.stdout.feed("")
 
 
-def _make_client(monkeypatch, server: _Server) -> "fea.StdioMcpClient":
+def _make_client(monkeypatch, server: _Server) -> fea.StdioMcpClient:
     monkeypatch.setattr(fea.subprocess, "Popen", lambda *a, **k: server.proc)
     return fea.StdioMcpClient("ignored-command", "test")
 
@@ -135,7 +133,7 @@ def test_concurrent_calls_match_by_id(monkeypatch) -> None:
         try:
             start.wait()
             results[v] = client.call("echo", {"n": v}, timeout=5.0)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             errors.append(exc)
 
     threads = [threading.Thread(target=worker, args=(v,)) for v in range(n)]

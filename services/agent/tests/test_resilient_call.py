@@ -58,7 +58,7 @@ class _FakeRust:
         return self._results.pop(0)
 
 
-def _inv() -> "fea.Investigation":
+def _inv() -> fea.Investigation:
     return fea.Investigation("/tmp/does-not-exist-evidence", case_id="case-resilient")
 
 

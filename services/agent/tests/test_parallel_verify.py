@@ -64,7 +64,7 @@ class _FakePy:
         return [c for c in self.calls if c[0] in ("audit_append", "pool_handoff")]
 
 
-def _fresh_inv(parallel: bool, workers: int = 4) -> "fea.Investigation":
+def _fresh_inv(parallel: bool, workers: int = 4) -> fea.Investigation:
     # Pin the case_id so both runs share an audit_path (it is otherwise a random
     # uuid per instance), making the recorded audit-call args comparable.
     inv = fea.Investigation("/tmp/does-not-exist-evidence", case_id="case-fixed")

@@ -49,9 +49,7 @@ class _FakeRust:
         with self.shared.lock:
             self.calls.append((name, args))
             self.shared.inflight += 1
-            self.shared.max_inflight = max(
-                self.shared.max_inflight, self.shared.inflight
-            )
+            self.shared.max_inflight = max(self.shared.max_inflight, self.shared.inflight)
         # Sleep inversely to rank so spec 0 finishes LAST -> reverse completion.
         rank = int(args.get("rank", 0))
         time.sleep(0.02 * (10 - rank))
@@ -64,7 +62,7 @@ class _FakeRust:
             self.shared.closed += 1
 
 
-def _inv(parallel: bool, workers: int, shared: _Shared) -> "fea.Investigation":
+def _inv(parallel: bool, workers: int, shared: _Shared) -> fea.Investigation:
     inv = fea.Investigation("/tmp/does-not-exist-evidence", case_id="case-fixed")
     inv.parallel = parallel
     inv.workers = workers

@@ -49,7 +49,7 @@ def _kinds(py: _FakePy) -> list[str]:
     return [kind for kind, _ in py.audits]
 
 
-def _inv() -> "fea.Investigation":
+def _inv() -> fea.Investigation:
     return fea.Investigation("/tmp/does-not-exist-evidence", case_id="case-hb")
 
 

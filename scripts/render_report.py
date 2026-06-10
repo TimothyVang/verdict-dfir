@@ -1087,9 +1087,7 @@ def build_host_sections(
             parts.append("No findings attributed to this host.\n\n")
         for beat in host_beats:
             named = (
-                beat.get("named_technique")
-                or beat.get("mitre_technique")
-                or "Finding"
+                beat.get("named_technique") or beat.get("mitre_technique") or "Finding"
             )
             cves = beat.get("cves") or []
             cve_txt = f" — {', '.join(cves)}" if cves else ""
@@ -1444,7 +1442,6 @@ def write_markdown(
     # findings) lives entirely in the Bottom Line Up Front above. This block only
     # produces the Recommendations list and captures the justified unknowns for
     # the single merged ## Limitations section below.
-    attack_story_section = ""  # folded into Bottom Line Up Front
     beats_section = ""  # removed: redundant with Detailed Findings + Timeline
     decisions_section = ""
     cannot_say: list[str] = []

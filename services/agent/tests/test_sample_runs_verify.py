@@ -15,9 +15,7 @@ from pathlib import Path
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[3]
-_SAMPLE_RUNS = sorted(
-    p.parent for p in (_ROOT / "docs" / "sample-run").glob("*/audit.jsonl")
-)
+_SAMPLE_RUNS = sorted(p.parent for p in (_ROOT / "docs" / "sample-run").glob("*/audit.jsonl"))
 
 
 @pytest.mark.parametrize("run_dir", _SAMPLE_RUNS, ids=lambda p: p.name)
@@ -29,6 +27,5 @@ def test_sample_run_trace_finding_passes(run_dir: Path) -> None:
         timeout=120,
     )
     assert result.returncode == 0, (
-        f"trace-finding failed for {run_dir.name}:\n"
-        f"{result.stdout}\n{result.stderr}"
+        f"trace-finding failed for {run_dir.name}:\n" f"{result.stdout}\n{result.stderr}"
     )
