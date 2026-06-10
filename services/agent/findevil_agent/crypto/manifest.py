@@ -99,20 +99,11 @@ class RunManifest:
 # ---------------------------------------------------------------------------
 
 
-def build_manifest(
-    *,
-    case_id: str,
-    run_id: str,
-    started_at: str,
-    audit_log: AuditLog,
-    signer: Signer,
-    extra: dict[str, Any] | None = None,
-) -> RunManifest:
-    """Assemble + sign a RunManifest from a finalized audit log.
-
-    Caller is responsible for not appending to the audit log after
-    this returns — manifests describe a snapshot.
-    """
+def _walk_audit_log(audit_log: AuditLog) -> tuple[list[ManifestLeaf], int, str]:
+    """Replay the audit log once: derive the Merkle-eligible leaves, count the
+    records, and compute the final line hash. Shared by the build path and by
+    ``verify_manifest`` so the verifier re-derives the same values the sealer
+    declared, instead of trusting the manifest's own copies."""
     leaves: list[ManifestLeaf] = []
     record_count = 0
     final_hash = ""
@@ -151,6 +142,24 @@ def build_manifest(
         # Other kinds (agent_message, plan_proposed, etc.) are in
         # the audit chain but not in the Merkle root — they're
         # observable via the chain hash, not separately.
+    return leaves, record_count, final_hash
+
+
+def build_manifest(
+    *,
+    case_id: str,
+    run_id: str,
+    started_at: str,
+    audit_log: AuditLog,
+    signer: Signer,
+    extra: dict[str, Any] | None = None,
+) -> RunManifest:
+    """Assemble + sign a RunManifest from a finalized audit log.
+
+    Caller is responsible for not appending to the audit log after
+    this returns — manifests describe a snapshot.
+    """
+    leaves, record_count, final_hash = _walk_audit_log(audit_log)
 
     tree = MerkleTree()
     for leaf in leaves:
@@ -197,6 +206,13 @@ def build_manifest(
             "bundle_b64": bundle.bundle_b64,
             "cert_fingerprint": bundle.cert_fingerprint,
             "signed_at": bundle.signed_at,
+            "kind": bundle.kind,
+            # Only present when a sigstore attempt honestly degraded to stub.
+            **(
+                {"fallback_reason": bundle.fallback_reason}
+                if bundle.fallback_reason is not None
+                else {}
+            ),
         },
         extra=body.extra,
     )
@@ -227,7 +243,18 @@ class ManifestVerification:
     merkle_root_ok: bool | str
     leaf_count_ok: bool | str
     signature_present: bool
-    overall: bool
+    signature_kind: str = "stub"
+    """Which signer sealed the run: ``"sigstore"`` or ``"stub"`` (default for
+    pre-``kind`` manifests)."""
+    signature_verified: bool | str = (
+        "stub signature: deterministic dev/offline placeholder, not cryptographic proof"
+    )
+    """Honest cryptographic-verification status. ``True`` only when a real
+    sigstore bundle was cryptographically verified offline; otherwise a reason
+    string. A stub bundle is never ``True`` — this field stops the chain from
+    *implying* proof a placeholder can't provide. Does NOT gate ``overall``
+    (presence-based), so dev/offline stub runs still verify end-to-end."""
+    overall: bool = False
 
 
 def verify_manifest(
@@ -265,6 +292,41 @@ def verify_manifest(
         except AuditLogError as exc:
             audit_status = f"audit chain break: {exc}"
 
+    # 1b. Log-vs-manifest consistency. A tail-truncated log still replays
+    # prefix-cleanly, and a forged-but-internally-consistent leaf set still
+    # rebuilds its own root — so re-derive count, final hash, and leaves from
+    # the actual log and compare them to what the manifest declared.
+    if audit_status is True:
+        derived, replayed_count, replayed_final = _walk_audit_log(AuditLog(log_path))
+        declared_count = obj.get("audit_log_record_count")
+        declared_final = str(obj.get("audit_log_final_hash") or "")
+        declared_leaves = [
+            (
+                int(leaf.get("seq", -1)),
+                str(leaf.get("kind", "")),
+                str(leaf.get("digest_hex", "")),
+                str(leaf.get("record_id", "")),
+            )
+            for leaf in obj.get("leaves", [])
+        ]
+        derived_leaves = [
+            (leaf.seq, leaf.kind, leaf.digest_hex, leaf.record_id) for leaf in derived
+        ]
+        if replayed_count != declared_count:
+            audit_status = (
+                f"audit log has {replayed_count} record(s) but the manifest "
+                f"declares {declared_count} (tail truncation or post-seal append)"
+            )
+        elif replayed_final != declared_final:
+            audit_status = (
+                "audit log final hash does not match the manifest's " "audit_log_final_hash"
+            )
+        elif derived_leaves != declared_leaves:
+            audit_status = (
+                "leaves re-derived from the audit log do not match the "
+                "manifest's declared leaves"
+            )
+
     # 2. Merkle root.
     declared_root = obj.get("merkle_root_hex", "")
     leaves = obj.get("leaves", [])
@@ -287,10 +349,15 @@ def verify_manifest(
     if declared_count != actual_count:
         count_status = f"leaf_count {declared_count} != actual {actual_count}"
 
-    # 4. Signature presence.
+    # 4. Signature presence + honest verification status.
     sig = obj.get("signature") or {}
     sig_present = bool(sig.get("bundle_b64") and sig.get("payload_sha256"))
+    sig_kind = str(sig.get("kind") or "stub")
+    sig_verified = _signature_verified(sig_present, sig_kind)
 
+    # `overall` stays presence-based (chain + merkle + count + a bundle exists)
+    # so dev/offline stub runs — every committed sample run — still verify
+    # end-to-end. `signature_verified` is the separate, honest crypto signal.
     overall = (
         audit_status is True and rebuild_status is True and count_status is True and sig_present
     )
@@ -299,8 +366,31 @@ def verify_manifest(
         merkle_root_ok=rebuild_status,
         leaf_count_ok=count_status,
         signature_present=sig_present,
+        signature_kind=sig_kind,
+        signature_verified=sig_verified,
         overall=overall,
     )
+
+
+def _signature_verified(present: bool, kind: str) -> bool | str:
+    """Honest answer to 'was the signature cryptographically verified?'.
+
+    Never returns ``True`` for a stub (a deterministic placeholder is not
+    proof) and never falsely claims to have verified a sigstore bundle it did
+    not. A real sigstore bundle is *recorded* for offline verification by a
+    party that supplies the expected signer identity (a deployment policy this
+    library can't assume) — so we report that explicitly rather than overclaim.
+    """
+    if not present:
+        return "no signature bundle present"
+    if kind == "stub":
+        return "stub signature: deterministic dev/offline placeholder, not cryptographic proof"
+    if kind == "sigstore":
+        return (
+            "sigstore bundle present and recorded; offline cryptographic verification "
+            "requires the verifier to supply the expected signer identity (deployment policy)"
+        )
+    return f"unknown signer kind {kind!r}"
 
 
 # ---------------------------------------------------------------------------

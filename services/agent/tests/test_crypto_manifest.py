@@ -263,6 +263,45 @@ class TestVerifyManifest:
         assert result.audit_chain_ok is True, result.audit_chain_ok
         assert result.overall is True
 
+    def test_records_signer_kind_and_honest_verification(self, tmp_path: Path) -> None:
+        log = _seed_log(tmp_path / "audit.jsonl")
+        manifest = build_manifest(
+            case_id="case-kind",
+            run_id="ver-kind",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=StubSigner(run_id="ver-kind"),
+        )
+        path = write_manifest(manifest, tmp_path / "run.manifest.json")
+        # The signer kind is recorded in the manifest signature block.
+        assert manifest.signature["kind"] == "stub"
+
+        result = verify_manifest(path)
+        # A run still verifies overall (chain + merkle + presence) ...
+        assert result.overall is True
+        # ... but the new honest field never claims a stub is cryptographic proof.
+        assert result.signature_kind == "stub"
+        assert result.signature_verified is not True
+        assert "not cryptographic proof" in str(result.signature_verified)
+
+    def test_fallback_reason_recorded_in_manifest(self, tmp_path: Path) -> None:
+        from findevil_agent.crypto.signer import FallbackSigner
+
+        class _Boom:
+            def sign(self, payload: bytes):  # type: ignore[no-untyped-def]
+                raise RuntimeError("no token")
+
+        log = _seed_log(tmp_path / "audit.jsonl")
+        manifest = build_manifest(
+            case_id="case-fb",
+            run_id="ver-fb",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=FallbackSigner(_Boom(), StubSigner(run_id="ver-fb")),
+        )
+        assert manifest.signature["kind"] == "stub"
+        assert "no token" in manifest.signature["fallback_reason"]
+
     def test_tampered_merkle_root_caught(self, tmp_path: Path) -> None:
         log = _seed_log(tmp_path / "audit.jsonl")
         manifest = build_manifest(
@@ -361,3 +400,56 @@ class TestVerifyManifest:
         result = verify_manifest(path)
         assert result.audit_chain_ok is not True
         assert result.overall is False
+
+
+class TestTamperEvidence:
+    """The manifest must catch log-vs-manifest divergence, not just internal
+    chain breaks: a tail-truncated audit log still replays prefix-cleanly,
+    and an internally-consistent forged leaf set still rebuilds its own root.
+    Both must fail against the sealed manifest."""
+
+    def _sealed(self, tmp_path: Path) -> Path:
+        log = _seed_log(tmp_path / "audit.jsonl")
+        manifest = build_manifest(
+            case_id="case-tamper",
+            run_id="tamper-1",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=StubSigner(run_id="tamper-1"),
+        )
+        return write_manifest(manifest, tmp_path / "run.manifest.json")
+
+    def test_tail_truncation_fails_verification(self, tmp_path: Path) -> None:
+        path = self._sealed(tmp_path)
+        audit = tmp_path / "audit.jsonl"
+        lines = audit.read_text(encoding="utf-8").splitlines(keepends=True)
+        audit.write_text("".join(lines[:-1]), encoding="utf-8")
+
+        result = verify_manifest(path)
+        assert result.audit_chain_ok is not True
+        assert result.overall is False
+
+    def test_rerooted_leaf_forgery_fails_verification(self, tmp_path: Path) -> None:
+        # An attacker drops a leaf from the manifest and recomputes the root
+        # and leaf_count so the manifest stays internally consistent. The
+        # leaves re-derived from the actual audit log must catch it.
+        from findevil_agent.crypto.merkle import MerkleTree
+
+        path = self._sealed(tmp_path)
+        obj = json.loads(path.read_text(encoding="utf-8"))
+        forged_leaves = obj["leaves"][:-1]
+        tree = MerkleTree()
+        for leaf in forged_leaves:
+            tree.append(bytes.fromhex(leaf["digest_hex"]))
+        obj["leaves"] = forged_leaves
+        obj["leaf_count"] = len(forged_leaves)
+        obj["merkle_root_hex"] = tree.root_hex()
+        path.write_text(json.dumps(obj, indent=2, sort_keys=True), encoding="utf-8")
+
+        result = verify_manifest(path)
+        assert result.overall is False
+
+    def test_clean_run_still_passes_consistency_checks(self, tmp_path: Path) -> None:
+        result = verify_manifest(self._sealed(tmp_path))
+        assert result.audit_chain_ok is True, result.audit_chain_ok
+        assert result.overall is True
