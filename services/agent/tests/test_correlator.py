@@ -81,8 +81,35 @@ class TestCrossArtifactRule:
         assert refined[0].confidence == "INFERRED"
         assert "single artifact class" in outcomes[0].reason
 
-    def test_disk_plus_log_execution_kept(self) -> None:
-        # Two findings spanning disk + log → cross-artifact corroboration.
+    def test_unrelated_run_classes_do_not_corroborate(self) -> None:
+        # Option-1 regression: another finding touching a different artifact
+        # class elsewhere in the run must NOT corroborate this finding's
+        # execution claim — corroboration has to appear in the Finding itself.
+        exec_claim = _f(
+            "f-1",
+            "MFT shows attacker.exe was executed",
+            artifact_path="C:\\$MFT",
+            confidence="CONFIRMED",
+        )
+        unrelated = _f(
+            "f-2",
+            "Scheduled task created in Windows namespace",
+            artifact_path="memory.raw",
+            confidence="CONFIRMED",
+        )
+        refined, outcomes = correlate([exec_claim, unrelated])
+        by_id = {o.finding_id: o for o in outcomes}
+        assert by_id["f-1"].action == "downgraded"
+        assert "single artifact class" in by_id["f-1"].reason
+        assert refined[0].confidence == "INFERRED"
+        # The unrelated non-execution finding passes through untouched.
+        assert by_id["f-2"].action == "kept"
+
+    def test_disk_plus_log_separate_findings_each_downgraded(self) -> None:
+        # Two single-class execution claims do not corroborate each other
+        # run-wide; each must carry its own ≥2-class evidence. The report-QA
+        # gate (which sees timeline event linkage) is the layer that can
+        # legitimately join same-binary/same-time findings across classes.
         f1 = _f(
             "f-1",
             "MFT shows attacker.exe was executed",
@@ -96,9 +123,8 @@ class TestCrossArtifactRule:
             confidence="CONFIRMED",
         )
         refined, outcomes = correlate([f1, f2])
-        kept = [o for o in outcomes if o.action == "kept"]
-        assert len(kept) == 2  # both kept
-        assert all(f.confidence == "CONFIRMED" for f in refined)
+        assert all(o.action == "downgraded" for o in outcomes)
+        assert all(f.confidence == "INFERRED" for f in refined)
 
 
 class TestMitreTechniqueTrigger:

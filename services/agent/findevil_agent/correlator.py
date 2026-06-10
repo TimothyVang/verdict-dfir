@@ -3,9 +3,13 @@
 Spec #2 §8.1 (Correlate stage) + ``agent-config/SOUL.md`` invariant
 "Execution claims need ≥2 artifact classes." This module is the
 last gate before the verdict is assembled — it walks the merged
-finding list and downgrades any "execution"-flavored claim that
-doesn't have corroboration from at least two distinct artifact
-classes (disk + log + memory).
+finding list and downgrades any "execution"-flavored claim whose
+own description doesn't carry corroboration from a second
+execution-artifact source (prefetch + registry pair, or EDR-tier
+telemetry). Corroboration must appear in the Finding itself; other
+findings elsewhere in the run do NOT corroborate it (the report-QA
+gate, which sees timeline event linkage, is the layer that can join
+same-binary/same-time findings across classes).
 
 It also enforces the Amcache caveat (per
 ``agent-config/MEMORY.md``): ``Amcache LastModified`` is
@@ -23,7 +27,6 @@ from dataclasses import dataclass
 
 from findevil_agent.events import Finding
 from findevil_agent.execution_claim import is_execution_claim
-from findevil_agent.judge import _classify_artifact
 
 # Amcache-only execution evidence — the SOUL.md / MEMORY.md
 # explicit caveat: Amcache LastModified is registration, not run.
@@ -55,9 +58,6 @@ def correlate(
     Returns a tuple of (refined_findings, outcomes). ``outcomes`` is
     one entry per input Finding describing what the correlator did.
     """
-    # Index artifact classes the run touched, for cross-checks.
-    classes_in_run: set[str] = {c for f in findings if (c := _classify_artifact(f)) is not None}
-
     refined: list[Finding] = []
     outcomes: list[CorrelationOutcome] = []
 
@@ -72,9 +72,6 @@ def correlate(
             continue
 
         # Execution claim — apply cross-artifact rule.
-        own_class = _classify_artifact(f)
-        has_other_class = bool(classes_in_run - ({own_class} if own_class else set()))
-
         # Strong corroboration: prefetch paired with a second execution registry
         # artifact (Amcache / ShimCache / UserAssist) OR EDR-tier (Sysmon /
         # Carbon Black / CrowdStrike) telemetry mentioned in this Finding's
@@ -106,13 +103,13 @@ def correlate(
                     reason="Amcache LastModified is catalog-registration, not execution",
                 )
             )
-        elif has_strong_corroboration or has_other_class:
+        elif has_strong_corroboration:
             refined.append(f)
             outcomes.append(
                 CorrelationOutcome(
                     finding_id=f.finding_id,
                     action="kept",
-                    reason="execution claim corroborated by ≥2 artifact classes or EDR/prefetch+cache",
+                    reason="execution corroborated in-finding by prefetch+registry pair or EDR telemetry",
                 )
             )
         else:
