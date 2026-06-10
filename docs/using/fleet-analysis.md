@@ -40,6 +40,27 @@ evidence is each host's own `run.manifest.json`, verifiable offline via `manifes
   load and will not run without it. Install per `docs/reference/dependencies.md`. (Stages 1 and 2
   are pure-stdlib and need no extra packages.)
 
+### Staging evidence into the VM (zero-copy) + first-run fixes
+
+The enumerator only sees images already at `/mnt/hgfs/evidence/extracted/<host>/*.img` **inside the
+guest** — SIFT mode never copies evidence in. The guest disk is usually small (~25 GB free), so do
+not `scp` a multi-GB corpus; **share it** instead:
+
+1. Build a host-side **hardlink** tree — `tmp/sift-fleet-evidence/extracted/<host>/memory.img`
+   (hardlinks cost no disk and are visible through HGFS; symlinks are not).
+2. `vmrun -T ws enableSharedFolders <vmx>` then
+   `vmrun -T ws addSharedFolder <vmx> evidence "$PWD/tmp/sift-fleet-evidence"`.
+3. In the guest: `sudo mkdir -p /mnt/hgfs && sudo vmhgfs-fuse .host:/ /mnt/hgfs -o allow_other`,
+   then verify `ls /mnt/hgfs/evidence/extracted`.
+4. Run with `FIND_EVIL_GUEST_IP=<actual guest IP>` — the `192.168.197.143` default drifts; read the
+   live IP from `.mcp.json.sift` or `vmrun -T ws getGuestIPAddress <vmx> -wait`.
+
+Known first-run fixes (all shipped): `find-evil-auto` resolves `python3` (not `python`);
+`render_fleet_report.py` resolves `pandoc`/`chrome` from PATH (override via `PANDOC_BIN`/`CHROME_BIN`).
+If `fleet_correlate.py` reports **0 cross-host correlations despite populated runs**, the guest's
+Volatility symbol cache is unwritable — `psscan.json` will be empty (`[]`); make
+`/opt/volatility3/.../symbols` writable (`sudo chmod -R a+rwX`) and re-run.
+
 ---
 
 ## Stage 1 — `fleet_investigate.py`

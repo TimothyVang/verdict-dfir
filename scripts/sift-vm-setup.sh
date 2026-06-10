@@ -141,6 +141,26 @@ if ! command -v hayabusa >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/hayabusa" 
 fi
 [[ -x "$HOME/.local/bin/hayabusa" ]] && log "  hayabusa: $HOME/.local/bin/hayabusa" || true
 
+# hayabusa ships WITHOUT its Sigma rules. The MCP tool
+# (services/mcp/src/tools/hayabusa_scan.rs resolve_rules_base) reads them from
+# $XDG_DATA_HOME/hayabusa-mcp/rules (default ~/.local/share/hayabusa-mcp/rules).
+# Without them every EVTX/Sigma scan aborts ("required rules and config files
+# were not found") and silently returns zero alerts. Fetch into that base.
+HAYABUSA_RULES_BASE="${HAYABUSA_RULES_BASE:-${XDG_DATA_HOME:-$HOME/.local/share}/hayabusa-mcp}"
+if [[ -d "${HAYABUSA_RULES_BASE}/rules/config" ]]; then
+  log "  hayabusa rules present (${HAYABUSA_RULES_BASE}/rules)"
+elif [[ -x "$HOME/.local/bin/hayabusa" ]] || command -v hayabusa >/dev/null 2>&1; then
+  log "  fetching hayabusa Sigma rules -> ${HAYABUSA_RULES_BASE}/rules ..."
+  HB_BIN="$(command -v hayabusa || echo "$HOME/.local/bin/hayabusa")"
+  mkdir -p "${HAYABUSA_RULES_BASE}"
+  if "${HB_BIN}" update-rules -r "${HAYABUSA_RULES_BASE}/rules" >/dev/null 2>&1 \
+     && [[ -d "${HAYABUSA_RULES_BASE}/rules/config" ]]; then
+    log "    hayabusa rules -> ${HAYABUSA_RULES_BASE}/rules"
+  else
+    warn "  hayabusa update-rules failed (needs network; EVTX/Sigma scans return 0 alerts until rules are fetched)"
+  fi
+fi
+
 # Velociraptor — not in SIFT; pull a release binary.
 VELOCIRAPTOR_VERSION="${VELOCIRAPTOR_VERSION:-0.74.6}"
 VELOCIRAPTOR_RELEASE="${VELOCIRAPTOR_RELEASE:-0.74}"

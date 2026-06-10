@@ -189,6 +189,11 @@ fn json_timeline_args(
         output_file.as_os_str().to_os_string(),
         // Quiet mode suppresses the progress banner.
         "-q".into(),
+        // Emit UTC ISO-8601 timestamps. Hayabusa's default is *local* time with
+        // a space separator (`2022-02-22 22:00:00.123 +02:00`), which the
+        // downstream timeline's strict ISO parser rejects — silently dropping
+        // every alert. `normalize_iso8601` then trims the 100-ns fraction.
+        "--ISO-8601".into(),
     ];
     if let Some(rules) = rule_set {
         args.push("-r".into());
@@ -243,7 +248,8 @@ pub fn hayabusa_scan(input: &HayabusaInput) -> Result<HayabusaOutput, HayabusaEr
 
     // Canonicalize the EVTX dir to an absolute path BEFORE any CWD override
     // below, so a relative `evtx_dir` can't break once we change directories.
-    let evtx_abs = std::fs::canonicalize(&input.evtx_dir).unwrap_or_else(|_| input.evtx_dir.clone());
+    let evtx_abs =
+        std::fs::canonicalize(&input.evtx_dir).unwrap_or_else(|_| input.evtx_dir.clone());
 
     let mut cmd = Command::new(&binary);
     cmd.args(json_timeline_args(
@@ -408,7 +414,8 @@ fn json_value_to_alert(v: &serde_json::Value) -> HayabusaAlert {
         0
     };
 
-    let timestamp_iso = pick_str(&["Timestamp", "timestamp", "@timestamp", "ts"]);
+    let timestamp_iso =
+        normalize_iso8601(&pick_str(&["Timestamp", "timestamp", "@timestamp", "ts"]));
     let rule = pick_str(&["RuleTitle", "RuleName", "rule", "title"]);
     let level = pick_str(&["Level", "level", "severity"]);
     let channel = pick_str(&["Channel", "channel"]);
@@ -457,6 +464,23 @@ fn json_value_to_alert(v: &serde_json::Value) -> HayabusaAlert {
     }
 }
 
+/// Normalize a timestamp to strict ISO-8601 UTC with microsecond precision so
+/// the downstream timeline accepts it. Even with `--ISO-8601`, hayabusa emits
+/// 100-ns (7-digit) fractions (`2022-02-22T10:10:10.1234567Z`); Python 3.10's
+/// `datetime.fromisoformat` (which the engine runs) rejects more than 6
+/// fractional digits, so the alert is dropped. Re-emit as
+/// `2022-02-22T10:10:10.123456Z`. Unparseable input is returned unchanged so a
+/// future format change degrades gracefully instead of losing the field.
+fn normalize_iso8601(raw: &str) -> String {
+    chrono::DateTime::parse_from_rfc3339(raw).map_or_else(
+        |_| raw.to_string(),
+        |dt| {
+            dt.with_timezone(&chrono::Utc)
+                .to_rfc3339_opts(chrono::SecondsFormat::Micros, true)
+        },
+    )
+}
+
 fn truncate_to(mut s: String, max: usize) -> String {
     if s.len() > max {
         // Walk to the nearest char boundary. Hayabusa is a Yamato Security
@@ -485,7 +509,9 @@ mod tests {
     use super::*;
 
     fn as_strings(args: &[OsString]) -> Vec<String> {
-        args.iter().map(|a| a.to_string_lossy().into_owned()).collect()
+        args.iter()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect()
     }
 
     #[test]
@@ -497,7 +523,10 @@ mod tests {
         // It must follow the subcommand, not precede it.
         let sub = s.iter().position(|a| a == "json-timeline").unwrap();
         let wiz = s.iter().position(|a| a == "--no-wizard").unwrap();
-        assert!(wiz > sub, "--no-wizard must come after json-timeline: {s:?}");
+        assert!(
+            wiz > sub,
+            "--no-wizard must come after json-timeline: {s:?}"
+        );
     }
 
     #[test]
@@ -505,7 +534,10 @@ mod tests {
         let args = json_timeline_args(Path::new("/evtx"), Path::new("/out.json"), None, None);
         let s = as_strings(&args);
         for expected in ["-d", "/evtx", "-o", "/out.json", "-q"] {
-            assert!(s.contains(&expected.to_string()), "missing {expected} in {s:?}");
+            assert!(
+                s.contains(&expected.to_string()),
+                "missing {expected} in {s:?}"
+            );
         }
     }
 
@@ -530,6 +562,33 @@ mod tests {
         let s = as_strings(&args);
         assert!(!s.contains(&"-r".to_string()));
         assert!(!s.contains(&"-m".to_string()));
+    }
+
+    #[test]
+    fn json_timeline_args_request_iso8601_utc() {
+        // Without --ISO-8601, hayabusa emits local-time timestamps the
+        // downstream timeline's strict ISO parser rejects, dropping every alert.
+        let args = json_timeline_args(Path::new("/evtx"), Path::new("/out.json"), None, None);
+        let s = as_strings(&args);
+        assert!(s.contains(&"--ISO-8601".to_string()), "args were {s:?}");
+    }
+
+    #[test]
+    fn normalize_iso8601_trims_fraction_and_forces_utc() {
+        // 100-ns (7-digit) fraction -> microseconds (6 digits); Python 3.10
+        // fromisoformat rejects more than 6.
+        assert_eq!(
+            normalize_iso8601("2020-11-02T08:28:14.6561234Z"),
+            "2020-11-02T08:28:14.656123Z"
+        );
+        // An offset timestamp is converted to UTC Z.
+        assert_eq!(
+            normalize_iso8601("2020-11-02T17:28:14.656123+09:00"),
+            "2020-11-02T08:28:14.656123Z"
+        );
+        // Unparseable input is passed through untouched (graceful degradation).
+        assert_eq!(normalize_iso8601(""), "");
+        assert_eq!(normalize_iso8601("not-a-time"), "not-a-time");
     }
 
     #[test]

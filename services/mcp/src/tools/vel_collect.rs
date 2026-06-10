@@ -298,7 +298,6 @@ fn parse_rows(
     })
 }
 
-
 fn truncate_to(mut s: String, max: usize) -> String {
     if s.len() > max {
         // Walk down to the nearest char boundary so multi-byte UTF-8
