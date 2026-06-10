@@ -316,29 +316,38 @@ def rust_replay_command() -> list[str]:
 
 
 class SshMcpClient:
+    # Set when the spawn itself fails (no ssh client on this host): the client
+    # then behaves as an already-closed server so callers get the same fast
+    # tool-error degrade as an unreachable VM instead of an engine crash.
+    _spawn_error: str | None = None
+
     def __init__(self, remote_command: str, label: str) -> None:
         self.label = label
-        self.proc = subprocess.Popen(
-            [
-                "ssh",
-                "-i",
-                SSH_KEY,
-                "-o",
-                "BatchMode=yes",
-                "-o",
-                "StrictHostKeyChecking=accept-new",
-                *SSH_CONNECT_OPTS,
-                "-T",
-                f"{GUEST_USER}@{GUEST_IP}",
-                remote_command,
-            ],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            bufsize=1,
-        )
+        try:
+            self.proc = subprocess.Popen(
+                [
+                    "ssh",
+                    "-i",
+                    SSH_KEY,
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "StrictHostKeyChecking=accept-new",
+                    *SSH_CONNECT_OPTS,
+                    "-T",
+                    f"{GUEST_USER}@{GUEST_IP}",
+                    remote_command,
+                ],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                bufsize=1,
+            )
+        except FileNotFoundError as exc:
+            self.proc = None
+            self._spawn_error = f"{label}: cannot spawn ssh: {exc}"
         self._wire()
 
     def _wire(self) -> None:
@@ -351,9 +360,11 @@ class SshMcpClient:
         self._next_id = 1
         self._lock = threading.Lock()
         self._waiters: dict[int, Queue[dict[str, Any] | None]] = {}
-        self._closed = False
+        self._closed = self.proc is None
         # Keep the last N stderr lines for diagnostics without unbounded growth.
         self._stderr_tail: deque[str] = deque(maxlen=400)
+        if self.proc is None:
+            return  # spawn failed — behave as an already-closed server
         threading.Thread(target=self._reader, daemon=True).start()
         # Drain stderr continuously. The server's stderr is a PIPE; if nothing
         # reads it, a verbose tool (e.g. registry_query parsing a 100 MB SOFTWARE
@@ -407,7 +418,9 @@ class SshMcpClient:
         # before blocking on the response so calls actually run in parallel.
         with self._lock:
             if self._closed:
-                raise RuntimeError(f"{self.label}: server closed stdout")
+                raise RuntimeError(
+                    self._spawn_error or f"{self.label}: server closed stdout"
+                )
             i = self._next_id
             self._next_id += 1
             msg["id"] = i
@@ -474,12 +487,16 @@ class SshMcpClient:
             return {"_error": {"message": f"malformed tool response: {e}: {result!r}"}}
 
     def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
+        if self.proc is None:
+            return  # spawn failed — nothing to notify
         msg = {"jsonrpc": "2.0", "method": method, "params": params or {}}
         with self._lock:
             self.proc.stdin.write(json.dumps(msg, separators=(",", ":")) + "\n")
             self.proc.stdin.flush()
 
     def close(self) -> None:
+        if self.proc is None:
+            return  # spawn failed — no process to tear down
         if self.proc.stdin and not self.proc.stdin.closed:
             try:
                 self.proc.stdin.close()
@@ -6040,7 +6057,9 @@ class Investigation:
             "memory_path": evidence_path,
             "limit": 200,
         }
-        mal = self._call_resilient(rust, py, "vol_malfind", malfind_args, timeout=1800.0)
+        mal = self._call_resilient(
+            rust, py, "vol_malfind", malfind_args, timeout=1800.0
+        )
         malfind_error = None
         if "_error" in mal:
             malfind_error = str(mal["_error"].get("message", "vol_malfind failed"))

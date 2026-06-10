@@ -25,6 +25,24 @@ def test_connect_opts_bound_the_connection() -> None:
     assert "ServerAliveCountMax=3" in fea.SSH_CONNECT_OPTS
 
 
+def test_missing_ssh_binary_degrades_not_crashes(monkeypatch) -> None:
+    # The L1 devbase has no ssh client. Spawning the tunnel must degrade to
+    # the same fast tool error as an unreachable VM — not crash the engine
+    # with an unhandled FileNotFoundError at client construction.
+    def _no_ssh(*args, **kwargs):
+        raise FileNotFoundError(2, "No such file or directory", "ssh")
+
+    monkeypatch.setattr(fea.subprocess, "Popen", _no_ssh)
+
+    client = fea.SshMcpClient("true", "rust-mcp")
+    try:
+        result = client.call_tool("case_open", {}, timeout=5.0)
+        assert "_error" in result
+        assert "ssh" in result["_error"]["message"]
+    finally:
+        client.close()
+
+
 def test_unreachable_sift_returns_fast_not_hang(monkeypatch) -> None:
     # TEST-NET-1 (RFC 5737) is guaranteed unroutable, so ssh exercises the
     # ConnectTimeout path. With the bound, the client gives up in ~10s and the
