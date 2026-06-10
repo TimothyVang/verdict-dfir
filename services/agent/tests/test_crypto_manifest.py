@@ -214,6 +214,55 @@ class TestVerifyManifest:
         assert result.signature_present is True
         assert result.overall is True
 
+    def test_copied_case_dir_verifies_via_manifest_sibling(self, tmp_path: Path) -> None:
+        # A judge copies a case dir to another machine: the embedded absolute
+        # audit_log_path 404s there. verify_manifest must fall back to the
+        # audit log sitting NEXT TO the manifest before giving up.
+        orig = tmp_path / "orig"
+        orig.mkdir()
+        log = _seed_log(orig / "audit.jsonl")
+        manifest = build_manifest(
+            case_id="case-copy",
+            run_id="ver-copy",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=StubSigner(run_id="ver-copy"),
+        )
+        write_manifest(manifest, orig / "run.manifest.json")
+
+        copy = tmp_path / "copy"
+        copy.mkdir()
+        (copy / "audit.jsonl").write_bytes((orig / "audit.jsonl").read_bytes())
+        (copy / "run.manifest.json").write_bytes((orig / "run.manifest.json").read_bytes())
+        # Simulate the other machine: the original path no longer exists.
+        (orig / "audit.jsonl").unlink()
+        (orig / "run.manifest.json").unlink()
+        orig.rmdir()
+
+        result = verify_manifest(copy / "run.manifest.json")
+        assert result.audit_chain_ok is True, result.audit_chain_ok
+        assert result.overall is True
+
+    def test_explicit_audit_log_path_still_wins(self, tmp_path: Path) -> None:
+        # The override must take precedence over both the sibling and the
+        # embedded path.
+        log = _seed_log(tmp_path / "audit.jsonl")
+        manifest = build_manifest(
+            case_id="case-ovr",
+            run_id="ver-ovr",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=StubSigner(run_id="ver-ovr"),
+        )
+        path = write_manifest(manifest, tmp_path / "run.manifest.json")
+        elsewhere = tmp_path / "elsewhere.jsonl"
+        elsewhere.write_bytes((tmp_path / "audit.jsonl").read_bytes())
+        (tmp_path / "audit.jsonl").unlink()
+
+        result = verify_manifest(path, audit_log_path=elsewhere)
+        assert result.audit_chain_ok is True, result.audit_chain_ok
+        assert result.overall is True
+
     def test_tampered_merkle_root_caught(self, tmp_path: Path) -> None:
         log = _seed_log(tmp_path / "audit.jsonl")
         manifest = build_manifest(

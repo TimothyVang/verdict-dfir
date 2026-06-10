@@ -251,8 +251,12 @@ def verify_manifest(
     """
     obj = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    # 1. Audit chain.
-    log_path = audit_log_path or Path(obj.get("audit_log_path") or "")
+    # 1. Audit chain. Precedence: explicit override → the audit log sitting
+    # next to the manifest (a copied case dir verifies on any machine; the
+    # chain itself proves it is the right file) → the embedded absolute path.
+    embedded = Path(obj.get("audit_log_path") or "")
+    sibling = manifest_path.parent / (embedded.name or "audit.jsonl")
+    log_path = audit_log_path or (sibling if sibling.is_file() else embedded)
     audit_status: bool | str = "audit_log_path missing"
     if log_path and log_path.is_file():
         try:
