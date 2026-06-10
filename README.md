@@ -122,6 +122,20 @@ Point it at a single image or a mixed case directory (memory + EVTX + disk + net
 Velociraptor). Output lands in `tmp/auto-runs/<case-id>/`, and the dashboard
 (`http://localhost:3000`) streams the run live as it happens.
 
+**Zero setup, zero flags — the `/verdict` skill.** In a Claude Code session (`claude` in the
+repo), just type:
+
+```
+/verdict <path-to-evidence>
+```
+
+The skill **bootstraps everything for you** — builds the MCP servers (`install.sh` if needed),
+brings up n8n, and prepares the SANS SIFT VM so disk images fully extract — then runs the whole
+pipeline, fires the n8n automation + grounding workflows, and prints the Verdict plus every
+workflow that ran (and opens the dashboard + report). You never run `install.sh`/`doctor.sh` or
+pass `--sift`/`--parallel` — the skill adds them. Full reference:
+[docs/using/running-verdict.md §`/verdict` skill](docs/using/running-verdict.md).
+
 **Prefer to drive it yourself?** Open Claude Code in the repo (`claude`) and prompt
 `investigate <path>` — same tools, interactive.
 

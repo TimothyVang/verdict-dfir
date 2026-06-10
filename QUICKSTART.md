@@ -40,6 +40,22 @@ winget install Velociraptor  # or github.com/Velocidex/velociraptor/releases
 
 ## 2. Choose a run mode
 
+### Option 2C — the `/verdict` skill (turnkey, recommended)
+
+The shortest path. In a Claude Code session (`claude` in the repo), type:
+
+```
+/verdict <path-to-evidence>
+```
+
+The skill does **everything** with no flags and no manual installs: it bootstraps the MCP servers
++ n8n + the SANS SIFT VM, auto-uses `--sift` so disk images fully extract, runs the parallel
+investigation to a signed Verdict, fires the n8n automation + grounding workflows, opens the
+dashboard + report, and prints the Verdict + every workflow that ran. You never run
+`install.sh`/`doctor.sh` or type `--sift`. Full reference:
+[docs/using/running-verdict.md §0](docs/using/running-verdict.md). (Loaded at session start — if you
+just pulled it, start a fresh `claude` session.)
+
 ### Option 2A — Interactive Claude Code session (best for exploration)
 
 ```bash

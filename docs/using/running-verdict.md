@@ -20,6 +20,35 @@ manifest. `.mcp.json` registers 6 servers total; 4 are non-product
 
 ---
 
+## 0. The `/verdict` skill — turnkey, zero flags (recommended)
+
+In a Claude Code session (`claude` in the repo), type **`/verdict <evidence>`** and the skill runs
+the *entire* pipeline with no setup and no flags:
+
+1. **Bootstraps** (`scripts/verdict-setup.sh`): builds the MCP servers via `install.sh` if missing,
+   brings up n8n, and prepares the SANS SIFT VM — resolves the VM's *current* DHCP IP (the hardcoded
+   default goes stale), powers it on if it is off, and confirms the forensic toolchain (`ewfmount`,
+   Volatility, Hayabusa, …).
+2. **Auto-selects `--sift`** when the VM is reachable, so disk images fully extract — local mode can
+   only mount the EWF container, not the inner NTFS volume. Falls back to local with a clear
+   custody-only warning when there is no VM.
+3. **Runs the parallel investigation** to a signed Verdict, then **fires the n8n finding-to-action +
+   grounding workflows** (host-side, post-verdict — never in the audit chain), and opens the
+   dashboard + report.
+4. **Reports** the Verdict + confidence, the finding / tool-call counts, `manifest_verify.overall`,
+   and every workflow that fired.
+
+You never run `install.sh` / `doctor.sh`, and never type `--sift` or `--parallel` — the skill adds
+them. It is a turnkey wrapper around `scripts/verdict` (documented below); anything it does you can
+also do by hand with the flags in §1. The forensic toolchain lives pre-installed in the SIFT VM, so
+"install everything" is satisfied by preparing the VM, not by installing binaries on the host.
+
+> The skill is loaded at session start. If you just pulled it (e.g. after a merge), start a fresh
+> `claude` session so `/verdict` is registered. To force serial or local, the skill honors the same
+> flags — tell it "run `/verdict <evidence>` locally" or "with `--no-parallel`".
+
+---
+
 ## 1. The one command and its flags
 
 ```bash
@@ -31,12 +60,14 @@ Every flag the launcher actually parses:
 | Flag | Effect |
 |---|---|
 | `<evidence>` (positional) | Path to the Observable. Omit it to use the newest non-placeholder entry already in `evidence/`. |
-| `--sift` | Run the DFIR tools inside the SANS SIFT VM over SSH (default: tools on the local host). Requires a one-time `bash scripts/sift-vm-bootstrap.sh`. |
+| `--sift` | Run the DFIR tools inside the SANS SIFT VM over SSH (default: tools on the local host) — **the only way to fully extract a disk image** (local mode mounts the EWF container but not the inner volume). The post-verdict n8n automation + grounding **now fire in `--sift` mode too** (host-side, after the case dir syncs back). Requires a one-time `bash scripts/sift-vm-bootstrap.sh`; set `FIND_EVIL_GUEST_IP` if the VM's IP changed. |
 | `--watch` | No path? Block until a file **or** a case folder is dropped into `evidence/`, debounced until the copy finishes, then go. |
 | `--no-dashboard` | Do not auto-open the web dashboard. |
 | `--skip-build` | Assume `target/release/findevil-mcp` is already built; skip the `cargo build`. |
 | `--dry-run` | Print each stage (`doctor`, build, engine argv, dashboard) without running anything. |
 | `--unattended` | Forwarded to the engine: auto-resolve Pool A vs. Pool B contradictions to the higher-credibility pool; never pause for analyst input. |
+| `--parallel` / `--no-parallel` | Run independent tool calls (verify re-runs + disk-artifact parses) concurrently. **On by default**; `--no-parallel` (alias `--sequential`) forces serial. Audit appends stay serialized, so the Verdict + hash-chained log are identical to serial. |
+| `--workers N` | Max concurrent lanes for `--parallel` (default 2). Each lane is its own findevil-mcp process, so a higher count can over-subscribe a RAM-constrained host (e.g. the SIFT VM) and corrupt registry hive loads; raise only after a parallel-vs-serial parity check. |
 | `--run-summary <path>` | Also write a machine-readable JSON pointer/QA file to `<path>` (see §6). |
 | `-- <args...>` | Forward all remaining args verbatim to the engine (`scripts/find_evil_auto.py`). |
 
