@@ -1,5 +1,5 @@
 # Spec #3 §4.4 — Packer template that builds a warm QEMU microvm
-# qcow2 from the existing sift-2026.03.24.ova at repo root.
+# qcow2 from the existing sift-2026-04-22.ova at repo root.
 #
 # The output is a snapshotted, booted-to-login qcow2 that L3 CI
 # runs can `-loadvm warm` into in 3-8 seconds — vs. 35-55s cold
@@ -27,7 +27,7 @@ packer {
 
 variable "ova_path" {
   type        = string
-  default     = "../sift-2026.03.24.ova"
+  default     = "../sift-2026-04-22.ova"
   description = "Path to the SIFT OVA at repo root."
 }
 

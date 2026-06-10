@@ -64,8 +64,8 @@ jobs:
           steps.kvm-check.outputs.kvm_ok == 'true'
           && steps.cache-warm.outputs.cache-hit != 'true'
         run: |
-          if [[ ! -f sift-2026.03.24.ova ]]; then
-            echo "::error::sift-2026.03.24.ova missing; L3 cannot build the warm qcow2"
+          if [[ ! -f sift-2026-04-22.ova ]]; then
+            echo "::error::sift-2026-04-22.ova missing; L3 cannot build the warm qcow2"
             echo "::error::Provision the OVA as a self-hosted fixture or cache it separately."
             exit 1
           fi
