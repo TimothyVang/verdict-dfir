@@ -146,6 +146,22 @@ credibility-weighted merge selects Pool A's framing.
 **Notes:**
 - This shows autonomous reasoning + self-correction. Make the
   contradiction record visible on screen for ≥3 seconds.
+- **Reproducible live self-correction (recipe).** To capture the
+  verifier catching a failure and recovering ON CAMERA — not as an
+  animation — run the case with the audit-labeled fault hook:
+
+  ```bash
+  FIND_EVIL_FAULT_INJECT="verifier_reject_once:prefetch-cain-exe" \
+    python3 scripts/find_evil_auto.py evidence/SCHARDT.dd \
+    --local --unattended --no-parallel --case-id demo-self-correction
+  ```
+
+  The chain then shows, live and in order: `fault_injection` (the
+  injection declares itself), the verifier rejecting the corrupted
+  replay, `verifier_redispatch`, and the fresh attempt approving —
+  verdict unchanged. `grep -E 'fault_injection|verifier_redispatch'`
+  over `tail -f audit.jsonl` makes the sequence pop on screen. The
+  committed reference run is `docs/sample-run/fault-injection-redispatch/`.
 
 ---
 

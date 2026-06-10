@@ -21,6 +21,7 @@
 | `FINDEVIL_DASHBOARD_EXTRA_ROOTS` | unset | dashboard | Additional allowed roots for case paths (e.g. `tmp/auto-runs`) |
 | `PYTHONPATH` | prepended `services/agent` | `scripts/verdict` (local mode) | Resolves the agent package in `FIND_EVIL_LOCAL=1` |
 | `FINDEVIL_L1_DOCKER` | unset | dashboard build | Disables some Next.js optimizations for CI Docker |
+| `FIND_EVIL_FAULT_INJECT` | unset | `find_evil_auto.py` (verify stage) | Demo/showcase fault hook: `verifier_reject_once:<finding-id-fragment>` corrupts ONE verify replay's tool name on the first attempt so the verifier rejects and the re-dispatch loop recovers — live, on camera. Inert by default; never silent (audited `fault_injection` record + stderr banner) |
 
 ## SIFT VM (`--sift` mode)
 

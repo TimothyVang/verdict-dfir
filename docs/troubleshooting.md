@@ -56,6 +56,22 @@ checkout or an unsynced SIFT VM reintroduces them:
 | Extra fields on findings rejected by the Pydantic `extra=forbid` model | `finding_for_verifier()` projects to canonical fields | `git pull` — fixed in current code |
 | SIFT VM running an older `services/agent_mcp` copy than the host | none (environment drift) | Re-sync the VM: `scp -i ~/.ssh/sift_key -r services/agent_mcp sansforensics@$FIND_EVIL_GUEST_IP:$FIND_EVIL_GUEST_REPO/` |
 
+What the engine does about a rejection (current code): each *re-runnable* rejection is
+**re-dispatched exactly once** with a fresh replay (`verifier_redispatch` audit record;
+recoveries are listed in `verdict.json → findings_summary.verifier_redispatches` and in
+`analysis_limitations` as transparency notes, not blockers). A rejection that persists is a
+`course_correction`, and **two consecutive** persistent failures trip the HEARTBEAT
+terminator: remaining lanes are skipped (`heartbeat_terminated` record), the run still
+seals, the empty-findings verdict is forced to `INDETERMINATE`, and the run summary reports
+`readiness_state: "partial"` with a HEARTBEAT blocker. Citation vetoes (`missing_citation`
+/ `missing_audit_record`) are never re-dispatched.
+
+| Symptom | Detector | Fix |
+|---|---|---|
+| `verifier_redispatch` records appear in `audit.jsonl` | re-dispatch loop (`_redispatch_rejections`) | None needed if the final action is `approved` (transient failure recovered). Persistent re-rejections: see the three causes above |
+| `heartbeat_terminated` record + `readiness_state: "partial"` | HEARTBEAT terminator (`_heartbeat_abort`) | The run hit 2 consecutive tool/verify failures — fix the underlying tool failure (sections 1/3/5) and re-run; the partial verdict is still sealed and verifiable |
+| `fault_injection` record in the chain; stderr banner `FAULT INJECTION ACTIVE` | `FIND_EVIL_FAULT_INJECT` env hook | Deliberate (demo/showcase). Unset the env var for clean runs — the hook is inert by default |
+
 ## 5. SIFT mode (`--sift`)
 
 | Symptom | Detector | Fix |

@@ -110,26 +110,24 @@ of your Project.
 
 **Requirement:** Include a demonstration video of your Project.
 
-**STATUS: SATISFIED**
+**STATUS: NEEDS RE-RECORD (live screencast) — explainer committed, hosted URL pending**
 
-> **Video file in repo:** [`docs/find-evil-demo.mp4`](docs/find-evil-demo.mp4)
+> **What is committed today:** [`docs/find-evil-demo.mp4`](docs/find-evil-demo.mp4) is a
+> 3:59 narrated **Remotion motion-graphics explainer** (source:
+> `scripts/make-demo-video/`). It explains the architecture well, but it is **not a live
+> terminal screencast** — the terminal it shows is a simulated animated pane and the
+> dashboard is a static screenshot.
 >
-> **Video script / beat map:** [`docs/demo-script-a2.md`](docs/demo-script-a2.md)
-> (5-minute structured walkthrough — beats are timed; `docs/demo-script-a2.md` is authoritative)
+> **What must ship before the deadline:**
+> 1. Re-record per the authoritative beat map [`docs/demo-script-a2.md`](docs/demo-script-a2.md)
+>    as a real screen capture (<5 min, narrated): `scripts/verdict` launch, `case_open` +
+>    SHA-256, a **live self-correction** (see the reproducible fault-injection recipe in
+>    Beat 4's notes — `FIND_EVIL_FAULT_INJECT` makes the verifier catch + re-dispatch
+>    on camera), and `manifest_verify` flipping to `overall=false` on a one-byte tamper.
+> 2. Host it (YouTube/Vimeo/Youku) and record the URL here and in the Devpost
+>    submission URL field.
 >
-> The video shows (authoritative beat map: `docs/demo-script-a2.md`):
-> - Beat 1: `scripts/verdict <evidence>` launched, `.mcp.json` auto-spawns both MCP servers
-> - Beat 2: `case_open` + SHA-256 verification, Pool A/B forked in parallel
-> - Beat 3: Memory image investigation — `vol_pslist` vs `vol_psscan` DKOM divergence
-> - Beat 4: Contradiction surface + resolution, `verify_finding` replay
-> - Beat 5: `manifest_finalize` — 3-tier chain signed, `manifest_verify` run offline
-> - Beat 6: Fleet rollup (22-host SRL-2018 dataset), leaderboard diff
-> - Beat 8: Signed verdict — signed `verdict.json` + `manifest_verify` confirms the chain
->
-> The mp4 is committed at `docs/find-evil-demo.mp4`. Per the hackathon rules the video
-> must also be hosted on YouTube/Vimeo/Youku — that hosted link goes in the Devpost
-> submission URL field. The demo script at `docs/demo-script-a2.md` is the authoritative
-> beat map.
+> **Hosted URL:** _pending re-record_
 
 ---
 

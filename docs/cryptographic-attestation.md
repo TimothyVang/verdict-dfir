@@ -135,15 +135,29 @@ is what the verifier consumes.
 
 1. The audit chain by walking `prev_hash` SHA-256 links from `seq=0`
    forward — first mismatch reports the seq + field that diverged.
+   It then re-derives the record count, the final line hash, and the
+   full Merkle-eligible leaf set from the replayed log and compares
+   them to what the manifest declares — so a tail-truncated log, a
+   post-seal append, or an internally-consistent forged leaf set all
+   fail with a precise diagnostic, even though each is self-consistent
+   on its own.
 2. The Merkle tree from the manifest's `leaves[]` array — declared
    `merkle_root_hex` must match the rebuilt root byte-for-byte.
-3. The sigstore signature against the canonical body bytes — body
-   is `merkle_root_hex || finalized_at || case_id || run_id || ...`
-   in the canonical-JSON ordering enforced by `manifest.py`.
+3. The signature bundle: `signature_present` confirms a bundle with a
+   payload digest is attached, and `signature_verified` reports the
+   honest cryptographic status — never `true` for a stub bundle (a
+   deterministic placeholder is not proof), and a sigstore bundle is
+   recorded for offline verification by a party that supplies the
+   expected signer identity. `overall` gates on presence, so the
+   committed stub-signed sample runs verify end-to-end.
 
-If all three pass, `overall=true`. Any one fails → `overall=false`
-with a precise diagnostic naming the field and the expected vs
-actual value. Tampering is loud; silent tampering is impossible.
+If all checks pass, `overall=true`. Any one fails → `overall=false`
+with a precise diagnostic naming the field and the expected vs actual
+value. Tampering with the audit log, or with the manifest's account of
+it, is loud. The honest limit: a **stub**-signed run proves chain and
+Merkle integrity but not who sealed the manifest body — only a real
+sigstore signature adds non-repudiable provenance, which is why
+customer release requires `signer=sigstore`.
 
 ---
 
