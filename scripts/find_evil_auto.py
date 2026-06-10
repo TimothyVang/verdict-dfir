@@ -5542,6 +5542,11 @@ class Investigation:
         self.findings_pool_b: list[dict[str, Any]] = []
         self.verifier_replays: dict[str, dict[str, Any]] = {}
         self.verifier_replay_failures: list[str] = []
+        # Per-finding re-dispatch bookkeeping: a verifier rejection gets one
+        # fresh verify_finding attempt before the finding is dropped
+        # (HEARTBEAT.md: reason about the failure and try again). Keyed by
+        # finding_id; mirrored into verdict.json findings_summary.
+        self.verifier_redispatches: dict[str, dict[str, Any]] = {}
         self.evidence_inventory: dict[str, Any] | None = None
         self.velociraptor_zip_extractions: list[dict[str, Any]] = []
         self.expert_signoff_packet: dict[str, Any] | None = None
@@ -8046,12 +8051,14 @@ class Investigation:
     def _verify_pool(
         self, py: SshMcpClient, findings: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        # Two stages: (A) re-run every finding's cited tool via verify_finding
-        # (slow, independent — parallelized under --parallel), then (B) record
-        # the verifier actions to the hash-chained audit log in finding order
-        # (strictly serial so prev_hash and the verifier->judge handoffs stay
-        # deterministic regardless of Stage A completion timing).
+        # Three stages: (A) re-run every finding's cited tool via verify_finding
+        # (slow, independent — parallelized under --parallel), then (A½)
+        # re-dispatch each re-runnable rejection exactly once (serial, audited),
+        # then (B) record the verifier actions to the hash-chained audit log in
+        # finding order (strictly serial so prev_hash and the verifier->judge
+        # handoffs stay deterministic regardless of Stage A completion timing).
         results = self._verify_findings_parallel(py, findings)
+        results = self._redispatch_rejections(py, findings, results)
         return self._record_verify_actions(py, findings, results)
 
     def _verify_findings_parallel(
@@ -8084,6 +8091,86 @@ class Investigation:
             for future in as_completed(future_to_idx):
                 results[future_to_idx[future]] = future.result()
         return results
+
+    # Rejections the verifier decides deterministically from the finding's
+    # citation, not from a tool re-run: a second attempt cannot succeed, and
+    # re-dispatching one would look like retrying around the "every Finding
+    # cites a tool_call_id" invariant.
+    _NON_REDISPATCHABLE_DRIFT = ("missing_citation", "missing_audit_record")
+
+    def _redispatch_rejections(
+        self,
+        py: SshMcpClient,
+        findings: list[dict[str, Any]],
+        results: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Stage A½: re-dispatch each re-runnable rejection exactly once.
+
+        A verify_finding rejection used to drop the finding with no second
+        attempt; HEARTBEAT.md reasons about the failure and tries again before
+        giving up. Serial in finding order (audit determinism), bounded at one
+        re-dispatch per finding, and chain-visible: a ``verifier_redispatch``
+        record precedes the fresh attempt, and only the final result becomes
+        the ``verifier_action``. A rejection that persists routes through
+        ``_course_correct`` so a consecutive streak trips the HEARTBEAT
+        escalation."""
+        tool_call_index = self._tool_call_index()
+        out = list(results)
+        for idx, (finding, result) in enumerate(zip(findings, results, strict=True)):
+            if "_error" in result:
+                first_reason = str(
+                    result["_error"].get("message", "verify_finding failed")
+                )
+            elif result.get("action") == "rejected":
+                first_reason = str(
+                    result.get("reason", "verify_finding returned no reason")
+                )
+            else:
+                continue
+            drift = (result.get("replay_artifact") or {}).get("drift_class")
+            if drift in self._NON_REDISPATCHABLE_DRIFT:
+                continue
+            finding_id = str(finding.get("finding_id") or "unknown")
+            self._audit(
+                py,
+                "verifier_redispatch",
+                {
+                    "finding_id": finding_id,
+                    "attempt": 2,
+                    "first_action": "rejected",
+                    "first_reason": first_reason[:300],
+                    "trigger": "verifier_reject",
+                },
+            )
+            retry = py.call_tool(
+                "verify_finding",
+                {
+                    "finding": finding_for_verifier(finding),
+                    "tool_call_index": tool_call_index,
+                    "findevil_mcp_command": rust_replay_command(),
+                    "force_fresh_replay": True,
+                },
+                timeout=1800.0,
+            )
+            recovered = "_error" not in retry and retry.get("action") != "rejected"
+            self.verifier_redispatches[finding_id] = {
+                "first_reason": first_reason[:300],
+                "recovered": recovered,
+            }
+            out[idx] = retry
+            if recovered:
+                self.analysis_limitations.append(
+                    f"verify_finding for {finding_id} recovered on re-dispatch "
+                    f"(first attempt: {first_reason[:200]})"
+                )
+            else:
+                self._course_correct(
+                    py,
+                    "verify_finding",
+                    f"{finding_id} rejected again after re-dispatch: {first_reason}",
+                    action="reject_after_redispatch",
+                )
+        return out
 
     def _record_verify_actions(
         self,
