@@ -228,3 +228,41 @@ def test_approved_finding_untouched() -> None:
     assert "verifier_redispatch" not in py.kinds()
     assert "course_correction" not in py.kinds()
     assert inv.verifier_redispatches == {}
+
+
+# ---------------------------------------------------------------------------
+# Report-QA interaction: a RECOVERED re-dispatch is transparency, not a
+# blocker — the final verifier action was approved and replay evidence is
+# intact. A rejection that persists must still fail the QA gate.
+# ---------------------------------------------------------------------------
+
+
+def _qa_for(limitations: list[str]) -> dict:
+    return fea.build_report_qa_signoff(
+        findings=[],
+        tool_calls=[],
+        verdict="INDETERMINATE",
+        case_completeness={},
+        attack_coverage={},
+        normalized_timeline={},
+        analysis_limitations=limitations,
+    )
+
+
+def _qa_status(qa: dict, check_id: str) -> str:
+    return next(c for c in qa["checks"] if c["check_id"] == check_id)["status"]
+
+
+def test_recovered_redispatch_is_not_a_replay_failure_blocker() -> None:
+    qa = _qa_for(
+        [
+            "verify_finding for f-01 recovered on re-dispatch "
+            "(first attempt: mcp rpc error: timeout)"
+        ]
+    )
+    assert _qa_status(qa, "verify_finding_replay_failures") == "PASS"
+
+
+def test_persistent_rejection_still_fails_replay_qa() -> None:
+    qa = _qa_for(["verify_finding rejected or failed for f-02: tool re-run failed"])
+    assert _qa_status(qa, "verify_finding_replay_failures") == "FAIL"

@@ -2955,7 +2955,11 @@ def build_report_qa_signoff(
     verifier_failures = [
         item
         for item in analysis_limitations
-        if "verify_finding" in item.lower() or "verifier" in item.lower()
+        if ("verify_finding" in item.lower() or "verifier" in item.lower())
+        # A recovered re-dispatch ends with the replay approved and its
+        # evidence intact — transparency, not a blocker. Persistent
+        # rejections keep their Stage-B failure wording and still FAIL.
+        and "recovered on re-dispatch" not in item.lower()
     ]
     if verifier_failures:
         _qa_check(
