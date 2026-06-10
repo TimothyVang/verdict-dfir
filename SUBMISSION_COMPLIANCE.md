@@ -118,16 +118,24 @@ of your Project.
 > terminal screencast** — the terminal it shows is a simulated animated pane and the
 > dashboard is a static screenshot.
 >
+> **The fix is staged — real-footage Remotion.** The film
+> (`scripts/make-demo-video/`) now embeds **genuine screen captures** as exhibits via the
+> `ExhibitVideo` component instead of an animated terminal pane. The flagged Beat 2 "simulated
+> terminal" is replaced by a real-capture slot, and the project renders today with on-brand
+> "AWAITING CAPTURE" placeholders so nothing breaks before footage is dropped in. The shot-list
+> — exact commands, target filenames, durations — is
+> [`scripts/make-demo-video/CAPTURE.md`](scripts/make-demo-video/CAPTURE.md).
+>
 > **What must ship before the deadline:**
-> 1. Re-record per the authoritative beat map [`docs/demo-script-a2.md`](docs/demo-script-a2.md)
->    as a real screen capture (<5 min, narrated): `scripts/verdict` launch, `case_open` +
->    SHA-256, a **live self-correction** (see the reproducible fault-injection recipe in
->    Beat 4's notes — `FIND_EVIL_FAULT_INJECT` makes the verifier catch + re-dispatch
->    on camera), and `manifest_verify` flipping to `overall=false` on a one-byte tamper.
+> 1. Record the captures per [`scripts/make-demo-video/CAPTURE.md`](scripts/make-demo-video/CAPTURE.md):
+>    the live terminal run **including the self-correction** (the `FIND_EVIL_FAULT_INJECT` recipe
+>    makes the verifier catch + re-dispatch on camera — verdict unchanged), a richer dashboard
+>    take, and optionally the `manifest_verify` one-byte-tamper. Drop them in `public/ui/`, add
+>    each to the `CAPTURED` set, `pnpm render`.
 > 2. Host it (YouTube/Vimeo/Youku) and record the URL here and in the Devpost
 >    submission URL field.
 >
-> **Hosted URL:** _pending re-record_
+> **Hosted URL:** _pending capture + render_
 
 ---
 

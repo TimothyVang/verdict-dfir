@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "render": "npx remotion render src/Video.tsx FindEvilDemo --output ../../docs/find-evil-demo.mp4 --codec h264",
-    "render:preview": "npx remotion render src/Video.tsx FindEvilDemo --output /tmp/find-evil-preview.mp4 --codec h264 --frames 0-90",
-    "studio": "npx remotion studio src/Video.tsx"
+    "render": "npx remotion render src/Root.tsx FindEvilDemo --output ../../docs/find-evil-demo.mp4 --codec h264",
+    "render:preview": "npx remotion render src/Root.tsx FindEvilDemo --output /tmp/find-evil-preview.mp4 --codec h264 --frames 0-90",
+    "studio": "npx remotion studio src/Root.tsx"
   },
   "dependencies": {
     "@remotion/cli": "4.0.237",
