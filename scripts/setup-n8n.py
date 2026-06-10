@@ -25,7 +25,6 @@ Env overrides:
     N8N_OWNER_EMAIL     default admin@findevil.local
     N8N_OWNER_PASSWORD  default: generated and saved to tmp/n8n-credentials.txt
     N8N_AUTO_DOCKER=1   start a docker n8n if none is reachable (needs Docker)
-    SLACK_WEBHOOK_URL   optional; adds the Slack notify node when present
 """
 
 from __future__ import annotations
@@ -52,9 +51,6 @@ API = f"{BASE}/api/v1"
 EMAIL = os.environ.get("N8N_OWNER_EMAIL", "admin@findevil.local")
 WF_NAME = "findevil-finding-to-action"
 WEBHOOK_PATH = "findevil-finding-to-action"
-SLACK_WEBHOOK = os.environ.get("SLACK_WEBHOOK_URL", "")
-if not SLACK_WEBHOOK and (TMP / "slack-webhook.txt").exists():
-    SLACK_WEBHOOK = (TMP / "slack-webhook.txt").read_text().strip()
 
 
 def log(msg: str) -> None:
@@ -229,7 +225,7 @@ def _write_creds(password: str) -> None:
     )
 
 
-# --- workflow definition (webhook -> route -> ticket -> [slack] -> respond) ---
+# --- workflow definition (webhook -> route -> ticket -> respond) ---
 JS_CODE = r"""
 // Find Evil! finding-to-action router (operator harness; NOT evidence).
 const inItem = $input.first().json;
@@ -259,18 +255,9 @@ if (verdict === 'SUSPICIOUS') {
 } else {
   plan = [{ finding: null, technique: null, actions: ['file_scope_note'] }];
 }
-let slack_text;
-if (verdict === 'SUSPICIOUS') {
-  const lines = plan.map(p => `• *${p.technique || 'finding'}* — ${p.finding}  →  ${p.actions.join(', ')}`).join('\n');
-  slack_text = `:rotating_light: *Find Evil! — SUSPICIOUS*  (case \`${caseId}\`)\n${lines}`;
-} else if (verdict === 'INDETERMINATE') {
-  slack_text = `:warning: *Find Evil! — INDETERMINATE*  (case \`${caseId}\`)  →  route to analyst queue`;
-} else {
-  slack_text = `:white_check_mark: *Find Evil! — NO_EVIL*  (case \`${caseId}\`)  →  scope note filed`;
-}
 return [{ json: { case_id: caseId, verdict,
   note: 'n8n finding-to-action (operator harness; not evidence, not in audit chain)',
-  action_plan: plan, slack_text } }];
+  action_plan: plan } }];
 """.strip()
 
 WRITE_JS = r"""
@@ -316,23 +303,6 @@ def build_workflow() -> dict:
             "parameters": {"language": "javaScript", "jsCode": WRITE_JS},
         },
     ]
-    if SLACK_WEBHOOK:
-        nodes.append(
-            {
-                "id": "slack",
-                "name": "Notify Slack",
-                "type": "n8n-nodes-base.httpRequest",
-                "typeVersion": 4.2,
-                "parameters": {
-                    "method": "POST",
-                    "url": SLACK_WEBHOOK,
-                    "sendBody": True,
-                    "specifyBody": "json",
-                    "jsonBody": "={{ JSON.stringify({ text: $json.slack_text }) }}",
-                    "options": {},
-                },
-            }
-        )
     nodes.append(
         {
             "id": "resp",

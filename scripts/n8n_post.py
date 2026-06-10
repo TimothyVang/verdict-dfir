@@ -31,7 +31,7 @@ WEBHOOK = os.environ.get(
     "FINDEVIL_N8N_WEBHOOK",
     "http://localhost:5678/webhook/findevil-finding-to-action",
 )
-NODES = ("trigger", "route", "slack", "ticket")
+NODES = ("trigger", "route", "ticket")
 SOURCE = "n8n finding-to-action (operator harness; not evidence, not in audit chain)"
 
 
@@ -100,7 +100,7 @@ def main() -> int:
             rj = {}
         action_plan = rj.get("action_plan", [])
         ticket_file = rj.get("ticket_file")
-        # The workflow is a linear chain (Webhook->Router->Ticket->[Slack]->Respond);
+        # The workflow is a linear chain (Webhook->Router->Ticket->Respond);
         # a valid response means every node before Respond executed.
         record.update(
             {
@@ -108,9 +108,6 @@ def main() -> int:
                 "steps": [{"node": n, "status": "ok"} for n in NODES],
                 "action_plan": action_plan,
                 "ticket_file": ticket_file,
-                # Slack node is conditional on SLACK_WEBHOOK inside n8n; the
-                # response doesn't surface it, so we leave delivery unknown.
-                "slack_delivered": None,
             }
         )
     except (urllib.error.URLError, OSError, TimeoutError, ValueError) as exc:
@@ -119,7 +116,6 @@ def main() -> int:
                 "n8n_reachable": False,
                 "error": str(exc),
                 "steps": [{"node": n, "status": "idle"} for n in NODES],
-                "slack_delivered": None,
                 "ticket_file": None,
                 "action_plan": [],
             }
