@@ -27,7 +27,7 @@ import hashlib
 import json
 import os
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
 
@@ -54,6 +54,18 @@ class SignedBundle:
 
     signed_at: str
     """UTC ISO-8601Z."""
+
+    kind: str = "stub"
+    """Which signer produced this bundle: ``"sigstore"`` (real keyless
+    Fulcio/Rekor proof) or ``"stub"`` (deterministic dev/offline
+    placeholder). Recorded in the manifest so a verifier can tell a real
+    proof from a placeholder without reaching into the bundle."""
+
+    fallback_reason: str | None = None
+    """Set when a sigstore attempt failed and the run honestly degraded to
+    the stub signer (e.g. no ``$SIGSTORE_ID_TOKEN`` / no Fulcio reachability).
+    ``None`` for a clean run. Lets the release gate read the *effective*
+    signer instead of the *requested* one."""
 
     @property
     def raw_bundle_json(self) -> str:
@@ -123,6 +135,7 @@ class SigstoreSigner:
             bundle_b64=base64.b64encode(bundle.to_json().encode("utf-8")).decode("ascii"),
             cert_fingerprint=_fingerprint_from_bundle_json(bundle.to_json()),
             signed_at=_utc_iso(),
+            kind="sigstore",
         )
 
 
@@ -164,7 +177,30 @@ class StubSigner:
             bundle_b64=base64.b64encode(bundle_json.encode("utf-8")).decode("ascii"),
             cert_fingerprint=cert_fp,
             signed_at=_utc_iso(),
+            kind="stub",
         )
+
+
+class FallbackSigner:
+    """Tries a primary signer (real sigstore) and honestly degrades to a
+    fallback (stub) when the primary fails — the typical offline / no-token
+    case. The returned bundle carries ``kind="stub"`` and a non-empty
+    ``fallback_reason`` so the release gate reads the *effective* signer, not
+    the *requested* one, and never crashes a run just because Fulcio/Rekor
+    (or an OIDC token) was unavailable.
+    """
+
+    def __init__(self, primary: Signer, fallback: Signer) -> None:
+        self._primary = primary
+        self._fallback = fallback
+
+    def sign(self, payload: bytes) -> SignedBundle:
+        try:
+            return self._primary.sign(payload)
+        except Exception as exc:  # noqa: BLE001 — degrade on ANY signer failure
+            bundle = self._fallback.sign(payload)
+            reason = f"sigstore signing failed, degraded to stub: {exc}"
+            return replace(bundle, fallback_reason=reason)
 
 
 def _fingerprint_from_bundle_json(bundle_json: str) -> str:
@@ -215,6 +251,7 @@ def make_signer(*, kind: str | None = None, **kwargs: Any) -> Signer:
 
 
 __all__ = [
+    "FallbackSigner",
     "SignedBundle",
     "Signer",
     "SigstoreSigner",

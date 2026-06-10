@@ -14,11 +14,42 @@ import json
 import pytest
 
 from findevil_agent.crypto.signer import (
+    FallbackSigner,
     SignedBundle,
     SigstoreSigner,
     StubSigner,
     make_signer,
 )
+
+
+class TestSignerKind:
+    def test_stub_bundle_kind_is_stub(self) -> None:
+        b = StubSigner(run_id="k1").sign(b"x")
+        assert b.kind == "stub"
+        assert b.fallback_reason is None
+
+
+class _BoomSigner:
+    """A signer whose sign() always raises — stands in for an unreachable
+    Fulcio/Rekor (no $SIGSTORE_ID_TOKEN, no network)."""
+
+    def sign(self, payload: bytes) -> SignedBundle:
+        raise RuntimeError("fulcio unreachable")
+
+
+class TestFallbackSigner:
+    def test_falls_back_to_stub_and_records_reason(self) -> None:
+        signer = FallbackSigner(_BoomSigner(), StubSigner(run_id="fb"))
+        b = signer.sign(b'{"a":1}')
+        assert b.kind == "stub"
+        assert b.fallback_reason
+        assert "fulcio unreachable" in b.fallback_reason
+
+    def test_primary_success_passes_through_unchanged(self) -> None:
+        primary = StubSigner(run_id="primary")  # stand-in success path
+        signer = FallbackSigner(primary, StubSigner(run_id="never"))
+        b = signer.sign(b"x")
+        assert b.fallback_reason is None
 
 
 class TestStubSigner:
