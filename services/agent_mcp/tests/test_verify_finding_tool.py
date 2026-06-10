@@ -39,6 +39,17 @@ def _finding_dict(**over: Any) -> dict[str, Any]:
     return base
 
 
+def test_make_mcp_client_uses_slow_tool_replay_timeout() -> None:
+    # Regression: the verify replay must allow slow memory plugins (vol_malfind
+    # on a multi-GB image) the same budget the main run gives them, or legit
+    # findings get rejected with "MCP request timed out after 120.0s".
+    client = vf._make_mcp_client(["findevil-mcp"])
+    try:
+        assert client._request_timeout_s >= 1800.0
+    finally:
+        client.close()
+
+
 class TestVerifyFinding:
     async def test_replay_match_approves(self, monkeypatch: Any) -> None:
         canned_text = json.dumps(

@@ -80,9 +80,19 @@ class VerifyFindingOutput(BaseModel):
     )
 
 
+# Replay re-runs the finding's cited tool, which may be a slow memory plugin
+# (vol_malfind on a multi-GB image runs for many minutes — the main
+# investigation budgets it 1800s). The StdioMcpClient default request timeout
+# is 120s, which falsely rejected legitimate slow-tool findings with an "MCP
+# request timed out after 120.0s" replay error. Match the main run's slowest
+# budget so verification rejects on real drift, not on a too-short clock. The
+# timeout is a ceiling, so fast tools still return immediately.
+_REPLAY_TIMEOUT_S = 1800.0
+
+
 # Indirection to let tests monkeypatch the client factory.
 def _make_mcp_client(command: list[str]) -> McpClient:
-    return StdioMcpClient(command)
+    return StdioMcpClient(command, request_timeout_s=_REPLAY_TIMEOUT_S)
 
 
 async def _handle(inp: BaseModel) -> VerifyFindingOutput:
