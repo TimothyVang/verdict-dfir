@@ -629,8 +629,8 @@ library or the `manifest_verify` MCP tool. There is no standalone
 `manifest_verify` shell command in this repo.
 
 ```bash
-uv run --directory services/agent python -c "from pathlib import Path; from findevil_agent.crypto.manifest import verify_manifest; print(verify_manifest(Path('PATH/TO/run.manifest.json'), audit_log_path=Path('PATH/TO/audit.jsonl')).model_dump_json(indent=2))"
-# returns overall=true if the audit chain and Merkle root validate and signature metadata is present
+uv run --directory services/agent python -c "from pathlib import Path; from findevil_agent.crypto.manifest import verify_manifest; print(verify_manifest(Path('PATH/TO/run.manifest.json'), audit_log_path=Path('PATH/TO/audit.jsonl')))"
+# returns overall=True if the audit chain and Merkle root validate and signature metadata is present
 ```
 
 The verifier rebuilds:
@@ -647,7 +647,7 @@ To execute it, copy the manifest, overwrite `merkle_root_hex` with `ff` repeated
 ```bash
 python -c "import shutil;shutil.copyfile('run.manifest.json','run.manifest.tamper.json')"
 python -c "import json,pathlib;p=pathlib.Path('run.manifest.tamper.json');d=json.loads(p.read_text());d['merkle_root_hex']='ff'*32;p.write_text(json.dumps(d,indent=2,sort_keys=True))"
-uv run --directory services/agent python -c "from pathlib import Path; from findevil_agent.crypto.manifest import verify_manifest; print(verify_manifest(Path('PATH/TO/run.manifest.tamper.json'), audit_log_path=Path('PATH/TO/audit.jsonl')).model_dump_json(indent=2))"
+uv run --directory services/agent python -c "from pathlib import Path; from findevil_agent.crypto.manifest import verify_manifest; print(verify_manifest(Path('PATH/TO/run.manifest.tamper.json'), audit_log_path=Path('PATH/TO/audit.jsonl')))"
 ```
 
 ---
