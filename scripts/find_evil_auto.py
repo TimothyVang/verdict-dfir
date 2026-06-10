@@ -199,6 +199,19 @@ GUEST_IP = os.environ.get("FIND_EVIL_GUEST_IP", "192.168.197.143")
 GUEST_USER = os.environ.get("FIND_EVIL_GUEST_USER", "sansforensics")
 SSH_KEY = os.environ.get("FIND_EVIL_SSH_KEY", str(Path.home() / ".ssh" / "sift_key"))
 GUEST_REPO = os.environ.get("FIND_EVIL_GUEST_REPO", "/home/sansforensics/find-evil")
+# Fail fast on an UNREACHABLE SIFT VM instead of hanging forever. Without
+# ConnectTimeout, ssh to a dead GUEST_IP blocks on connect() with no upper bound
+# (no route / firewalled host can hang for minutes), deadlocking the whole
+# investigation; the keepalive pair tears a session down ~90s after the VM dies
+# mid-run. Applied to every ssh invocation (MCP stdio client + ssh_run probes).
+SSH_CONNECT_OPTS = [
+    "-o",
+    "ConnectTimeout=10",
+    "-o",
+    "ServerAliveInterval=30",
+    "-o",
+    "ServerAliveCountMax=3",
+]
 REPO_ROOT = Path(__file__).resolve().parent.parent
 # Default evidence drop directory. `find-evil-auto` with no positional path
 # falls back to $FINDEVIL_EVIDENCE_ROOT, else this repo-local `evidence/` dir.
@@ -314,8 +327,7 @@ class SshMcpClient:
                 "BatchMode=yes",
                 "-o",
                 "StrictHostKeyChecking=accept-new",
-                "-o",
-                "ServerAliveInterval=30",
+                *SSH_CONNECT_OPTS,
                 "-T",
                 f"{GUEST_USER}@{GUEST_IP}",
                 remote_command,
@@ -1203,6 +1215,7 @@ def ssh_run(remote_command: str, timeout: int = 600) -> tuple[int, str, str]:
             SSH_KEY,
             "-o",
             "BatchMode=yes",
+            *SSH_CONNECT_OPTS,
             f"{GUEST_USER}@{GUEST_IP}",
             remote_command,
         ],
@@ -9041,6 +9054,7 @@ class Investigation:
                     SSH_KEY,
                     "-o",
                     "BatchMode=yes",
+                    *SSH_CONNECT_OPTS,
                     f"{GUEST_USER}@{GUEST_IP}",
                     f"cat > {shlex.quote(self.verdict_path)}",
                 ],
