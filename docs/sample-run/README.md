@@ -6,13 +6,15 @@ Requirement #8) and can verify the chain of custody **offline**. Every file here
 byte-for-byte output of an actual run — nothing was edited, because editing any record would
 break the hash chain (which is the point).
 
-Three runs are included. The first shows catching evil head-on; the second and third show the
+Four runs are included. The first shows catching evil head-on; the second and third show the
 ≥2-artifact-class rule producing CONFIRMED execution findings on the *same* case — once in pure
-**local** mode (no SIFT VM) and again under `--sift`, proving the verdict is identical either way:
+**local** mode (no SIFT VM) and again under `--sift`, proving the verdict is identical either way;
+the fourth proves the **self-correction loop** end-to-end under a deliberately-injected fault:
 
 | Run | Evidence | Verdict | Findings | What it demonstrates |
 |---|---|---|---|---|
 | [`attack-samples-evtx/`](attack-samples-evtx/) | EVTX attack-sample set | **SUSPICIOUS** | 3 (1 CONFIRMED + 2 `hypothesis:`) | Catching evil head-on: a directly-observed Security **EID 1102 audit-log-clear** (T1070.001) confirmed, with weaker leads honestly held at HYPOTHESIS. |
+| [`fault-injection-redispatch/`](fault-injection-redispatch/) | Same NIST `SCHARDT.dd`, local mode, recorded with `FIND_EVIL_FAULT_INJECT=verifier_reject_once:prefetch-cain-exe` | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | **Self-correction under an injected fault:** the verifier caught a deliberately-corrupted replay (`unknown tool: __fault_injected__prefetch_parse`), the engine re-dispatched the verify exactly once, the fresh attempt approved, and the verdict is unchanged. The whole loop is in the hash chain, in order: `fault_injection` → `verifier_redispatch` (carrying the first attempt's rejection reason) → `verifier_action: approved`. |
 | [`nist-hacking-case/`](nist-hacking-case/) | NIST CFReDS `SCHARDT.dd` (public domain), **local mode** (Prefetch **+** registry/UserAssist) | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | The ≥2-artifact-class rule on the recommended **no-VM path**: with the disk's Prefetch *and* the NTUSER.DAT **UserAssist** hive both parsed on the host (TSK direct-read — no 9 GB SIFT OVA needed), each hacking-tool execution (cain, netstumbler, mirc, ethereal, lookatlan) is corroborated by **two independent artifact classes**, so it escalates to **CONFIRMED**. Each CONFIRMED finding's `derived_from` cites *both* `tool_call_id`s (a `prefetch_parse` and a `registry_query`), so the 2-class claim is greppable, not prose. |
 | [`nist-hacking-case-sift/`](nist-hacking-case-sift/) | Same `SCHARDT.dd`, run under `--sift` (Prefetch **+** registry/UserAssist inside the SIFT VM over SSH) | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | **Mode parity:** the identical 2-class CONFIRMED escalation, driven inside the SANS SIFT VM over SSH instead of on the host — proving a judge gets the same verdict whether they take the easy local path or the full VM. |
 
@@ -75,6 +77,12 @@ finding (or one), and exits non-zero if any finding fails to resolve.
 
 ## Honest caveats
 
+- **The fault-injection run's failure was deliberate.** `fault-injection-redispatch/` was recorded
+  with `FIND_EVIL_FAULT_INJECT` set, which corrupts exactly one verifier replay's tool name for the
+  first attempt. The injection is not hidden: the chain's `fault_injection` record declares it
+  before any verifier action, and the engine prints a loud banner when the env var is set. The
+  recovery itself is the production code path — the same re-dispatch fires on any real transient
+  replay failure.
 - **Signer is the stub signer** (`extra.signer = "stub"`). The hash chain and Merkle root verify
   fully offline; `signature_present` confirms a bundle is attached, but these sample runs are not
   signed with the real Sigstore/Fulcio+Rekor keyless signer. A production run with a real Sigstore
