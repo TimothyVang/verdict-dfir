@@ -82,3 +82,79 @@ def test_success_resets_the_streak() -> None:
     inv._course_correct(py, "vol_psscan", "boom again", "defer")
 
     assert "heartbeat_failure" not in _kinds(py)
+
+
+# ---------------------------------------------------------------------------
+# Terminator: the escalated flag must have consequences (it used to be set
+# and never read — a heartbeat-escalated run with no findings could still
+# end NO_EVIL and keep opening lanes).
+#
+# - T1: once escalated, investigate_inventory opens no further lanes and
+#       audits exactly one heartbeat_terminated record (idempotent).
+# - T2: a terminated run with no findings computes INDETERMINATE, never
+#       NO_EVIL — partial coverage cannot claim scoped-clean.
+# - T3: the run summary carries a HEARTBEAT blocker so readiness tooling
+#       sees the partial posture.
+# ---------------------------------------------------------------------------
+
+
+def _evtx_inventory(n: int) -> dict:
+    return {
+        "entries": [
+            {
+                "path": f"/case/sys{i}.evtx",
+                "evidence_type": "evtx",
+                "artifact_class": "evtx",
+                "custody_status": "custody_registered",
+            }
+            for i in range(n)
+        ],
+        "summary": {},
+    }
+
+
+def test_escalation_skips_remaining_inventory_lanes() -> None:
+    inv = _inv()
+    py = _FakePy()
+    rust = _FakePy()
+    inv.evidence_inventory = _evtx_inventory(2)
+    lane_calls: list[tuple] = []
+    inv.investigate_evtx = (  # type: ignore[method-assign]
+        lambda *a, **k: lane_calls.append(a)
+    )
+
+    inv._heartbeat_escalated = True
+    inv.investigate_inventory(rust, py)
+
+    assert lane_calls == []
+    terminated = [p for k, p in py.audits if k == "heartbeat_terminated"]
+    assert len(terminated) == 1
+    assert terminated[0]["action"] == "terminate_partial"
+
+    # Idempotent: a second pass never double-audits the terminator.
+    inv.investigate_inventory(rust, py)
+    terminated = [p for k, p in py.audits if k == "heartbeat_terminated"]
+    assert len(terminated) == 1
+
+
+def test_terminated_empty_run_is_indeterminate_not_no_evil() -> None:
+    inv = _inv()
+    inv.evidence_inventory = _evtx_inventory(0)
+    inv.tool_calls = [{"tool_call_id": "tc-1", "tool": "evtx_query", "output_hash": "abc"}]
+    # Precondition: a clean empty run over substantive tooling is NO_EVIL.
+    assert inv.compute_verdict([]) == "NO_EVIL"
+
+    inv._heartbeat_escalated = True
+    assert inv.compute_verdict([]) == "INDETERMINATE"
+
+
+def test_terminated_run_summary_is_partial_with_blocker() -> None:
+    inv = _inv()
+    py = _FakePy()
+    inv._heartbeat_escalated = True
+
+    assert inv._heartbeat_abort(py) is True
+
+    summary = inv.build_run_summary(readiness_state="partial")
+    assert summary["readiness_state"] == "partial"
+    assert any("HEARTBEAT" in blocker for blocker in summary["blockers"])

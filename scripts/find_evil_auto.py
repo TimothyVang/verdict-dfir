@@ -5564,6 +5564,10 @@ class Investigation:
         self._consecutive_failures = 0
         self._heartbeat_threshold = 2
         self._heartbeat_escalated = False
+        # Set by _heartbeat_abort the first time the escalated flag is
+        # consumed at a lane boundary: remaining lanes are skipped and the
+        # run seals an honestly-labeled partial Verdict.
+        self._heartbeat_terminated = False
         # Per-finding correlate_findings decisions (kept/downgraded/rejected),
         # audited as ``correlation_outcomes`` and mirrored into verdict.json so
         # the SOUL.md >=2-artifact rule is visible in the run record, not just
@@ -5642,6 +5646,33 @@ class Investigation:
                     ),
                 },
             )
+
+    def _heartbeat_abort(self, py: SshMcpClient) -> bool:
+        """Cooperative HEARTBEAT terminator, checked at lane boundaries.
+
+        HEARTBEAT.md: "2 consecutive failed self-tests -> session terminates
+        with partial report". Terminate means stop opening new lanes and let
+        the run fall through to reason->finalize as usual, so the manifest
+        still seals an honestly-labeled partial Verdict — never a crash and
+        never an unsealed run. Audits one ``heartbeat_terminated`` record the
+        first time the escalated flag is consumed (idempotent thereafter)."""
+        if not self._heartbeat_escalated:
+            return False
+        if not self._heartbeat_terminated:
+            self._heartbeat_terminated = True
+            self._audit(
+                py,
+                "heartbeat_terminated",
+                {
+                    "consecutive_failures": self._consecutive_failures,
+                    "action": "terminate_partial",
+                    "recovery": (
+                        "skip remaining lanes; seal an honest "
+                        "INDETERMINATE/partial Verdict over what was examined"
+                    ),
+                },
+            )
+        return True
 
     # Substrings that mark a *transient* tool failure — worth one retry before
     # the caller defers. Acquisition smears, timeouts, and dropped MCP
@@ -7958,18 +7989,35 @@ class Investigation:
             entry for entry in entries if entry.get("artifact_class") == "velociraptor"
         ]
 
+        # Each lane group is gated by the HEARTBEAT terminator: once two
+        # consecutive self-tests have failed, stop opening lanes and let the
+        # run seal an honest partial Verdict over what was already examined.
+        if self._heartbeat_abort(py):
+            return
         for entry in memory_entries[:3]:
             self.investigate_memory(rust, py, str(entry["path"]))
+        if self._heartbeat_abort(py):
+            return
         for entry in evtx_entries[:50]:
             self.investigate_evtx(rust, py, str(entry["path"]))
+        if self._heartbeat_abort(py):
+            return
         for evtx_dir in hayabusa_dirs[:5]:
             self.investigate_hayabusa_dir(rust, py, evtx_dir)
+        if self._heartbeat_abort(py):
+            return
         if extracted_entries:
             self.investigate_extracted_disk_artifacts(rust, py, extracted_entries)
+        if self._heartbeat_abort(py):
+            return
         if network_entries:
             self.investigate_network_artifacts(rust, py, network_entries)
+        if self._heartbeat_abort(py):
+            return
         for entry in velociraptor_entries[:10]:
             self.investigate_velociraptor_zip(rust, py, str(entry["path"]))
+        if self._heartbeat_abort(py):
+            return
         for entry in raw_disk_entries:
             self.investigate_disk(rust, py, str(entry["path"]))
         if not (
@@ -8941,6 +8989,10 @@ class Investigation:
           case_open/chain-of-custody ran.
         """
         if not merged:
+            # A HEARTBEAT-terminated run skipped lanes: empty cannot mean
+            # scoped-clean, only "nothing found in the part we examined".
+            if self is not None and getattr(self, "_heartbeat_escalated", False):
+                return "INDETERMINATE"
             if self is not None and getattr(self, "verifier_replay_failures", []):
                 return "INDETERMINATE"
             if self is not None:
@@ -9094,6 +9146,12 @@ class Investigation:
                 "soul_md_kept": kept,
                 "soul_md_downgraded": downgraded,
                 "correlation_outcomes": self.correlation_outcomes,
+                "verifier_redispatches": self.verifier_redispatches,
+            },
+            "heartbeat": {
+                "escalated": self._heartbeat_escalated,
+                "consecutive_failures": self._consecutive_failures,
+                "terminated_partial": self._heartbeat_terminated,
             },
             "findings": merged,
             "tool_calls": self.tool_calls,
@@ -9358,6 +9416,12 @@ class Investigation:
                 if row.get("status") == "WARN" and row.get("check_id")
             )
         blockers.extend(self.verifier_replay_failures)
+        if getattr(self, "_heartbeat_terminated", False):
+            blockers.append(
+                "HEARTBEAT terminator: consecutive self-test failures — "
+                "remaining lanes skipped; partial Verdict sealed over what "
+                "was examined"
+            )
         warnings.extend(self.analysis_limitations)
         if error:
             blockers.append(error)
@@ -9488,6 +9552,12 @@ class Investigation:
             else:
                 print(f"\n  WARN: unknown evidence type for {self.evidence}")
 
+            # Phase 1½: consume any HEARTBEAT escalation that tripped inside a
+            # single-evidence lane (directory runs hit this at lane boundaries
+            # in investigate_inventory). Termination still proceeds through
+            # reason->finalize so the partial Verdict is sealed, not dropped.
+            self._heartbeat_abort(py)
+
             # Phase 2: Reasoning
             merged, contras, kept, downgraded = self.reason(py)
             verdict = self.compute_verdict(merged)
@@ -9612,6 +9682,7 @@ class Investigation:
                 "packet_state": final_release_gate.get("packet_state"),
                 "customer_ready": final_release_gate.get("customer_releasable", False),
                 "manifest_verify_overall": manifest_verification.get("overall"),
+                "heartbeat_terminated": self._heartbeat_terminated,
                 "case_dir_in_vm": self.case_dir,
                 "local_dir": str(local_dir),
             }
@@ -9875,7 +9946,9 @@ def main() -> int:
         raise
     if args.run_summary:
         readiness_state = "successful"
-        if result.get("packet_state") not in (None, "READY_FOR_CUSTOMER_RELEASE"):
+        if result.get("heartbeat_terminated"):
+            readiness_state = "partial"
+        elif result.get("packet_state") not in (None, "READY_FOR_CUSTOMER_RELEASE"):
             readiness_state = "blocked"
         write_run_summary(
             args.run_summary,
