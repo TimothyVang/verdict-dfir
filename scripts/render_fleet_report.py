@@ -64,13 +64,13 @@ INK = "#ece6da"
 MUTED = "#8c8576"
 FAINT = "#544f48"
 HAIRLINE = "#2b2620"
-ACCENT = "#9b59b6"        # purple brand
+ACCENT = "#9b59b6"  # purple brand
 ACCENT_LIGHT = "#b98fce"
-ALERT = "#d6452f"         # red — strongest signal
-INFERRED = "#c79a4a"      # amber
-HYPOTHESIS = "#6f93b8"    # blue
-CONFIRMED = "#7fae6e"     # green
-FIG_BG = SURFACE          # margins included, so the PNG is dark to the edge
+ALERT = "#d6452f"  # red — strongest signal
+INFERRED = "#c79a4a"  # amber
+HYPOTHESIS = "#6f93b8"  # blue
+CONFIRMED = "#7fae6e"  # green
+FIG_BG = SURFACE  # margins included, so the PNG is dark to the edge
 
 SANS = "DejaVu Sans"
 MONO = "DejaVu Sans Mono"
@@ -131,28 +131,54 @@ def _cross_host_counts(corr: dict) -> list[tuple[str, int]]:
 
 
 def _kicker(fig, x, y, text):
-    fig.text(x, y, text.upper(), color=ACCENT_LIGHT, fontsize=9.5,
-             fontweight="bold", family=SANS, ha="left", va="baseline")
+    fig.text(
+        x,
+        y,
+        text.upper(),
+        color=ACCENT_LIGHT,
+        fontsize=9.5,
+        fontweight="bold",
+        family=SANS,
+        ha="left",
+        va="baseline",
+    )
 
 
 def _headline(fig, x, y, text, size=23):
-    fig.text(x, y, text, color=INK, fontsize=size, fontweight="bold",
-             family=SANS, ha="left", va="baseline")
+    fig.text(
+        x,
+        y,
+        text,
+        color=INK,
+        fontsize=size,
+        fontweight="bold",
+        family=SANS,
+        ha="left",
+        va="baseline",
+    )
 
 
 def _caption(fig, x, y, text, size=9.5, color=MUTED, ha="left"):
-    fig.text(x, y, text, color=color, fontsize=size, family=SANS, ha=ha,
-             va="baseline")
+    fig.text(x, y, text, color=color, fontsize=size, family=SANS, ha=ha, va="baseline")
 
 
 def _rule(fig, x0, x1, y, color=HAIRLINE, lw=0.8):
-    fig.add_artist(plt.Line2D([x0, x1], [y, y], color=color, lw=lw,
-                              transform=fig.transFigure, solid_capstyle="butt"))
+    fig.add_artist(
+        plt.Line2D(
+            [x0, x1],
+            [y, y],
+            color=color,
+            lw=lw,
+            transform=fig.transFigure,
+            solid_capstyle="butt",
+        )
+    )
 
 
 def _save(fig, fig_path: Path) -> None:
-    fig.savefig(fig_path, dpi=150, bbox_inches="tight", facecolor=FIG_BG,
-                edgecolor="none")
+    fig.savefig(
+        fig_path, dpi=150, bbox_inches="tight", facecolor=FIG_BG, edgecolor="none"
+    )
     plt.close(fig)
 
 
@@ -185,53 +211,124 @@ def fig_verdict_distribution(corr: dict, fig_path: Path) -> None:
     fig.patch.set_facecolor(FIG_BG)
     _kicker(fig, 0.055, 0.86, "Fleet verdict")
     _headline(fig, 0.055, 0.74, "What the fleet concluded", size=24)
-    _caption(fig, 0.055, 0.665,
-             f"{host_count} hosts examined  ·  verdict per host, merged fleet-wide")
+    _caption(
+        fig,
+        0.055,
+        0.665,
+        f"{host_count} hosts examined  ·  verdict per host, merged fleet-wide",
+    )
 
     dominant_word, dominant_n = items[0]
     dcolor = _verdict_color(dominant_word)
-    fig.text(0.055, 0.305, f"{dominant_n}", color=dcolor, fontsize=104,
-             fontweight="bold", family=SANS, ha="left", va="baseline")
-    fig.text(0.26, 0.40, f"/ {total}", color=MUTED, fontsize=20, family=MONO,
-             ha="left", va="baseline")
-    fig.text(0.26, 0.305, "hosts", color=MUTED, fontsize=12.5, family=SANS,
-             ha="left", va="baseline")
-    fig.text(0.057, 0.205, dominant_word.upper(), color=dcolor, fontsize=19,
-             fontweight="bold", family=SANS, ha="left", va="baseline")
+    fig.text(
+        0.055,
+        0.305,
+        f"{dominant_n}",
+        color=dcolor,
+        fontsize=104,
+        fontweight="bold",
+        family=SANS,
+        ha="left",
+        va="baseline",
+    )
+    fig.text(
+        0.26,
+        0.40,
+        f"/ {total}",
+        color=MUTED,
+        fontsize=20,
+        family=MONO,
+        ha="left",
+        va="baseline",
+    )
+    fig.text(
+        0.26,
+        0.305,
+        "hosts",
+        color=MUTED,
+        fontsize=12.5,
+        family=SANS,
+        ha="left",
+        va="baseline",
+    )
+    fig.text(
+        0.057,
+        0.205,
+        dominant_word.upper(),
+        color=dcolor,
+        fontsize=19,
+        fontweight="bold",
+        family=SANS,
+        ha="left",
+        va="baseline",
+    )
 
     strip_x0, strip_x1 = 0.40, 0.945
     strip_y, strip_h = 0.36, 0.135
     width = strip_x1 - strip_x0
-    fig.add_artist(mpatches.FancyBboxPatch(
-        (strip_x0, strip_y), width, strip_h,
-        boxstyle="round,pad=0,rounding_size=0.012", transform=fig.transFigure,
-        facecolor=INSET, edgecolor=HAIRLINE, lw=0.8, mutation_aspect=2.4))
+    fig.add_artist(
+        mpatches.FancyBboxPatch(
+            (strip_x0, strip_y),
+            width,
+            strip_h,
+            boxstyle="round,pad=0,rounding_size=0.012",
+            transform=fig.transFigure,
+            facecolor=INSET,
+            edgecolor=HAIRLINE,
+            lw=0.8,
+            mutation_aspect=2.4,
+        )
+    )
     gap = 0.004 if len(items) > 1 else 0.0
     cx = strip_x0
     for i, (word, n) in enumerate(items):
         seg_w = width * (n / total)
         if i == len(items) - 1:
             seg_w = (strip_x0 + width) - cx
-        fig.add_artist(mpatches.FancyBboxPatch(
-            (cx + (gap if i else 0), strip_y + 0.012),
-            max(seg_w - gap, 0.001), strip_h - 0.024,
-            boxstyle="round,pad=0,rounding_size=0.010", transform=fig.transFigure,
-            facecolor=_verdict_color(word), edgecolor="none",
-            mutation_aspect=2.4, alpha=0.92))
+        fig.add_artist(
+            mpatches.FancyBboxPatch(
+                (cx + (gap if i else 0), strip_y + 0.012),
+                max(seg_w - gap, 0.001),
+                strip_h - 0.024,
+                boxstyle="round,pad=0,rounding_size=0.010",
+                transform=fig.transFigure,
+                facecolor=_verdict_color(word),
+                edgecolor="none",
+                mutation_aspect=2.4,
+                alpha=0.92,
+            )
+        )
         if seg_w > 0.06:
-            fig.text(cx + seg_w / 2, strip_y + strip_h / 2, word.upper(),
-                     color=INSET, fontsize=11.5, fontweight="bold", family=SANS,
-                     ha="center", va="center")
+            fig.text(
+                cx + seg_w / 2,
+                strip_y + strip_h / 2,
+                word.upper(),
+                color=INSET,
+                fontsize=11.5,
+                fontweight="bold",
+                family=SANS,
+                ha="center",
+                va="center",
+            )
         cx += seg_w
 
     pct = 100.0 * dominant_n / total
     gloss = _VERDICT_GLOSS.get(dominant_word.upper(), "")
-    _caption(fig, strip_x0, strip_y - 0.085,
-             f"{pct:.0f}% {dominant_word.upper()}" + (f"  —  {gloss}" if gloss else ""),
-             color=MUTED)
-    _caption(fig, strip_x0, strip_y - 0.165,
-             "Each host's verdict is independently signed; this is the merged view.",
-             color=FAINT, size=8.8)
+    _caption(
+        fig,
+        strip_x0,
+        strip_y - 0.085,
+        f"{pct:.0f}% {dominant_word.upper()}" + (f"  —  {gloss}" if gloss else ""),
+        color=MUTED,
+    )
+    _caption(
+        fig,
+        strip_x0,
+        strip_y - 0.165,
+        "Each host's verdict is independently signed; this is the merged view.",
+        color=FAINT,
+        size=8.8,
+    )
     _rule(fig, 0.055, 0.945, 0.07)
     _caption(fig, 0.055, 0.035, "VERDICT  ·  fleet correlation", color=FAINT, size=8.2)
     _save(fig, fig_path)
@@ -269,9 +366,13 @@ def fig_mitre_density(corr: dict, fig_path: Path) -> None:
     fig.patch.set_facecolor(FIG_BG)
     _kicker(fig, 0.055, 0.86, "ATT&CK technique density")
     _headline(fig, 0.055, 0.72, "Where the fleet's evil concentrates", size=22)
-    _caption(fig, 0.055, 0.645,
-             f"distinct hosts exhibiting each technique · {n} "
-             f"technique{'s' if n != 1 else ''} observed")
+    _caption(
+        fig,
+        0.055,
+        0.645,
+        f"distinct hosts exhibiting each technique · {n} "
+        f"technique{'s' if n != 1 else ''} observed",
+    )
 
     left, right, gap, max_tile = 0.055, 0.945, 0.022, 0.30
     tile_w = min(max_tile, ((right - left) - gap * (n - 1)) / max(n, 1))
@@ -281,43 +382,124 @@ def fig_mitre_density(corr: dict, fig_path: Path) -> None:
     for i, (tid, hosts) in enumerate(items):
         tx = left + i * (tile_w + gap)
         col = _severity_color(hosts)
-        fig.add_artist(mpatches.FancyBboxPatch(
-            (tx, tile_y), tile_w, tile_h,
-            boxstyle="round,pad=0,rounding_size=0.012", transform=fig.transFigure,
-            facecolor=INSET, edgecolor=HAIRLINE, lw=0.9))
-        fig.add_artist(mpatches.FancyBboxPatch(
-            (tx, tile_y), 0.008, tile_h,
-            boxstyle="round,pad=0,rounding_size=0.004", transform=fig.transFigure,
-            facecolor=col, edgecolor="none"))
+        fig.add_artist(
+            mpatches.FancyBboxPatch(
+                (tx, tile_y),
+                tile_w,
+                tile_h,
+                boxstyle="round,pad=0,rounding_size=0.012",
+                transform=fig.transFigure,
+                facecolor=INSET,
+                edgecolor=HAIRLINE,
+                lw=0.9,
+            )
+        )
+        fig.add_artist(
+            mpatches.FancyBboxPatch(
+                (tx, tile_y),
+                0.008,
+                tile_h,
+                boxstyle="round,pad=0,rounding_size=0.004",
+                transform=fig.transFigure,
+                facecolor=col,
+                edgecolor="none",
+            )
+        )
         pad = 0.028
-        fig.text(tx + pad, tile_y + tile_h * 0.52, f"{hosts}", color=col,
-                 fontsize=46, fontweight="bold", family=SANS, ha="left", va="center")
-        fig.text(tx + pad + 0.072, tile_y + tile_h * 0.62, f"/ {host_count}",
-                 color=MUTED, fontsize=13, family=MONO, ha="left", va="center")
-        fig.text(tx + pad + 0.072, tile_y + tile_h * 0.42, "hosts", color=MUTED,
-                 fontsize=10, family=SANS, ha="left", va="center")
-        fig.text(tx + pad, tile_y + tile_h - 0.045, tid, color=INK,
-                 fontsize=13.5, fontweight="bold", family=MONO, ha="left", va="top")
-        fig.text(tx + pad, tile_y + 0.052, _MITRE_NAMES.get(tid, "technique"),
-                 color=MUTED, fontsize=9.6, family=SANS, ha="left", va="baseline")
+        fig.text(
+            tx + pad,
+            tile_y + tile_h * 0.52,
+            f"{hosts}",
+            color=col,
+            fontsize=46,
+            fontweight="bold",
+            family=SANS,
+            ha="left",
+            va="center",
+        )
+        fig.text(
+            tx + pad + 0.072,
+            tile_y + tile_h * 0.62,
+            f"/ {host_count}",
+            color=MUTED,
+            fontsize=13,
+            family=MONO,
+            ha="left",
+            va="center",
+        )
+        fig.text(
+            tx + pad + 0.072,
+            tile_y + tile_h * 0.42,
+            "hosts",
+            color=MUTED,
+            fontsize=10,
+            family=SANS,
+            ha="left",
+            va="center",
+        )
+        fig.text(
+            tx + pad,
+            tile_y + tile_h - 0.045,
+            tid,
+            color=INK,
+            fontsize=13.5,
+            fontweight="bold",
+            family=MONO,
+            ha="left",
+            va="top",
+        )
+        fig.text(
+            tx + pad,
+            tile_y + 0.052,
+            _MITRE_NAMES.get(tid, "technique"),
+            color=MUTED,
+            fontsize=9.6,
+            family=SANS,
+            ha="left",
+            va="baseline",
+        )
 
     if n <= 2:
         note_x = left + tiles_total + 0.05
         if note_x < right:
             lead_tid, lead_hosts = items[0]
-            fig.text(note_x, tile_y + tile_h * 0.68, "Single dominant technique.",
-                     color=INK, fontsize=12.5, fontweight="bold", family=SANS,
-                     ha="left", va="center")
-            fig.text(note_x, tile_y + tile_h * 0.30,
-                     f"{_MITRE_NAMES.get(lead_tid, lead_tid)} appears on {lead_hosts}\n"
-                     f"of {host_count} hosts — a focused, not\nscattered, signature.",
-                     color=MUTED, fontsize=9.8, family=SANS, ha="left", va="center",
-                     linespacing=1.4)
+            fig.text(
+                note_x,
+                tile_y + tile_h * 0.68,
+                "Single dominant technique.",
+                color=INK,
+                fontsize=12.5,
+                fontweight="bold",
+                family=SANS,
+                ha="left",
+                va="center",
+            )
+            fig.text(
+                note_x,
+                tile_y + tile_h * 0.30,
+                f"{_MITRE_NAMES.get(lead_tid, lead_tid)} appears on {lead_hosts}\n"
+                f"of {host_count} hosts — a focused, not\nscattered, signature.",
+                color=MUTED,
+                fontsize=9.8,
+                family=SANS,
+                ha="left",
+                va="center",
+                linespacing=1.4,
+            )
 
     _rule(fig, 0.055, 0.945, 0.075)
-    _caption(fig, 0.055, 0.035, "MITRE ATT&CK  ·  fleet correlation", color=FAINT, size=8.2)
-    _caption(fig, 0.945, 0.035, "severity: red ≥10  ·  amber 5–9  ·  blue 2–4",
-             color=FAINT, size=8.2, ha="right")
+    _caption(
+        fig, 0.055, 0.035, "MITRE ATT&CK  ·  fleet correlation", color=FAINT, size=8.2
+    )
+    _caption(
+        fig,
+        0.945,
+        0.035,
+        "severity: red ≥10  ·  amber 5–9  ·  blue 2–4",
+        color=FAINT,
+        size=8.2,
+        ha="right",
+    )
     _save(fig, fig_path)
 
 
@@ -338,9 +520,13 @@ def fig_cross_host_processes(corr: dict, fig_path: Path) -> None:
     fig.patch.set_facecolor(FIG_BG)
     _kicker(fig, 0.055, 0.945, "Cross-host process reuse")
     _headline(fig, 0.055, 0.875, "One image, almost the whole fleet", size=23)
-    _caption(fig, 0.055, 0.825,
-             f"distinct hosts running each image · top {min(top_n, len(counts))} of "
-             f"{len(counts)} shared images · {host_count} hosts total")
+    _caption(
+        fig,
+        0.055,
+        0.825,
+        f"distinct hosts running each image · top {min(top_n, len(counts))} of "
+        f"{len(counts)} shared images · {host_count} hosts total",
+    )
 
     ax = fig.add_axes([0.30, 0.085, 0.63, 0.66])
     ax.set_facecolor(FIG_BG)
@@ -354,11 +540,27 @@ def fig_cross_host_processes(corr: dict, fig_path: Path) -> None:
     is_lead = [n == lead_name for n in names]
     for yi, (val, lead) in enumerate(zip(vals, is_lead)):
         col = _severity_color(val)
-        ax.barh(yi, val, height=(0.74 if lead else 0.46), color=col,
-                alpha=(1.0 if lead else 0.62), edgecolor="none", zorder=3)
-        ax.text(val + 0.35, yi, f"{val}", va="center", ha="left",
-                color=(INK if lead else MUTED), fontsize=(15 if lead else 11),
-                fontweight=("bold" if lead else "normal"), family=MONO, zorder=4)
+        ax.barh(
+            yi,
+            val,
+            height=(0.74 if lead else 0.46),
+            color=col,
+            alpha=(1.0 if lead else 0.62),
+            edgecolor="none",
+            zorder=3,
+        )
+        ax.text(
+            val + 0.35,
+            yi,
+            f"{val}",
+            va="center",
+            ha="left",
+            color=(INK if lead else MUTED),
+            fontsize=(15 if lead else 11),
+            fontweight=("bold" if lead else "normal"),
+            family=MONO,
+            zorder=4,
+        )
 
     ax.set_yticks(range(len(rows)))
     ax.set_yticklabels(names, fontproperties=_mono())
@@ -378,26 +580,54 @@ def fig_cross_host_processes(corr: dict, fig_path: Path) -> None:
     ax.annotate(
         f"{lead_val}/{host_count} hosts — fleet-wide\n{lead_name} is the dominant\n"
         "shared image across the estate",
-        xy=(lead_val * 0.62, lead_yi - 0.28), xytext=(lead_val * 0.46, lead_yi - 1.55),
-        fontsize=11, color=INK, family=SANS, va="top", ha="left",
+        xy=(lead_val * 0.62, lead_yi - 0.28),
+        xytext=(lead_val * 0.46, lead_yi - 1.55),
+        fontsize=11,
+        color=INK,
+        family=SANS,
+        va="top",
+        ha="left",
         bbox=dict(boxstyle="round,pad=0.6", facecolor=INSET, edgecolor=ACCENT, lw=1.1),
-        arrowprops=dict(arrowstyle="-|>", color=ACCENT, lw=1.4,
-                        connectionstyle="arc3,rad=-0.18", shrinkA=4, shrinkB=6),
-        zorder=6)
+        arrowprops=dict(
+            arrowstyle="-|>",
+            color=ACCENT,
+            lw=1.4,
+            connectionstyle="arc3,rad=-0.18",
+            shrinkA=4,
+            shrinkB=6,
+        ),
+        zorder=6,
+    )
 
     lx, leg_y = 0.55, 0.775
     _caption(fig, lx - 0.045, leg_y, "severity", color=FAINT, size=8.5)
     for label, col in ((">=10 hosts", ALERT), ("5–9", INFERRED), ("2–4", HYPOTHESIS)):
-        fig.add_artist(mpatches.FancyBboxPatch(
-            (lx, leg_y - 0.004), 0.016, 0.014,
-            boxstyle="round,pad=0,rounding_size=0.004", transform=fig.transFigure,
-            facecolor=col, edgecolor="none"))
-        fig.text(lx + 0.022, leg_y, label, color=MUTED, fontsize=8.8, family=SANS,
-                 va="baseline")
+        fig.add_artist(
+            mpatches.FancyBboxPatch(
+                (lx, leg_y - 0.004),
+                0.016,
+                0.014,
+                boxstyle="round,pad=0,rounding_size=0.004",
+                transform=fig.transFigure,
+                facecolor=col,
+                edgecolor="none",
+            )
+        )
+        fig.text(
+            lx + 0.022,
+            leg_y,
+            label,
+            color=MUTED,
+            fontsize=8.8,
+            family=SANS,
+            va="baseline",
+        )
         lx += 0.022 + 0.012 * len(label) + 0.02
 
     _rule(fig, 0.055, 0.945, 0.79)
-    _caption(fig, 0.055, 0.03, "CROSS-HOST  ·  fleet correlation", color=FAINT, size=8.2)
+    _caption(
+        fig, 0.055, 0.03, "CROSS-HOST  ·  fleet correlation", color=FAINT, size=8.2
+    )
     _save(fig, fig_path)
     plt.close(fig)
 
@@ -433,9 +663,13 @@ def _dense_month_window(rows: list[dict]):
     lo = hi = idx
     while lo - 1 >= 0 and adj(months[lo - 1], months[lo]) and mc[months[lo - 1]] >= thr:
         lo -= 1
-    while hi + 1 < len(months) and adj(months[hi], months[hi + 1]) and mc[months[hi + 1]] >= thr:
+    while (
+        hi + 1 < len(months)
+        and adj(months[hi], months[hi + 1])
+        and mc[months[hi + 1]] >= thr
+    ):
         hi += 1
-    win = set(months[lo:hi + 1])
+    win = set(months[lo : hi + 1])
     cnt = sum(1 for r in rows if mkey(r["start"]) in win)
     a = datetime(months[lo][0], months[lo][1], 1).strftime("%b")
     b = datetime(months[hi][0], months[hi][1], 1).strftime("%b %Y")
@@ -457,9 +691,14 @@ def fig_temporal_clusters(corr: dict, fig_path: Path) -> None:
             start = datetime.fromisoformat(fe)
         except ValueError:
             continue
-        rows.append({"start": start, "hosts": c.get("host_count", 0),
-                     "procs": len(c.get("events", [])),
-                     "dur": float(c.get("duration_seconds", 0.0))})
+        rows.append(
+            {
+                "start": start,
+                "hosts": c.get("host_count", 0),
+                "procs": len(c.get("events", [])),
+                "dur": float(c.get("duration_seconds", 0.0)),
+            }
+        )
     if not rows:
         return
     rows.sort(key=lambda r: r["start"])
@@ -472,9 +711,13 @@ def fig_temporal_clusters(corr: dict, fig_path: Path) -> None:
     fig.patch.set_facecolor(FIG_BG)
     _kicker(fig, 0.05, 0.94, "Temporal clustering")
     _headline(fig, 0.05, 0.865, "Waves of near-simultaneous process creation", size=22)
-    _caption(fig, 0.05, 0.81,
-             f"{n} clusters · {total_procs} processes · each mark = one wave "
-             "(≥2 hosts, seconds apart)")
+    _caption(
+        fig,
+        0.05,
+        0.81,
+        f"{n} clusters · {total_procs} processes · each mark = one wave "
+        "(≥2 hosts, seconds apart)",
+    )
 
     ax = fig.add_axes([0.05, 0.40, 0.90, 0.30])
     ax.set_facecolor(FIG_BG)
@@ -494,12 +737,16 @@ def fig_temporal_clusters(corr: dict, fig_path: Path) -> None:
     ax.axhline(ribbon_y, color=HAIRLINE, lw=1.0, zorder=1)
     for r in rows:
         lead = r is headline_row
-        ax.scatter(fx(r["start"]), ribbon_y,
-                   s=18 + 340 * (r["procs"] / max_procs) ** 0.62,
-                   color=(ACCENT if lead else _temporal_band_color(r["hosts"])),
-                   alpha=(1.0 if lead else 0.6),
-                   edgecolors=(ACCENT_LIGHT if lead else "none"),
-                   linewidths=(1.4 if lead else 0), zorder=(6 if lead else 3))
+        ax.scatter(
+            fx(r["start"]),
+            ribbon_y,
+            s=18 + 340 * (r["procs"] / max_procs) ** 0.62,
+            color=(ACCENT if lead else _temporal_band_color(r["hosts"])),
+            alpha=(1.0 if lead else 0.6),
+            edgecolors=(ACCENT_LIGHT if lead else "none"),
+            linewidths=(1.4 if lead else 0),
+            zorder=(6 if lead else 3),
+        )
 
     ax.set_xlim(-0.03, 1.03)
     ax.set_ylim(0, 1)
@@ -518,37 +765,85 @@ def fig_temporal_clusters(corr: dict, fig_path: Path) -> None:
     ax.annotate(
         f"{headline_row['hosts']} hosts · {headline_row['procs']} procs · "
         f"{int(headline_row['dur'])}s\nheaviest synchronized burst\nlateral-movement wave",
-        xy=(hx, ribbon_y - 0.07), xytext=(0.045, ribbon_y - 0.82),
-        fontsize=11, color=INK, family=SANS, va="top", ha="left",
+        xy=(hx, ribbon_y - 0.07),
+        xytext=(0.045, ribbon_y - 0.82),
+        fontsize=11,
+        color=INK,
+        family=SANS,
+        va="top",
+        ha="left",
         bbox=dict(boxstyle="round,pad=0.6", facecolor=INSET, edgecolor=ACCENT, lw=1.1),
-        arrowprops=dict(arrowstyle="-|>", color=ACCENT, lw=1.4,
-                        connectionstyle="arc3,rad=0.25", shrinkA=6, shrinkB=8),
-        annotation_clip=False, zorder=7)
+        arrowprops=dict(
+            arrowstyle="-|>",
+            color=ACCENT,
+            lw=1.4,
+            connectionstyle="arc3,rad=0.25",
+            shrinkA=6,
+            shrinkB=8,
+        ),
+        annotation_clip=False,
+        zorder=7,
+    )
 
     window = _dense_month_window(rows)
     if window and window[0] > 1:
         cnt, label, win = window
         band_rows = [r for r in rows if (r["start"].year, r["start"].month) in win]
         band_x = sum(fx(r["start"]) for r in band_rows) / len(band_rows)
-        ax.annotate(f"{cnt} of {n} clusters fall in the\n{label} operational window",
-                    xy=(band_x, ribbon_y - 0.06), xytext=(band_x - 0.10, ribbon_y - 1.15),
-                    fontsize=9.8, color=MUTED, family=SANS, va="top", ha="center",
-                    arrowprops=dict(arrowstyle="-", color=FAINT, lw=0.9),
-                    annotation_clip=False, zorder=5)
+        ax.annotate(
+            f"{cnt} of {n} clusters fall in the\n{label} operational window",
+            xy=(band_x, ribbon_y - 0.06),
+            xytext=(band_x - 0.10, ribbon_y - 1.15),
+            fontsize=9.8,
+            color=MUTED,
+            family=SANS,
+            va="top",
+            ha="center",
+            arrowprops=dict(arrowstyle="-", color=FAINT, lw=0.9),
+            annotation_clip=False,
+            zorder=5,
+        )
 
     leg_y = 0.10
-    fig.text(0.05, leg_y, "marker size → processes in wave", color=FAINT,
-             fontsize=8.8, family=SANS, va="baseline")
+    fig.text(
+        0.05,
+        leg_y,
+        "marker size → processes in wave",
+        color=FAINT,
+        fontsize=8.8,
+        family=SANS,
+        va="baseline",
+    )
     lx = 0.45
-    fig.text(lx, leg_y, "hosts involved:", color=FAINT, fontsize=8.8, family=SANS,
-             va="baseline")
+    fig.text(
+        lx,
+        leg_y,
+        "hosts involved:",
+        color=FAINT,
+        fontsize=8.8,
+        family=SANS,
+        va="baseline",
+    )
     lx += 0.105
     for lbl, col in (("≥5", ALERT), ("3–4", INFERRED), ("2", HYPOTHESIS)):
-        fig.add_artist(mpatches.Circle((lx, leg_y + 0.005), 0.006,
-                                       transform=fig.transFigure, facecolor=col,
-                                       edgecolor="none"))
-        fig.text(lx + 0.013, leg_y, lbl, color=MUTED, fontsize=8.8, family=SANS,
-                 va="baseline")
+        fig.add_artist(
+            mpatches.Circle(
+                (lx, leg_y + 0.005),
+                0.006,
+                transform=fig.transFigure,
+                facecolor=col,
+                edgecolor="none",
+            )
+        )
+        fig.text(
+            lx + 0.013,
+            leg_y,
+            lbl,
+            color=MUTED,
+            fontsize=8.8,
+            family=SANS,
+            va="baseline",
+        )
         lx += 0.013 + 0.012 * len(lbl) + 0.03
 
     _rule(fig, 0.05, 0.95, 0.145)
