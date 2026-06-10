@@ -28,8 +28,15 @@ To light up a slot:
 
 - **Resolution:** record the terminal/browser at 1920×1080 (or 16:9). Big font (terminal 16–18pt)
   so text is legible at video scale.
-- **Tooling:** OBS, `asciinema rec` + `agg` (terminal→mp4), or any screen recorder. The dashboard
-  needs a real browser, so OBS/Chrome capture.
+- **Tooling:**
+  - *Terminal shots* → **`asciinema` + `agg`** (verified on this machine). asciinema records the
+    real session as text and `agg` renders it to crisp video at any size — sharper than a pixel
+    grab. Install the converter once: `cargo install --git https://github.com/asciinema/agg agg`.
+  - *Browser/dashboard shots* → a real screen recorder. On this Wayland box the no-install option
+    is GNOME's recorder (`Ctrl+Alt+Shift+R`; lift the cap with
+    `gsettings set org.gnome.settings-daemon.plugins.media-keys max-screencast-length 0`), or
+    install **OBS** (`flatpak install flathub com.obsproject.Studio`) if you want to narrate live.
+  - *Pure ffmpeg grab* (XWayland `:0`): `ffmpeg -video_size 1920x1080 -framerate 30 -f x11grab -i :0.0+0,0 -c:v libx264 -crf 18 -pix_fmt yuv420p grab.mp4`.
 - **Pacing aid:** `FIND_EVIL_PACE=0.15` spaces the audit/stage output so the stream builds
   visibly instead of dumping instantly (no effect on the result). Use it for the terminal + the
   dashboard takes.
@@ -52,14 +59,42 @@ FIND_EVIL_FAULT_INJECT="verifier_reject_once:prefetch-cain-exe" \
   --local --unattended --case-id demo-self-correction
 ```
 
-**What must be on screen, in order:** `case_open` + the SHA-256, the tool stream
-(`vol_*` / `prefetch_parse` / `registry_query` / `evtx_query`), the verify phase printing the
-**rejection → re-dispatch → approved**, and the final `verdict = SUSPICIOUS`. Optionally split-
-screen a `tail -f tmp/auto-runs/demo-self-correction/audit.jsonl | grep -E 'fault_injection|verifier_redispatch'`
-so the self-correction records pop.
+**What's on screen, in order:** `case_open` + the SHA-256, the tool stream
+(`vol_*` / `prefetch_parse` / `registry_query` / `evtx_query`), then the verify phase printing the
+self-correction **to stdout** (the engine now prints these — no audit-log spelunking needed):
 
-A full NIST run is minutes long — either trim to the highlights or set `playbackRate={2}`–`{3}`
-on the `<ExhibitVideo>` in `ClaudeCodeScene.tsx` (beat budget ≈ 22s).
+```
+verify_finding rejected f-A-… — re-dispatching once (fresh replay)
+verify_finding recovered f-A-… on re-dispatch ✓
+```
+
+…and the final `verdict = SUSPICIOUS`.
+
+**Verified recipe (asciinema → agg → mp4), this machine:** record the run *inside* asciinema's
+`-c`, then render. No GUI needed; text stays razor-sharp.
+
+```bash
+# 1. record the real run as an asciicast (the -c command runs in a pty)
+asciinema rec --overwrite \
+  -c "FIND_EVIL_PACE=0.08 FIND_EVIL_FAULT_INJECT=verifier_reject_once:prefetch-cain-exe \
+      python3 scripts/find_evil_auto.py evidence/SCHARDT.dd --local --unattended --no-parallel \
+      --case-id demo-self-correction" \
+  /tmp/self-correction.cast
+
+# 2. render to video (speed up a long run to fit the ~22s beat)
+agg --font-size 26 --theme asciinema --speed 1.6 /tmp/self-correction.cast /tmp/self-correction.gif
+ffmpeg -y -i /tmp/self-correction.gif -movflags +faststart -pix_fmt yuv420p \
+  -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
+  scripts/make-demo-video/public/ui/terminal-investigation.mp4
+
+# 3. add "terminal-investigation.mp4" to CAPTURED in ExhibitVideo.tsx, then `pnpm render`
+```
+
+`evidence/attack-samples` (EVTX) is a faster swap-in if you want a ~30s run instead of the
+minutes-long NIST disk case — use `verifier_reject_once:audit-log-cleared` for that fixture. A
+quick reference clip recorded exactly this way verified the pipeline end-to-end (the recovery is
+legible at video scale). Trim or raise `--speed` / the `<ExhibitVideo playbackRate>` to fit the
+beat budget (≈ 22s).
 
 ## Slot 2 — `ui/dashboard-live.mp4` (Beat 6: "Watch it work") — already present, re-capture for richness
 
