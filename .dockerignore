@@ -2,7 +2,7 @@
 #
 # Mirrors .gitignore's large-binary/secret rules so a stray evidence image, VM,
 # credential, or research clone can never be copied into a Docker layer (image
-# layers are world-readable once pushed). See docs/runbooks/docker-runner.md.
+# layers are world-readable once pushed).
 
 # --- VCS / CI noise (not needed inside the runner image) ---
 .git

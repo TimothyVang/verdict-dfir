@@ -17,6 +17,7 @@ investigation in-process; the external DFIR binaries are needed for memory/disk/
 | `claude` CLI | latest | The agent IS the engine (A2) | `npm i -g @anthropic-ai/claude-code` |
 | Rust | **1.88** (`rust-toolchain.toml`) | builds `findevil-mcp` | `rustup` |
 | `cargo` | with Rust 1.88 | build/test | rustup |
+| C toolchain (`cc`) | system | links Rust crates (rustup does not install it) | `build-essential` (Debian/Ubuntu) · `xcode-select --install` (macOS) |
 | `uv` + Python | **3.11** | `findevil-agent-mcp` venv | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | Node | **20** | `apps/web` dashboard + Remotion | nodejs.org / nvm |
 | `pnpm` | 9.x | workspace install | `corepack enable` |

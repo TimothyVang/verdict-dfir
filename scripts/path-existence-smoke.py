@@ -120,8 +120,7 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"^/tmp/"),
     # Evidence drop dir. evidence/*.evtx (etc.) are gitignored runtime
     # inputs the user supplies (README/CLAUDE/QUICKSTART name
-    # `evidence/DE_1102_security_log_cleared.evtx`); docker-runner.md's
-    # `/evidence/case` is the in-container mount. Not repo files.
+    # `evidence/DE_1102_security_log_cleared.evtx`). Not repo files.
     re.compile(r"^/?evidence/"),
     # Cargo build artifacts (`target/release/findevil-mcp`) — produced
     # by `cargo build`, gitignored, present only after a build.
@@ -209,11 +208,13 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # quoted in README.md + docs/demo-script-a2.md as conventional
     # locations.  tmp/ is gitignored.
     re.compile(r"^tmp/"),
-    # Host output dir for the docker runner (`./out/`, `./out`) quoted in
-    # docs/runbooks/docker-runner.md — scripts/verdict-docker bind-mounts it to
-    # receive the run dir + signed manifest.  `out/` is gitignored and created
-    # at runtime, so it exists only after a docker run, never in the CI checkout.
+    # Runtime output dir (`./out/`, `./out`): gitignored and created at run time,
+    # so it exists only after a run, never in the CI checkout.
     re.compile(r"^\./out(/|$)"),
+    # Generated demo video: built by scripts/make-demo-video.sh and hosted on the
+    # GitHub Release (not committed, to keep the clone small). CHANGELOG/docs cite
+    # its generator output path; README links the hosted copy.
+    re.compile(r"^docs/find-evil-demo\.mp4$"),
     # Research-only repo-root dir for external SDK / OpenClaw / Hermes
     # / Pixel-Agents reference clones (CLAUDE.md "External reference
     # clones" + Amendment A3 §1.3).  /git-hub-references/ is gitignored

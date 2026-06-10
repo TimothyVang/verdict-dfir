@@ -20,9 +20,9 @@ party can verify offline**. It runs as a [Claude Code](https://claude.com/claude
 narrow, typed tool surface, so every conclusion cites the exact tool call that produced it.
 
 <p align="center">
-  <a href="docs/find-evil-demo.mp4"><img src="assets/screenshots/demo.gif" alt="VERDICT live investigation dashboard streaming a case" width="760"></a>
+  <a href="https://github.com/TimothyVang/sans-hackathon/releases/latest/download/find-evil-demo.mp4"><img src="assets/screenshots/demo.gif" alt="VERDICT live investigation dashboard streaming a case" width="760"></a>
 </p>
-<p align="center"><sub>The live dashboard streams every tool call and finding as the case runs. <a href="docs/find-evil-demo.mp4">Watch the full walkthrough →</a></sub></p>
+<p align="center"><sub>The live dashboard streams every tool call and finding as the case runs. <a href="https://github.com/TimothyVang/sans-hackathon/releases/latest/download/find-evil-demo.mp4">Watch the full walkthrough →</a></sub></p>
 
 ## What you get
 
@@ -81,9 +81,10 @@ Beyond the three ideas above, a single case run also:
   process-creation waves, MITRE-technique spread. (On a 22-host SANS estate it pinned one implant
   image to 20 of 22 hosts.) Runs in the SANS SIFT VM ([fleet analysis](docs/using/fleet-analysis.md)),
   or per-host locally with no VM ([whole-case local run](docs/using/whole-case-local-run.md)).
-- **Acts on the verdict (optional).** Post-verdict n8n workflows turn a verdict into a notification,
-  ticket, or containment step. This automation sits *outside* the audit chain — never evidence, never
-  a Finding. ([servers](docs/reference/mcp-and-tools.md))
+- **Acts on the verdict (optional).** When the operator deploys an n8n workflow, post-verdict automation
+  can turn a verdict into a notification, ticket, or containment step; out of the box no workflow is
+  deployed, so the step records as skipped. Either way it sits *outside* the audit chain — never
+  evidence, never a Finding. ([servers](docs/reference/mcp-and-tools.md))
 
 ## Hi, I'm new
 
@@ -106,9 +107,9 @@ SIFT VM) is in [QUICKSTART.md](QUICKSTART.md); what the in-agent `setup` trigger
 ## Quickstart
 
 ```bash
-git clone https://github.com/TimothyVang/sans-hackathon.git verdict
+git clone --depth 1 https://github.com/TimothyVang/sans-hackathon.git verdict   # --depth 1 keeps the clone small + fast
 cd verdict
-bash scripts/setup          # one-shot: preflight + build + DFIR tools + honest summary
+bash scripts/setup          # one-shot: preflight + build (or fetch prebuilt) + DFIR tools + honest summary
 # or, just the build step:
 bash scripts/install.sh     # preflight + build (Rust MCP server + Python env)
 ```
@@ -126,10 +127,6 @@ Point it at a single image or a mixed case directory (memory + EVTX + disk + net
 Velociraptor). Output lands in `tmp/auto-runs/<case-id>/`, and the dashboard
 (`http://localhost:3000`) streams the run live as it happens.
 
-**Prefer a container?** `bash scripts/verdict-docker <evidence> --headless` runs the whole pipeline
-in a reproducible image — no host toolchain beyond Docker, and no Claude token (it runs the
-deterministic engine). Details + limits: [docs/runbooks/docker-runner.md](docs/runbooks/docker-runner.md).
-
 **Zero setup, zero flags — the `/verdict` skill.** In a Claude Code session (`claude` in the
 repo), just type:
 
@@ -139,8 +136,8 @@ repo), just type:
 
 The skill **bootstraps everything for you** — builds the MCP servers (`install.sh` if needed),
 brings up n8n, and prepares the SANS SIFT VM so disk images fully extract — then runs the whole
-pipeline, fires the n8n automation + grounding workflows, and prints the Verdict plus every
-workflow that ran (and opens the dashboard + report). You never run `install.sh`/`doctor.sh` or
+pipeline, attempts the post-verdict n8n + grounding automation (skipped unless you've deployed the
+workflows), and prints the Verdict plus every workflow that ran (and opens the dashboard + report). You never run `install.sh`/`doctor.sh` or
 pass `--sift`/`--parallel` — the skill adds them. Full reference:
 [docs/using/running-verdict.md §`/verdict` skill](docs/using/running-verdict.md).
 

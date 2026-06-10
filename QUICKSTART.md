@@ -1,6 +1,24 @@
 # Find Evil! — Quickstart
 
-Three things to get you investigating evidence with the agent. For the project pitch + claims, see [README.md](README.md). For the full doc map, see [`docs/README.md`](docs/README.md).
+For the project pitch + claims, see [README.md](README.md). For the full doc map, see [`docs/README.md`](docs/README.md).
+
+---
+
+## Quickstart in 3 steps
+
+```bash
+git clone https://github.com/TimothyVang/sans-hackathon.git verdict && cd verdict
+bash scripts/setup                    # install + build + DFIR tools + green/red summary
+scripts/verdict <path-to-evidence>    # investigate -> live dashboard -> signed verdict + report
+```
+
+No evidence yet? `bash scripts/fetch-fixtures.sh` stages public datasets (into `fixtures/`). In a
+Claude Code session you can instead type `/verdict <path>` (it also bootstraps n8n + the SIFT VM).
+Canonical install detail — prerequisites, how to verify, the container path — is in
+[INSTALL.md](INSTALL.md).
+
+**Everything below is "going deeper"** — environment choices (SIFT VM vs. local) and the full
+run-mode catalog.
 
 ---
 
@@ -136,7 +154,7 @@ tmp/auto-runs/auto-<uuid>/
 
 Run with `--no-report` to skip PDF rendering (saves ~5 seconds).
 
-### Option 2C — Fleet investigation (entire host inventory)
+### Option 2D — Fleet investigation (entire host inventory)
 
 When the case is "we have N memory images, find all the evil," chain three scripts:
 

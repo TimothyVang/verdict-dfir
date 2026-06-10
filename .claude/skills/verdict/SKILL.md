@@ -1,15 +1,15 @@
 ---
 name: verdict
-description: Turnkey end-to-end DFIR — type /verdict <evidence> and it bootstraps everything (builds the MCP servers, brings up n8n, prepares the SIFT VM) then runs the full pipeline with no flags. Use when the operator says /verdict, "run verdict", "investigate <path> end to end", "is there evil here", or wants the whole investigation + automation + report in one go. Auto-selects the SIFT VM (full forensic toolchain) so disk images fully extract, fires n8n + grounding, and surfaces the Verdict + every workflow that ran.
+description: Turnkey end-to-end DFIR — type /verdict <evidence> and it bootstraps everything (builds the MCP servers, brings up n8n, prepares the SIFT VM) then runs the full pipeline with no flags. Use when the operator says /verdict, "run verdict", "investigate <path> end to end", "is there evil here", or wants the whole investigation + automation + report in one go. Auto-selects the SIFT VM (full forensic toolchain) so disk images fully extract, attempts post-verdict n8n + grounding automation, and surfaces the Verdict + every workflow that ran.
 ---
 
 # VERDICT — turnkey one-shot DFIR + a unified "what ran" report
 
 The operator types `/verdict <evidence>` (or just `/verdict`) and gets the **whole** pipeline
 with no setup and no flags: this skill bootstraps the environment, auto-uses the SIFT VM so disk
-images actually extract, runs the parallel investigation to a signed Verdict, fires the n8n
-automation + grounding workflows, and shows the dashboard + report — then reports everything that
-fired.
+images actually extract, runs the parallel investigation to a signed Verdict, attempts the
+post-verdict n8n + grounding automation (skipped unless the operator has deployed the workflows),
+and shows the dashboard + report — then reports everything that fired.
 
 ## Safety rules (do not violate)
 
@@ -43,7 +43,7 @@ The operator types only `/verdict <evidence>`; **this skill adds the right flags
 - If `SIFT_OK=1`, run:
   `FIND_EVIL_GUEST_IP=<ip> bash scripts/verdict <evidence> --sift`
   → DFIR tools run **in the SIFT VM** (the only way to fully extract a disk image) → signed
-  verdict + manifest → **n8n finding-to-action fires** → **grounding fires** → dashboard + report.
+  verdict + manifest → **n8n + grounding automation attempted** (skipped unless deployed) → dashboard + report.
 - If `SIFT_OK=0` (no reachable VM), run `bash scripts/verdict <evidence>` locally and tell the
   operator a **disk image is custody-only** without the VM (memory/EVTX/network still work if
   their tools are present).
@@ -67,7 +67,7 @@ Summarize, in this shape:
 Verdict   : <SUSPICIOUS | INDETERMINATE | NO_EVIL>  (confidence <…>)
 Findings  : <N>  (each citing a tool_call_id)  ·  tool calls: <N>
 Custody   : manifest_verify.overall = <true|false>
-Automation: n8n <fired: workflow <name> | skipped (down)>  →  automation.json
+Automation: n8n <fired: workflow <name> | skipped (no workflow deployed / n8n down)>  →  automation.json
 Grounding : <K claims researched | skipped>  →  grounding.json
 Case      : tmp/auto-runs/<case-id>/   ·   REPORT.html / REPORT.pdf
 ```
@@ -91,8 +91,13 @@ Unless the operator passed `--no-dashboard`, surface both:
 ## Notes
 - `--sift` runs the DFIR tools inside the SANS SIFT VM over SSH (needed for full disk
   extraction — local mode can only mount the EWF container, not the inner volume). The
-  post-verdict n8n automation + grounding now fire in `--sift` mode too (host-side, after the
+  post-verdict n8n automation + grounding are attempted in `--sift` mode too (host-side, after the
   case dir syncs back), so `--sift` gives you the full pipeline in one go.
+- **Automation is opt-in.** Out of the box no n8n finding-to-action workflow is deployed
+  (`setup-n8n.py` provisions only an owner + API key), so `automation.json` reads
+  `skipped` / `n8n_reachable: false` unless the operator deploys a workflow (e.g.
+  `scripts/setup-grounding-workflow.py`). Report it honestly — never say automation "fired"
+  when the sidecar says it was skipped.
 - The SIFT VM IP default (`192.168.197.143`) can be stale; if `--sift` can't reach the VM,
   set `FIND_EVIL_GUEST_IP` to the current IP (e.g. via `vmrun getGuestIPAddress`).
 - If `scripts/verdict` stops before `case_open`, report the exact failing line — do not

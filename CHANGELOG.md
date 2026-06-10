@@ -11,6 +11,45 @@ once the first `v0.x` is cut on the `v-submit` tag.
 
 ## [Unreleased]
 
+### Added — production readiness: easy install, docs, cross-platform distribution
+
+- **Canonical `INSTALL.md`** — one linear path (clone → `scripts/setup` → verify
+  with `scripts/doctor.sh` → first run), plus the container path. Added to the L0
+  docs-consistency guard and the L1 link-existence smoke.
+- **`CONTRIBUTING.md` + `docs/glossary.md`** — contributor build/test commands
+  (mirroring CI), the non-negotiable invariants and Conventional-Commit rules,
+  and plain-language definitions + FAQ.
+- **`scripts/install.sh --bootstrap`** (opt-in; or `FINDEVIL_BOOTSTRAP=1`) installs
+  a C toolchain (`build-essential` on Debian/Ubuntu) and missing cargo/uv/node via
+  their official installers. The default path is unchanged and stays fail-closed;
+  guarded by `scripts/install-bootstrap-smoke.py` and wired into
+  `scripts/run-all-smokes.sh`.
+- **Prebuilt-binary install path** — `scripts/install.sh` can fetch a
+  checksum-verified `findevil-mcp` instead of compiling (opt-in
+  `FINDEVIL_MCP_PREBUILT=1` + `FINDEVIL_MCP_VERSION=<tag>`), falling back to a
+  source build for any unpublished triple.
+- **Cross-platform binary releases** — `release-binaries.yml` builds
+  `findevil-mcp` for linux x86_64/aarch64 + macOS x86_64/arm64 and attaches
+  checksummed tarballs + `SHA256SUMS` to the GitHub Release. findevil-mcp is pure
+  Rust (links only libc/libm/libgcc), so no C-library cross-compilation is needed.
+- **Advisory CI workflows** (separate, non-required, validate-on-branch):
+  `cross-platform.yml` (build/test on macOS + Windows) and `sbom.yml` (CycloneDX
+  SBOMs).
+
+### Changed — front-door clarity
+
+- **README "Hi, I'm new"** reframed from "two equivalent ways" to one canonical
+  path (`bash scripts/setup`) plus a power option (the in-Claude `setup` trigger,
+  which additionally fetches the gated SANS SIFT OVA).
+- **`QUICKSTART.md`** now opens with a genuine 3-step quickstart; the
+  environment/run-mode tutorial is "going deeper" below it.
+
+### Fixed
+
+- **`agent-config/PLAYBOOK.md`** — corrected a slash-joined tool shorthand
+  (`vol_pslist`/`vol_psscan`/…) that `path-existence-smoke` flagged as a broken
+  path, restoring a green smoke run.
+
 ### Removed — Amendment A6: build swarm subsystem deleted
 
 - **Removed the build swarm (Spec #1) entirely.** The overnight

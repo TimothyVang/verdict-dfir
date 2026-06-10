@@ -174,10 +174,10 @@ jobs:
                      docs/plans/2026-04-23-orchestration-glue-plan.md; do
             test -f "$plan" || { echo "missing plan: $plan"; exit 1; }
           done
-          # Root operator docs (README + QUICKSTART + CHANGELOG +
+          # Root operator docs (README + INSTALL + QUICKSTART + CHANGELOG +
           # CLAUDE.md) - deleting any of these breaks the front-page
           # contract for judges/contributors.
-          for doc in CLAUDE.md README.md QUICKSTART.md CHANGELOG.md; do
+          for doc in CLAUDE.md README.md INSTALL.md CONTRIBUTING.md QUICKSTART.md CHANGELOG.md; do
             test -f "$doc" || { echo "missing root doc: $doc"; exit 1; }
           done
           # Canonical analyst-facing docs under docs/ (referenced from
@@ -187,6 +187,7 @@ jobs:
                      docs/cryptographic-attestation.md \
                      docs/verdict-semantics.md \
                      docs/false-positives.md \
+                     docs/glossary.md \
                      docs/demo-script-a2.md; do
             test -f "$doc" || { echo "missing canonical doc: $doc"; exit 1; }
           done

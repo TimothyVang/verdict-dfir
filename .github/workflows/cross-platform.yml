@@ -1,0 +1,64 @@
+name: cross-platform
+
+# ADVISORY cross-platform build/test for findevil-mcp (Rust) and the Python
+# agent-mcp. This is a SEPARATE workflow and is NOT a required status check —
+# keep it OUT of branch protection until the macOS/Windows legs are green, so a
+# failing leg never blocks a merge. It exists so you can validate, on a branch,
+# that the code compiles and tests pass beyond Linux.
+#
+# DFIR subprocess tools (Volatility/Hayabusa/…) are intentionally NOT installed
+# here; Rust integration tests that need them detect BinaryNotFound and self-
+# skip, matching doctor.sh's warn-only DFIR tier off-Linux. findevil-mcp is pure
+# Rust (links only libc/libm/libgcc) so no C-library setup is required.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'services/mcp/**'
+      - 'services/agent_mcp/**'
+      - 'services/agent/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/cross-platform.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: rust ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust 1.88
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.88.0"
+      - name: cargo build (findevil-mcp)
+        run: cargo build --locked -p findevil-mcp
+      - name: cargo test (findevil-mcp)
+        run: cargo test --locked -p findevil-mcp
+
+  python:
+    name: python ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: pytest (agent_mcp)
+        shell: bash
+        working-directory: services/agent_mcp
+        run: |
+          set -euo pipefail
+          uv sync --extra dev
+          uv run pytest -q

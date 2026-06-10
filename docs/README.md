@@ -6,7 +6,8 @@ Read this first when navigating the documentation tree. The root README is the j
 
 | Need | Read |
 |---|---|
-| Install and run an investigation | [`../QUICKSTART.md`](../QUICKSTART.md) — the one command is `scripts/verdict <evidence>` |
+| Install from a cold clone (canonical) | [`../INSTALL.md`](../INSTALL.md) — clone → install → verify → first run |
+| Pick an environment + run modes | [`../QUICKSTART.md`](../QUICKSTART.md) — the one command is `scripts/verdict <evidence>` |
 | Run it — every flag, run modes, output layout | [`using/running-verdict.md`](using/running-verdict.md) |
 | Full MCP-server / tool / dependency / env inventory | [`reference/mcp-and-tools.md`](reference/mcp-and-tools.md), [`reference/dependencies.md`](reference/dependencies.md), [`reference/environment-variables.md`](reference/environment-variables.md) |
 | The dev/operator memory layer (obsidian-mind) | [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md) |
@@ -37,6 +38,8 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 | `CLAUDE.md` | **ACTIVE** | Agent instructions, document hierarchy, non-negotiable invariants, spec/code divergences. Always loaded into Claude Code sessions. |
 | `AGENTS.md` | **ACTIVE** | Codex-compatible adapter instructions that defer to `CLAUDE.md` and preserve the narrow MCP surface. |
 | `README.md` | **ACTIVE** | Public-facing project landing page. |
+| `INSTALL.md` | **ACTIVE** | Canonical install guide: clone → install → verify → first run, plus the container path. |
+| `CONTRIBUTING.md` | **ACTIVE** | How to build, test (mirrors CI), and submit changes; the invariants and Conventional-Commit rules. |
 | `QUICKSTART.md` | **ACTIVE** | Three-step quickstart for impatient users. |
 | `STARTUP.md` | **RESEARCH** | Team onboarding notes retained for hackathon context. |
 | `CHANGELOG.md` | **ACTIVE** | Chronological project changelog. |
@@ -53,6 +56,7 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 | `DATASET.md` | **REQUIRED** | Devpost Required Component #5. Every fixture the agent was tested against, with SHA-256 + license + expected findings. |
 | `demo-script-a2.md` | **ACTIVE** | 5-minute Devpost demo video script (A2 flow). Pre-flight checklist + per-beat narration + rubric mapping. |
 | `divergences-resolved.md` | **ACTIVE** | Ledger of settled spec/code divergences moved out of `CLAUDE.md`. |
+| `glossary.md` | **ACTIVE** | Plain-language definitions (Case/Observable/Finding/Verdict, the three Verdicts, ACH, audit chain) + a short FAQ. |
 | `false-positives.md` | **ACTIVE** | Operator's guide. Three architectural FP layers + four operational habits + per-tool FP risk table. |
 | `finding-to-action.md` | **ACTIVE** | Per-MITRE-technique IR playbook: from a SUSPICIOUS/CONFIRMED finding to analyst next steps (T1014, T1055, T1547, T1543, T1053, T1070, T1041/T1048). |
 | `investigation-phases.md` | **ACTIVE** | Phase-by-phase walkthrough: case_open → Pool A/B → contradictions → verify → judge → correlate → finalize. What each phase produces in audit.jsonl and verdict.json. |

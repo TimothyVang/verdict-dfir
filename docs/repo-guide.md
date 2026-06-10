@@ -34,7 +34,7 @@ see `docs/architecture.md`; for commands and the live-test gate see
 ├── out/ + tmp/                                     # run outputs (auto-runs, fleet-runs, summaries) — generated
 ├── assets/                                         # logo + brand assets
 ├── packer/sift-microvm.pkr.hcl                     # L3 warm-qcow2 build from the OVA
-├── docker/                                         # l1-compose.yml, l1-devbase / l2-siftlite Dockerfiles, verdict-runner
+├── docker/                                         # l1-compose.yml, l1-devbase / l2-siftlite sandbox Dockerfiles
 ├── .remotion/                                      # Remotion headless render cache (demo video)
 ├── target/ / node_modules/                         # build output — generated, gitignored
 └── .github/workflows/                              # l0/l1/l2/l3 + release + competitor-watch + devpost-submit

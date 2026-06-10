@@ -1,0 +1,85 @@
+# Glossary and FAQ
+
+Plain-language definitions of the terms VERDICT uses, plus answers to common questions. Canonical
+sources: [CLAUDE.md](../CLAUDE.md), [verdict-semantics.md](verdict-semantics.md),
+[architecture.md](architecture.md), [agent-config/SOUL.md](../agent-config/SOUL.md).
+
+## Core terms
+
+| Term | Meaning |
+|---|---|
+| **VERDICT** | The DFIR agent in this repo. Point it at evidence; it returns a signed Verdict ("is there evil here?") plus a report. |
+| **DFIR** | Digital Forensics & Incident Response — investigating compromised systems to determine what happened. |
+| **MCP** | Model Context Protocol — the typed tool interface Claude Code calls. VERDICT exposes 31 product tools across two MCP servers and adds no `execute_shell`. |
+| **Claude Code is the engine** | Amendment A2: there is no separate app server. When you run `claude`/`scripts/verdict`, that session *is* the forensic analyst. |
+
+## DFIR vocabulary (used deliberately throughout)
+
+| Term | Means (not…) |
+|---|---|
+| **Case** | One unit of investigation, keyed by `case_id` (not session/run/job). |
+| **Observable** | A piece of evidence under examination (not file/path/blob). |
+| **Task** | A step the agent takes (not action/step). |
+| **Finding** | A substantiated observation, each citing a `tool_call_id` (not result). |
+| **Verdict** | The case conclusion: one of three words below (not conclusion/score). |
+| **Confidence** | How strongly a Finding is supported (not score). |
+| **Artifact class** | A category of forensic evidence (Prefetch, MFT, EVTX, Amcache, …). Execution claims need **≥2** corroborating artifact classes. |
+
+## The three Verdicts
+
+Full semantics in [verdict-semantics.md](verdict-semantics.md). None of them means "definitely safe."
+
+| Verdict | Meaning |
+|---|---|
+| **SUSPICIOUS** | Found something; triage now. |
+| **INDETERMINATE** | Saw leads but couldn't corroborate them; review when convenient. |
+| **NO_EVIL** | Scoped-clean *within what was actually examined* — never "definitely safe." |
+
+## Epistemic hierarchy (strict)
+
+| Tier | Rule |
+|---|---|
+| **CONFIRMED** | Backed directly by tool output. |
+| **INFERRED** | Derived from ≥2 confirmed facts; labeled as inferred. |
+| **HYPOTHESIS** | A lead, not a fact; prefixed with the literal word "hypothesis:". |
+
+## Agent topology and chain of custody
+
+| Term | Meaning |
+|---|---|
+| **Pool A / Pool B** | Two subagent pools that investigate the same evidence with opposing priors (persistence-biased vs. exfil-biased). |
+| **ACH** | Analysis of Competing Hypotheses — Heuer's intelligence method, here as live architecture: disagreements surface as `contradiction` records before a judge merges them. |
+| **judge / verifier / correlator** | The verifier re-runs each cited tool; the judge merges Pool A/B findings with credibility weighting; the correlator links findings across the case (and across hosts in fleet mode). |
+| **`tool_call_id`** | A SHA-256 over a tool's raw output. Every Finding cites one or it is vetoed. |
+| **audit chain / `audit.jsonl`** | Append-only, hash-chained log (each record carries `prev_hash`) of every tool call and finding. |
+| **Merkle root / `run.manifest.json`** | A Merkle tree over canonical tool outputs, recorded in the run manifest. |
+| **manifest / `manifest_verify`** | The signed seal over the run; `manifest_verify` re-checks the chain + Merkle root **offline**. Post-A5 the chain is 3 tiers (audit `prev_hash` → `rs_merkle` → sigstore). |
+| **SIFT VM** | The SANS SIFT Workstation VM (a gated ~9.3 GB download) that supplies the full disk-forensics toolchain. Needed only for disk-image inner-volume extraction. |
+| **Live test** | The dev "done" gate: a real investigation producing a real Verdict + `manifest_verify overall:true` — not a smoke run. |
+
+---
+
+## FAQ
+
+**Does `NO_EVIL` mean the system is safe?**
+No. It means *scoped-clean within what was examined*. VERDICT never asserts "definitely safe."
+
+**Why is there no `execute_shell` tool?**
+The narrow, typed tool surface is the security pitch — it bounds what the agent can do on evidence
+and keeps every action in the audit chain. Adding shell pass-through would forfeit that.
+
+**Do I need the SIFT VM?**
+Only for disk-image inner-volume extraction (`.E01`/`.dd`). Memory, EVTX, PCAP, and Velociraptor
+evidence run fully in local-host mode. Without SIFT, disk evidence is custody-only.
+
+**Is a Claude credential required?**
+Yes for the investigating agent (one of three modes — see [CLAUDE.md §8](../CLAUDE.md)).
+
+**Is VERDICT's memory part of the evidence?**
+No — never. Both memory systems (the obsidian-mind dev/operator vault and the in-flow Hermes recall)
+are outside the audit chain: never evidence, never a Finding, never a Merkle leaf. See
+[CLAUDE.md §8.5](../CLAUDE.md).
+
+**Where does output go?**
+`tmp/auto-runs/<case-id>/` — `verdict.json`, `audit.jsonl`, `run.manifest.json`, `manifest_verify.json`,
+and the rendered report. The live dashboard streams it at `http://localhost:3000`.

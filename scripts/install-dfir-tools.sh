@@ -6,8 +6,7 @@
 # User-space only: everything lands in ~/.local/bin (no sudo). Idempotent (skips
 # anything already resolvable) and best-effort (a failed download warns and
 # continues — a missing tool degrades to a clean BinaryNotFound the agent pivots
-# on, never a crash). Versions match docker/verdict-runner.Dockerfile so the host
-# and the container agree.
+# on, never a crash). Tool versions are pinned below for reproducibility.
 #
 # pcap tooling (tshark) needs a system package; it is reported as an apt hint
 # rather than installed, to avoid a sudo prompt. Override any version via env

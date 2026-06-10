@@ -37,6 +37,19 @@ info()  { echo "${c_blu}[INFO]${c_off}  $*"; }
 warn()  { echo "${c_yel}[WARN]${c_off}  $*"; }
 fail()  { echo "${c_red}[ERR]${c_off}   $*" >&2; }
 
+# Opt-in prerequisite bootstrap. Default OFF: the canonical contract is
+# fail-closed on a missing toolchain (judges/CI rely on it). With --bootstrap
+# (or FINDEVIL_BOOTSTRAP=1) install.sh installs missing cargo/uv/node via their
+# official installers before the checks, instead of erroring out. The remote
+# installers below are reached ONLY through bootstrap_enabled.
+BOOTSTRAP="${FINDEVIL_BOOTSTRAP:-0}"
+for _arg in "$@"; do
+    case "${_arg}" in
+        --bootstrap) BOOTSTRAP=1 ;;
+    esac
+done
+bootstrap_enabled() { [ "${BOOTSTRAP}" = "1" ]; }
+
 echo ""
 echo "  ██╗   ██╗███████╗██████╗ ██████╗ ██╗ ██████╗████████╗"
 echo "  ██║   ██║██╔════╝██╔══██╗██╔══██╗██║██╔════╝╚══██╔══╝"
@@ -90,8 +103,38 @@ info "Checking toolchain prerequisites..."
 # doctor.sh does the same at line 30.
 [ -f "${HOME}/.cargo/env" ] && source "${HOME}/.cargo/env"
 
+# A C toolchain (cc/linker) is required to build Rust crates; rustup warns but
+# does not install one. Bootstrap it on Debian/Ubuntu via apt; elsewhere point
+# the user at the right package.
+if bootstrap_enabled && ! command -v cc &> /dev/null && ! command -v gcc &> /dev/null; then
+    if command -v apt-get &> /dev/null; then
+        info "[bootstrap] no C compiler — installing build-essential via apt..."
+        if [ "$(id -u)" -eq 0 ]; then
+            apt-get update -qq && apt-get install -y --no-install-recommends build-essential \
+                || warn "[bootstrap] build-essential install failed; install a C toolchain manually."
+        elif command -v sudo &> /dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends build-essential \
+                || warn "[bootstrap] build-essential install failed; install a C toolchain manually."
+        else
+            warn "[bootstrap] need root/sudo to apt-install build-essential; install it manually."
+        fi
+    elif [ "$(uname -s)" = "Darwin" ]; then
+        warn "[bootstrap] no C compiler — run 'xcode-select --install', then re-run."
+    else
+        warn "[bootstrap] no C compiler found; install your distro's build tools (gcc/clang)."
+    fi
+fi
+
+if bootstrap_enabled && ! command -v cargo &> /dev/null; then
+    info "[bootstrap] cargo missing — installing Rust via rustup..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
+        || warn "[bootstrap] rustup install failed; falling back to the manual step below."
+    # shellcheck disable=SC1091
+    [ -f "${HOME}/.cargo/env" ] && source "${HOME}/.cargo/env"
+fi
+
 if ! command -v cargo &> /dev/null; then
-    fail "cargo not on PATH. Install Rust: https://rustup.rs/"
+    fail "cargo not on PATH. Install Rust: https://rustup.rs/  (or re-run: bash scripts/install.sh --bootstrap)"
     exit 1
 fi
 ok "cargo: $(cargo --version)"
@@ -110,17 +153,40 @@ if ! printf '%s\n%s\n' "1.85" "${RUST_VER}" | sort -V -C; then
     warn "the toolchain pinned in rust-toolchain.toml (1.88) on first build."
 fi
 
+if bootstrap_enabled && ! command -v uv &> /dev/null; then
+    info "[bootstrap] uv missing — installing via astral.sh/uv/install.sh..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh \
+        || warn "[bootstrap] uv install failed; falling back to the manual step below."
+    export PATH="${HOME}/.local/bin:${PATH}"
+    # shellcheck disable=SC1091
+    [ -f "${HOME}/.local/bin/env" ] && source "${HOME}/.local/bin/env"
+fi
+
 if ! command -v uv &> /dev/null; then
     fail "uv not on PATH."
     echo ""
     echo "  Install uv (Python environment manager):"
     echo "    curl -LsSf https://astral.sh/uv/install.sh | sh"
-    echo "  Then re-run this script."
+    echo "  Then re-run this script (or re-run with: bash scripts/install.sh --bootstrap)."
     exit 1
 fi
 ok "uv: $(uv --version)"
 
 # Node 20+ (required for apps/web dashboard + Remotion demo video)
+if bootstrap_enabled && ! command -v node &> /dev/null; then
+    info "[bootstrap] node missing — installing Node 20 via fnm (best-effort; node is optional)..."
+    curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell \
+        || warn "[bootstrap] fnm install failed; install Node 20 manually if you want the dashboard."
+    for _fnmdir in "${HOME}/.local/share/fnm" "${HOME}/.fnm"; do
+        [ -d "${_fnmdir}" ] && export PATH="${_fnmdir}:${PATH}"
+    done
+    if command -v fnm &> /dev/null; then
+        eval "$(fnm env)" || true
+        fnm install 20 || warn "[bootstrap] 'fnm install 20' failed."
+        fnm use 20 || true
+    fi
+fi
+
 if ! command -v node &> /dev/null; then
     warn "node not on PATH. The live dashboard (apps/web/) and demo video builder will not work."
     echo "  Install Node 20 LTS: https://nodejs.org/en/download"
@@ -160,10 +226,87 @@ fi
 # 3. Build the Rust MCP server (target/release/findevil-mcp).
 # ---------------------------------------------------------------------------
 
-info "Building findevil-mcp (Rust, release mode — first build can take 5-10 min)..."
-# `-p findevil-mcp` selects the single package to build; we don't need
-# `--workspace` (cargo silently ignores it when -p is also passed).
-cargo build --release --locked -p findevil-mcp -q
+# Prefer a published, checksum-verified prebuilt binary over a 5-10 min compile.
+# This is the DEFAULT fast path for a new user: when FINDEVIL_MCP_VERSION is unset
+# we auto-detect the latest published release and fetch its binary. ANY failure
+# (no release, no asset for this host, missing/mismatched checksum, no curl) falls
+# back to `cargo build`, so install always succeeds. Build from source explicitly
+# with FINDEVIL_MCP_FROM_SOURCE=1; CI builds from source by default (set
+# FINDEVIL_MCP_PREBUILT=1 to force the binary even under CI).
+FINDEVIL_MCP_RELEASE_BASE="${FINDEVIL_MCP_RELEASE_BASE:-https://github.com/TimothyVang/sans-hackathon/releases/download}"
+FINDEVIL_MCP_RELEASE_REPO="${FINDEVIL_MCP_RELEASE_REPO:-TimothyVang/sans-hackathon}"
+
+# Latest published release tag (newest non-draft, non-prerelease) via the GitHub
+# API, parsed without jq. Empty on any failure — the caller falls back to compiling.
+detect_latest_release() {
+    command -v curl &> /dev/null || return 1
+    curl -fsSL "https://api.github.com/repos/${FINDEVIL_MCP_RELEASE_REPO}/releases/latest" 2>/dev/null \
+        | grep -m1 '"tag_name"' \
+        | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/'
+}
+
+host_triple() {
+    case "$(uname -s)-$(uname -m)" in
+        Linux-x86_64)  echo "x86_64-unknown-linux-gnu" ;;
+        Linux-aarch64) echo "aarch64-unknown-linux-gnu" ;;
+        Darwin-x86_64) echo "x86_64-apple-darwin" ;;
+        Darwin-arm64)  echo "aarch64-apple-darwin" ;;
+        *) return 1 ;;
+    esac
+}
+
+try_fetch_prebuilt() {
+    # Explicit source build, or CI (which should build from source to test it)
+    # unless the prebuilt binary is force-enabled.
+    [ -n "${FINDEVIL_MCP_FROM_SOURCE:-}" ] && return 1
+    if [ -n "${CI:-}" ] && [ -z "${FINDEVIL_MCP_PREBUILT:-}" ]; then
+        return 1
+    fi
+    command -v curl &> /dev/null || return 1
+    local triple ver base tarball tmp extracted
+    triple="$(host_triple)" || { warn "[prebuilt] no published binary for this host; compiling."; return 1; }
+    # Explicit version wins; otherwise auto-detect the latest release so the fast
+    # path is the default. Still falls back to compile on any failure below.
+    ver="${FINDEVIL_MCP_VERSION:-}"
+    if [ -z "${ver}" ]; then
+        info "[prebuilt] checking for a published findevil-mcp release..."
+        ver="$(detect_latest_release || true)"
+        [ -n "${ver}" ] || { info "[prebuilt] none published yet; compiling from source."; return 1; }
+        info "[prebuilt] latest release is ${ver}; trying its binary (falls back to compile)."
+    fi
+    base="${FINDEVIL_MCP_RELEASE_BASE}/${ver}"
+    tarball="findevil-mcp-${triple}.tar.xz"
+    tmp="$(mktemp -d)"
+    info "[prebuilt] fetching ${tarball} from ${base}..."
+    if ! curl -fsSL "${base}/${tarball}" -o "${tmp}/${tarball}"; then
+        rm -rf "${tmp}"; warn "[prebuilt] download failed; compiling."; return 1
+    fi
+    # Refuse any binary we cannot checksum against the release SHA256SUMS.
+    if ! curl -fsSL "${base}/SHA256SUMS" -o "${tmp}/SHA256SUMS"; then
+        rm -rf "${tmp}"; warn "[prebuilt] no SHA256SUMS published; refusing unverified binary, compiling."; return 1
+    fi
+    if ! ( cd "${tmp}" && grep -F "${tarball}" SHA256SUMS | sha256sum -c - ); then
+        rm -rf "${tmp}"; fail "[prebuilt] checksum mismatch for ${tarball}; refusing."; return 1
+    fi
+    if ! tar -xJf "${tmp}/${tarball}" -C "${tmp}"; then
+        rm -rf "${tmp}"; warn "[prebuilt] extract failed; compiling."; return 1
+    fi
+    extracted="$(find "${tmp}" -name findevil-mcp -type f | head -1)"
+    [ -n "${extracted}" ] || { rm -rf "${tmp}"; warn "[prebuilt] binary not found in tarball; compiling."; return 1; }
+    mkdir -p target/release
+    install -m 0755 "${extracted}" target/release/findevil-mcp || { rm -rf "${tmp}"; return 1; }
+    rm -rf "${tmp}"
+    ok "[prebuilt] installed findevil-mcp ${ver} (${triple}) — compile skipped."
+}
+
+if try_fetch_prebuilt; then
+    : # checksum-verified prebuilt binary is in place; compile skipped
+else
+    info "Building findevil-mcp (Rust, release mode — first build can take 5-10 min)..."
+    # `-p findevil-mcp` selects the single package to build; we don't need
+    # `--workspace` (cargo silently ignores it when -p is also passed).
+    cargo build --release --locked -p findevil-mcp -q
+fi
 if [ ! -x "target/release/findevil-mcp" ] && [ ! -x "target/release/findevil-mcp.exe" ]; then
     fail "target/release/findevil-mcp not found after cargo build."
     exit 1
@@ -306,9 +449,13 @@ fi
 # n8n is the optional post-verdict automation (route findings -> Slack/ticket).
 # Best-effort and NEVER fatal: scripts/setup-n8n.py self-skips when no n8n is
 # reachable at N8N_BASE (default http://localhost:5678). When one is up it
-# provisions an owner + REST API key (saved to gitignored tmp/n8n-*.txt) and
-# deploys + activates the findevil-finding-to-action workflow, so the dashboard
-# AutomationPanel and scripts/n8n_post.py route live verdicts out of the box.
+# provisions an owner + REST API key (saved to gitignored tmp/n8n-*.txt) ONLY.
+# It does NOT deploy a finding-to-action workflow out of the box (that path is
+# superseded by host-side grounding-aware routing in scripts/ground_actions.py),
+# so unless an operator deploys a workflow (e.g. scripts/setup-grounding-workflow.py)
+# scripts/n8n_post.py records the automation as skipped and the dashboard
+# AutomationPanel shows it idle. The verdict stands either way — automation is
+# never in the audit chain.
 # Set FINDEVIL_SKIP_N8N=1 to skip; N8N_AUTO_DOCKER=1 to start a container when
 # none is running. See docs/runbooks/n8n-automation-integration.md.
 
@@ -530,7 +677,7 @@ connect_sift_vm || true
 # DFIR tools on this machine. scripts/install-dfir-tools.sh installs the ones the
 # Rust MCP server shells out to — volatility3, hayabusa, chainsaw, velociraptor,
 # plus pandoc for report rendering — user-space into ~/.local/bin (no sudo),
-# pinned to the verdict-runner image versions, idempotent and best-effort. Then
+# pinned to known-good versions, idempotent and best-effort. Then
 # scripts/doctor.sh (the canonical checker, resolving binaries the SAME way the
 # server does) re-verifies them and prints a remedy for any still absent. Never
 # fatal: a missing DFIR binary degrades to a clean BinaryNotFound at run time.
