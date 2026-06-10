@@ -56,6 +56,8 @@ REPO = Path(__file__).resolve().parent.parent
 EXPLICIT_DOCS: tuple[str, ...] = (
     "CLAUDE.md",
     "README.md",
+    "INSTALL.md",
+    "CONTRIBUTING.md",
     "QUICKSTART.md",
 )
 

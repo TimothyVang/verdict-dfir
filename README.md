@@ -44,7 +44,7 @@ Every run writes a self-contained case directory:
 
 Three ideas, exercised end-to-end on every CI run:
 
-1. **A typed MCP tool surface — no `execute_shell`.** 31 narrow, schema-validated tools: 19 Rust
+1. **A typed MCP tool surface — no `execute_shell`.** 32 narrow, schema-validated tools: 20 Rust
    DFIR tools (`case_open`, `vol_pslist`/`psscan`/`psxview`, `mft_timeline`, `evtx_query`,
    `hayabusa_scan`, `yara_scan`, `registry_query`, `prefetch_parse`, `pcap_triage`, …) + 12 Python
    crypto/analysis tools. AGPL/GPL engines (Volatility, Hayabusa, Velociraptor) are invoked as
@@ -75,24 +75,28 @@ Beyond the three ideas above, a single case run also:
   output SHA-256 still matches, and `detect_contradictions` raises Pool A vs Pool B conflicts as
   first-class records before the judge merges — so a third party can independently replay the chain.
   ([tools](agent-config/TOOLS.md))
-- **Scales to a fleet.** Correlate findings across many hosts — shared processes, technique spread —
-  with the 3-stage investigate → correlate → render pipeline. ([fleet analysis](docs/using/fleet-analysis.md))
+- **Scales to a fleet.** Run a whole compromised estate, not one box: the 3-stage investigate →
+  correlate → render pipeline produces a single cross-host `FLEET_REPORT` surfacing the signals that
+  only appear *across* machines — the same uncommon process on many hosts, near-simultaneous
+  process-creation waves, MITRE-technique spread. (On a 22-host SANS estate it pinned one implant
+  image to 20 of 22 hosts.) Runs in the SANS SIFT VM ([fleet analysis](docs/using/fleet-analysis.md)),
+  or per-host locally with no VM ([whole-case local run](docs/using/whole-case-local-run.md)).
 - **Acts on the verdict (optional).** Post-verdict n8n workflows turn a verdict into a notification,
   ticket, or containment step. This automation sits *outside* the audit chain — never evidence, never
   a Finding. ([servers](docs/reference/mcp-and-tools.md))
 
 ## Hi, I'm new
 
-New here? You have two equivalent ways to get a working setup. Both install the full toolchain
-(Rust, uv, Node, pnpm), build the `findevil-mcp` server, sync the Python agent-mcp venv, and
-install the host DFIR tools.
+New here? **Install with one command — `bash scripts/setup`.** It checks the toolchain, builds the
+`findevil-mcp` server, syncs the Python agent-mcp venv, installs the host DFIR tools, re-checks
+what's still missing, and prints a green/red summary. Safe to re-run. The full step-by-step —
+prerequisites, how to verify, and the container path — is in **[INSTALL.md](INSTALL.md)**.
 
-- **From a terminal:** run `bash scripts/setup`. It installs everything, re-checks what is
-  still missing, and prints a green/red summary. Safe to re-run.
-- **From Claude Code:** open the repo with `claude` and type `setup` (or `i'm new`). The agent
-  runs the same install, then — for any asset behind a registration form, EULA, or login (such
-  as the SANS SIFT VM) — drives a browser to fetch it and moves it into place for you. If the
-  download site cannot be automated, the agent opens the page and walks you through it.
+**Power option — install from inside Claude Code.** Open the repo with `claude` and type `setup`
+(or `i'm new`). It runs the *same* install, and additionally — for any asset behind a registration
+form, EULA, or login (the SANS SIFT VM in particular) — drives a browser to fetch it and move it
+into place for you. If the download can't be automated, the agent opens the page and walks you
+through it.
 
 When setup is green, point VERDICT at evidence: `scripts/verdict <path-to-evidence>`, or open
 `claude` and prompt `investigate <path>`. Per-environment setup (local DFIR tools vs. the SANS
@@ -121,6 +125,10 @@ scripts/verdict <path-to-evidence>
 Point it at a single image or a mixed case directory (memory + EVTX + disk + network +
 Velociraptor). Output lands in `tmp/auto-runs/<case-id>/`, and the dashboard
 (`http://localhost:3000`) streams the run live as it happens.
+
+**Prefer a container?** `bash scripts/verdict-docker <evidence> --headless` runs the whole pipeline
+in a reproducible image — no host toolchain beyond Docker, and no Claude token (it runs the
+deterministic engine). Details + limits: [docs/runbooks/docker-runner.md](docs/runbooks/docker-runner.md).
 
 **Zero setup, zero flags — the `/verdict` skill.** In a Claude Code session (`claude` in the
 repo), just type:
@@ -158,7 +166,7 @@ Per-environment setup (local DFIR binaries vs. the SANS SIFT VM) and evidence pl
 ```
 .
 ├── agent-config/        — runtime agent identity (SOUL / AGENTS / PLAYBOOK / TOOLS / MEMORY)
-├── services/mcp/        — Rust MCP server (19 typed DFIR tools)
+├── services/mcp/        — Rust MCP server (20 typed DFIR tools)
 ├── services/agent_mcp/  — Python MCP server (12 crypto / ACH / memory tools)
 ├── services/agent/      — findevil_agent package (crypto chain + ACH primitives)
 ├── apps/web/            — Next.js dashboard (live audit-stream viewer + design system)

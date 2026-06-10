@@ -50,7 +50,7 @@ the matching `investigate_*` method too, or the two paths drift.**
 
 ---
 
-## Tool inventory (31 product tools)
+## Tool inventory (32 product tools)
 
 The complete typed surface both paths can drive. Argument/output shapes live in `TOOLS.md`; this is
 the at-a-glance map of *what exists* and *when it runs*.
@@ -188,7 +188,7 @@ Triage zips produced by `velociraptor` collection.
 |---|---|---|---|
 | 1 | `case_open` | SHA-256 + case_id | both |
 | 2 | Velociraptor zip extraction | Safely extract supported contained artifacts to the case work dir; reject zip-slip and oversized members | both |
-| 3 | Per-artifact re-dispatch | Route each extracted artifact to its type playbook: **memory** → `vol_pslist/psscan/psxview/malfind`+`yara_scan`; **EVTX** → `evtx_query` (+ `hayabusa_scan` on folders with ≥2 logs); **disk** artifacts → `mft_timeline`/`usnjrnl_query`/`prefetch_parse`/`registry_query`; **network** → `sysmon_network_query`/`zeek_summary`/`pcap_triage` | both |
+| 3 | Per-artifact re-dispatch | Route each extracted artifact to its type playbook: **memory** → `vol_pslist`/`vol_psscan`/`vol_psxview`/`vol_malfind`+`yara_scan`; **EVTX** → `evtx_query` (+ `hayabusa_scan` on folders with ≥2 logs); **disk** artifacts → `mft_timeline`/`usnjrnl_query`/`prefetch_parse`/`registry_query`; **network** → `sysmon_network_query`/`zeek_summary`/`pcap_triage` | both |
 
 ### Mixed case directory (most realistic) — the breadth path
 
@@ -246,5 +246,5 @@ Even in unattended mode, halt and surface to the analyst when:
 ## What this playbook is NOT
 
 - **Not a script.** The supervisor is the agent; this file is its prior. If a case looks weird, deviate.
-- **Not exhaustive of DFIR.** It covers what the 19 typed Rust MCP tools can reach. If the case needs Plaso/log2timeline, Sleuthkit's `fls`/`icat`, Bulk Extractor, broad interactive packet carving, or browser-history extraction, those are out of our automation scope today; surface that as a gap to the analyst.
+- **Not exhaustive of DFIR.** It covers what the 20 typed Rust MCP tools can reach. If the case needs Plaso/log2timeline, Sleuthkit's `fls`/`icat`, Bulk Extractor, or broad interactive packet carving, those are out of our automation scope today; surface that as a gap to the analyst. (Browser history IS covered now — see `browser_history`.)
 - **Not a substitute for SOUL.md or AGENTS.md.** Read those first; this file is the operational layer that sits below the epistemic and role-definition layers.

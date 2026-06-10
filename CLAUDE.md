@@ -35,7 +35,7 @@ live dashboard at `http://localhost:3000` → read the Verdict in
 - `NO_EVIL` — scoped-clean *within what was actually examined*; never "definitely safe."
 
 **Under the hood.** `case_open` SHA-256s the evidence and opens a **Case**; it forks **Pool A**
-(persistence) and **Pool B** (exfil), which drive the typed, read-only MCP tools (19 Rust +
+(persistence) and **Pool B** (exfil), which drive the typed, read-only MCP tools (20 Rust +
 12 Python). Every **Finding** must cite a `tool_call_id`. The whole run is sealed into a
 hash-chained, signed manifest you can verify offline.
 
@@ -60,7 +60,7 @@ Run these silently, once per session, before the first tool call. Full text in
 
 ## 1. Mission
 
-This is the SANS **Find Evil!** hackathon submission (deadline **2026-06-15 22:45 CDT**). Two modes:
+This is the SANS **Find Evil!** hackathon submission (deadline **2026-06-15 11:45 PM EDT** = 22:45 CDT). Two modes:
 
 - **Agent mode** — a user opens `scripts/find-evil` / `claude` and asks `investigate <case path>`. You are the SANS Find Evil! DFIR agent: supervisor over Pool A (persistence) + Pool B (exfil) subagents, driving the typed MCP tool surface, emitting Findings that cite a `tool_call_id`, producing a hash-chained audit log.
 - **Dev mode** — a developer asks you to read/write code. Follow the four coding principles (§6) and conventions (§7). The dev "done" gate is a passing **live test**, not a smoke run.
@@ -97,7 +97,7 @@ analyst resolves → `verify_finding` re-runs each cited tool → `judge_finding
 
 Violating any of these breaks the judging story or an integration contract.
 
-- **No `execute_shell` MCP tool, ever.** The Rust surface is deliberately narrow (19 typed tools). Adding shell pass-through undoes the "reduces the attack surface" pitch. The 19 Rust + 12 Python product tools are the only verbs in the audit chain; the non-product servers `.mcp.json` also registers (`n8n-mcp`/`playwright`/`puppeteer`/`qmd`) never touch evidence and never emit Findings.
+- **No `execute_shell` MCP tool, ever.** The Rust surface is deliberately narrow (20 typed tools). Adding shell pass-through undoes the "reduces the attack surface" pitch. The 20 Rust + 12 Python product tools are the only verbs in the audit chain; the non-product servers `.mcp.json` also registers (`n8n-mcp`/`playwright`/`puppeteer`/`qmd`) never touch evidence and never emit Findings.
 - **Every Finding cites a `tool_call_id`.** The verifier vetos any Finding without one. UI chips render `[confirmed · tool · sha256]` per finding.
 - **Epistemic hierarchy is strict.** `CONFIRMED` (backed by tool output) > `INFERRED` (≥2 confirmed facts, labeled) > `HYPOTHESIS` (prefixed "hypothesis:"). Nothing else is legal.
 - **Execution claims need ≥2 artifact classes** (Prefetch + Amcache+ShimCache, or EDR telemetry). Amcache alone is insufficient — it's catalog-registration time, not execution.
@@ -123,7 +123,7 @@ in `agent-config/TOOLS.md`.
 `.mcp.json` registers **4 additional non-product servers** — `n8n-mcp` (post-verdict automation),
 `playwright`, `puppeteer` (browser tasks), and `qmd` (obsidian-mind dev-memory recall) — that are
 **not in the audit chain and emit no Findings**. So `.mcp.json` has 6 servers total while the
-product surface is 31 tools; neither number contradicts the other. Full server + dependency
+product surface is 32 tools; neither number contradicts the other. Full server + dependency
 inventory: `docs/reference/mcp-and-tools.md` and `docs/reference/dependencies.md`.
 
 **DKOM redundancy is intentional.** `vol_pslist` walks the active list; `vol_psscan`
@@ -240,7 +240,9 @@ the audit chain.
   at the start of interactive sessions (it is gated OFF during `scripts/verdict` investigations).
 - **Check the brain notes before debugging.** Hard-won traps live in `obsidian-mind/brain/Gotchas.md`
   (build/CI/crypto pins — yara-x/mft toolchain pins, RFC-8785 canonical JSON, the 3.10-engine
-  `execution_claim` mirror, the L3 OVA-name drift, the `tool_call_id`-only enforcement gap); recurring
+  `execution_claim` mirror, the L3 OVA-name drift, the `tool_call_id`-only enforcement gap, the
+  SIFT-fleet-on-Linux fixes — `find-evil-auto` python3, `fleet_correlate.py` snake_case psscan
+  fields, the writable VM `vol` symbol cache, HGFS evidence staging); recurring
   engine/MCP mechanics in `Patterns.md`, the architecture "why" in `Key Decisions.md`, and runnable
   scripts/components in `Skills.md`. Consult them before re-debugging a known build/CI/crypto issue.
 - **Capture durable facts.** When you learn something that will matter next session (a fix, a
@@ -259,7 +261,7 @@ the audit chain.
 | Commands, live-test gate, per-evidence-type matrix | `docs/live-test-matrix.md` |
 | Repo layout, 3 subsystems, sandbox layers, A1–A6 amendment history, project state | `docs/repo-guide.md` |
 | Judge-facing trust boundaries & architecture diagram | `docs/architecture.md` |
-| Full MCP-server + tool inventory (6 servers / 31 product tools) | `docs/reference/mcp-and-tools.md` |
+| Full MCP-server + tool inventory (6 servers / 32 product tools) | `docs/reference/mcp-and-tools.md` |
 | Dependency + external-DFIR-tool + version matrix | `docs/reference/dependencies.md` |
 | Env-var reference (~35 vars) | `docs/reference/environment-variables.md` |
 | How to run the product (flags, modes, output layout) | `docs/using/running-verdict.md` |
