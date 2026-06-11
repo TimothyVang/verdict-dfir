@@ -108,7 +108,29 @@ mockup. Full walkthrough gallery: **[`docs/showcase/`](docs/showcase/)**.
 
 ## How it works
 
-Three ideas, exercised end-to-end on every CI run:
+Point VERDICT at evidence and it runs the same nine-stage pipeline every time — each stage lands
+live on the dashboard as it completes:
+
+<p align="center">
+  <img src="docs/showcase/sift-scenario/workflows/01-pipeline-rail.png" alt="The nine-stage VERDICT pipeline: Evidence locked, Team A persistence, Team B exfiltration, Cross-check, Verify findings, Weigh, Correlate, Sign, Report" width="900">
+</p>
+
+1. **Evidence locked** — `case_open` SHA-256s the evidence and opens a **read-only** Case.
+2. **Team A · persistence** — the first analysis pool forks as a subagent and hunts persistence with the typed DFIR tools; every Finding cites the `tool_call_id` that produced it.
+3. **Team B · exfiltration** — a second pool works the same evidence in parallel with an exfil-biased prior, so competing hypotheses surface instead of hiding in consensus.
+4. **Cross-check** — `detect_contradictions` flags Findings that disagree, *before* anything merges.
+5. **Verify findings** — the verifier re-runs each cited tool and compares output hashes; a Finding whose tool output drifted is **rejected**.
+6. **Weigh** — `judge_findings` merges by claim with credibility weighting (execution claims need ≥2 artifact classes or they stay HYPOTHESIS).
+7. **Correlate** — `correlate_findings` stitches the survivors into one attack story.
+8. **Sign** — `manifest_finalize` seals the run into a hash-chained, Merkle-rooted, signed manifest.
+9. **Report** — the analyst report and the Verdict.
+
+<p align="center">
+  <img src="docs/showcase/sift-scenario/workflows/05-view-audit.png" alt="The dashboard Audit view streaming every tool call in the hash-chained investigation log" width="760">
+</p>
+<p align="center"><sub>The dashboard's Audit view streams every tool call as it lands; the whole chain verifies offline with <code>manifest_verify</code>.</sub></p>
+
+Underneath, three ideas exercised end-to-end on every CI run:
 
 1. **A typed MCP tool surface — no `execute_shell`.** 32 narrow, schema-validated tools: 20 Rust
    DFIR tools (`case_open`, `vol_pslist`/`psscan`/`psxview`, `mft_timeline`, `evtx_query`,
