@@ -26,10 +26,45 @@ narrow, typed tool surface, so every conclusion cites the exact tool call that p
 > drives the 32 typed read-only tools, runs the verifier, and signs the verdict. The product *is*
 > the agent loop — not a service it calls.
 
+## Run it against any evidence
+
+VERDICT is a Claude Code skill. Point it at **any** evidence — a memory image, EVTX log, disk
+image (`.E01` / `.dd`), packet capture, or a whole multi-host case folder — and it opens the case,
+drives the typed read-only DFIR tools, verifies every finding, and produces a signed verdict + report.
+
+```bash
+# First run — ONE command installs everything (toolchain, MCP servers, the SANS SIFT VM) then runs:
+bash scripts/setup --with-sift --run
+
+# Any time after — point it at any evidence:
+/verdict <evidence>                 # in Claude Code: the turnkey skill (recommended)
+bash scripts/verdict <evidence>     # the same pipeline, headless from a shell
+#  …or in an interactive `claude` session just say:  investigate <evidence>
+```
+
+**It drives the SIFT VM dynamically.** `/verdict` discovers the SANS SIFT VM on its own — boots it
+if it is down, resolves its IP (VMware Tools *or* the DHCP lease), and routes every forensic tool
+into it over SSH so disk images fully extract — then runs the whole pipeline to a signed Verdict.
+No reachable VM? It transparently falls back to the host's local tools — same hash-chained,
+offline-verifiable audit trail, every finding still citing the exact `tool_call_id` that produced
+it (local mode can't crack disk inner volumes, so the SIFT VM is the recommended path for disk
+images).
+
 <p align="center">
-  <img src="docs/showcase/dashboard-live.gif" alt="VERDICT live investigation dashboard streaming a case" width="760">
+  <img src="docs/showcase/sift-scenario/srl-basefile-sift.gif" alt="VERDICT investigating the SRL-2018 base-file host with the forensic tools running inside the SANS SIFT VM" width="760">
 </p>
-<p align="center"><sub>The live dashboard streams every tool call and finding as the case runs. <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">Watch the full walkthrough (4:35) →</a></sub></p>
+<p align="center"><sub>The hardest case — SANS <b>SRL-2018</b>, a 198&nbsp;GB / 22-host compromised enterprise — run host-by-host with the forensic toolchain executing inside the SANS SIFT VM over SSH. <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">Watch the full walkthrough (4:35) →</a></sub></p>
+
+<p align="center">
+  <img src="docs/showcase/sift-scenario/srl-fleet-report-hero.png" alt="Fleet rollup — 22 hosts investigated, 74 cross-host process correlations, 53 multi-host temporal clusters" width="250">
+  &nbsp;
+  <img src="docs/showcase/sift-scenario/srl-basefile-sift-dashboard-hero.png" alt="base-file file server — SUSPICIOUS, confirmed Windows Security-log wipe, signed and verifiable offline" width="250">
+  &nbsp;
+  <img src="docs/showcase/sift-scenario/srl-basefile-sift-dashboard-full.png" alt="Tool-cited findings — audit-log clear (EID 1102), PowerShell LOLBin (EID 4688), service install (EID 7045)" width="250">
+</p>
+<p align="center"><sub>22-host fleet rollup · the <b>base-file</b> file server flagged <b>SUSPICIOUS</b> — a <b>confirmed</b> Windows Security-log wipe (EID&nbsp;1102) · every finding cites a <code>tool_call_id</code>, signed and verifiable offline.</sub></p>
+
+### A clean single-disk run, end to end
 
 <p align="center">
   <img src="docs/showcase/dashboard-hero.png" alt="Verdict banner — SUSPICIOUS, 8 confirmed findings on SCHARDT.dd, signed and verifiable offline" width="250">
@@ -38,7 +73,7 @@ narrow, typed tool surface, so every conclusion cites the exact tool call that p
   &nbsp;
   <img src="docs/showcase/report.png" alt="Signed forensic investigation report with cryptographic attestation" width="250">
 </p>
-<p align="center"><sub>Verdict &amp; evidence · tool-cited findings · the signed analyst report — each finding traces to the exact tool call that produced it.</sub></p>
+<p align="center"><sub>SCHARDT.dd (the NIST hacking case) through SIFT → <b>SUSPICIOUS</b>, 8 confirmed executions (cain.exe, mirc, ethereal, netstumbler…) with the full <b>signed report</b>. Verdict &amp; evidence · tool-cited findings · the signed analyst report.</sub></p>
 
 ## What you get
 
