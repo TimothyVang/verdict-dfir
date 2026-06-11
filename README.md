@@ -21,6 +21,11 @@ images, EVTX logs, disk artifacts, and network captures — and produces an evid
 party can verify offline**. It runs as a [Claude Code](https://claude.com/claude-code) agent over a
 narrow, typed tool surface, so every conclusion cites the exact tool call that produced it.
 
+> **There is no separate app server — Claude Code _is_ the engine.** Run `scripts/verdict <evidence>`
+> (or `claude`) in this repo and *this session* becomes the forensic analyst: it opens the case,
+> drives the 32 typed read-only tools, runs the verifier, and signs the verdict. The product *is*
+> the agent loop — not a service it calls.
+
 <p align="center">
   <img src="docs/showcase/dashboard-live.gif" alt="VERDICT live investigation dashboard streaming a case" width="760">
 </p>
