@@ -1,4 +1,4 @@
-# External Reference Captures
+# `docs/references/` — external reference captures
 
 Raw captures of the primary/authoritative sources surfaced by the deep-research
 validation passes (see PR #17 and the research summaries). Each file carries a

@@ -130,23 +130,40 @@ named-pipe artifacts the answer key also expects — so it scopes to `SUSPICIOUS
 overclaim, and we publish the gap rather than hide it. Full method, the recall table, the
 false-positive controls, and the honest limits: **[`docs/accuracy-report.md`](docs/accuracy-report.md)**.
 
-## Hi, I'm new
+## Hi, I'm new — start here
 
-New here? **Install with one command — `bash scripts/setup`.** It checks the toolchain, builds the
-`findevil-mcp` server, syncs the Python agent-mcp venv, installs the host DFIR tools, re-checks
-what's still missing, and prints a green/red summary. Safe to re-run. The full step-by-step —
-prerequisites, how to verify, and the container path — is in **[INSTALL.md](INSTALL.md)**.
+**One command installs everything.** From a fresh clone:
 
-**Power option — install from inside Claude Code.** Open the repo with `claude` and type `setup`
-(or `i'm new`). It runs the *same* install, and additionally — for any asset behind a registration
-form, EULA, or login (the SANS SIFT VM in particular) — drives a browser to fetch it and move it
-into place for you. If the download can't be automated, the agent opens the page and walks you
-through it.
+```bash
+bash scripts/setup
+```
 
-When setup is green, point VERDICT at evidence: `scripts/verdict <path-to-evidence>`, or open
-`claude` and prompt `investigate <path>`. Per-environment setup (local DFIR tools vs. the SANS
-SIFT VM) is in [QUICKSTART.md](QUICKSTART.md); what the in-agent `setup` trigger does is in
-[docs/onboarding.md](docs/onboarding.md).
+That single command installs the toolchain (Rust, uv, Node, pnpm), **all the DFIR tools**
+(Volatility 3, Hayabusa, Chainsaw, Velociraptor, Sleuth Kit, tshark, pandoc — YARA is built into
+the Rust binary), **Playwright + Puppeteer + Chromium** for browser automation, builds and verifies
+**both MCP servers**, pre-fetches the helper MCPs, runs the preflight **`doctor`**, and prints an
+honest green/red summary. Safe to re-run; Claude Code never has to install anything afterward.
+
+**The simplest path — install and run in one command:**
+
+```bash
+bash scripts/setup --run     # installs everything, then watches evidence/ and investigates on drop
+```
+
+Drop a case file into **`evidence/`** (a memory image, `.evtx`, disk image, `.pcap`, `.zip`, or a
+case folder) and it runs automatically — no further commands.
+
+**Prefer to drive it in Claude Code interactively?** Run `bash scripts/setup`, then open `claude`
+and type **`investigate evidence/`**.
+
+**Want the SANS SIFT VM too (full disk forensics)?** The 9.3 GB SIFT OVA is the one piece a plain
+shell can't fetch (SANS EULA/login). Open `claude` and type **`setup`** — it runs the same install
+**and** drives a browser to download the OVA, place it, and build the VM for you. Local-host mode
+needs none of this and is the default.
+
+Full step-by-step (prerequisites, the container path) is in **[INSTALL.md](INSTALL.md)**;
+per-environment detail (local vs. SIFT VM) is in **[QUICKSTART.md](QUICKSTART.md)**; what the
+in-agent `setup` trigger does is in [docs/onboarding.md](docs/onboarding.md).
 
 ## Quickstart
 

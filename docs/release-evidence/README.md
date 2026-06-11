@@ -1,4 +1,4 @@
-# Release Evidence
+# `docs/release-evidence/` — release-validation evidence
 
 This directory holds small, reviewable evidence summaries that explain what the release workflows validated.
 

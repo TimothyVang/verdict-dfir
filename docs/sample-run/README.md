@@ -1,4 +1,4 @@
-# Sample runs — self-contained, offline-verifiable execution logs
+# `docs/sample-run/` — sample runs (self-contained, offline-verifiable execution logs)
 
 These are real, completed VERDICT investigations committed into the repo so a judge who
 **clones without running the tool** still gets traceable agent execution logs (Submission

@@ -36,6 +36,7 @@ c_off=$'\033[0m'
 
 JSON_MODE=""
 NO_DASHBOARD=""
+RUN=""
 
 usage() {
   cat <<'USAGE'
@@ -46,6 +47,10 @@ write a handoff at tmp/setup-state.json.
 
   --json           Machine-readable; print the state JSON, suppress banner/offers.
   --no-dashboard   Do not print the dashboard launch hint.
+  --run            When setup is green, immediately hand off to
+                   `scripts/verdict --watch` — investigate the newest file in
+                   evidence/ now, or wait for one to be dropped. (Install + run
+                   in one command.)
   --help, -h       Show this help and exit.
 
 Exit 0 when ready, 1 when a required tool is missing.
@@ -56,6 +61,7 @@ for arg in "$@"; do
   case "${arg}" in
     --json)         JSON_MODE=1 ;;
     --no-dashboard) NO_DASHBOARD=1 ;;
+    --run)          RUN=1 ;;
     -h|--help)      usage; exit 0 ;;
     *) echo "setup: unknown argument '${arg}'" >&2; usage >&2; exit 2 ;;
   esac
@@ -248,6 +254,18 @@ else
     cat "${STATE_FILE}"
   fi
   rc=1
+fi
+
+# --run: when the environment is ready, flow straight into an investigation.
+# scripts/verdict --watch investigates the newest file already in evidence/, or
+# blocks until one is dropped — install-then-run in a single command.
+if [ -n "${RUN}" ] && [ "${rc}" -eq 0 ]; then
+  if [ -z "${JSON_MODE}" ]; then
+    echo
+    echo "${c_blu}[run]${c_off} setup is green — investigating evidence now (scripts/verdict --watch)."
+    echo "      Drop a file into evidence/, or it uses the newest one already there."
+  fi
+  exec bash "${REPO}/scripts/verdict" --watch
 fi
 
 exit "${rc}"

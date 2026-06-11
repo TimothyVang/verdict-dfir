@@ -1,4 +1,4 @@
-# VERDICT — see it run
+# `docs/showcase/` — VERDICT showcase (see it run)
 
 The whole workflow, end to end: **install → invoke → investigate → watch → verdict.**
 Every capture below is a real run against real evidence (an EVTX directory + a NIST disk image),

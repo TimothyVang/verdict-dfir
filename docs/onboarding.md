@@ -139,9 +139,12 @@ Steps:
      registry `manual_fallback` (open the page, user downloads manually). A "could not fetch"
      must never block the rest of setup — local-host mode works without the OVA.
 
-4. When setup is green, offer the next action: `scripts/verdict <path>` (hands-free) or
-   `investigate <path>` (interactive). Offer to open the dashboard at `http://localhost:3000`
-   once `pnpm --filter @findevil/web dev` is listening (see the Chrome DevTools section above).
+4. When setup is green, **run it** — install-then-run is the goal. If `evidence/` already holds a
+   case file (or the user named a path), proceed to **`investigate <path>`** automatically. If
+   `evidence/` is empty, say so and offer the two ready-to-go paths: drop a file in and the watcher
+   takes it (`scripts/verdict --watch`), or `investigate <path>` once they have one. Offer to open
+   the dashboard at `http://localhost:3000` once `pnpm --filter @findevil/web dev` is listening
+   (see the Chrome DevTools section above).
 
 Do not auto-fetch the SANS SIFT OVA unless the user wants SIFT/disk mode — local-host mode is
 the default and needs no gated asset. A user who wants prompt-free browser runs can add the

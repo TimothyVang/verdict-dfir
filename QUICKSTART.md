@@ -8,14 +8,16 @@ For the project pitch + claims, see [README.md](README.md). For the full doc map
 
 ```bash
 git clone --depth 1 https://github.com/TimothyVang/verdict-dfir.git verdict && cd verdict
-bash scripts/setup                    # install + build + DFIR tools + green/red summary
+bash scripts/setup                    # installs EVERYTHING: toolchain + all DFIR tools + Playwright + both MCP servers, then runs doctor
 scripts/verdict <path-to-evidence>    # investigate -> live dashboard -> signed verdict + report
 ```
 
-No evidence yet? `bash scripts/fetch-fixtures.sh` stages public datasets (into `fixtures/`). In a
-Claude Code session you can instead type `/verdict <path>` (it also bootstraps n8n + the SIFT VM).
-Canonical install detail — prerequisites and how to verify — is in
-[INSTALL.md](INSTALL.md).
+**Prefer to drive it with Claude Code?** Drop your evidence into **`evidence/`**, open `claude`, and
+type **`investigate evidence/`**. (Or hands-free in a session: `/verdict <path>` does the whole thing
+and also fetches + builds the SANS SIFT VM via the browser.)
+
+No evidence yet? `bash scripts/fetch-fixtures.sh` stages public datasets (into `fixtures/`).
+Canonical install detail — prerequisites and how to verify — is in [INSTALL.md](INSTALL.md).
 
 **Everything below is "going deeper"** — environment choices (SIFT VM vs. local) and the full
 run-mode catalog.
