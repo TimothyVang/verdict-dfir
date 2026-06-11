@@ -128,6 +128,50 @@ class TestBothPoolsFindings:
         evtx_merged = next(m for m in merged if m.finding.artifact_path == "Security.evtx")
         assert evtx_merged.corroborated is True
 
+    def test_distinct_findings_from_one_tool_call_do_not_collapse(self) -> None:
+        # A single tool call (one pcap_triage on one capture) legitimately yields
+        # several DISTINCT findings about different subjects (hosts) that share the
+        # same artifact and MITRE technique (T1071.001 Web Protocols). They must NOT
+        # collapse into one — doing so silently destroys recall (the nitroba case:
+        # anon-email + webmail + social are three different facts, not one).
+        b = PoolStats(
+            pool="B",
+            findings=[
+                _f(
+                    "f-b-anon",
+                    pool="B",
+                    confidence="INFERRED",
+                    artifact_path="nitroba.pcap",
+                    tool_call_id="tc-1",
+                    mitre="T1071.001",
+                    description="host 192.168.15.4 submitted to anonymous email service willselfdestruct.com",
+                ),
+                _f(
+                    "f-b-mail",
+                    pool="B",
+                    confidence="INFERRED",
+                    artifact_path="nitroba.pcap",
+                    tool_call_id="tc-1",
+                    mitre="T1071.001",
+                    description="authenticated webmail session to mail.google.com",
+                ),
+                _f(
+                    "f-b-social",
+                    pool="B",
+                    confidence="INFERRED",
+                    artifact_path="nitroba.pcap",
+                    tool_call_id="tc-1",
+                    mitre="T1071.001",
+                    description="authenticated social-media login to facebook",
+                ),
+            ],
+        )
+        a = PoolStats(pool="A", findings=[])
+        merged = judge_findings(a, b)
+        assert (
+            len(merged) == 3
+        ), f"distinct findings from one tool call collapsed into {len(merged)}"
+
     def test_disagreeing_pools_drop_to_hypothesis(self) -> None:
         a = PoolStats(
             pool="A",

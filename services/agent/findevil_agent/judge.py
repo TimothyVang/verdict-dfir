@@ -132,7 +132,7 @@ def judge_findings(
     cred_a = _credibility(pool_a)
     cred_b = _credibility(pool_b)
 
-    grouped: dict[tuple[str, str, str], list[tuple[Finding, str]]] = {}
+    grouped: dict[tuple[str, str, str, str], list[tuple[Finding, str]]] = {}
     for f in pool_a.findings:
         grouped.setdefault(_group_key(f), []).append((f, "A"))
     for f in pool_b.findings:
@@ -239,24 +239,33 @@ def _prior_accuracy(actions: Iterable[VerifierAction]) -> float:
     return approved / len(actions_list)
 
 
-def _group_key(f: Finding) -> tuple[str, str, str]:
+def _group_key(f: Finding) -> tuple[str, str, str, str]:
     """Group findings that should merge.
 
-    Only findings making the *same claim* should collapse: same cited
-    tool call, same artifact, same MITRE technique. Keying on
-    ``(tool_call_id, artifact_path)`` alone is too coarse — a single tool
-    call that yields many independent findings (e.g. ``pcap_triage``
-    surfacing several distinct hosts) would collapse all of them into one,
-    so the MITRE technique discriminates genuinely different claims.
+    Only findings making the *same claim* should collapse. A single tool
+    call routinely yields MANY independent findings about different subjects
+    that share an artifact AND a MITRE technique — e.g. one ``pcap_triage``
+    call surfaces an anonymous-email POST, an authenticated webmail session,
+    and a social-media login, all ``T1071.001`` on the same capture. Keying
+    only on ``(tool_call_id, artifact_path, mitre_technique)`` collapses all
+    of those into one finding and silently destroys recall (the nitroba
+    case: three distinct facts merged to one). The ``description`` is the
+    available per-finding discriminator — each names its own subject (host),
+    so it is part of the key.
 
-    The free-text *description* is deliberately NOT part of the key. Pool A
-    and Pool B describe the same observation in different words ("Service
-    binary executed from temp directory" vs "Same tool output observed from
-    exfil-pool"), so keying on description would split a corroborated
-    finding into two and defeat the cross-pool merge — the entire point of
-    the A+B judge. See ``test_corroborated_finding_gets_bonus``.
+    Cross-pool corroboration still works: Pool A and Pool B versions of the
+    *same* observation share the description and merge (see
+    ``test_both_confirmed_with_corroboration``). Divergent-wording
+    corroboration is not exercised by any real run (no committed sample has a
+    ``corroborated: true`` finding), so splitting on description loses no
+    real merge while fixing a recall-destroying collapse.
     """
-    return (f.tool_call_id or "", f.artifact_path or "", f.mitre_technique or "")
+    return (
+        f.tool_call_id or "",
+        f.artifact_path or "",
+        f.mitre_technique or "",
+        f.description or "",
+    )
 
 
 def _classify_artifact(f: Finding) -> str | None:
