@@ -110,31 +110,29 @@ of your Project.
 
 **Requirement:** Include a demonstration video of your Project.
 
-**STATUS: REAL-FOOTAGE CUT RENDERS — polished take + hosted URL pending**
+**STATUS: SATISFIED — rendered, hosted, published (2026-06-11)**
 
-> **What renders today — genuine capture, not animation.** The film
-> (`scripts/make-demo-video/`) now embeds **real screen recordings** as exhibits via the
-> `ExhibitVideo` component. The Beat 2 slot the audit flagged as a "simulated animated terminal"
-> plays an actual asciinema capture of a live investigation — including the verifier catching an
-> injected replay failure and **re-dispatching to recover** (`verify_finding rejected … —
-> re-dispatching once` → `recovered … on re-dispatch ✓`, printed live to the terminal). The
-> dashboard beat plays a real localhost capture. `pnpm render` produces a complete real-footage
-> cut.
+> **The hosted cut.** The full 4:35 film (10 beats, voiceover, real-footage exhibits) is
+> rendered and published as a release asset:
 >
-> **Honest status of the committed reference cut:** the Beat 2 clip is a genuine but rough
-> reference take (1.6× speed, EVTX fixture) — legible and real, meant to be replaced by a
-> polished take. Any slot without footage falls back to an on-brand "AWAITING CAPTURE"
-> placeholder, so the project always renders.
+> **Hosted URL:** <https://github.com/TimothyVang/sans-hackathon/releases/download/v-submit/find-evil-demo.mp4>
 >
-> **What still must ship before the deadline:**
-> 1. Replace the reference cut with a polished take per
->    [`scripts/make-demo-video/CAPTURE.md`](scripts/make-demo-video/CAPTURE.md) (verified
->    asciinema → agg → mp4 recipe): the NIST run incl. the self-correction, a richer dashboard
->    take, optionally the `manifest_verify` one-byte-tamper. Same filenames → no code change.
-> 2. `pnpm render`, host it (YouTube/Vimeo/Youku), and record the URL here and in the Devpost
->    submission URL field.
+> **Real exhibits in the cut (genuine capture, not animation):**
+> 1. **Beat 2** — an actual asciinema capture of a live investigation, slowed to 0.3× and
+>    trimmed to end held on the verifier self-correction (`verify_finding rejected … —
+>    re-dispatching once` → `recovered … on re-dispatch ✓`, with the declared fault
+>    injection noted in the audit chain).
+> 2. **Beat 6** — a fresh localhost dashboard capture (current brand, live finding stream,
+>    a held hover on a finding's `tool_call_id` provenance line).
+> 3. **Beat 7** — the offline tamper proof, recorded per
+>    [`CAPTURE.md`](scripts/make-demo-video/CAPTURE.md) Slot 3: `scripts/trace-finding`
+>    passes on the committed sample run, one hex character is flipped in a `/tmp` copy, and
+>    the verifier fails naming the exact broken record (`seq 97: prev_hash break`).
 >
-> **Hosted URL:** _pending capture + render_
+> Narration canon is [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts);
+> re-render with `pnpm render` (output goes to `/tmp`, not the repo — the mp4 ships as a
+> release asset only). Optional upgrade: re-host on YouTube/Vimeo for Devpost's embedded
+> player and update the URL here + in the Devpost form.
 
 ---
 
@@ -261,7 +259,7 @@ of your Project.
 | 3 | README with setup instructions | [`README.md`](README.md) · [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 4 | Deployment / step-by-step instructions | [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 5 | Feature / functionality description | [`README.md`](README.md) | SATISFIED |
-| 6 | Demonstration video | [`scripts/make-demo-video/src/beats/beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) · [`scripts/make-demo-video/CAPTURE.md`](scripts/make-demo-video/CAPTURE.md) (shot recipes) | NEEDS RE-RECORD (live capture staged; hosted URL pending — see §6) |
+| 6 | Demonstration video | [hosted mp4 (release asset)](https://github.com/TimothyVang/sans-hackathon/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
 | 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED |

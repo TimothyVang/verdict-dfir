@@ -22,7 +22,7 @@ narrow, typed tool surface, so every conclusion cites the exact tool call that p
 <p align="center">
   <img src="docs/showcase/dashboard-live.gif" alt="VERDICT live investigation dashboard streaming a case" width="760">
 </p>
-<p align="center"><sub>The live dashboard streams every tool call and finding as the case runs.</sub></p>
+<p align="center"><sub>The live dashboard streams every tool call and finding as the case runs. <a href="https://github.com/TimothyVang/sans-hackathon/releases/download/v-submit/find-evil-demo.mp4">Watch the full walkthrough (4:35) →</a></sub></p>
 
 <p align="center">
   <img src="docs/showcase/dashboard-hero.png" alt="Verdict banner — SUSPICIOUS, 8 confirmed findings on SCHARDT.dd, signed and verifiable offline" width="250">
