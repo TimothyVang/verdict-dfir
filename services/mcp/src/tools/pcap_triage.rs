@@ -65,6 +65,12 @@ pub struct PcapTriageOutput {
     // attribute web activity (which the count-only fields above cannot).
     pub http_requests: Vec<PcapHttpRequest>,
     pub zeek: Option<ZeekSummaryOutput>,
+    // Diagnostic only — kept in-process but NEVER serialized. tshark/zeek stderr is
+    // volatile (timing, truncation warnings, version banners), and the server folds
+    // the serialized output into `output_sha256`, which `verify_finding` replays. A
+    // volatile field here makes that hash drift run-to-run and vetoes correct
+    // findings, so it must stay out of the hashed evidence output.
+    #[serde(skip)]
     pub stderr_tail: String,
 }
 
@@ -371,7 +377,17 @@ fn top_conversations(
             count: *count,
         })
         .collect();
-    rows.sort_by(|a, b| b.count.cmp(&a.count));
+    // Full-key tiebreak after count: the source map is a HashMap, so tied counts
+    // would otherwise serialize in random iteration order and drift the output hash
+    // that verify_finding replays. (src, dst, dst_port, proto) is the unique key.
+    rows.sort_by(|a, b| {
+        b.count
+            .cmp(&a.count)
+            .then_with(|| a.src.cmp(&b.src))
+            .then_with(|| a.dst.cmp(&b.dst))
+            .then_with(|| a.dst_port.cmp(&b.dst_port))
+            .then_with(|| a.proto.cmp(&b.proto))
+    });
     rows.truncate(limit);
     rows
 }
@@ -407,6 +423,10 @@ fn top_http_requests(
             .then_with(|| (b.method == "POST").cmp(&(a.method == "POST")))
             .then_with(|| b.count.cmp(&a.count))
             .then_with(|| a.host.cmp(&b.host))
+            // Final full-key tiebreak so HashMap iteration order never drifts the
+            // hashed output. (src, host, method) is the unique aggregation key.
+            .then_with(|| a.src.cmp(&b.src))
+            .then_with(|| a.method.cmp(&b.method))
     });
     rows.truncate(limit);
     rows
@@ -425,4 +445,85 @@ pub fn path_looks_like_pcap(p: &Path) -> bool {
     p.extension()
         .and_then(|e| e.to_str())
         .is_some_and(|e| matches!(e.to_ascii_lowercase().as_str(), "pcap" | "pcapng" | "cap"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_output(stderr_tail: &str) -> PcapTriageOutput {
+        PcapTriageOutput {
+            analyzer: "tshark".to_string(),
+            packets_seen: 1,
+            conversations: Vec::new(),
+            dns_queries: Vec::new(),
+            http_hosts: Vec::new(),
+            http_requests: Vec::new(),
+            zeek: None,
+            stderr_tail: stderr_tail.to_string(),
+        }
+    }
+
+    // The server hashes `serde_json::to_string(&output)` into `output_sha256`, and
+    // `verify_finding` re-runs the tool and rejects a Finding when that hash drifts.
+    // tshark/zeek stderr varies run-to-run (timing, truncation warnings, version
+    // banners), so the volatile `stderr_tail` MUST NOT reach the serialized output —
+    // otherwise replay-verification non-deterministically vetoes correct findings.
+    #[test]
+    fn stderr_tail_is_excluded_from_serialized_output() {
+        let json = serde_json::to_string(&sample_output("tshark: dropped 3 pkts at 17:02:11"))
+            .expect("serialize");
+        assert!(
+            !json.contains("stderr_tail"),
+            "volatile stderr_tail leaked into the hashed output: {json}"
+        );
+    }
+
+    // Two runs that differ ONLY in volatile stderr must hash identically.
+    #[test]
+    fn output_hash_is_stable_across_volatile_stderr() {
+        let a = serde_json::to_string(&sample_output("warning A @ t=1")).expect("serialize");
+        let b = serde_json::to_string(&sample_output("totally different warning @ t=999"))
+            .expect("serialize");
+        assert_eq!(a, b, "serialized output changed when only stderr differed");
+    }
+
+    // Conversations come from a HashMap; tied counts must resolve by the unique key,
+    // not by random iteration order, or the hashed output drifts between runs.
+    #[test]
+    fn conversations_tie_break_is_deterministic() {
+        let mut map: std::collections::HashMap<(String, String, String, String), usize> =
+            std::collections::HashMap::new();
+        map.insert(
+            (
+                "10.0.0.2".into(),
+                "10.0.0.9".into(),
+                "443".into(),
+                "TCP".into(),
+            ),
+            5,
+        );
+        map.insert(
+            (
+                "10.0.0.1".into(),
+                "10.0.0.9".into(),
+                "443".into(),
+                "TCP".into(),
+            ),
+            5,
+        );
+        map.insert(
+            (
+                "10.0.0.5".into(),
+                "10.0.0.9".into(),
+                "80".into(),
+                "TCP".into(),
+            ),
+            9,
+        );
+        let rows = top_conversations(&map, 50);
+        assert_eq!(rows[0].count, 9, "highest count must sort first");
+        assert_eq!(rows[1].src, "10.0.0.1", "ties resolve by src ascending");
+        assert_eq!(rows[2].src, "10.0.0.2");
+    }
 }
