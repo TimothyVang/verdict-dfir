@@ -184,6 +184,59 @@ if [[ "${SIFT}" == "1" ]]; then
   ok "--sift: MCP routed to the SANS SIFT VM over SSH"
 fi
 
+# 3b. SIFT evidence staging (automation: ONE command for ANY host path) -------
+# In --sift mode the typed tools run INSIDE the VM, so case_open needs a path the
+# guest can see. Resolve the guest IP (VMware Tools, else the DHCP lease), then:
+#   - a host path that exists  -> SCP it into the VM and rewrite EVIDENCE to the
+#     guest path (skip the copy if an identical-size file is already staged);
+#   - a path not on this host   -> assume it is already an in-VM path; use as-is.
+# A whole multi-host case folder is refused here (it belongs in the fleet
+# pipeline, not one VM). Override the guest evidence dir with
+# FIND_EVIL_GUEST_EVIDENCE_DIR.
+if [[ "${SIFT}" == "1" && "${DRY}" != "1" ]]; then
+  GUSER="${FIND_EVIL_GUEST_USER:-sansforensics}"
+  GKEY="${FIND_EVIL_SSH_KEY:-${HOME}/.ssh/sift_key}"
+  GEVDIR="${FIND_EVIL_GUEST_EVIDENCE_DIR:-/home/${GUSER}/evidence}"
+  if [[ -z "${FIND_EVIL_GUEST_IP:-}" ]]; then
+    FIND_EVIL_GUEST_IP="$(bash scripts/sift-guest-ip.sh 2>/dev/null || true)"
+    [[ -n "${FIND_EVIL_GUEST_IP}" ]] && { export FIND_EVIL_GUEST_IP; ok "--sift: resolved SIFT VM at ${FIND_EVIL_GUEST_IP}"; }
+  fi
+  [[ -n "${FIND_EVIL_GUEST_IP:-}" ]] || fail "--sift: could not resolve the SIFT VM IP. Start the VM, or set FIND_EVIL_GUEST_IP=<ip>."
+  export FIND_EVIL_GUEST_IP
+  # Point the live .mcp.json (interactive session) at the resolved VM too; the
+  # committed .mcp.json.sift template keeps its documentation-placeholder IP.
+  sed -i "s#192\.0\.2\.10#${FIND_EVIL_GUEST_IP}#g" .mcp.json 2>/dev/null || true
+  GADDR="${GUSER}@${FIND_EVIL_GUEST_IP}"
+  SSHB=(ssh -i "${GKEY}" -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8)
+  if [[ -e "${EVIDENCE}" ]]; then
+    if [[ -d "${EVIDENCE}" && ( -d "${EVIDENCE}/hosts" || -d "${EVIDENCE}/disks" ) ]]; then
+      fail "--sift: '${EVIDENCE}' is a multi-host case folder — use the fleet pipeline (scripts/run-whole-case-local.sh or scripts/fleet_investigate.py), or pass a single host's evidence."
+    fi
+    rbase="$(basename "${EVIDENCE}")"
+    remote="${GEVDIR}/${rbase}"
+    lsize="$(_evidence_size "${EVIDENCE}")"
+    rsize="$("${SSHB[@]}" "${GADDR}" "stat -c%s '${remote}' 2>/dev/null || echo 0" 2>/dev/null || echo 0)"
+    if [[ "${rsize}" == "${lsize}" && "${lsize:-0}" -gt 0 ]]; then
+      ok "--sift: evidence already staged in the VM (${remote}); skipping copy"
+    else
+      free="$("${SSHB[@]}" "${GADDR}" "df -PB1 '/home/${GUSER}' 2>/dev/null | awk 'NR==2{print \$4}'" 2>/dev/null || echo "")"
+      if [[ -n "${free}" && "${lsize:-0}" -gt 0 ]] && (( lsize + lsize/10 > free )); then
+        fail "--sift: '${rbase}' (${lsize} B) will not fit in the SIFT VM (free ${free} B). Free space in the guest, or run locally (drop --sift)."
+      fi
+      "${SSHB[@]}" "${GADDR}" "mkdir -p '${GEVDIR}'" 2>/dev/null \
+        || fail "--sift: could not reach the SIFT VM at ${FIND_EVIL_GUEST_IP} (ssh failed)"
+      log "--sift: staging ${rbase} into the VM (scp → ${GADDR}:${remote})…"
+      scpflag=(); [[ -d "${EVIDENCE}" ]] && scpflag=(-r)
+      scp -i "${GKEY}" -o StrictHostKeyChecking=accept-new "${scpflag[@]}" "${EVIDENCE}" "${GADDR}:${remote}" \
+        || fail "--sift: staging copy failed (scp to ${remote})"
+      ok "--sift: staged → ${remote}"
+    fi
+    EVIDENCE="${remote}"
+  else
+    ok "--sift: '${EVIDENCE}' is not on this host — treating it as an in-VM path"
+  fi
+fi
+
 # 4. investigate -------------------------------------------------------------
 log "3/4 investigate — ${EVIDENCE}"
 SUMMARY="${RUN_SUMMARY:-tmp/verdict-last-run.json}"
