@@ -21,7 +21,7 @@ via `fnm` (best-effort, since Node is optional).
 
 | Tool | Version | Why | Required? |
 |---|---|---|---|
-| Rust + Cargo | 1.88 (pinned in `rust-toolchain.toml`) | builds `findevil-mcp` (19 DFIR tools) | **yes** |
+| Rust + Cargo | 1.88 (pinned in `rust-toolchain.toml`) | builds `findevil-mcp` (20 DFIR tools) | **yes** |
 | uv | latest | syncs the Python `findevil-agent-mcp` env | **yes** |
 | Node | 20 | the live dashboard (`apps/web`) | optional |
 | pnpm | latest | dashboard package manager | optional |

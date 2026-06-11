@@ -75,7 +75,7 @@ echo "=========================================="
 
 # 1. Rust MCP server end-to-end.
 run_smoke \
-    "rust-mcp-smoke (19-tool dispatch + error paths)" \
+    "rust-mcp-smoke (20-tool dispatch + error paths)" \
     "python3 scripts/rust-mcp-smoke.py --release" \
     '[ -x "${CARGO_TARGET_DIR:-target}/release/findevil-mcp" ] || [ -x "${CARGO_TARGET_DIR:-target}/release/findevil-mcp.exe" ]'
 

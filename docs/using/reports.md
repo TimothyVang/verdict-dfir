@@ -47,7 +47,7 @@ Optional **sidecar files** in the Case dir are read only if present:
 `customer_release_gate.final.json` (final release-gate state). Each is best-effort:
 absent or malformed JSON degrades gracefully instead of failing the render.
 
-> Only the **31 product tools** (19 Rust + 12 Python) are audit-chained, so every
+> Only the **32 product tools** (20 Rust + 12 Python) are audit-chained, so every
 > Finding the report prints cites a `tool_call_id` traceable back through `audit.jsonl`.
 > See `docs/reference/mcp-and-tools.md` for the tool surface.
 

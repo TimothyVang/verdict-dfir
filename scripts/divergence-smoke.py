@@ -25,7 +25,7 @@ The divergences (matching CLAUDE.md "Spec/code divergences"):
   §1  Rust 1.83 -> 1.88                bad: rust:1.83-bookworm
   §2  Cargo.lock committed             declarative; nothing to scan
   §3  findevil_agent.cli dropped (A2)  bad: python -m findevil_agent.cli
-  §4  Rust MCP tool count is 13        bad: "11 typed Rust" / "12 typed Rust"
+  §4  Rust MCP tool count is 20        bad: "11 typed Rust" / "12 typed Rust"
   §5  rmcp not a runtime dep           bad: live `rmcp = "=...` (uncommented)
   §7  A3 MemoryStore phrase-quote      doc-only; no shipped wrong-pattern
   §8  A3 audit push: SSE not WebSocket bad: "ws": "..." dep in apps/web pkg

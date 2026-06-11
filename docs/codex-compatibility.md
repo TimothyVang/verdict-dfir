@@ -12,14 +12,14 @@ Find Evil ships two MCP servers in `.mcp.json`:
 
 | Server | Purpose | Expected tools |
 |---|---|---:|
-| `findevil-mcp` | Rust DFIR tool surface over evidence and forensic artifacts | 19 |
+| `findevil-mcp` | Rust DFIR tool surface over evidence and forensic artifacts | 20 |
 | `findevil-agent-mcp` | Python audit, manifest, verifier, ACH, memory, ACP, and expert-feedback support tools | 12 |
 
-Expected total: 31 tools.
+Expected total: 32 tools.
 
 These are the only product-default MCP servers — the only two in the audit chain. `.mcp.json` *also* registers four **non-product** servers (`n8n-mcp`, `playwright`, `puppeteer`, and `qmd` dev-memory recall) for post-verdict automation, browser tasks, and memory; they touch no evidence and emit no Findings, so seeing six entries in `.mcp.json` is expected, not a misconfiguration (full inventory: [`reference/mcp-and-tools.md`](reference/mcp-and-tools.md)). Do not add generic filesystem, Docker, Kubernetes, GitHub, fetch, or shell MCPs as defaults.
 
-The Protocol SIFT gateway (`teamdfir/protocol-sift`) is a welcome common base that installs independently via `protocol-sift install` on the same SIFT VM. It is **not** a product-default MCP for Find Evil!: its broad shell-backed surface (200+ tools, `execute_shell`) is architecturally distinct from our 31-typed-tool surface. If Protocol SIFT is installed, both gateways coexist under separate MCP server names; neither requires nor conflicts with the other. See [`docs/architecture.md#relationship-to-protocol-sift`](architecture.md#relationship-to-protocol-sift).
+The Protocol SIFT gateway (`teamdfir/protocol-sift`) is a welcome common base that installs independently via `protocol-sift install` on the same SIFT VM. It is **not** a product-default MCP for Find Evil!: its broad shell-backed surface (200+ tools, `execute_shell`) is architecturally distinct from our 32-typed-tool surface. If Protocol SIFT is installed, both gateways coexist under separate MCP server names; neither requires nor conflicts with the other. See [`docs/architecture.md#relationship-to-protocol-sift`](architecture.md#relationship-to-protocol-sift).
 
 ## Local Codex MCP Config
 

@@ -161,7 +161,7 @@ Every Case starts with `case_open`, and that step is the chain-of-custody anchor
   Adding a write path or an `execute_shell` verb is a non-negotiable invariant violation.
 - **Mid-run tamper is fatal.** If the evidence is modified out-of-band during a run, the
   chain of custody is compromised and the supervisor refuses to sign the manifest.
-- **The 31 product tools are the only audit-chained surface** (19 Rust + 12 Python).
+- **The 32 product tools are the only audit-chained surface** (20 Rust + 12 Python).
   `.mcp.json` registers 6 servers total; the other 4 are non-product conveniences and
   are not part of the signed chain. See
   [`docs/reference/mcp-and-tools.md`](../reference/mcp-and-tools.md) for the full map and

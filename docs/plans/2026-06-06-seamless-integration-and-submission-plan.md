@@ -214,7 +214,7 @@ it** since it's been on disk; keep using `.env` (it's correctly ignored). Not co
 ## Appendix A — Exact ordered command sequence to a submittable state
 
 ```bash
-cd /home/analyst/Desktop/PUG-Projects/sans-hackathon
+cd ~/verdict   # repo root
 
 # --- 0. Branch for the finish work (no direct master push) ---
 git switch -c finish-to-submission

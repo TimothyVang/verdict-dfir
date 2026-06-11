@@ -13,7 +13,7 @@ MCP pipeline → open the live dashboard at the Case → signed Verdict + report
 
 The Verdict word is always one of **`SUSPICIOUS`** / **`INDETERMINATE`** / **`NO_EVIL`** (see
 [`../verdict-semantics.md`](../verdict-semantics.md)). Every Finding cites a `tool_call_id` from
-the 31 audit-chained product tools (19 Rust + 12 Python) — the only surface sealed into the
+the 32 audit-chained product tools (20 Rust + 12 Python) — the only surface sealed into the
 manifest. `.mcp.json` registers 6 servers total; 4 are non-product
 (`n8n-mcp`, `playwright`, `puppeteer`, plus the `qmd` dev-memory recall server) — full table in
 [`../reference/mcp-and-tools.md`](../reference/mcp-and-tools.md).

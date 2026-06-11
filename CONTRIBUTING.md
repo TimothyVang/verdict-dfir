@@ -5,7 +5,7 @@ to the project? Start with [INSTALL.md](INSTALL.md); for the design, read
 [CLAUDE.md](CLAUDE.md) and [docs/architecture.md](docs/architecture.md).
 
 VERDICT is a DFIR agent where **Claude Code is the engine** (Amendment A2). It is three subsystems:
-a Rust MCP server (`services/mcp/`, 19 DFIR tools), a Python MCP server
+a Rust MCP server (`services/mcp/`, 20 DFIR tools), a Python MCP server
 (`services/agent_mcp/`, 12 crypto/ACH/memory tools), and a Next.js dashboard (`apps/web/`).
 
 ---

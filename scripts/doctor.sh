@@ -171,10 +171,10 @@ require "uv"      "curl -LsSf https://astral.sh/uv/install.sh | sh" \
 GROUP="MCP servers"
 [ -z "${JSON_MODE}" ] && { echo; echo "${c_blu}MCP servers${c_off} ${c_dim}(auto-spawned by Claude Code from .mcp.json)${c_off}"; }
 
-# findevil-mcp — Rust, 19 typed DFIR tools. Needs the release binary
+# findevil-mcp — Rust, 20 typed DFIR tools. Needs the release binary
 # (scripts/run-mcp-rust.sh falls back to a slow `cargo run` without it).
 if [ -x "target/release/findevil-mcp" ] || [ -x "target/release/findevil-mcp.exe" ]; then
-  row ok "findevil-mcp" "Rust · 19 DFIR tools · target/release/findevil-mcp"
+  row ok "findevil-mcp" "Rust · 20 DFIR tools · target/release/findevil-mcp"
 else
   row err "findevil-mcp" "not built — run: bash scripts/install.sh"
   REMEDIES+=("findevil-mcp: bash scripts/install.sh   # cargo build --release -p findevil-mcp")

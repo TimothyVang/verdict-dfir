@@ -29,6 +29,16 @@ once the first `v0.x` is cut on the `v-submit` tag.
   SUSPICIOUS run (NIST SCHARDT.dd, 8 confirmed findings) on the current UI.
   README hero + gallery rewired to these; stale `assets/screenshots/demo.gif`
   and `dashboard.png` removed.
+- **Doc tool-count reconciled to the shipped 32-tool surface (20 Rust + 12
+  Python).** `browser_history` (the 20th Rust tool, an offline
+  Chrome/Edge/Firefox history reader) was already shipped and smoke-covered, but
+  ~20 reference/runbook/script files still cited the pre-`browser_history`
+  "31 / 19 Rust" counts. Swept them all to 32 / 20 and added the missing
+  `browser_history` rows to `PLAYBOOK.md` and `services/mcp/README.md`. The
+  dated `[v-submit]` snapshot below preserves the historical 31-tool count and is
+  intentionally left as-is. (`CHANGELOG`, `docs/architecture.md`, `docs/glossary.md`,
+  `docs/repo-guide.md`, `agent-config/TOOLS.md`/`PLAYBOOK.md`, `services/mcp/README.md`,
+  `scripts/doctor.sh`/`install.sh`, the `docs/using/*` and `docs/runbooks/*` set.)
 
 ### Added — production readiness: easy install, docs, cross-platform distribution
 

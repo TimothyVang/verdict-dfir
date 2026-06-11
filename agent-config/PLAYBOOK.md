@@ -55,7 +55,7 @@ the matching `investigate_*` method too, or the two paths drift.**
 The complete typed surface both paths can drive. Argument/output shapes live in `TOOLS.md`; this is
 the at-a-glance map of *what exists* and *when it runs*.
 
-### Rust `findevil-mcp` (19) — DFIR primitives, read-only on evidence, SHA-256 every output
+### Rust `findevil-mcp` (20) — DFIR primitives, read-only on evidence, SHA-256 every output
 
 | Tool | What | Runs for |
 |---|---|---|
@@ -67,6 +67,7 @@ the at-a-glance map of *what exists* and *when it runs*.
 | `usnjrnl_query` | `$UsnJrnl` change log — corroborates MFT, surfaces deletes | disk |
 | `prefetch_parse` | Per-binary execution evidence (run_count, last-run times) | disk |
 | `registry_query` | Run/RunOnce/IFEO/Services/WMI/Tasks keys | disk |
+| `browser_history` | Visited-URL timeline from an extracted Chrome/Edge `History` or Firefox `places.sqlite` (read-only, `immutable=1`) | disk (browser DB) |
 | `evtx_query` | Parse a single `.evtx` (EID histogram, 4624/4625/4688/7045…) | evtx, disk, velo |
 | `hayabusa_scan` | Sigma rules over an EVTX **directory** (dir-based; not single files) | evtx-dir, velo, disk-extracted |
 | `yara_scan` | YARA over a memory image or extracted disk yara-targets | memory, disk (if targets) |

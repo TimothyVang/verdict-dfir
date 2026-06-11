@@ -12,7 +12,7 @@ Typed Rust MCP server for Find Evil! per Spec #2 §3 and §6.
 | Workspace + crate scaffold | ✅ |
 | All 20 typed DFIR tools | ✅ shipped |
 | Hand-rolled JSON-RPC 2.0 stdio server (MCP 2024-11-05) | ✅ in `src/server.rs` |
-| End-to-end stdio smoke (`scripts/rust-mcp-smoke.py`) | ✅ all 19 tools dispatch over the wire |
+| End-to-end stdio smoke (`scripts/rust-mcp-smoke.py`) | ✅ all 20 tools dispatch over the wire |
 | M2 sigstore + rs_merkle integration | partial (rs_merkle live; sigstore lives in `services/agent_mcp/`) |
 
 ## Quick start
@@ -24,7 +24,7 @@ cargo test --workspace --locked
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-## Tool surface (19/19 shipped)
+## Tool surface (20/20 shipped)
 
 Per Spec #2 §6 (which enumerates 11) plus memory cross-validation, disk mount/extract session-resource tools, and network/log triage additions — see CLAUDE.md "Spec/code divergences" for the rationale. All tools are registered in `src/tools/mod.rs`, advertised in `tools/list`, and dispatchable via `tools/call`. Each successful response carries `_meta.output_sha256`.
 
@@ -38,6 +38,7 @@ Per Spec #2 §6 (which enumerates 11) plus memory cross-validation, disk mount/e
 | `prefetch_parse` | `tools/prefetch_parse.rs` | in-process: `frnsc-prefetch + forensic-rs` | A (execution) |
 | `mft_timeline` | `tools/mft_timeline.rs` | in-process: `mft = 0.6.1` | A (timeline) |
 | `registry_query` | `tools/registry_query.rs` | in-process: `frnsc-hive = 0.13.4` | A (persistence) |
+| `browser_history` | `tools/browser_history.rs` | in-process: `rusqlite` (vendored SQLite) | A/B (browser artifact) |
 | `yara_scan` | `tools/yara_scan.rs` | in-process: `yara-x = 1.12.0` | B (malware/IOC) |
 | `usnjrnl_query` | `tools/usnjrnl_query.rs` | in-process: `usnjrnl-forensic = 0.6.0` | A/B (filesystem changes) |
 | `hayabusa_scan` | `tools/hayabusa_scan.rs` | subprocess: `hayabusa` (AGPL) | A (Sigma rules) |

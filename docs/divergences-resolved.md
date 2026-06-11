@@ -12,7 +12,7 @@ Settled facts. Each entry was once an active divergence between a spec and the s
 
 - **Python CLI package is `findevil_agent`, not `services.agent`.** Tests + entry points use `findevil_agent.*`. The `cli.py` submodule was dropped under A2 (Claude Code IS the orchestrator). Dockerfile wrapper + `scripts/build-deb.sh` cut 2026-04-27 (PR #4) per `docs/runbooks/dockerfile-a2-decision.md`. L0 `amendment-a2-guard` + L1 `scripts/divergence-smoke.py` §3 fail CI if `findevil_agent.cli` reappears.
 
-- **Rust MCP tool count is 19, not 11.** Spec #2 §6 enumerates 11; we ship `vol_psscan` (12th, DKOM cross-val), `vol_psxview` (13th, cross-references views after divergence), `disk_mount` / `disk_extract_artifacts` / `disk_unmount` (Track 1 disk-resource slice), plus 3 network/log triage tools. Memory tools are deliberately redundant — divergence between them IS the T1014/Rootkit finding. Don't fold them.
+- **Rust MCP tool count is 20, not 11.** Spec #2 §6 enumerates 11; we ship `vol_psscan` (12th, DKOM cross-val), `vol_psxview` (13th, cross-references views after divergence), `disk_mount` / `disk_extract_artifacts` / `disk_unmount` (Track 1 disk-resource slice), 3 network/log triage tools, plus `browser_history` (the 20th, an offline Chrome/Edge/Firefox history reader). Memory tools are deliberately redundant — divergence between them IS the T1014/Rootkit finding. Don't fold them.
 
 - **`rmcp` is intentionally NOT a runtime dependency.** Spec #2 §4.1 lists `rmcp 0.16.x`; we ship a hand-rolled stdio JSON-RPC 2.0 (MCP 2024-11-05) in `services/mcp/src/server.rs` for wire-format stability and Python-server dispatch parity. `Cargo.toml:27` keeps the `rmcp` line commented as a deliberate marker. See `services/mcp/README.md`.
 

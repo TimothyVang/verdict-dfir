@@ -9,7 +9,7 @@ The agent has access to two MCP servers, both auto-spawned by Claude Code via `.
 
 Every successful tool call carries `_meta.output_sha256` (hex SHA-256 of the canonical JSON output). Findings cite tool calls by `tool_call_id`. The verifier vetoes any finding that doesn't.
 
-> **This file is the agent read-order catalog of the 31 typed PRODUCT tools** (the only verbs in
+> **This file is the agent read-order catalog of the 32 typed PRODUCT tools** (the only verbs in
 > the audit chain). The *full* set of MCP servers actually registered in `.mcp.json` (incl. the
 > operator-runtime `n8n-mcp`, `playwright`, `puppeteer` that emit no Findings) and the external
 > DFIR binaries + dependency pins are inventoried in

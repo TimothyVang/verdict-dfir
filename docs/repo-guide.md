@@ -18,7 +18,7 @@ see `docs/architecture.md`; for commands and the live-test gate see
 ├── .mcp.json / .mcp.json.sift                      # Auto-spawn registry: 6 servers (2 product + n8n-mcp, playwright, puppeteer, qmd dev-memory); .sift swaps the 2 product servers to SSH transport
 │
 │   # ── PRODUCT (ships; in the audit chain) ──
-├── services/mcp/                                   # Rust MCP server (19 typed DFIR tools; hand-rolled stdio JSON-RPC 2.0)
+├── services/mcp/                                   # Rust MCP server (20 typed DFIR tools; hand-rolled stdio JSON-RPC 2.0)
 ├── services/agent/                                 # Python package findevil_agent — M2 crypto + M4 ACH + A3 memory/acp (FastAPI/LangGraph dropped under A2)
 ├── services/agent_mcp/                             # Python MCP server wrapping M2/M4/memory/ACP/expert feedback as 12 typed tools
 ├── apps/web/                                       # Next.js 15 + Tailwind v4 + NES.css dashboard (A3) — SSE audit-log tail, role-state sprites, /debug, /codex
@@ -139,7 +139,7 @@ All subsystems exist. L1 CI runs the smoke runners; the dev "done" gate is a pas
 test** (`scripts/verdict`, see `docs/live-test-matrix.md`), not a smoke run. The Product
 layer is feature-complete through A3 Phase 4 plus the post-A5 `vol_psxview` addition, the
 Track 1 disk mount/extract slice, expert miss feedback, `find-evil-auto --run-summary`, and
-the PowerShell readiness packet gate. Shipped MCP surface: 19 Rust DFIR tools + 12 Python
+the PowerShell readiness packet gate. Shipped MCP surface: 20 Rust DFIR tools + 12 Python
 crypto/ACH/memory/ACP/expert-feedback tools. The audit-log SSE tail powers a Next.js +
 Tailwind v4 + NES.css dashboard at `apps/web/` with role-state sprite containers and
 `/debug`; only the pixel-art sprite swap and AuditBeadString/HashChainBadge/FindingChip

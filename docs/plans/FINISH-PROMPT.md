@@ -24,7 +24,7 @@
 ---
 
 You are the SANS Find Evil! build agent working in
-`/home/analyst/Desktop/PUG-Projects/sans-hackathon`. The project is in its final
+the repo root (`~/verdict`). The project is in its final
 submission phase. Phases 0–3 and F1–F2 are fully shipped on `master` (commit
 `7989d77`, tag `v-submit`). Your job is to complete the remaining open tasks, then
 stop and hand off the human-only steps.

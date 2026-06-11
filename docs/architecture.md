@@ -12,7 +12,7 @@ Per SANS Find Evil! rules, submissions declare which of four supported patterns 
 
 1. **Direct Agent Extension** (rules §1) — Claude Code IS the agent. The judge runs `scripts/find-evil` (or `claude`) at the repo root; `.mcp.json` auto-spawns both MCP servers; Claude Code drives the investigation as supervisor + Pool A/B subagents (native Task mechanism — not `CLAUDE_CODE_FORK_SUBAGENT`, which is a build-time internal and is not used in this product). The SANS rules call this "the fastest path to a working submission."
 2. **Custom MCP Server** (rules §2) — two purpose-built MCP servers expose the typed tool surface:
-   - `findevil-mcp` (Rust) — 19 DFIR primitives (case_open, disk_mount/extract/unmount, evtx_query, mft_timeline, hayabusa_scan, vol_pslist, vol_psscan, vol_psxview, vol_malfind, yara_scan, usnjrnl_query, registry_query, prefetch_parse, vel_collect, sysmon_network_query, zeek_summary, pcap_triage). Read-only on evidence; SHA-256 every output. **NO `execute_shell`.**
+   - `findevil-mcp` (Rust) — 20 DFIR primitives (case_open, disk_mount/extract/unmount, evtx_query, mft_timeline, hayabusa_scan, vol_pslist, vol_psscan, vol_psxview, vol_malfind, yara_scan, usnjrnl_query, registry_query, prefetch_parse, vel_collect, browser_history, sysmon_network_query, zeek_summary, pcap_triage). Read-only on evidence; SHA-256 every output. **NO `execute_shell`.**
    - `findevil-agent-mcp` (Python) — 12 crypto + ACH + memory + ACP + expert-feedback tools (audit_append/verify, manifest_finalize/verify, verify_finding, detect_contradictions, judge_findings, correlate_findings, memory_remember/recall, pool_handoff, expert_miss_capture). The pre-A5 `ots_stamp`/`ots_verify` pair was removed.
 
 The combination is the architectural claim: Claude Code's agent loop never touches a raw shell because the only verbs it has are MCP-typed function calls into one of the two servers.
@@ -35,7 +35,7 @@ Find Evil! runs on the same SANS-blessed SIFT VM (`sift-2026.03.24.ova`) that Pr
 
 After `protocol-sift install` on a SIFT VM, both Find Evil!'s narrow typed surface and Protocol SIFT's broad shell-backed gateway coexist. Judges or operators choose which agent interface to use per investigation; neither requires nor conflicts with the other.
 
-The narrow surface is intentional: it reduces the attack surface from "full shell access" to "19 named DFIR operations" and "12 cryptographic/ACH/memory operations," enabling an architectural argument that the agent loop never touches shell primitives directly — all actions flow through typed JSON-RPC schema validation.
+The narrow surface is intentional: it reduces the attack surface from "full shell access" to "20 named DFIR operations" and "12 cryptographic/ACH/memory operations," enabling an architectural argument that the agent loop never touches shell primitives directly — all actions flow through typed JSON-RPC schema validation.
 
 ---
 
@@ -213,7 +213,7 @@ All three modes are **judge-valid**. Judges pick whichever they already have —
 
 | Dimension | Valhuntir (reference) | Us |
 |---|---|---|
-| MCP server | Python, 8 servers via sift-gateway, 100+ tools | **Two** typed MCP servers — Rust `findevil-mcp` (19 DFIR tools, including the deliberately-redundant `vol_pslist` + `vol_psscan` pair plus `vol_psxview` for DKOM cross-validation, disk mount/extract helpers, and network/log triage) + Python `findevil-agent-mcp` (12 crypto/ACH/memory/ACP/expert-feedback tools); no execute_shell |
+| MCP server | Python, 8 servers via sift-gateway, 100+ tools | **Two** typed MCP servers — Rust `findevil-mcp` (20 DFIR tools, including the deliberately-redundant `vol_pslist` + `vol_psscan` pair plus `vol_psxview` for DKOM cross-validation, disk mount/extract helpers, and network/log triage) + Python `findevil-agent-mcp` (12 crypto/ACH/memory/ACP/expert-feedback tools); no execute_shell |
 | Agent runtime | Custom Python harness | **Claude Code** itself (SANS rules §1 "Direct Agent Extension") — no custom orchestrator to maintain |
 | Chain-of-custody | Password-gated HMAC (PBKDF2 2M iter) | sigstore/Rekor + Merkle + audit hash chain (FRE 902(14) self-authenticating, with the A5 timestamp trade-off documented) |
 | Agent pattern | Single agent + human approval | ACH dual-agent (persistence vs exfil) via Claude Code forked subagents + judge + contradiction surface |
