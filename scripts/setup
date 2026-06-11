@@ -269,12 +269,14 @@ fi
 # the Claude/manual path; local-host mode works without the VM, so this never
 # changes the setup exit code.
 do_with_sift() {
-  local ova=""
-  ova="$(ls -S "${REPO}"/sift-*.ova "${REPO}"/*.ova 2>/dev/null | head -1 || true)"
-  if [ -n "${ova}" ] && [ "$(stat -c%s "${ova}" 2>/dev/null || echo 0)" -ge 5000000000 ]; then
-    echo "${c_grn}[sift]${c_off} OVA already staged: $(basename "${ova}")"
+  # Reuse an OVA we already have. place-gated-download.sh stages a valid OVA (>=
+  # size floor, not HTML) from the repo root, tmp/gated-downloads, or ~/Downloads
+  # — so a prior or interrupted download is reused instead of re-fetching ~8.8 GB.
+  if bash "${REPO}/scripts/place-gated-download.sh" sift-ova >/dev/null 2>&1; then
+    local ova; ova="$(ls -S "${REPO}"/sift-*.ova "${REPO}"/*.ova 2>/dev/null | head -1 || true)"
+    echo "${c_grn}[sift]${c_off} OVA already present — skipping download: $(basename "${ova:-sift.ova}")"
   else
-    echo "${c_blu}[sift]${c_off} fetching the SANS SIFT OVA headlessly (Playwright; ~8.8 GB)..."
+    echo "${c_blu}[sift]${c_off} no OVA staged — fetching the SANS SIFT OVA headlessly (Playwright; ~8.8 GB)..."
     if command -v node >/dev/null 2>&1 \
         && NODE_PATH="$(npm root -g 2>/dev/null)" node "${REPO}/scripts/fetch-sift-ova.cjs"; then
       bash "${REPO}/scripts/place-gated-download.sh" sift-ova || true

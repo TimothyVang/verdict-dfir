@@ -31,6 +31,32 @@ function log(msg) {
   process.stderr.write(`[sift-fetch] ${msg}\n`);
 }
 
+// Return the path of an existing valid OVA (>= minBytes, not an HTML page) in any
+// of `dirs`, or null. Lets the fetcher reuse a prior download instead of pulling
+// ~8.8 GB again.
+function findExistingOva(dirs, minBytes) {
+  for (const dir of dirs) {
+    let names = [];
+    try {
+      names = fs.readdirSync(dir).filter((f) => f.toLowerCase().endsWith(".ova"));
+    } catch (_) {
+      continue;
+    }
+    for (const name of names) {
+      const p = path.join(dir, name);
+      try {
+        if (fs.statSync(p).size >= minBytes) {
+          const head = fs.readFileSync(p, { encoding: "latin1", flag: "r" }).slice(0, 512);
+          if (!/<!doctype|<html/i.test(head)) return p;
+        }
+      } catch (_) {
+        /* unreadable — skip */
+      }
+    }
+  }
+  return null;
+}
+
 function loadPlaywright() {
   // Prefer an explicit dir, then the global npm root (install.sh installs
   // playwright globally), then plain resolution.
@@ -71,6 +97,15 @@ async function main() {
   const dlDir =
     process.env.FINDEVIL_DOWNLOAD_DIR || path.join(REPO, "tmp/gated-downloads");
   fs.mkdirSync(dlDir, { recursive: true });
+
+  // Reuse a valid OVA we already have (repo root or the download dir) instead of
+  // pulling ~8.8 GB again.
+  const existing = findExistingOva([REPO, dlDir], minBytes);
+  if (existing) {
+    log(`OVA already present — reusing ${existing} (no download)`);
+    console.log(existing);
+    process.exit(0);
+  }
 
   let chromium;
   try {
