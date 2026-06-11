@@ -205,7 +205,7 @@ decision it is NOT a scoring gate (training-data contamination is not modeled). 
 
 | # | Case id | Class | Tier | Fetch | Expected verdict | Recall target |
 |---|---|---|---|---|---|---|
-| 1 | `nitroba` | network (pcap) | 🟢 | `NITROBA_URL` (default digitalcorpora) | CONFIRMED_EVIL | 60% |
+| 1 | `nitroba` | network (pcap) | 🟢 | `NITROBA_URL` (default digitalcorpora) | CONFIRMED_EVIL | 80% |
 | 2 | `nist-data-leakage` | disk (insider exfil) | 🟢 | `DATA_LEAKAGE_URL` | CONFIRMED_EVIL | 60% |
 | 3 | `nist-hacking-case` | disk (XP) | 🟢 | default cfreds URL (already wired) | CONFIRMED_EVIL | 71% |
 | 4 | `alihadi-09-encrypt` | disk (crypto) | 🟡 | `ALIHADI09_URL` | **INDETERMINATE** (false-positive control) | 50% |

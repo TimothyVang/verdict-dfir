@@ -23,6 +23,9 @@ via `fnm` (best-effort, since Node is optional).
 |---|---|---|---|
 | Rust + Cargo | 1.88 (pinned in `rust-toolchain.toml`) | builds `findevil-mcp` (20 DFIR tools) | **yes** |
 | uv | latest | syncs the Python `findevil-agent-mcp` env | **yes** |
+| Python | 3.11–3.12 | runs the Python `findevil-agent-mcp` + smoke/score tooling | **yes** |
+| git | recent | clones the repo; used by the smokes | **yes** |
+| unzip | any | extracts Velociraptor `.zip` collections + fixtures | **yes** |
 | Node | 20 | the live dashboard (`apps/web`) | optional |
 | pnpm | latest | dashboard package manager | optional |
 | A Claude credential | one of three (below) | the agent cannot run without it | **yes** |
@@ -107,4 +110,4 @@ SIFT VM. See [docs/using/running-verdict.md](docs/using/running-verdict.md).
 - [docs/using/running-verdict.md](docs/using/running-verdict.md) — every flag, output layout
 - [docs/reference/dependencies.md](docs/reference/dependencies.md) — the full dependency + version matrix
 - [docs/troubleshooting.md](docs/troubleshooting.md) — failure mode → detector → fix
-- [docs/architecture.md](docs/architecture.md) — the five trust boundaries
+- [docs/architecture.md](docs/architecture.md) — the six trust boundaries

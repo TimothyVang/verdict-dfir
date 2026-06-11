@@ -222,7 +222,7 @@ Per-environment setup (local DFIR binaries vs. the SANS SIFT VM) and evidence pl
 - [docs/README.md](docs/README.md) — canonical documentation index
 - [docs/using/running-verdict.md](docs/using/running-verdict.md) — how to run it (every flag, run modes, output layout)
 - [docs/reference/mcp-and-tools.md](docs/reference/mcp-and-tools.md) — full MCP-server + tool inventory, and [dependencies.md](docs/reference/dependencies.md)
-- [docs/architecture.md](docs/architecture.md) — the five trust boundaries
+- [docs/architecture.md](docs/architecture.md) — the six trust boundaries
 - [docs/cryptographic-attestation.md](docs/cryptographic-attestation.md) — the chain of custody + FRE 902(14)
 - [docs/verdict-semantics.md](docs/verdict-semantics.md) — what `SUSPICIOUS` / `INDETERMINATE` / `NO_EVIL` mean
 - [docs/false-positives.md](docs/false-positives.md) — how VERDICT avoids over-claiming

@@ -56,7 +56,7 @@ flowchart TB
     end
 
     subgraph Trust2["**TRUST BOUNDARY 2** — Two MCP Servers (typed tool surface)"]
-        RustMcp["**findevil-mcp** (Rust, hand-rolled MCP 2024-11-05)<br/>20 typed DFIR tools<br/>NO execute_shell<br/>---<br/>case_open, disk_mount/extract/unmount,<br/>mft_timeline, evtx_query, hayabusa_scan,<br/>vol_pslist, vol_psscan, vol_psxview,<br/>vol_malfind, yara_scan, usnjrnl_query,<br/>registry_query, prefetch_parse, vel_collect,<br/>sysmon_network_query, zeek_summary, pcap_triage"]
+        RustMcp["**findevil-mcp** (Rust, hand-rolled MCP 2024-11-05)<br/>20 typed DFIR tools<br/>NO execute_shell<br/>---<br/>case_open, disk_mount/extract/unmount,<br/>mft_timeline, evtx_query, hayabusa_scan,<br/>vol_pslist, vol_psscan, vol_psxview,<br/>vol_malfind, yara_scan, usnjrnl_query,<br/>registry_query, prefetch_parse, vel_collect,<br/>browser_history, sysmon_network_query, zeek_summary, pcap_triage"]
         AgentMcp["**findevil-agent-mcp** (Python, mcp SDK 1.x)<br/>12 typed crypto/ACH/memory/ACP/expert-feedback tools<br/>---<br/>audit_append/verify,<br/>manifest_finalize/verify,<br/>verify_finding,<br/>detect_contradictions,<br/>judge_findings,<br/>correlate_findings,<br/>memory_remember/recall,<br/>pool_handoff,<br/>expert_miss_capture"]
         EvtxCrate["evtx crate<br/>MIT, in-process<br/>1600× python-evtx"]
         Merkle["rs_merkle 1.4.0<br/>append-only tree"]

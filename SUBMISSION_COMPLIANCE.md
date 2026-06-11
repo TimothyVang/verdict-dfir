@@ -89,9 +89,9 @@ of your Project.
 **STATUS: SATISFIED**
 
 > **Full description:** [`README.md`](README.md) — see sections:
-> - *What it does* (four differentiators)
-> - *How it's built* (five trust boundaries)
-> - *Anticipated questions* (Q&A for judges)
+> - *What you get* and *Capabilities* (the differentiators + disk/memory/fleet coverage)
+> - *How it works* (the typed tool surface, cryptographic custody, ACH agent topology, six trust boundaries)
+> - *Accuracy — measured, and honest about the gap* (reproducible recall vs published goldens)
 >
 > **Short summary:**
 > Find Evil! is a Claude Code DFIR agent that investigates Windows host evidence (memory
@@ -145,15 +145,15 @@ of your Project.
 > **Architecture document:** [`docs/architecture.md`](docs/architecture.md)
 >
 > Contains:
-> - Mermaid flowchart of all five trust boundaries
+> - Mermaid flowchart of all six trust boundaries
 > - Runtime architecture (evidence vault → SIFT subprocesses → MCP servers → Claude Code)
 > - Audit chain data-flow diagram
 > - Relationship to Protocol SIFT (coexistence table)
 > - Prompt-based vs. architectural guardrails comparison (required by SANS rules §3)
 >
-> The Mermaid diagrams render directly on GitHub. A static PNG export is at
-> [`docs/architecture-diagram.png`](docs/architecture-diagram.png) if it exists,
-> otherwise open `docs/architecture.md` on GitHub for rendered diagrams.
+> The Mermaid diagrams render directly on GitHub — open
+> [`docs/architecture.md`](docs/architecture.md) for the rendered trust-boundary flowchart,
+> the runtime architecture, and the audit-chain data-flow diagram.
 
 ---
 
@@ -219,7 +219,7 @@ of your Project.
 **STATUS: SATISFIED**
 
 > **Committed sample runs (self-contained on a fresh clone):**
-> [`docs/sample-run/`](docs/sample-run/) ships three real, completed investigations — their
+> [`docs/sample-run/`](docs/sample-run/) ships five real, completed investigations — their
 > `audit.jsonl`, `run.manifest.json`, `verdict.json`, `manifest_verify.json`, and `REPORT.md`.
 > All verify **offline** (`manifest_verify` returns `overall: true`), and
 > [`docs/sample-run/README.md`](docs/sample-run/README.md) walks a single finding all the way
@@ -265,7 +265,7 @@ of your Project.
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
 | 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED (best: nitroba 100% recall, reproducible; NIST 7% — honest coverage gap) |
-| 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (3 committed runs, verify offline) | SATISFIED |
+| 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (5 committed runs, verify offline) | SATISFIED |
 
 ---
 
