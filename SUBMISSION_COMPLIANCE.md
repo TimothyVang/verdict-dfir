@@ -187,9 +187,11 @@ of your Project.
 
 > **Consolidated accuracy report:** [`docs/accuracy-report.md`](docs/accuracy-report.md) — the
 > scoring method (bipartite recall + asymmetric verdict gate), the recall table against published
-> ground truth (nitroba 5/5 = 100%; NIST 3/14 local; 8 staged + scheduled), 100% `tool_call_id`
+> ground truth (nitroba 5/5 = 100%, reproducible from `docs/sample-run/nitroba`; NIST 1/14 = 7%;
+> 8 staged + scheduled), 100% `tool_call_id`
 > citation across committed runs, the false-positive posture (3 FP layers + the alihadi-09 control),
-> and the honest limits. Every number is reproducible from a committed artifact.
+> and the honest limits. Every number is reproducible from a committed artifact (run
+> `scripts/score-recall.py docs/sample-run/<case> --golden goldens/<case>`).
 >
 > **Full investigation report (PDF):**
 > [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf)
@@ -262,7 +264,7 @@ of your Project.
 | 6 | Demonstration video | [hosted mp4 (release asset)](https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
-| 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED (best: nitroba 100% recall; NIST local 21%, full disk needs `--sift`) |
+| 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED (best: nitroba 100% recall, reproducible; NIST 7% — honest coverage gap) |
 | 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (3 committed runs, verify offline) | SATISFIED |
 
 ---

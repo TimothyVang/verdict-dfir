@@ -115,11 +115,14 @@ Beyond the three ideas above, a single case run also:
 
 ## Accuracy — measured, and honest about the gap
 
-VERDICT is graded against published answer keys, not vibes. On the **nitroba** network case it
-found **5 of 5 expected findings — 100% recall** (`scripts/score-recall.py` vs the golden), and
-**every finding across committed runs cites a `tool_call_id`**. On the **NIST hacking case**, local
-mode without the SIFT VM reaches **21% recall (3 of 14)** — the full disk needs `--sift` to extract
-every artifact class, and we say so rather than hiding it. Full method, the recall table, the
+VERDICT is graded against published answer keys, not vibes — and the numbers below are
+reproducible from committed runs, not asserted. On the **nitroba** network case it finds **5 of 5
+expected findings — 100% recall**, which you can re-run yourself:
+`scripts/score-recall.py docs/sample-run/nitroba --golden goldens/nitroba`. **Every finding across
+committed runs cites a `tool_call_id`.** On the **NIST hacking case** it reaches **7% recall (1 of
+14)**: it surfaces real hacking-tool execution, but not the account-creation, MRU, thumbcache, and
+named-pipe artifacts the answer key also expects — so it scopes to `SUSPICIOUS` rather than
+overclaim, and we publish the gap rather than hide it. Full method, the recall table, the
 false-positive controls, and the honest limits: **[`docs/accuracy-report.md`](docs/accuracy-report.md)**.
 
 ## Hi, I'm new

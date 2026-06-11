@@ -43,8 +43,8 @@ as of this report:
 
 | # | Case | Class | Golden verdict | Recall bar | Result | Status |
 |---|---|---|---|---|---|---|
-| 1 | `nitroba` | network (pcap) | CONFIRMED_EVIL | 80% | **5/5 = 100%** · run `INDETERMINATE` | **PASS** (local) |
-| 2 | `nist-hacking-case` | disk (XP) | CONFIRMED_EVIL | 71% | 3/14 = 21% · run `INDETERMINATE` | local custody-only — needs `--sift` |
+| 1 | `nitroba` | network (pcap) | CONFIRMED_EVIL | 80% | **5/5 = 100%** · run `INDETERMINATE` | **PASS** (committed: `docs/sample-run/nitroba`) |
+| 2 | `nist-hacking-case` | disk (XP) | CONFIRMED_EVIL | 71% | 1/14 = 7% · run `SUSPICIOUS` | **FAIL** — coverage gap (committed: `docs/sample-run/nist-hacking-case`) |
 | 3 | `nist-data-leakage` | disk | CONFIRMED_EVIL | 60% | — | staged, scheduled (SIFT) |
 | 4 | `alihadi-09-encrypt` | disk (FP control) | **INDETERMINATE** | 50% | — | staged, scheduled (SIFT) |
 | 5 | `alihadi-01-webserver` | disk | CONFIRMED_EVIL | 60% | — | staged, scheduled (SIFT) |
@@ -54,16 +54,23 @@ as of this report:
 | 9 | `volatility-cridex` | memory | CONFIRMED_EVIL | 50% | — | staged, scheduled |
 | 10 | `synthetic-benign` | negative control | **NO_EVIL** (0 findings) | 100% | — | staged, scheduled |
 
-**Honest summary:** 1 of 10 fully scored and passing (`nitroba`, 100%); 1 partially scored
-(`nist-hacking-case`, 21% on the recommended *local* path — it parses Prefetch + UserAssist on the
-host but the golden's 14 canonical claims span artifacts that need the SIFT VM's full disk
-extraction). The remaining 8 are fixture-staged and pending a SIFT-VM batch — **scheduled, not yet
-run.** We publish the gap rather than hide it.
+**Honest summary:** 1 of 10 fully scored and passing (`nitroba`, 100%); 1 scored and failing
+(`nist-hacking-case`, **7% = 1/14**). The NIST gap is a real coverage gap, not custody: both the
+local and `--sift` committed runs score 1/14 — the engine surfaces hacking-tool execution but does
+not yet parse the account-creation, MRU, thumbcache, and named-pipe artifacts the golden's 14
+canonical claims also expect, so it honestly scopes the run to `SUSPICIOUS` rather than claim the
+case. The remaining 8 are fixture-staged and pending a SIFT-VM batch — **scheduled, not yet run.**
+We publish the gap rather than hide it.
 
-`nitroba` is the strongest single result: against a 5-claim network answer key it surfaced all
-five — anonymous-email contact, source host `192.168.15.4`, Gmail-cookie attribution, the
-authenticated Facebook login, and the send-vs-browsing timeline correlation — at a 100% recall over
-an 80% bar.
+`nitroba` is the strongest single result, and it is reproducible from the committed run
+(`scripts/score-recall.py docs/sample-run/nitroba --golden goldens/nitroba` → 5/5 PASS): against a
+5-claim network answer key it surfaced all five — anonymous-email contact, source host
+`192.168.15.4`, Gmail-cookie attribution, the authenticated Facebook login, and the
+send-vs-browsing timeline correlation — at 100% recall over an 80% bar. The run verdict is
+`INDETERMINATE` (not a contradiction with 100% recall: recall measures whether the golden *facts*
+were surfaced; the verdict measures whether *evil is confirmed* — network metadata yields
+`HYPOTHESIS`-level attribution facts, which is honest, so the recall is full while the verdict stays
+scoped).
 
 ---
 
@@ -137,7 +144,7 @@ verification — see [`cryptographic-attestation.md`](cryptographic-attestation.
 ## 6. Honest limits
 
 - **Disk classes need the SIFT VM.** A local-mode disk run without SIFT degrades to custody-only and
-  returns `INDETERMINATE` (e.g. NIST local 3/14) — honest, but below the recall bar. Full disk recall
+  returns a scoped verdict (e.g. NIST 1/14) — honest, but below the recall bar. Full disk recall
   requires `scripts/verdict --sift`. This is why 8 goldens are pending.
 - **Single-source claims floor at HYPOTHESIS.** The ≥2-artifact-class rule is conservative by design;
   it will hold a real-but-uncorroborated execution claim below CONFIRMED. That trades some recall for

@@ -244,7 +244,7 @@ unfetchable-on-host datasets are marked "staged, run pending evidence".)*
 |---|---|---|---|---|
 | `nitroba` | yes (local, tshark) | INDETERMINATE | **5/5 (100%) — PASS** (bar=80%) | Network-playbook gaps fixed (see below). Surfaces all five: anonymous-email contact, source host (192.168.15.4), Gmail-cookie attribution, authenticated Facebook login, and the send-vs-browsing timeline correlation. |
 | `nist-data-leakage` | staged, run pending evidence | — | — | needs `--sift` (disk) |
-| `nist-hacking-case` | yes (local, partial) | INDETERMINATE | 3/14 (21%) | local custody-only; needs `--sift` for full recall |
+| `nist-hacking-case` | yes (committed run) | SUSPICIOUS | 1/14 (7%) | coverage gap (not custody) — both local and `--sift` runs score 1/14; golden expects account-creation/MRU/thumbcache/named-pipe artifacts not yet parsed |
 | `alihadi-09-encrypt` | staged, run pending evidence | — | — | false-positive control; expect INDETERMINATE |
 | `alihadi-01-webserver` | staged, run pending evidence | — | — | disk+memory correlation |
 | `dfrws-2008-linux` | staged, run pending evidence | — | — | Linux memory+disk+network |
