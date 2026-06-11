@@ -37,6 +37,7 @@ c_off=$'\033[0m'
 JSON_MODE=""
 NO_DASHBOARD=""
 RUN=""
+WITH_SIFT=""
 
 usage() {
   cat <<'USAGE'
@@ -51,6 +52,11 @@ write a handoff at tmp/setup-state.json.
                    `scripts/verdict --watch` — investigate the newest file in
                    evidence/ now, or wait for one to be dropped. (Install + run
                    in one command.)
+  --with-sift      Also set up the SANS SIFT VM (recommended — matches the SANS
+                   judging environment): fetch the gated SIFT OVA headlessly via
+                   the installed Playwright, then build the VM. Best-effort and
+                   non-fatal — on any failure it points at the Claude/manual
+                   path, and local-host mode works without it.
   --help, -h       Show this help and exit.
 
 Exit 0 when ready, 1 when a required tool is missing.
@@ -62,6 +68,7 @@ for arg in "$@"; do
     --json)         JSON_MODE=1 ;;
     --no-dashboard) NO_DASHBOARD=1 ;;
     --run)          RUN=1 ;;
+    --with-sift)    WITH_SIFT=1 ;;
     -h|--help)      usage; exit 0 ;;
     *) echo "setup: unknown argument '${arg}'" >&2; usage >&2; exit 2 ;;
   esac
@@ -254,6 +261,48 @@ else
     cat "${STATE_FILE}"
   fi
   rc=1
+fi
+
+# --with-sift: set up the SANS SIFT VM end-to-end. Fetch the gated OVA headlessly
+# via the Playwright that install.sh already installed (when it isn't staged
+# yet), then build the VM. Best-effort + NON-FATAL: on any failure it points at
+# the Claude/manual path; local-host mode works without the VM, so this never
+# changes the setup exit code.
+do_with_sift() {
+  local ova=""
+  ova="$(ls -S "${REPO}"/sift-*.ova "${REPO}"/*.ova 2>/dev/null | head -1 || true)"
+  if [ -n "${ova}" ] && [ "$(stat -c%s "${ova}" 2>/dev/null || echo 0)" -ge 5000000000 ]; then
+    echo "${c_grn}[sift]${c_off} OVA already staged: $(basename "${ova}")"
+  else
+    echo "${c_blu}[sift]${c_off} fetching the SANS SIFT OVA headlessly (Playwright; ~8.8 GB)..."
+    if command -v node >/dev/null 2>&1 \
+        && NODE_PATH="$(npm root -g 2>/dev/null)" node "${REPO}/scripts/fetch-sift-ova.cjs"; then
+      bash "${REPO}/scripts/place-gated-download.sh" sift-ova || true
+    else
+      echo "${c_yel}[sift]${c_off} headless OVA fetch did not complete (site change / blocked / offline)."
+      echo "      Fall back — open ${c_blu}claude${c_off} here and type ${c_blu}setup${c_off} (the agent drives the browser),"
+      echo "      or download manually from https://www.sans.org/tools/sift-workstation/, save it as"
+      echo "      sift-<version>.ova at the repo root, then re-run: ${c_blu}bash scripts/setup --with-sift${c_off}"
+      echo "      Local-host mode works without the SIFT VM."
+      return 0
+    fi
+  fi
+  echo "${c_blu}[sift]${c_off} building the SIFT VM (scripts/sift-vm-bootstrap.sh; 20-40 min on first run)..."
+  if FINDEVIL_SETUP_SIFT=1 bash "${REPO}/scripts/sift-vm-bootstrap.sh"; then
+    echo "${c_grn}[sift]${c_off} SIFT VM ready. Run in SIFT mode:  bash scripts/verdict --sift <path>"
+  else
+    echo "${c_yel}[sift]${c_off} SIFT VM bootstrap did not complete (non-fatal — local mode still works)."
+  fi
+}
+
+if [ -n "${WITH_SIFT}" ]; then
+  if [ "${rc}" -eq 0 ]; then
+    echo
+    do_with_sift
+  else
+    echo
+    echo "${c_yel}[sift]${c_off} skipping SIFT setup — fix the missing required tool(s) above first, then re-run with --with-sift."
+  fi
 fi
 
 # --run: when the environment is ready, flow straight into an investigation.

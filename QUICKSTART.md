@@ -28,7 +28,19 @@ run-mode catalog.
 
 ### Path A — SIFT VM (recommended; matches the SANS judging environment)
 
-**Step 0 — download the SIFT VM (one-time, ~9.3 GB).** The SANS SIFT Workstation OVA is **not** shipped in this repo (it is SANS-licensed, gitignored as `*.ova`, and far larger than GitHub's file limit). Download it yourself:
+**The one-command way** — install everything, fetch the gated OVA headlessly via Playwright, and
+build the VM:
+
+```bash
+bash scripts/setup --with-sift
+```
+
+If the headless fetch can't complete (the SANS page changed, you're offline, a hypervisor is
+missing), it falls back cleanly and tells you the manual step below — and local-host mode (Path B)
+still works meanwhile. In a `claude` session, typing `setup` does the same and can adapt to page
+changes.
+
+**Manual OVA download (fallback, one-time, ~9.3 GB).** The SANS SIFT Workstation OVA is **not** shipped in this repo (it is SANS-licensed, gitignored as `*.ova`, and far larger than GitHub's file limit). Download it yourself:
 
 1. Go to **<https://www.sans.org/tools/sift-workstation/>**
 2. Scroll to the **VM** option and download the OVA (~9.3 GB).

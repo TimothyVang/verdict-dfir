@@ -157,19 +157,28 @@ case folder) and it runs automatically — no further commands.
 and type **`investigate evidence/`**.
 
 > **Setup flags (you may not know these):**
+> - **`bash scripts/setup --with-sift`** — install everything **and** set up the SANS SIFT VM
+>   (recommended): fetches the OVA headlessly via Playwright, then builds the VM. Falls back to local
+>   if it can't fetch.
 > - **`bash scripts/setup --run`** — install **and** immediately investigate (watches `evidence/` and
->   runs on the first drop, or uses the newest file already there). This is the one-command
->   install-and-go.
+>   runs on the first drop, or uses the newest file already there). The one-command install-and-go.
 > - **`bash scripts/setup`** — install only, then print an honest green/red summary of what (if
 >   anything) is still missing.
 > - **`bash scripts/setup --json`** — machine-readable status (for scripts/CI).
 >
 > Run `bash scripts/setup --help` to see them all.
 
-**Want the SANS SIFT VM too (full disk forensics)?** The 9.3 GB SIFT OVA is the one piece a plain
-shell can't fetch (SANS EULA/login). Open `claude` and type **`setup`** — it runs the same install
-**and** drives a browser to download the OVA, place it, and build the VM for you. Local-host mode
-needs none of this and is the default.
+**Recommended: set up the SANS SIFT VM too.** It's the SANS-blessed environment the judges run in
+and it bundles every DFIR tool — one command installs everything **and** fetches + builds the VM:
+
+```bash
+bash scripts/setup --with-sift
+```
+
+That fetches the gated 9.3 GB SIFT OVA headlessly via the Playwright it just installed, then builds
+the VM. (In a `claude` session, typing `setup` does the same and can adapt if the SANS page layout
+changes.) On any failure it falls back cleanly — and **local-host mode still works**: local is the
+fast, no-VM default, and it's what the committed sample runs (`docs/sample-run/`) were produced with.
 
 Full step-by-step (prerequisites, the container path) is in **[INSTALL.md](INSTALL.md)**;
 per-environment detail (local vs. SIFT VM) is in **[QUICKSTART.md](QUICKSTART.md)**; what the

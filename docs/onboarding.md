@@ -109,8 +109,19 @@ Steps:
    If `missing_curl` is non-empty, offer to re-run `bash scripts/install-dfir-tools.sh`
    (non-blocking).
 
-3. If `gated` contains an entry with `present:false`, run the browser fallback. Look it up in
-   `scripts/gated-tools.json` and follow its `browser.steps` (recon-verified — see `recon`).
+3. If `gated` contains an entry with `present:false` and the user wants SIFT/disk mode, fetch it.
+   **Try the shell fetcher first** — it runs the same headless Playwright download and then builds
+   the VM:
+
+   ```bash
+   bash scripts/setup --with-sift
+   ```
+
+   That invokes `scripts/fetch-sift-ova.cjs` (navigate SANS → public Egnyte share → click Download →
+   place the OVA) and then `scripts/sift-vm-bootstrap.sh`. If it reports a failure (SANS page layout
+   changed, hypervisor missing, etc.), **then** drive the browser MCP yourself — you can adapt to the
+   change where a static script can't. Look it up in `scripts/gated-tools.json` and follow its
+   `browser.steps` (recon-verified — see `recon`).
    For the SANS SIFT OVA specifically (verified 2026-06-07, `login_required:false`):
    - Drive the browser MCP — prefer Playwright (`browser_*`, pre-approved in
      `.claude/settings.local.json`, so it runs prompt-free); Puppeteer
