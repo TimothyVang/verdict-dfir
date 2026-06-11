@@ -10,7 +10,7 @@ Typed Rust MCP server for Find Evil! per Spec #2 §3 and §6.
 | Component | Status |
 |---|---|
 | Workspace + crate scaffold | ✅ |
-| All 19 typed DFIR tools | ✅ shipped |
+| All 20 typed DFIR tools | ✅ shipped |
 | Hand-rolled JSON-RPC 2.0 stdio server (MCP 2024-11-05) | ✅ in `src/server.rs` |
 | End-to-end stdio smoke (`scripts/rust-mcp-smoke.py`) | ✅ all 19 tools dispatch over the wire |
 | M2 sigstore + rs_merkle integration | partial (rs_merkle live; sigstore lives in `services/agent_mcp/`) |

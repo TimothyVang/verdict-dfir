@@ -5,7 +5,7 @@ import { Scene } from "./shared/Scene";
 import { Kicker, KineticHeadline, PullQuote, RuleLine, Stamp } from "./shared/editorial-ui";
 import { spread } from "./shared/pacing";
 
-// Beat 4 — "The toolbox." VERDICT's 31 forensic tools as a grouped instrument
+// Beat 4 — "The toolbox." VERDICT's 32 forensic tools as a grouped instrument
 // tray: four plain-English questions, each a GROTESK header + a count badge that
 // counts up (mirrors FleetScene's big-numeral reveal) + a wrapped row of MONO
 // tool-name chips. Groups reveal left→right; chips stagger in with spring. The

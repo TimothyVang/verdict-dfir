@@ -28,7 +28,7 @@ Find Evil! runs on the same SANS-blessed SIFT VM (`sift-2026.03.24.ova`) that Pr
 | Aspect | Find Evil! | Protocol SIFT gateway |
 |---|---|---|
 | MCP servers | 2 typed servers (findevil-mcp, findevil-agent-mcp) | 1 gateway (200+ shell-backed tools) |
-| Tool count | 31 (19 Rust DFIR + 12 Python crypto/ACH/memory/ACP) | 200+ (dynamic, shell coverage) |
+| Tool count | 32 (20 Rust DFIR + 12 Python crypto/ACH/memory/ACP) | 200+ (dynamic, shell coverage) |
 | Shell surface | None — NO `execute_shell` | Broad — gateway is a shell pass-through |
 | Use case | Repeatable DFIR mechanics for SANS investigation | General-purpose bot connectivity |
 | Installation | No conflicts — separate MCP registrations | `protocol-sift install` installs the gateway independently |
@@ -56,7 +56,7 @@ flowchart TB
     end
 
     subgraph Trust2["**TRUST BOUNDARY 2** — Two MCP Servers (typed tool surface)"]
-        RustMcp["**findevil-mcp** (Rust, hand-rolled MCP 2024-11-05)<br/>19 typed DFIR tools<br/>NO execute_shell<br/>---<br/>case_open, disk_mount/extract/unmount,<br/>mft_timeline, evtx_query, hayabusa_scan,<br/>vol_pslist, vol_psscan, vol_psxview,<br/>vol_malfind, yara_scan, usnjrnl_query,<br/>registry_query, prefetch_parse, vel_collect,<br/>sysmon_network_query, zeek_summary, pcap_triage"]
+        RustMcp["**findevil-mcp** (Rust, hand-rolled MCP 2024-11-05)<br/>20 typed DFIR tools<br/>NO execute_shell<br/>---<br/>case_open, disk_mount/extract/unmount,<br/>mft_timeline, evtx_query, hayabusa_scan,<br/>vol_pslist, vol_psscan, vol_psxview,<br/>vol_malfind, yara_scan, usnjrnl_query,<br/>registry_query, prefetch_parse, vel_collect,<br/>sysmon_network_query, zeek_summary, pcap_triage"]
         AgentMcp["**findevil-agent-mcp** (Python, mcp SDK 1.x)<br/>12 typed crypto/ACH/memory/ACP/expert-feedback tools<br/>---<br/>audit_append/verify,<br/>manifest_finalize/verify,<br/>verify_finding,<br/>detect_contradictions,<br/>judge_findings,<br/>correlate_findings,<br/>memory_remember/recall,<br/>pool_handoff,<br/>expert_miss_capture"]
         EvtxCrate["evtx crate<br/>MIT, in-process<br/>1600× python-evtx"]
         Merkle["rs_merkle 1.4.0<br/>append-only tree"]

@@ -401,7 +401,7 @@ export function HashBead({ hash, prevHash, kind, confidence, highlight, dim, sty
 }
 
 // ---------------------------------------------------------------------------
-// BrandMark — circular gavel + scales + sigstore-check logo (from OutroScene).
+// BrandMark — check-as-V: cream check in a purple ring (from OutroScene).
 // ---------------------------------------------------------------------------
 
 interface BrandMarkProps {
@@ -416,7 +416,7 @@ interface BrandMarkProps {
   style?: React.CSSProperties;
 }
 
-/** Inline-SVG gavel + scales + sigstore green-check brand mark, ported from OutroScene. */
+/** Inline-SVG check-as-V brand mark, ported from OutroScene. */
 export function BrandMark({
   size = 96,
   withWordmark = false,
@@ -472,7 +472,7 @@ export function BrandMark({
 }
 
 // ---------------------------------------------------------------------------
-// Watermark — bottom-right gavel + VERDICT mark on all content scenes.
+// Watermark — bottom-right check-as-V + VERDICT mark on all content scenes.
 // ---------------------------------------------------------------------------
 
 /** Faint bottom-right brand watermark (opacity 0.22) for content scenes. */

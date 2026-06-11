@@ -11,6 +11,8 @@
 
 <p align="center"><b>Digital forensics &amp; incident response at machine speed — with a verdict you can prove.</b></p>
 
+<p align="center"><sub>Every finding cites the exact tool call that produced it, sealed into a hash-chained, Merkle-rooted audit log a third party can verify offline — strong enough to back an <a href="docs/cryptographic-attestation.md">FRE&nbsp;902(14)</a> self-authentication claim. VERDICT is an <b>orchestrator that reduces the friction</b> of repeatable DFIR mechanics, <b>not an autonomous responder</b>: the analyst approves the plan, and the verifier re-runs every cited tool before any finding reaches the report.</sub></p>
+
 ---
 
 **VERDICT** automates the repeatable mechanics of a Windows-host DFIR investigation — memory
@@ -110,6 +112,15 @@ Beyond the three ideas above, a single case run also:
   can turn a verdict into a notification, ticket, or containment step; out of the box no workflow is
   deployed, so the step records as skipped. Either way it sits *outside* the audit chain — never
   evidence, never a Finding. ([servers](docs/reference/mcp-and-tools.md))
+
+## Accuracy — measured, and honest about the gap
+
+VERDICT is graded against published answer keys, not vibes. On the **nitroba** network case it
+found **5 of 5 expected findings — 100% recall** (`scripts/score-recall.py` vs the golden), and
+**every finding across committed runs cites a `tool_call_id`**. On the **NIST hacking case**, local
+mode without the SIFT VM reaches **21% recall (3 of 14)** — the full disk needs `--sift` to extract
+every artifact class, and we say so rather than hiding it. Full method, the recall table, the
+false-positive controls, and the honest limits: **[`docs/accuracy-report.md`](docs/accuracy-report.md)**.
 
 ## Hi, I'm new
 

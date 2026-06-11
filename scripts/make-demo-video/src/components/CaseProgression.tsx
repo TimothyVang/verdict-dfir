@@ -43,7 +43,7 @@ const NODES: Record<string, FlowNode> = {
   caseOpen: { id: "caseOpen", label: "case_open", sub: "locked · read-only", x: 420, y: LANE_MID, w: 230 },
   poolA: { id: "poolA", label: "Pool A", sub: "persistence", x: 760, y: LANE_TOP, w: 210 },
   poolB: { id: "poolB", label: "Pool B", sub: "exfil", x: 760, y: LANE_BOT, w: 210 },
-  tools: { id: "tools", label: "31 forensic tools", sub: "typed · hashed output", x: 1010, y: LANE_MID, w: 240 },
+  tools: { id: "tools", label: "32 forensic tools", sub: "typed · hashed output", x: 1010, y: LANE_MID, w: 240 },
   contradictions: { id: "contradictions", label: "Contradictions flagged", sub: "detect_contradictions", x: 700, y: 520, w: 290, tint: "alert" },
   verify: { id: "verify", label: "Verify vs raw output", sub: "verify_finding", x: 360, y: 520, w: 270 },
   judge: { id: "judge", label: "Judge · weigh", sub: "credibility merge", x: 360, y: 650, w: 250 },

@@ -1,8 +1,9 @@
 # VERDICT — see it run
 
 The whole workflow, end to end: **install → invoke → investigate → watch → verdict.**
-Every capture below is a real run (NIST/EVTX evidence), not a mockup. Home paths are
-shown as `~` for privacy; nothing else is edited.
+Every capture below is a real run against real evidence (an EVTX directory + a NIST disk image),
+not a mockup. In the terminal captures the operator's home path is shown as `~` for privacy;
+the dashboard/report show the SIFT VM's standard `sansforensics` user. Nothing else is edited.
 
 ## 1 · Install — one preflight, then green
 

@@ -86,7 +86,7 @@ claude
 bash scripts/find-evil-sift
 ```
 
-`.mcp.json` (or `.mcp.json.sift`, swapped automatically) tells Claude Code to spawn both MCP servers — `findevil-mcp` (Rust, 19 typed DFIR tools) and `findevil-agent-mcp` (Python, 12 typed crypto/ACH/memory/ACP/expert-feedback tools).
+`.mcp.json` (or `.mcp.json.sift`, swapped automatically) tells Claude Code to spawn both MCP servers — `findevil-mcp` (Rust, 20 typed DFIR tools) and `findevil-agent-mcp` (Python, 12 typed crypto/ACH/memory/ACP/expert-feedback tools).
 
 In the session, prompt:
 

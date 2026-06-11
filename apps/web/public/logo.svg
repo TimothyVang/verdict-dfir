@@ -4,10 +4,6 @@
       @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&amp;display=swap');
       .wm { font-family: 'JetBrains Mono', ui-monospace, 'DejaVu Sans Mono', monospace; }
     </style>
-    <linearGradient id="gavelGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#b98fce"/>
-      <stop offset="100%" stop-color="#9b59b6"/>
-    </linearGradient>
   </defs>
 
   <!-- Warm "paper" card -->

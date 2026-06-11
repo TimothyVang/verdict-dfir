@@ -234,6 +234,11 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # teamdfir/protocol-sift is an external competitor repo quoted in
     # docs to explain the coexistence story.  It is not a path in this repo.
     re.compile(r"^teamdfir/"),
+    # The project's own GitHub repo URL + slug — canonical `verdict-dfir` and the
+    # superseded `sans-hackathon`, quoted in CLAUDE.md / docs.  External GitHub
+    # references, not filesystem paths in this repo.
+    re.compile(r"^github\.com/TimothyVang/"),
+    re.compile(r"^TimothyVang/(verdict-dfir|sans-hackathon)"),
     # In-repo markdown anchor links (file.md#section-name).  The path-
     # existence smoke resolves file paths by their prefix up to '#'; the
     # anchor part is not a file system component.  These are allowed so

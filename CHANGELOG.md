@@ -94,7 +94,7 @@ once the first `v0.x` is cut on the `v-submit` tag.
   with a "superseded by A6" banner; the Product, its MCP tool surface,
   and the investigation pipeline are untouched.
 
-> **Note:** The entries below describe the Amendment A5 removal work (OpenTimestamps/Bitcoin tier) and document the tool-count evolution during that period. The current shipped state (post-A5) is **31 tools: 19 Rust DFIR + 12 Python crypto/ACH/memory/ACP/expert-feedback.** See `[v-submit]` section below for the current release.
+> **Note:** The entries below describe the Amendment A5 removal work (OpenTimestamps/Bitcoin tier) and document the tool-count evolution during that period. The current shipped state (post-A5) is **32 tools: 20 Rust DFIR + 12 Python crypto/ACH/memory/ACP/expert-feedback.** See `[v-submit]` section below for the current release.
 
 ### Changed — one `verdict` command + self-score moved out of the pipeline
 

@@ -70,7 +70,7 @@ export function ArchDiagram() {
             opacity: interpolate(frame - sd(44), [0, 14], [0, 1], clampOpts),
           }}
         >
-          chain verifiable offline · 31 typed tools
+          chain verifiable offline · 32 typed tools
         </div>
       </div>
 
