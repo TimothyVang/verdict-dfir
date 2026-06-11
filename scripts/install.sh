@@ -233,8 +233,8 @@ fi
 # back to `cargo build`, so install always succeeds. Build from source explicitly
 # with FINDEVIL_MCP_FROM_SOURCE=1; CI builds from source by default (set
 # FINDEVIL_MCP_PREBUILT=1 to force the binary even under CI).
-FINDEVIL_MCP_RELEASE_BASE="${FINDEVIL_MCP_RELEASE_BASE:-https://github.com/TimothyVang/sans-hackathon/releases/download}"
-FINDEVIL_MCP_RELEASE_REPO="${FINDEVIL_MCP_RELEASE_REPO:-TimothyVang/sans-hackathon}"
+FINDEVIL_MCP_RELEASE_BASE="${FINDEVIL_MCP_RELEASE_BASE:-https://github.com/TimothyVang/verdict-dfir/releases/download}"
+FINDEVIL_MCP_RELEASE_REPO="${FINDEVIL_MCP_RELEASE_REPO:-TimothyVang/verdict-dfir}"
 
 # Latest published release tag (newest non-draft, non-prerelease) via the GitHub
 # API, parsed without jq. Empty on any failure — the caller falls back to compiling.

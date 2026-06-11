@@ -45,7 +45,7 @@ via `fnm` (best-effort, since Node is optional).
 ## Step 1 — Clone
 
 ```bash
-git clone --depth 1 https://github.com/TimothyVang/sans-hackathon.git verdict   # --depth 1 keeps the clone small + fast
+git clone --depth 1 https://github.com/TimothyVang/verdict-dfir.git verdict   # --depth 1 keeps the clone small + fast
 cd verdict
 ```
 

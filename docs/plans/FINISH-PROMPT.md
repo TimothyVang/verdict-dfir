@@ -144,7 +144,7 @@ produces the `find-evil-submission.zip` release artifact.
 2. Verify the zip contains `REPORT.html`, `audit.jsonl`, `run.manifest.json`, and
    `manifest_verify.json`.
 3. On the Devpost submission form, fill in:
-   - **Project URL:** `https://github.com/TimothyVang/sans-hackathon`
+   - **Project URL:** `https://github.com/TimothyVang/verdict-dfir`
    - **Demo video URL:** the hosted YouTube/Vimeo URL from F5b
    - Upload the `find-evil-submission.zip` bundle
 4. Confirm submission before the 2026-06-15 22:45 CDT deadline.

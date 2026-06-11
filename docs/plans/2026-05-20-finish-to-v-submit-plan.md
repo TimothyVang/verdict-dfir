@@ -50,7 +50,7 @@ User-level queue: `C:/Users/newbi/.claude/projects/C--Users-newbi-Desktop-PUG-Pr
 Reviewed 2026-05-20:
 
 - Local branch: `master` tracking `origin/master` with no ahead/behind divergence.
-- Remote: `https://github.com/TimothyVang/sans-hackathon.git`.
+- Remote: `https://github.com/TimothyVang/verdict-dfir.git`.
 - GitHub repo visibility: `PRIVATE`.
 - `DEMO_VIDEO_URL`: not found.
 - Local `v-submit` tag: absent.
@@ -110,10 +110,10 @@ In one line: **the engine is done; the launch checklist is not.**
 ### Step 4 - Resolve GitHub and demo-video blockers
 
 - Make the repo public before final Devpost submission:
-  - `gh repo edit TimothyVang/sans-hackathon --visibility public`
+  - `gh repo edit TimothyVang/verdict-dfir --visibility public`
 - Record the demo video per `docs/demo-script-a2.md`.
 - Set the real demo URL before cutting `v-submit`:
-  - `gh variable set DEMO_VIDEO_URL --repo TimothyVang/sans-hackathon --body 'https://youtu.be/<id>'`
+  - `gh variable set DEMO_VIDEO_URL --repo TimothyVang/verdict-dfir --body 'https://youtu.be/<id>'`
 
 ### Step 5 - Cut and push `v-submit`
 
@@ -131,7 +131,7 @@ In one line: **the engine is done; the launch checklist is not.**
 The workflow packages the zip and uploads it to the GitHub release; it does not submit the Devpost form.
 
 - Download the release artifact:
-  - `gh release download v-submit --repo TimothyVang/sans-hackathon --pattern find-evil-submission.zip`
+  - `gh release download v-submit --repo TimothyVang/verdict-dfir --pattern find-evil-submission.zip`
 - Upload `find-evil-submission.zip`, the public repo URL, and the demo video URL to Devpost manually.
 
 ### Step 7 - Optional sprite + chrome polish
@@ -172,9 +172,9 @@ Only do this before `v-submit` if visual polish is explicitly in scope and time 
 - After Step 2: `gh run list --workflow=l3-nightly.yml --branch=master --status=success --json headSha,databaseId` shows a successful run whose `headSha` matches the commit to tag.
 - After Step 2: `gh run list --workflow=l3-weekly-goldens.yml --status=success --limit=1 --json databaseId` returns a run ID, and `gh run download <run-id> --name l3-weekly-verdicts --dir <tmp-dir>` succeeds.
 - After Step 3: new `readiness-summary.json` has `readiness_state: "READY_FOR_EXPERT_REVIEW"`, `blockers: []`, and `customer_releasable: false`.
-- After Step 4: `gh repo view TimothyVang/sans-hackathon --json visibility` returns `PUBLIC`.
-- After Step 4: `gh variable get DEMO_VIDEO_URL --repo TimothyVang/sans-hackathon` returns the real video URL.
-- After Step 5: `gh release view v-submit --repo TimothyVang/sans-hackathon` shows `find-evil-submission.zip` attached and `devpost-submit.yml` is green.
+- After Step 4: `gh repo view TimothyVang/verdict-dfir --json visibility` returns `PUBLIC`.
+- After Step 4: `gh variable get DEMO_VIDEO_URL --repo TimothyVang/verdict-dfir` returns the real video URL.
+- After Step 5: `gh release view v-submit --repo TimothyVang/verdict-dfir` shows `find-evil-submission.zip` attached and `devpost-submit.yml` is green.
 - End-to-end: a judge can clone the public repo, run `scripts/install.sh`, start `claude` or `scripts/find-evil`, investigate a case, and verify the manifest offline via the `manifest_verify` MCP tool.
 
 ---

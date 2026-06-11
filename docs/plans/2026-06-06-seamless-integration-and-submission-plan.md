@@ -45,7 +45,7 @@ The 2026-05-20 doc is retained only as launch history.
 
 | Old-plan claim (2026-05-20) | Live truth (2026-06-06) | Source |
 |---|---|---|
-| repo PRIVATE | **PUBLIC** (`TimothyVang/sans-hackathon`) | `gh repo view` |
+| repo PRIVATE | **PUBLIC** (`TimothyVang/verdict-dfir`) | `gh repo view` |
 | DEMO_VIDEO_URL unset | **set**, but to a 393 KB committed placeholder blob (raw-GitHub) | `gh variable list` |
 | no green L3 | l3-nightly **green on HEAD**; l3-weekly green 2026-05-31 | `gh run list` |
 | v-submit tag absent | **exists** @ `f19f587`, GH release published | `git tag`, `gh release` |
@@ -243,17 +243,17 @@ gh pr create --draft --fill --base master
 gh run list --workflow=l1-unit.yml           --branch=master --status=success --json headSha,databaseId
 gh run list --workflow=l3-nightly.yml        --branch=master --status=success --json headSha,databaseId  # headSha == tag commit
 gh run list --workflow=l3-weekly-goldens.yml --status=success --limit=1 --json databaseId                 # non-empty
-gh repo view TimothyVang/sans-hackathon --json visibility                                                  # PUBLIC (already)
+gh repo view TimothyVang/verdict-dfir --json visibility                                                  # PUBLIC (already)
 
 # --- F5 HUMAN: record + host demo, set the URL ---
-gh variable set DEMO_VIDEO_URL --repo TimothyVang/sans-hackathon --body 'https://youtu.be/<id>'
+gh variable set DEMO_VIDEO_URL --repo TimothyVang/verdict-dfir --body 'https://youtu.be/<id>'
 
 # --- F6 HUMAN: re-cut v-submit at the green HEAD ---
 git tag -f v-submit && git push -f origin v-submit
 gh run watch   # release.yml then devpost-submit.yml
 
 # --- F7 HUMAN: fetch the refreshed bundle + upload to Devpost ---
-gh release download v-submit --repo TimothyVang/sans-hackathon --pattern find-evil-submission.zip
+gh release download v-submit --repo TimothyVang/verdict-dfir --pattern find-evil-submission.zip
 python3 scripts/validate-submission-assets.py --zip find-evil-submission.zip
 # upload find-evil-submission.zip + public repo URL + hosted demo URL to the Devpost form
 ```

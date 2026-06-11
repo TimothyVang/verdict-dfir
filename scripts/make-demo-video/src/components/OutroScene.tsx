@@ -13,7 +13,7 @@ import { Scene } from "./shared/Scene";
 // so they read as a printed colophon, not a list of links.
 interface Credit { label: string; value: string; mono?: boolean; tone?: string }
 const CREDITS: Credit[] = [
-  { label: "Source", value: "github.com/TimothyVang/sans-hackathon", mono: true },
+  { label: "Source", value: "github.com/TimothyVang/verdict-dfir", mono: true },
   { label: "License", value: "Apache-2.0" },
   { label: "Continuous integration", value: "L0 · L1 · L2 · L3 — all green", tone: C.confirmed },
   { label: "Tool surface", value: "20 Rust · 12 Python", mono: true },

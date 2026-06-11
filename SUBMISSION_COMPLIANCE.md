@@ -12,7 +12,7 @@ states whether it is satisfied, and gives the exact path or URL.
 
 **STATUS: SATISFIED**
 
-> **Repository:** https://github.com/TimothyVang/sans-hackathon
+> **Repository:** https://github.com/TimothyVang/verdict-dfir
 >
 > The repository is public. Clone and run in three commands — see §4 below.
 
@@ -96,7 +96,7 @@ of your Project.
 > **Short summary:**
 > Find Evil! is a Claude Code DFIR agent that investigates Windows host evidence (memory
 > images, EVTX logs, disk artifacts) and produces a cryptographically signed verdict any
-> third party can verify offline. It exposes 31 narrow typed MCP tools (19 Rust DFIR +
+> third party can verify offline. It exposes 32 narrow typed MCP tools (20 Rust DFIR +
 > 12 Python crypto/ACH/memory) — no `execute_shell`. Two competing-hypothesis agent pools
 > (persistence-biased Pool A + exfil-biased Pool B) investigate in parallel; disagreements
 > are surfaced as first-class `kind=contradiction` audit records before the judge merges.
@@ -115,7 +115,7 @@ of your Project.
 > **The hosted cut.** The full 4:35 film (10 beats, voiceover, real-footage exhibits) is
 > rendered and published as a release asset:
 >
-> **Hosted URL:** <https://github.com/TimothyVang/sans-hackathon/releases/download/v-submit/find-evil-demo.mp4>
+> **Hosted URL:** <https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4>
 >
 > **Real exhibits in the cut (genuine capture, not animation):**
 > 1. **Beat 2** — an actual asciinema capture of a live investigation, slowed to 0.3× and
@@ -254,12 +254,12 @@ of your Project.
 
 | # | Requirement | File / URL | Status |
 |---|-------------|------------|--------|
-| 1 | Code repository URL | https://github.com/TimothyVang/sans-hackathon | SATISFIED |
+| 1 | Code repository URL | https://github.com/TimothyVang/verdict-dfir | SATISFIED |
 | 2 | Apache 2.0 / MIT license file | [`LICENSE`](LICENSE) | SATISFIED |
 | 3 | README with setup instructions | [`README.md`](README.md) · [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 4 | Deployment / step-by-step instructions | [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 5 | Feature / functionality description | [`README.md`](README.md) | SATISFIED |
-| 6 | Demonstration video | [hosted mp4 (release asset)](https://github.com/TimothyVang/sans-hackathon/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
+| 6 | Demonstration video | [hosted mp4 (release asset)](https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
 | 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED |

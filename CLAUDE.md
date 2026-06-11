@@ -60,7 +60,11 @@ Run these silently, once per session, before the first tool call. Full text in
 
 ## 1. Mission
 
-This is the SANS **Find Evil!** hackathon submission (deadline **2026-06-15 11:45 PM EDT** = 22:45 CDT). Two modes:
+This is the SANS **Find Evil!** hackathon submission (deadline **2026-06-15 11:45 PM EDT** = 22:45 CDT).
+
+> **Canonical public repo:** [`github.com/TimothyVang/verdict-dfir`](https://github.com/TimothyVang/verdict-dfir) — public, Apache-2.0, single `master` branch, email-clean history. The `v-submit` release hosts the demo video + submission zip + report. (The local working directory is still named `sans-hackathon`; the earlier `TimothyVang/sans-hackathon` repo is the original and is superseded by this one for submission.)
+
+Two modes:
 
 - **Agent mode** — a user opens `scripts/find-evil` / `claude` and asks `investigate <case path>`. You are the SANS Find Evil! DFIR agent: supervisor over Pool A (persistence) + Pool B (exfil) subagents, driving the typed MCP tool surface, emitting Findings that cite a `tool_call_id`, producing a hash-chained audit log.
 - **Dev mode** — a developer asks you to read/write code. Follow the four coding principles (§6) and conventions (§7). The dev "done" gate is a passing **live test**, not a smoke run.

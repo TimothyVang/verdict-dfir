@@ -7,7 +7,7 @@ For the project pitch + claims, see [README.md](README.md). For the full doc map
 ## Quickstart in 3 steps
 
 ```bash
-git clone https://github.com/TimothyVang/sans-hackathon.git verdict && cd verdict
+git clone https://github.com/TimothyVang/verdict-dfir.git verdict && cd verdict
 bash scripts/setup                    # install + build + DFIR tools + green/red summary
 scripts/verdict <path-to-evidence>    # investigate -> live dashboard -> signed verdict + report
 ```
