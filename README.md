@@ -20,9 +20,18 @@ party can verify offline**. It runs as a [Claude Code](https://claude.com/claude
 narrow, typed tool surface, so every conclusion cites the exact tool call that produced it.
 
 <p align="center">
-  <img src="assets/screenshots/demo.gif" alt="VERDICT live investigation dashboard streaming a case" width="760">
+  <img src="docs/showcase/dashboard-live.gif" alt="VERDICT live investigation dashboard streaming a case" width="760">
 </p>
 <p align="center"><sub>The live dashboard streams every tool call and finding as the case runs.</sub></p>
+
+<p align="center">
+  <img src="docs/showcase/dashboard-hero.png" alt="Verdict banner — SUSPICIOUS, 8 confirmed findings on SCHARDT.dd, signed and verifiable offline" width="250">
+  &nbsp;
+  <img src="docs/showcase/dashboard-findings.png" alt="Tool-cited findings — each cites a tool_call_id and SHA-256 with ATT&amp;CK technique tags" width="250">
+  &nbsp;
+  <img src="docs/showcase/report.png" alt="Signed forensic investigation report with cryptographic attestation" width="250">
+</p>
+<p align="center"><sub>Verdict &amp; evidence · tool-cited findings · the signed analyst report — each finding traces to the exact tool call that produced it.</sub></p>
 
 ## What you get
 
