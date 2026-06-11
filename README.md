@@ -156,6 +156,16 @@ case folder) and it runs automatically — no further commands.
 **Prefer to drive it in Claude Code interactively?** Run `bash scripts/setup`, then open `claude`
 and type **`investigate evidence/`**.
 
+> **Setup flags (you may not know these):**
+> - **`bash scripts/setup --run`** — install **and** immediately investigate (watches `evidence/` and
+>   runs on the first drop, or uses the newest file already there). This is the one-command
+>   install-and-go.
+> - **`bash scripts/setup`** — install only, then print an honest green/red summary of what (if
+>   anything) is still missing.
+> - **`bash scripts/setup --json`** — machine-readable status (for scripts/CI).
+>
+> Run `bash scripts/setup --help` to see them all.
+
 **Want the SANS SIFT VM too (full disk forensics)?** The 9.3 GB SIFT OVA is the one piece a plain
 shell can't fetch (SANS EULA/login). Open `claude` and type **`setup`** — it runs the same install
 **and** drives a browser to download the OVA, place it, and build the VM for you. Local-host mode
