@@ -1,0 +1,2409 @@
+{
+  "agent": "find-evil-auto MVP",
+  "analysis_limitations": [],
+  "attack_coverage": {
+    "blind_spot_count": 8,
+    "covered_target_count": 4,
+    "finding_target_count": 1,
+    "observed_techniques": [
+      "T1071.001"
+    ],
+    "summary": "4/12 ATT&CK targets covered by typed-tool output; 1 target(s) produced finding-level evidence; 8 target(s) remain blind spots",
+    "targets": [
+      {
+        "analyst_value": "Cross-view process enumeration for DKOM/rootkit signals.",
+        "artifact_classes": [
+          "memory"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: memory",
+        "status": "blind_spot",
+        "tactic": "Defense Evasion",
+        "technique_id": "T1014",
+        "technique_name": "Rootkit",
+        "tools_expected": [
+          "vol_pslist",
+          "vol_psscan",
+          "vol_psxview"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Suspicious VADs, injected code, and payload triage.",
+        "artifact_classes": [
+          "memory"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: memory",
+        "status": "blind_spot",
+        "tactic": "Defense Evasion / Privilege Escalation",
+        "technique_id": "T1055",
+        "technique_name": "Process Injection",
+        "tools_expected": [
+          "vol_malfind",
+          "yara_scan"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "PowerShell process, script-block, and execution artifacts.",
+        "artifact_classes": [
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [
+          "disk/filesystem"
+        ],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: evtx",
+        "status": "blind_spot",
+        "tactic": "Execution",
+        "technique_id": "T1059.001",
+        "technique_name": "PowerShell",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan",
+          "prefetch_parse"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Logon events and remote-session evidence.",
+        "artifact_classes": [
+          "evtx"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: evtx",
+        "status": "blind_spot",
+        "tactic": "Lateral Movement",
+        "technique_id": "T1021.001",
+        "technique_name": "Remote Desktop Protocol",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Account logon, privilege use, and local-account artifacts.",
+        "artifact_classes": [
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [
+          "disk/filesystem"
+        ],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: evtx",
+        "status": "blind_spot",
+        "tactic": "Defense Evasion / Persistence / Privilege Escalation",
+        "technique_id": "T1078",
+        "technique_name": "Valid Accounts",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan",
+          "registry_query"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "LSASS access, dumping utilities, and credential-theft traces.",
+        "artifact_classes": [
+          "memory",
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [
+          "disk/filesystem"
+        ],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: evtx, memory",
+        "status": "blind_spot",
+        "tactic": "Credential Access",
+        "technique_id": "T1003",
+        "technique_name": "OS Credential Dumping",
+        "tools_expected": [
+          "vol_malfind",
+          "evtx_query",
+          "hayabusa_scan",
+          "yara_scan"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "New files, download traces, and transfer telemetry.",
+        "artifact_classes": [
+          "disk/filesystem",
+          "network"
+        ],
+        "artifact_classes_observed": [
+          "disk/filesystem",
+          "network"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Command and Control",
+        "technique_id": "T1105",
+        "technique_name": "Ingress Tool Transfer",
+        "tools_expected": [
+          "mft_timeline",
+          "usnjrnl_query",
+          "yara_scan",
+          "vel_collect",
+          "pcap_triage",
+          "zeek_summary"
+        ],
+        "tools_observed": [
+          "pcap_triage"
+        ]
+      },
+      {
+        "analyst_value": "HTTP/S hosts, external web connections, and process-to-web telemetry for cautious C2 triage.",
+        "artifact_classes": [
+          "network"
+        ],
+        "artifact_classes_observed": [
+          "network"
+        ],
+        "finding_confidence": "HYPOTHESIS",
+        "gap": "finding-level evidence exists; preserve cited tool output",
+        "status": "finding",
+        "tactic": "Command and Control",
+        "technique_id": "T1071.001",
+        "technique_name": "Web Protocols",
+        "tools_expected": [
+          "pcap_triage",
+          "zeek_summary",
+          "sysmon_network_query"
+        ],
+        "tools_observed": [
+          "pcap_triage"
+        ]
+      },
+      {
+        "analyst_value": "DNS queries and resolver conversations for suspicious-domain triage.",
+        "artifact_classes": [
+          "network"
+        ],
+        "artifact_classes_observed": [
+          "network"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Command and Control",
+        "technique_id": "T1071.004",
+        "technique_name": "DNS",
+        "tools_expected": [
+          "pcap_triage",
+          "zeek_summary"
+        ],
+        "tools_observed": [
+          "pcap_triage"
+        ]
+      },
+      {
+        "analyst_value": "Network telemetry needed to prove or reject exfiltration.",
+        "artifact_classes": [
+          "network"
+        ],
+        "artifact_classes_observed": [
+          "network"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Exfiltration",
+        "technique_id": "T1041",
+        "technique_name": "Exfiltration Over C2 Channel",
+        "tools_expected": [
+          "pcap_triage",
+          "zeek_summary",
+          "sysmon_network_query",
+          "vel_collect"
+        ],
+        "tools_observed": [
+          "pcap_triage"
+        ]
+      },
+      {
+        "analyst_value": "Autorun persistence and execution corroboration.",
+        "artifact_classes": [
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [
+          "disk/filesystem"
+        ],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: ",
+        "status": "blind_spot",
+        "tactic": "Persistence / Privilege Escalation",
+        "technique_id": "T1547.001",
+        "technique_name": "Registry Run Keys / Startup Folder",
+        "tools_expected": [
+          "registry_query",
+          "prefetch_parse",
+          "mft_timeline"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Scheduled-task creation, TaskCache, and task XML evidence.",
+        "artifact_classes": [
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [
+          "disk/filesystem"
+        ],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: evtx",
+        "status": "blind_spot",
+        "tactic": "Execution / Persistence / Privilege Escalation",
+        "technique_id": "T1053.005",
+        "technique_name": "Scheduled Task",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan",
+          "registry_query"
+        ],
+        "tools_observed": []
+      }
+    ]
+  },
+  "attack_story": {
+    "assessment": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+    "attack_chain": [
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "see finding artifact"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-A-pcap_triage-external-conversation",
+        "host": "nitroba.pcap",
+        "hunt": "",
+        "mitre_technique": "T1071.001",
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 1,
+        "phase": "Command & Control",
+        "phase_index": 9,
+        "source_event_ids": [],
+        "summary": "hypothesis: pcap_triage observed a notable external conversation to 69.59.235.129:10224 (external destination on uncommon port 10224). Treat as network triage context for C2 or transfer hypotheses only; do not claim data loss without separate collection/stagin",
+        "timestamp_utc": null,
+        "title": "hypothesis: pcap_triage observed a notable external conversation to 69.59.235.129:10224 (external destination ",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      },
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "see finding artifact"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-A-pcap-timeline-192.168.15.4",
+        "host": "nitroba.pcap",
+        "hunt": "",
+        "mitre_technique": "T1071.001",
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 2,
+        "phase": "Command & Control",
+        "phase_index": 9,
+        "source_event_ids": [],
+        "summary": "hypothesis: Timeline correlation: the anonymous/harassing-email sends from internal host 192.168.15.4 (first at 2008-07-22T06:01:26Z) fall within the same browsing session as that host's authenticated web activity (2008-07-22T04:29:53Z to 2008-07-22T06:03:44Z)",
+        "timestamp_utc": null,
+        "title": "hypothesis: Timeline correlation: the anonymous/harassing-email sends from internal host 192.168.15.4 (first a",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      },
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "see finding artifact"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-B-pcap-webmail-mail.google.com",
+        "host": "nitroba.pcap",
+        "hunt": "",
+        "mitre_technique": "T1071.001",
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 3,
+        "phase": "Command & Control",
+        "phase_index": 9,
+        "source_event_ids": [],
+        "summary": "hypothesis: Authenticated webmail session to `mail.google.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's identity. Account ow",
+        "timestamp_utc": null,
+        "title": "hypothesis: Authenticated webmail session to `mail.google.com` from internal host 192.168.15.4 (HTTP session c",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      },
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "see finding artifact"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-B-pcap-social-facebook",
+        "host": "nitroba.pcap",
+        "hunt": "",
+        "mitre_technique": "T1071.001",
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 4,
+        "phase": "Command & Control",
+        "phase_index": 9,
+        "source_event_ids": [],
+        "summary": "hypothesis: Authenticated social-media login to facebook (`www.facebook.com`) from internal host 192.168.15.4 (HTTP session cookie present) \u2014 ties the activity on 192.168.15.4 to a named social-media account and corroborates the suspect's identity. Account own",
+        "timestamp_utc": null,
+        "title": "hypothesis: Authenticated social-media login to facebook (`www.facebook.com`) from internal host 192.168.15.4 ",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      },
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "see finding artifact"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-B-pcap-anon-email-www.sendanonymousemail.net",
+        "host": "nitroba.pcap",
+        "hunt": "",
+        "mitre_technique": "T1071.001",
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 5,
+        "phase": "Command & Control",
+        "phase_index": 9,
+        "source_event_ids": [],
+        "summary": "hypothesis: Internal host 192.168.15.4 submitted a request (HTTP POST) to anonymous/self-destructing email service `www.sendanonymousemail.net` (sendanonymousemail) over HTTP \u2014 consistent with sending an anonymous or harassing message, and identifies 192.168.1",
+        "timestamp_utc": null,
+        "title": "hypothesis: Internal host 192.168.15.4 submitted a request (HTTP POST) to anonymous/self-destructing email ser",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      },
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "see finding artifact"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-B-pcap-webmail-b.mail.google.com",
+        "host": "nitroba.pcap",
+        "hunt": "",
+        "mitre_technique": "T1071.001",
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 6,
+        "phase": "Command & Control",
+        "phase_index": 9,
+        "source_event_ids": [],
+        "summary": "hypothesis: Authenticated webmail session to `b.mail.google.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's identity. Account ",
+        "timestamp_utc": null,
+        "title": "hypothesis: Authenticated webmail session to `b.mail.google.com` from internal host 192.168.15.4 (HTTP session",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      },
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "see finding artifact"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-B-pcap-webmail-mail.live.com",
+        "host": "nitroba.pcap",
+        "hunt": "",
+        "mitre_technique": "T1071.001",
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 7,
+        "phase": "Command & Control",
+        "phase_index": 9,
+        "source_event_ids": [],
+        "summary": "hypothesis: Authenticated webmail session to `mail.live.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's identity. Account owne",
+        "timestamp_utc": null,
+        "title": "hypothesis: Authenticated webmail session to `mail.live.com` from internal host 192.168.15.4 (HTTP session coo",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      },
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "see finding artifact"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-B-pcap-webmail-chatenabled.mail.google.com",
+        "host": "nitroba.pcap",
+        "hunt": "",
+        "mitre_technique": "T1071.001",
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 8,
+        "phase": "Command & Control",
+        "phase_index": 9,
+        "source_event_ids": [],
+        "summary": "hypothesis: Authenticated webmail session to `chatenabled.mail.google.com` from internal host 192.168.1.64 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.1.64 to a specific webmail account, corroborating the source host's identity",
+        "timestamp_utc": null,
+        "title": "hypothesis: Authenticated webmail session to `chatenabled.mail.google.com` from internal host 192.168.1.64 (HT",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      },
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "see finding artifact"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-B-pcap-anon-email-www.willselfdestruct.com",
+        "host": "nitroba.pcap",
+        "hunt": "",
+        "mitre_technique": "T1071.001",
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 9,
+        "phase": "Command & Control",
+        "phase_index": 9,
+        "source_event_ids": [],
+        "summary": "hypothesis: Internal host 192.168.15.4 contacted anonymous/self-destructing email service `www.willselfdestruct.com` (willselfdestruct) over HTTP \u2014 consistent with sending an anonymous or harassing message, and identifies 192.168.15.4 as the originating source",
+        "timestamp_utc": null,
+        "title": "hypothesis: Internal host 192.168.15.4 contacted anonymous/self-destructing email service `www.willselfdestruc",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      }
+    ],
+    "business_impact": "",
+    "certainty": "Low \u2014 a single-source lead; a direction to pursue, not a conclusion.",
+    "confidence_posture": {
+      "CONFIRMED": 0,
+      "HYPOTHESIS": 9,
+      "INFERRED": 0
+    },
+    "customer_releasable": false,
+    "customer_release_candidate": false,
+    "customer_summary": "The supplied evidence shows suspicious activity.",
+    "evidence_scope": {
+      "artifact_classes_touched": [
+        "disk/filesystem",
+        "network"
+      ],
+      "coverage_summary": "2/5 artifact classes touched; 1/5 directly available from supplied evidence",
+      "evidence_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "evidence_type": "network"
+    },
+    "expert_decision": "pending",
+    "expert_miss_summary": {
+      "by_type": {},
+      "items": [],
+      "ledger_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/state/expert_misses.jsonl",
+      "summary": "Expert misses captured this case: 0 (uncaptured edits are a QA defect; see EXPERT.md Replacement metric).",
+      "total": 0
+    },
+    "headline": "Triage lead: suspicious activity \u2014 suspicious activity.",
+    "how_they_got_in": "",
+    "ready_for_customer_pdf": false,
+    "ready_for_expert_signoff": true,
+    "recommended_next_decisions": [
+      "Review notable external conversations for protocol semantics, byte counts, session timing, and host ownership.",
+      "Collect Security, Sysmon, and PowerShell Operational EVTX and rerun EVTX/Hayabusa analysis.",
+      "Use the disk artifact summary to pivot between Prefetch, Registry, MFT, USN, EVTX, and YARA-target rows without upgrading single-source execution claims."
+    ],
+    "root_cause": "",
+    "signoff_question": "Would I send this report to a company without rewriting it?",
+    "verdict": "INDETERMINATE",
+    "verdict_meaning": "Use the verdict as a triage priority, then read each Finding confidence and citation before acting.",
+    "version": 1,
+    "what_we_can_say": [
+      "The run produced only triage-level leads; read each cited tool call in the findings detail before acting."
+    ],
+    "what_we_cannot_say": [
+      "Who operated the activity \u2014 this report does not assert attribution; naming an account reflects a record field, not the human behind it.",
+      "Whether the wider environment is affected \u2014 this run examined the supplied evidence only.",
+      "Undetermined: injected code and hidden processes cannot be examined without a memory image. To resolve: capture RAM and run the volatility process and injection plugins.",
+      "Undetermined: logon, process-creation, and PowerShell activity cannot be reviewed without event logs. To resolve: collect the Security, Sysmon/Operational, and PowerShell/Operational logs."
+    ]
+  },
+  "attck_practitioner_coverage": {
+    "data_source_coverage": [
+      {
+        "data_source_id": "DS0029",
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "tools_observed": [
+          "pcap_triage"
+        ]
+      }
+    ],
+    "lanes": {
+      "endpoint_host": {
+        "artifact_classes_seen": [
+          "disk/filesystem"
+        ],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [],
+        "findings_linked": [],
+        "label": "Host & Endpoint Forensics",
+        "next_actions": [
+          "Corroborate lane-specific leads with another artifact class before upgrading confidence."
+        ],
+        "status": "partial",
+        "tools_run": []
+      },
+      "live_response": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: velociraptor"
+        ],
+        "findings_linked": [],
+        "label": "Endpoint Telemetry & Live Response",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      },
+      "malware": {
+        "artifact_classes_seen": [
+          "disk/filesystem"
+        ],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: memory"
+        ],
+        "findings_linked": [],
+        "label": "Malware Analysis & Triage",
+        "next_actions": [
+          "Corroborate lane-specific leads with another artifact class before upgrading confidence."
+        ],
+        "status": "partial",
+        "tools_run": []
+      },
+      "memory": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: memory"
+        ],
+        "findings_linked": [],
+        "label": "Memory Forensics",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      },
+      "network": {
+        "artifact_classes_seen": [
+          "network"
+        ],
+        "attck_data_sources_seen": [
+          "DS0029"
+        ],
+        "attck_techniques_observed": [
+          "T1071.001"
+        ],
+        "coverage_gaps": [],
+        "findings_linked": [
+          "f-A-pcap_triage-external-conversation",
+          "f-A-pcap-timeline-192.168.15.4",
+          "f-B-pcap-webmail-mail.google.com",
+          "f-B-pcap-social-facebook",
+          "f-B-pcap-anon-email-www.sendanonymousemail.net",
+          "f-B-pcap-webmail-b.mail.google.com",
+          "f-B-pcap-webmail-mail.live.com",
+          "f-B-pcap-webmail-chatenabled.mail.google.com",
+          "f-B-pcap-anon-email-www.willselfdestruct.com"
+        ],
+        "label": "Network Forensics",
+        "next_actions": [
+          "Corroborate lane-specific leads with another artifact class before upgrading confidence."
+        ],
+        "status": "automated",
+        "tools_run": [
+          "pcap_triage"
+        ]
+      },
+      "windows_event": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: evtx"
+        ],
+        "findings_linked": [],
+        "label": "Windows Event & Account Analysis",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      }
+    },
+    "overclaim_guardrails_applied": [
+      "covered_no_finding is limited coverage, not a clean/cleared claim",
+      "Domain coverage describes triage/orchestration across the typed tools that ran, not certified-analyst judgment",
+      "visual exhibits do not create findings or upgrade confidence",
+      "execution claims still require at least two artifact classes"
+    ],
+    "research_basis": [
+      "MITRE ATT&CK data sources and techniques",
+      "SANS FOR508/FOR572/FOR610 public course themes",
+      "Zeek, Velociraptor, Sigma/Hayabusa, YARA, capa public docs",
+      "DFIR Report, Red Canary, Elastic Security Labs practitioner reporting patterns",
+      "Reddit DFIR/computerforensics/blueteamsec prioritization signals"
+    ],
+    "source_citation_ids": [
+      "CITE-MITRE-ATTACK-DATASOURCES",
+      "CITE-MITRE-T1003-001",
+      "CITE-MITRE-T1014",
+      "CITE-NIST-800-61R2",
+      "CITE-VOLATILITY3",
+      "CITE-ZEEK-LOGS"
+    ],
+    "technique_coverage": [
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-T1014",
+          "CITE-VOLATILITY3"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1014",
+        "technique_name": "Rootkit"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-VOLATILITY3"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1055",
+        "technique_name": "Process Injection"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1059.001",
+        "technique_name": "PowerShell"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1021.001",
+        "technique_name": "Remote Desktop Protocol"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1078",
+        "technique_name": "Valid Accounts"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-T1003-001"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1003",
+        "technique_name": "OS Credential Dumping"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1105",
+        "technique_name": "Ingress Tool Transfer"
+      },
+      {
+        "linked_findings": [
+          "f-A-pcap_triage-external-conversation",
+          "f-A-pcap-timeline-192.168.15.4",
+          "f-B-pcap-webmail-mail.google.com",
+          "f-B-pcap-social-facebook",
+          "f-B-pcap-anon-email-www.sendanonymousemail.net",
+          "f-B-pcap-webmail-b.mail.google.com",
+          "f-B-pcap-webmail-mail.live.com",
+          "f-B-pcap-webmail-chatenabled.mail.google.com",
+          "f-B-pcap-anon-email-www.willselfdestruct.com"
+        ],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-ZEEK-LOGS"
+        ],
+        "status": "finding",
+        "technique_id": "T1071.001",
+        "technique_name": "Web Protocols"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-ZEEK-LOGS"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1071.004",
+        "technique_name": "DNS"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-ZEEK-LOGS"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1041",
+        "technique_name": "Exfiltration Over C2 Channel"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1547.001",
+        "technique_name": "Registry Run Keys / Startup Folder"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1053.005",
+        "technique_name": "Scheduled Task"
+      }
+    ],
+    "version": 1
+  },
+  "case_completeness": {
+    "available_classes": 1,
+    "checks": [
+      {
+        "artifact_class": "memory",
+        "available": false,
+        "confidence_impact": "not a memory image; no live-process evidence",
+        "tools": [],
+        "touched": false
+      },
+      {
+        "artifact_class": "evtx",
+        "available": false,
+        "confidence_impact": "no event log supplied in this single-evidence run",
+        "tools": [],
+        "touched": false
+      },
+      {
+        "artifact_class": "disk/filesystem",
+        "available": false,
+        "confidence_impact": "no disk image supplied; execution/persistence corroboration is limited",
+        "tools": [],
+        "touched": true
+      },
+      {
+        "artifact_class": "network",
+        "available": true,
+        "confidence_impact": "network telemetry available for C2/exfiltration triage",
+        "tools": [
+          "pcap_triage"
+        ],
+        "touched": true
+      },
+      {
+        "artifact_class": "velociraptor",
+        "available": false,
+        "confidence_impact": "no Velociraptor collection supplied",
+        "tools": [],
+        "touched": false
+      }
+    ],
+    "evidence_type": "network",
+    "inventory_summary": null,
+    "summary": "2/5 artifact classes touched; 1/5 directly available from supplied evidence",
+    "touched_classes": 2
+  },
+  "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+  "cryptographic_attestation": {
+    "manifest_finalized_after_verdict": true,
+    "manifest_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-ba8a48ab-0e56-4650-92d6-eb204088eb96/run.manifest.json",
+    "packet_attestation": {
+      "customer_releasable": false,
+      "customer_release_candidate": false,
+      "final_finding_ids": [
+        "f-A-pcap_triage-external-conversation",
+        "f-A-pcap-timeline-192.168.15.4",
+        "f-B-pcap-webmail-mail.google.com",
+        "f-B-pcap-social-facebook",
+        "f-B-pcap-anon-email-www.sendanonymousemail.net",
+        "f-B-pcap-webmail-b.mail.google.com",
+        "f-B-pcap-webmail-mail.live.com",
+        "f-B-pcap-webmail-chatenabled.mail.google.com",
+        "f-B-pcap-anon-email-www.willselfdestruct.com"
+      ],
+      "packet_state": "EXPERT_REVIEW_DRAFT",
+      "release_gate_sha256": "9a820196159d35569dbf0346c037c5d6a55220b6b6a895405c2b65e343cec3c6",
+      "report_qa_sha256": "a10d8180faf5f716c054bf3af0b975e7188655f57953f9d3c9e571ba21d44d14",
+      "verdict_packet_sha256": "725f6bfadc36c5e4b6f8a019d27f96d33bbd0988b745a932aaaaf5e2981bc519"
+    }
+  },
+  "disk_artifact_summary": null,
+  "entity_index": {
+    "accounts": [],
+    "destination_ips": [],
+    "entity_count": 0,
+    "hosts": [],
+    "processes": [],
+    "services": [],
+    "source_ips": [],
+    "version": 1,
+    "workstations": []
+  },
+  "event_narratives": [],
+  "evidence_inventory": null,
+  "evidence_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+  "evidence_type": "network",
+  "evtx_summary": null,
+  "expert_doctrine": {
+    "claim_rules": [
+      {
+        "category": "citation",
+        "fail_behavior": "block_customer_pdf",
+        "id": "finding_tool_call_required",
+        "requirement": "Every Finding must cite a non-empty tool_call_id that exists in the case tool-call list.",
+        "severity": "blocker"
+      },
+      {
+        "category": "reproducibility",
+        "fail_behavior": "block_customer_pdf",
+        "id": "verify_finding_replay_embedded",
+        "requirement": "Customer-ready reports must embed verifier replay evidence for each Finding and every replay must match the audited tool output.",
+        "severity": "blocker"
+      },
+      {
+        "category": "reproducibility",
+        "fail_behavior": "block_customer_pdf",
+        "id": "verify_finding_replay_failures",
+        "requirement": "A verifier rejection or replay failure must force INDETERMINATE or blocked customer release, never NO_EVIL.",
+        "severity": "blocker"
+      },
+      {
+        "category": "execution",
+        "fail_behavior": "downgrade_or_block",
+        "id": "execution_requires_two_current_artifact_classes",
+        "requirement": "Execution claims require at least two current-case artifact classes. Prefetch is preferred; Amcache, ShimCache, memory-only process evidence, YARA, Hayabusa, and malfind are not standalone execution proof.",
+        "severity": "blocker"
+      },
+      {
+        "category": "exfiltration",
+        "fail_behavior": "downgrade_or_block",
+        "id": "exfiltration_requires_staging_and_movement",
+        "requirement": "Exfiltration claims require staging or collection evidence plus network, tool, or data-movement evidence.",
+        "severity": "blocker"
+      },
+      {
+        "category": "verdict",
+        "fail_behavior": "require_scope_caveat",
+        "id": "no_evil_is_scoped",
+        "requirement": "NO_EVIL means no reportable Finding in the artifact classes examined. It must not imply environment-wide assurance.",
+        "severity": "warning"
+      },
+      {
+        "category": "coverage",
+        "fail_behavior": "force_indeterminate_or_expert_review",
+        "id": "disk_auto_mode_custody_only",
+        "requirement": "Raw disk auto mode is custody-only unless mounted or extracted artifacts are supplied and parsed.",
+        "severity": "blocker"
+      },
+      {
+        "category": "reporting",
+        "fail_behavior": "require_report_caveat",
+        "id": "visuals_do_not_upgrade_confidence",
+        "requirement": "Charts, evidence cards, screenshots, and PDF exhibits support cited tool output but never create Findings or raise confidence.",
+        "severity": "warning"
+      },
+      {
+        "category": "language",
+        "fail_behavior": "block_customer_pdf",
+        "id": "no_attribution",
+        "requirement": "Never assert actor attribution from supplied host artifacts.",
+        "severity": "blocker"
+      },
+      {
+        "category": "language",
+        "fail_behavior": "block_customer_pdf",
+        "id": "no_forbidden_unqualified_language",
+        "requirement": "Customer-visible Finding and report text must not use unqualified language that overstates scope, attribution, execution, compromise, or malware status.",
+        "severity": "blocker"
+      }
+    ],
+    "forbidden_unqualified_terms": [
+      "clean",
+      "cleared",
+      "disproven",
+      "absent",
+      "no compromise",
+      "absence of compromise",
+      "absence of the technique",
+      "attributed to",
+      "malware operator",
+      "the attacker",
+      "is malware",
+      "breach confirmed",
+      "customer-ready",
+      "customer ready"
+    ],
+    "operating_model": "The agent prepares an evidence-bound signoff packet; the human expert remains final authority for customer release.",
+    "source_files": [
+      "agent-config/SOUL.md",
+      "agent-config/MEMORY.md",
+      "agent-config/PLAYBOOK.md",
+      "agent-config/EXPERT.md"
+    ],
+    "supported_domains": {
+      "autonomous_today": [
+        "windows_memory",
+        "windows_evtx",
+        "disk_custody_registration",
+        "timeline_normalization",
+        "evidence_backed_pdf_reporting",
+        "miss-feedback-loop"
+      ],
+      "escalation_only": [
+        "legal_notification",
+        "attribution",
+        "unsupported_cloud_or_saas",
+        "mobile_forensics",
+        "ot_ics_forensics",
+        "failed_report_qa"
+      ],
+      "partial_today": [
+        "disk_content_analysis_without_mount",
+        "exfiltration_without_network_telemetry",
+        "malware_capability_without_reverse_engineering",
+        "identity_compromise_from_single_log_source"
+      ]
+    },
+    "version": 1
+  },
+  "expert_miss_summary": {
+    "by_type": {},
+    "items": [],
+    "ledger_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/state/expert_misses.jsonl",
+    "summary": "Expert misses captured this case: 0 (uncaptured edits are a QA defect; see EXPERT.md Replacement metric).",
+    "total": 0
+  },
+  "expert_signoff": {
+    "customer_releasable": false,
+    "customer_release_candidate": false,
+    "expert_decision": "pending",
+    "expert_signoff_required": true,
+    "ready_for_customer_pdf": false,
+    "signer": "stub",
+    "signoff_question": "Would I send this report to a company without rewriting it?",
+    "status": "PENDING_EXPERT_REVIEW"
+  },
+  "expert_signoff_packet": {
+    "customer_releasable": false,
+    "decision": "pending",
+    "expert_miss_summary": {
+      "by_type": {},
+      "items": [],
+      "ledger_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/state/expert_misses.jsonl",
+      "summary": "Expert misses captured this case: 0 (uncaptured edits are a QA defect; see EXPERT.md Replacement metric).",
+      "total": 0
+    },
+    "feedback_items": [],
+    "referenced_hashes": {
+      "release_gate_sha256": "9a820196159d35569dbf0346c037c5d6a55220b6b6a895405c2b65e343cec3c6",
+      "report_qa_sha256": "a10d8180faf5f716c054bf3af0b975e7188655f57953f9d3c9e571ba21d44d14",
+      "run_manifest_sha256": null,
+      "verdict_packet_sha256": "725f6bfadc36c5e4b6f8a019d27f96d33bbd0988b745a932aaaaf5e2981bc519"
+    },
+    "referenced_paths": {
+      "run_manifest": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-ba8a48ab-0e56-4650-92d6-eb204088eb96/run.manifest.json",
+      "verdict": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-ba8a48ab-0e56-4650-92d6-eb204088eb96/verdict.json"
+    },
+    "release_blockers": [
+      "ATT&CK coverage includes blind spots that require expert awareness.",
+      "No normalized timeline events are available for the executive attack story.",
+      "customer release requires an effective manifest_finalize signer=sigstore; stub signatures (including a sigstore request that degraded to stub) are dev/offline only",
+      "explicit human expert approval is required before customer release",
+      "finalized manifest signature metadata must be present before customer release",
+      "manifest_verify must pass before customer release"
+    ],
+    "release_conditions": {
+      "expert_approved": false,
+      "machine_qa_passed": false,
+      "sigstore_signer": false
+    },
+    "required_before_customer_release": true,
+    "review_time_minutes": null,
+    "reviewed_at": null,
+    "reviewer_identity": null,
+    "signoff_question": "Would I send this report to a company without rewriting it?",
+    "status": "PENDING_EXPERT_REVIEW",
+    "version": 1
+  },
+  "finalized_at": null,
+  "findings": [
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "confidence": "HYPOTHESIS",
+      "derived_from": null,
+      "description": "hypothesis: pcap_triage observed a notable external conversation to 69.59.235.129:10224 (external destination on uncommon port 10224). Treat as network triage context for C2 or transfer hypotheses only; do not claim data loss without separate collection/staging plus tool or data-movement evidence.",
+      "event_id": "ac268ac8-3e1e-4513-9c9f-2932b539182d",
+      "event_type": "Finding",
+      "finding_id": "f-A-pcap_triage-external-conversation",
+      "host": "nitroba.pcap",
+      "mitre_technique": "T1071.001",
+      "pool_origin": "A",
+      "prior_observations": [
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.35301082094804037,
+          "ts": "2026-06-10T05:08:35.589325Z"
+        },
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.3530108204585647,
+          "ts": "2026-06-10T05:08:35.578543Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.35145285872957455,
+          "ts": "2026-06-09T19:35:21.384737Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.35145285821654193,
+          "ts": "2026-06-09T19:35:21.373386Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213296907504,
+          "ts": "2026-06-09T16:19:12.243265Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213291969514,
+          "ts": "2026-06-09T16:19:12.232323Z"
+        }
+      ],
+      "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_artifact": {
+        "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "matched": true,
+        "replay_tool_call_id": "3f9d5ded-51d5-4584-836c-e1139f40f145",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-002",
+        "tool_name": "pcap_triage",
+        "wall_clock_ms": 2175
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_matched": true,
+      "replay_record_sha256": "45f097d407945713a4ace2ad6a6c67d49de40eb03aa4e686538c483a0716713e",
+      "replay_tool_name": "pcap_triage",
+      "tool_call_id": "tc-002",
+      "ts": "2026-06-11T16:50:14Z",
+      "verifier_action": "approved"
+    },
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "confidence": "HYPOTHESIS",
+      "derived_from": [
+        "tc-002"
+      ],
+      "description": "hypothesis: Timeline correlation: the anonymous/harassing-email sends from internal host 192.168.15.4 (first at 2008-07-22T06:01:26Z) fall within the same browsing session as that host's authenticated web activity (2008-07-22T04:29:53Z to 2008-07-22T06:03:44Z) \u2014 the harassing-email send times correlate in time with the suspect host's browsing activity. Cross-flow timing link only; do not name a person from network metadata alone.",
+      "event_id": "b057a0ba-11c5-44ad-b4e0-ab3a92acf2cd",
+      "event_type": "Finding",
+      "finding_id": "f-A-pcap-timeline-192.168.15.4",
+      "host": "nitroba.pcap",
+      "mitre_technique": "T1071.001",
+      "pool_origin": "A",
+      "prior_observations": [
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.3530108206680741,
+          "ts": "2026-06-10T05:08:35.589325Z"
+        },
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.3530108201785984,
+          "ts": "2026-06-10T05:08:35.578543Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.35145285845084384,
+          "ts": "2026-06-09T19:35:21.384737Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.3514528579378113,
+          "ts": "2026-06-09T19:35:21.373386Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.35092132941244125,
+          "ts": "2026-06-09T16:19:12.243265Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.35092132891864225,
+          "ts": "2026-06-09T16:19:12.232323Z"
+        }
+      ],
+      "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_artifact": {
+        "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "matched": true,
+        "replay_tool_call_id": "cd217abe-9c75-4aac-96d2-529e21d0992a",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-002",
+        "tool_name": "pcap_triage",
+        "wall_clock_ms": 2161
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_matched": true,
+      "replay_record_sha256": "85177b849703d5953e335acefe349343085f6ba2a3353cea8532603c972ee84c",
+      "replay_tool_name": "pcap_triage",
+      "tool_call_id": "tc-002",
+      "ts": "2026-06-11T16:50:14Z",
+      "verifier_action": "approved"
+    },
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "confidence": "HYPOTHESIS",
+      "derived_from": [
+        "tc-002"
+      ],
+      "description": "hypothesis: Authenticated webmail session to `mail.google.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's identity. Account ownership still requires provider records.",
+      "event_id": "72e04261-eaf5-4d69-9d1d-9d837ac817f3",
+      "event_type": "Finding",
+      "finding_id": "f-B-pcap-webmail-mail.google.com",
+      "host": "nitroba.pcap",
+      "mitre_technique": "T1071.001",
+      "pool_origin": "B",
+      "prior_observations": [
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.3530108202510074,
+          "ts": "2026-06-10T05:08:35.589325Z"
+        },
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.35301081976153176,
+          "ts": "2026-06-10T05:08:35.578543Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.3514528580356178,
+          "ts": "2026-06-09T19:35:21.384737Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.35145285752258526,
+          "ts": "2026-06-09T19:35:21.373386Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213289978433,
+          "ts": "2026-06-09T16:19:12.243265Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213285040442,
+          "ts": "2026-06-09T16:19:12.232323Z"
+        }
+      ],
+      "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_artifact": {
+        "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "matched": true,
+        "replay_tool_call_id": "9b65b1cc-2ad3-4909-91a0-0a73f9d90d3d",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-002",
+        "tool_name": "pcap_triage",
+        "wall_clock_ms": 2165
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_matched": true,
+      "replay_record_sha256": "bf8a9a7039f97a0a2f1ae2c4c39350365987aa295a337701bbb8a1f3fbee82e7",
+      "replay_tool_name": "pcap_triage",
+      "tool_call_id": "tc-002",
+      "ts": "2026-06-11T16:50:14Z",
+      "verifier_action": "approved"
+    },
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "confidence": "HYPOTHESIS",
+      "derived_from": [
+        "tc-002"
+      ],
+      "description": "hypothesis: Authenticated social-media login to facebook (`www.facebook.com`) from internal host 192.168.15.4 (HTTP session cookie present) \u2014 ties the activity on 192.168.15.4 to a named social-media account and corroborates the suspect's identity. Account ownership still requires provider records; do not name a person from network metadata alone.",
+      "event_id": "9a3f170e-ebf0-45d5-abd1-c32d5b3abbb2",
+      "event_type": "Finding",
+      "finding_id": "f-B-pcap-social-facebook",
+      "host": "nitroba.pcap",
+      "mitre_technique": "T1071.001",
+      "pool_origin": "B",
+      "prior_observations": [
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.35301081981709825,
+          "ts": "2026-06-10T05:08:35.589325Z"
+        },
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.3530108193276226,
+          "ts": "2026-06-10T05:08:35.578543Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.3514528576036237,
+          "ts": "2026-06-09T19:35:21.384737Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.3514528570905911,
+          "ts": "2026-06-09T19:35:21.373386Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213285665025,
+          "ts": "2026-06-09T16:19:12.243265Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.35092132807270343,
+          "ts": "2026-06-09T16:19:12.232323Z"
+        }
+      ],
+      "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_artifact": {
+        "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "matched": true,
+        "replay_tool_call_id": "fb706b6b-0d2d-4b8e-99da-047975bc3e9e",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-002",
+        "tool_name": "pcap_triage",
+        "wall_clock_ms": 2154
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_matched": true,
+      "replay_record_sha256": "3829caf09f68ceac625a729e237b4ebff8d4171220a7ff7d323cecf1b0dcbce2",
+      "replay_tool_name": "pcap_triage",
+      "tool_call_id": "tc-002",
+      "ts": "2026-06-11T16:50:14Z",
+      "verifier_action": "approved"
+    },
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "confidence": "HYPOTHESIS",
+      "derived_from": [
+        "tc-002"
+      ],
+      "description": "hypothesis: Internal host 192.168.15.4 submitted a request (HTTP POST) to anonymous/self-destructing email service `www.sendanonymousemail.net` (sendanonymousemail) over HTTP \u2014 consistent with sending an anonymous or harassing message, and identifies 192.168.15.4 as the originating source host. Corroborate the message body/recipient before naming a person; do not assert attribution from network metadata alone.",
+      "event_id": "ac9b6608-eef8-4199-947f-f38ca850cbe6",
+      "event_type": "Finding",
+      "finding_id": "f-B-pcap-anon-email-www.sendanonymousemail.net",
+      "host": "nitroba.pcap",
+      "mitre_technique": "T1071.001",
+      "pool_origin": "B",
+      "prior_observations": [
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.3530108193940845,
+          "ts": "2026-06-10T05:08:35.589325Z"
+        },
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.3530108189046089,
+          "ts": "2026-06-10T05:08:35.578543Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.3514528571824769,
+          "ts": "2026-06-09T19:35:21.384737Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.3514528566694443,
+          "ts": "2026-06-09T19:35:21.373386Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213281459926,
+          "ts": "2026-06-09T16:19:12.243265Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213276521935,
+          "ts": "2026-06-09T16:19:12.232323Z"
+        }
+      ],
+      "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_artifact": {
+        "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "matched": true,
+        "replay_tool_call_id": "0a427325-560d-47d9-9bf7-d393f2852de9",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-002",
+        "tool_name": "pcap_triage",
+        "wall_clock_ms": 2171
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_matched": true,
+      "replay_record_sha256": "daeade8801d29d9d0ba069fc8136fc4e32f7c6748ce3fb7f8dabc902efd5c3cc",
+      "replay_tool_name": "pcap_triage",
+      "tool_call_id": "tc-002",
+      "ts": "2026-06-11T16:50:14Z",
+      "verifier_action": "approved"
+    },
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "confidence": "HYPOTHESIS",
+      "derived_from": [
+        "tc-002"
+      ],
+      "description": "hypothesis: Authenticated webmail session to `b.mail.google.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's identity. Account ownership still requires provider records.",
+      "event_id": "91efd2b4-1bd9-4a56-8a7e-871715c7725c",
+      "event_type": "Finding",
+      "finding_id": "f-B-pcap-webmail-b.mail.google.com",
+      "host": "nitroba.pcap",
+      "mitre_technique": "T1071.001",
+      "pool_origin": "B",
+      "prior_observations": [
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.35301081907875365,
+          "ts": "2026-06-10T05:08:35.589325Z"
+        },
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.35301081858927796,
+          "ts": "2026-06-10T05:08:35.578543Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.35145285686853767,
+          "ts": "2026-06-09T19:35:21.384737Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.35145285635550505,
+          "ts": "2026-06-09T19:35:21.373386Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213278325281,
+          "ts": "2026-06-09T16:19:12.243265Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.35092132733872905,
+          "ts": "2026-06-09T16:19:12.232323Z"
+        }
+      ],
+      "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_artifact": {
+        "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "matched": true,
+        "replay_tool_call_id": "d1ca36e2-c873-4502-93d6-72ff8660b591",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-002",
+        "tool_name": "pcap_triage",
+        "wall_clock_ms": 2162
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_matched": true,
+      "replay_record_sha256": "c8bc426651be00f9afc07dcab70357a200c556fe13bed6f826255270d3f4cea3",
+      "replay_tool_name": "pcap_triage",
+      "tool_call_id": "tc-002",
+      "ts": "2026-06-11T16:50:14Z",
+      "verifier_action": "approved"
+    },
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "confidence": "HYPOTHESIS",
+      "derived_from": [
+        "tc-002"
+      ],
+      "description": "hypothesis: Authenticated webmail session to `mail.live.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's identity. Account ownership still requires provider records.",
+      "event_id": "c62ea089-b1e6-4ef6-8fa4-5866e7609b0a",
+      "event_type": "Finding",
+      "finding_id": "f-B-pcap-webmail-mail.live.com",
+      "host": "nitroba.pcap",
+      "mitre_technique": "T1071.001",
+      "pool_origin": "B",
+      "prior_observations": [
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.3530108188235744,
+          "ts": "2026-06-10T05:08:35.589325Z"
+        },
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.3530108183340987,
+          "ts": "2026-06-10T05:08:35.578543Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.35145285661448455,
+          "ts": "2026-06-09T19:35:21.384737Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.351452856101452,
+          "ts": "2026-06-09T19:35:21.373386Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.35092132757885924,
+          "ts": "2026-06-09T16:19:12.243265Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.35092132708506024,
+          "ts": "2026-06-09T16:19:12.232323Z"
+        }
+      ],
+      "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_artifact": {
+        "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "matched": true,
+        "replay_tool_call_id": "df2e2cd6-682d-4707-8930-0c5057a4b385",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-002",
+        "tool_name": "pcap_triage",
+        "wall_clock_ms": 2181
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_matched": true,
+      "replay_record_sha256": "46b0dcb9cd2a3608d77f772446b608e8476c345e23a5c8d20cabec17e205e7f3",
+      "replay_tool_name": "pcap_triage",
+      "tool_call_id": "tc-002",
+      "ts": "2026-06-11T16:50:14Z",
+      "verifier_action": "approved"
+    },
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "confidence": "HYPOTHESIS",
+      "derived_from": [
+        "tc-002"
+      ],
+      "description": "hypothesis: Authenticated webmail session to `chatenabled.mail.google.com` from internal host 192.168.1.64 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.1.64 to a specific webmail account, corroborating the source host's identity. Account ownership still requires provider records.",
+      "event_id": "4c46c6fb-679c-46c2-bf6b-b12ac4133931",
+      "event_type": "Finding",
+      "finding_id": "f-B-pcap-webmail-chatenabled.mail.google.com",
+      "host": "nitroba.pcap",
+      "mitre_technique": "T1071.001",
+      "pool_origin": "B",
+      "prior_observations": [
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.3530108186090259,
+          "ts": "2026-06-10T05:08:35.589325Z"
+        },
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.35301081811955026,
+          "ts": "2026-06-10T05:08:35.578543Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.3514528564008829,
+          "ts": "2026-06-09T19:35:21.384737Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.3514528558878504,
+          "ts": "2026-06-09T19:35:21.373386Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213273655807,
+          "ts": "2026-06-09T16:19:12.243265Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213268717817,
+          "ts": "2026-06-09T16:19:12.232323Z"
+        }
+      ],
+      "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_artifact": {
+        "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "matched": true,
+        "replay_tool_call_id": "3305932c-0b27-44b6-b6fc-8a6b355441a9",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-002",
+        "tool_name": "pcap_triage",
+        "wall_clock_ms": 2147
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_matched": true,
+      "replay_record_sha256": "2ffc1e137ad980968d24448a51be1af22c66d2391a810fa82678ca91f352d349",
+      "replay_tool_name": "pcap_triage",
+      "tool_call_id": "tc-002",
+      "ts": "2026-06-11T16:50:14Z",
+      "verifier_action": "approved"
+    },
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "confidence": "HYPOTHESIS",
+      "derived_from": [
+        "tc-002"
+      ],
+      "description": "hypothesis: Internal host 192.168.15.4 contacted anonymous/self-destructing email service `www.willselfdestruct.com` (willselfdestruct) over HTTP \u2014 consistent with sending an anonymous or harassing message, and identifies 192.168.15.4 as the originating source host. Corroborate the message body/recipient before naming a person; do not assert attribution from network metadata alone.",
+      "event_id": "7f6d3af6-6eae-43d6-b8cc-63e6dfe872dd",
+      "event_type": "Finding",
+      "finding_id": "f-B-pcap-anon-email-www.willselfdestruct.com",
+      "host": "nitroba.pcap",
+      "mitre_technique": "T1071.001",
+      "pool_origin": "B",
+      "prior_observations": [
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.35301081839543075,
+          "ts": "2026-06-10T05:08:35.589325Z"
+        },
+        {
+          "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+          "confidence": 0.35301081790595507,
+          "ts": "2026-06-10T05:08:35.578543Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.35145285618823047,
+          "ts": "2026-06-09T19:35:21.384737Z"
+        },
+        {
+          "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
+          "confidence": 0.3514528556751979,
+          "ts": "2026-06-09T19:35:21.373386Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.35092132715324986,
+          "ts": "2026-06-09T16:19:12.243265Z"
+        },
+        {
+          "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+          "confidence": 0.3509213266594508,
+          "ts": "2026-06-09T16:19:12.232323Z"
+        }
+      ],
+      "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_artifact": {
+        "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+        "matched": true,
+        "replay_tool_call_id": "9a373af6-6479-47b9-b619-4d01e315f88c",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-002",
+        "tool_name": "pcap_triage",
+        "wall_clock_ms": 2144
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "replay_matched": true,
+      "replay_record_sha256": "9db23d270f969a55bd87bdd172f038b8894fffe2dfa6251e1331c623c23a34d4",
+      "replay_tool_name": "pcap_triage",
+      "tool_call_id": "tc-002",
+      "ts": "2026-06-11T16:50:14Z",
+      "verifier_action": "approved"
+    }
+  ],
+  "findings_summary": {
+    "by_confidence": {
+      "CONFIRMED": 0,
+      "HYPOTHESIS": 9,
+      "INFERRED": 0
+    },
+    "contradictions_surfaced": 14,
+    "correlation_outcomes": [
+      {
+        "action": "kept",
+        "finding_id": "f-A-pcap_triage-external-conversation",
+        "reason": "non-execution claim"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-A-pcap-timeline-192.168.15.4",
+        "reason": "non-execution claim"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-pcap-webmail-mail.google.com",
+        "reason": "non-execution claim"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-pcap-social-facebook",
+        "reason": "non-execution claim"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-pcap-anon-email-www.sendanonymousemail.net",
+        "reason": "non-execution claim"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-pcap-webmail-b.mail.google.com",
+        "reason": "non-execution claim"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-pcap-webmail-mail.live.com",
+        "reason": "non-execution claim"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-pcap-webmail-chatenabled.mail.google.com",
+        "reason": "non-execution claim"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-pcap-anon-email-www.willselfdestruct.com",
+        "reason": "non-execution claim"
+      }
+    ],
+    "soul_md_downgraded": 0,
+    "soul_md_kept": 9,
+    "total_merged": 9,
+    "verifier_redispatches": {}
+  },
+  "heartbeat": {
+    "consecutive_failures": 0,
+    "escalated": false,
+    "terminated_partial": false
+  },
+  "host_groups": [
+    {
+      "by_confidence": {
+        "CONFIRMED": 0,
+        "HYPOTHESIS": 9,
+        "INFERRED": 0
+      },
+      "event_count": 0,
+      "evidence_sources": [
+        "nitroba.pcap"
+      ],
+      "finding_count": 9,
+      "finding_ids": [
+        "f-A-pcap_triage-external-conversation",
+        "f-A-pcap-timeline-192.168.15.4",
+        "f-B-pcap-webmail-mail.google.com",
+        "f-B-pcap-social-facebook",
+        "f-B-pcap-anon-email-www.sendanonymousemail.net",
+        "f-B-pcap-webmail-b.mail.google.com",
+        "f-B-pcap-webmail-mail.live.com",
+        "f-B-pcap-webmail-chatenabled.mail.google.com",
+        "f-B-pcap-anon-email-www.willselfdestruct.com"
+      ],
+      "first_seen": null,
+      "host": "nitroba.pcap",
+      "last_seen": null,
+      "top_confidence": "HYPOTHESIS"
+    }
+  ],
+  "indicators": {
+    "accounts": [],
+    "domains": [
+      "b.mail.google.com",
+      "chatenabled.mail.google.com",
+      "facebook.com",
+      "mail.google.com",
+      "mail.live.com",
+      "sendanonymousemail.net",
+      "willselfdestruct.com"
+    ],
+    "file_paths": [],
+    "hashes": [],
+    "hosts": [],
+    "indicator_count": 10,
+    "ip_addresses": [
+      "192.168.1.64",
+      "192.168.15.4",
+      "69.59.235.129"
+    ],
+    "note": "Observed artifacts pulled from the timeline and findings; validate or corroborate before detection deployment or blocking.",
+    "processes": [],
+    "services": [],
+    "urls": [],
+    "version": 1
+  },
+  "malware_triage": null,
+  "next_actions": [
+    {
+      "action": "Review notable external conversations for protocol semantics, byte counts, session timing, and host ownership.",
+      "based_on": [
+        "f-A-pcap_triage-external-conversation"
+      ],
+      "expected_evidence": "Full flow records, PCAP carve/reassembly, Zeek conn/http/dns/tls logs, endpoint owner and process context",
+      "priority": "P1",
+      "why": "External connections on uncommon ports or with large byte counts are leads that need protocol and endpoint corroboration."
+    },
+    {
+      "action": "Collect Security, Sysmon, and PowerShell Operational EVTX and rerun EVTX/Hayabusa analysis.",
+      "based_on": [
+        "evtx_gap"
+      ],
+      "expected_evidence": "Security 4624/4625/4688, Sysmon 1/3/7/10/11, PowerShell 4103/4104",
+      "priority": "P2",
+      "why": "Current findings lack event-log corroboration for logon, process creation, and PowerShell execution hypotheses."
+    },
+    {
+      "action": "Use the disk artifact summary to pivot between Prefetch, Registry, MFT, USN, EVTX, and YARA-target rows without upgrading single-source execution claims.",
+      "based_on": [
+        "disk_artifact_summary"
+      ],
+      "expected_evidence": "Correlated Prefetch run times, Registry LastWrite, MFT/USN timestamps, EVTX records, and YARA hits",
+      "priority": "P2",
+      "why": "Extracted disk artifacts are now summarized as leads and timeline context; execution wording still needs two artifact classes and cited tool_call_id evidence."
+    },
+    {
+      "action": "Close ATT&CK blind spots before making closure decisions.",
+      "based_on": [
+        "T1014",
+        "T1055",
+        "T1059.001",
+        "T1021.001",
+        "T1078"
+      ],
+      "expected_evidence": "Additional evidence classes mapped in attack_coverage.targets[].artifact_classes",
+      "priority": "P3",
+      "why": "The coverage matrix identifies target techniques with no supporting artifact class in this run."
+    },
+    {
+      "action": "Build a broader timeline with disk and event-log artifacts before closing the case.",
+      "based_on": [
+        "timeline_gap"
+      ],
+      "expected_evidence": "EVTX timestamps, process creation times, MFT/USN entries, Prefetch last-run times",
+      "priority": "P4",
+      "why": "No normalized timeline events were available from the supplied evidence."
+    }
+  ],
+  "normalized_timeline": {
+    "events": [],
+    "limitations": [
+      "No timestamped events were normalized from the supplied evidence."
+    ],
+    "source_coverage": [],
+    "version": 1
+  },
+  "release_gate": {
+    "customer_releasable": false,
+    "customer_release_candidate": false,
+    "expert_approved": false,
+    "expert_decision": "pending",
+    "expert_signoff_required": true,
+    "failed_checks": [],
+    "machine_qa_passed": false,
+    "manifest_signature_present": false,
+    "manifest_verified": false,
+    "packet_state": "EXPERT_REVIEW_DRAFT",
+    "qa_status": "WARN",
+    "ready_for_customer_pdf": false,
+    "release_blockers": [
+      "ATT&CK coverage includes blind spots that require expert awareness.",
+      "No normalized timeline events are available for the executive attack story.",
+      "customer release requires an effective manifest_finalize signer=sigstore; stub signatures (including a sigstore request that degraded to stub) are dev/offline only",
+      "explicit human expert approval is required before customer release",
+      "finalized manifest signature metadata must be present before customer release",
+      "manifest_verify must pass before customer release"
+    ],
+    "report_render_allowed": true,
+    "signer": "stub",
+    "signer_customer_release_ok": false,
+    "signer_effective": "stub",
+    "warning_checks": [
+      "timeline_source_refs_present",
+      "attack_coverage_blind_spots"
+    ]
+  },
+  "report_evidence_cards": [
+    {
+      "card_id": "evidence-card-001",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-MITRE-ATTACK-DATASOURCES",
+        "CITE-ZEEK-LOGS"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-A-pcap_triage-external-conversation"
+      ],
+      "snippet": "hypothesis: pcap_triage observed a notable external conversation to 69.59.235.129:10224 (external destination on uncommon port 10224). Treat as network triage context for C2 or transfer hypotheses only; do not claim data loss without separa",
+      "source_record_refs": [
+        "tc-002"
+      ],
+      "title": "hypothesis: pcap_triage observed a notable external conversation to 69.59.235.129:10224 (e",
+      "tool_call_id": "tc-002",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-A-pcap_triage-external-conversation` is backed by parsed tool output `tc-002` and should be interpreted with the cited artifact and source caveats."
+    },
+    {
+      "card_id": "evidence-card-002",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-MITRE-ATTACK-DATASOURCES",
+        "CITE-ZEEK-LOGS"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-A-pcap-timeline-192.168.15.4"
+      ],
+      "snippet": "hypothesis: Timeline correlation: the anonymous/harassing-email sends from internal host 192.168.15.4 (first at 2008-07-22T06:01:26Z) fall within the same browsing session as that host's authenticated web activity (2008-07-22T04:29:53Z to 2",
+      "source_record_refs": [
+        "tc-002"
+      ],
+      "title": "hypothesis: Timeline correlation: the anonymous/harassing-email sends from internal host 1",
+      "tool_call_id": "tc-002",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-A-pcap-timeline-192.168.15.4` is backed by parsed tool output `tc-002` and should be interpreted with the cited artifact and source caveats."
+    },
+    {
+      "card_id": "evidence-card-003",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-MITRE-ATTACK-DATASOURCES",
+        "CITE-ZEEK-LOGS"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-B-pcap-webmail-mail.google.com"
+      ],
+      "snippet": "hypothesis: Authenticated webmail session to `mail.google.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's ",
+      "source_record_refs": [
+        "tc-002"
+      ],
+      "title": "hypothesis: Authenticated webmail session to `mail.google.com` from internal host 192.168.",
+      "tool_call_id": "tc-002",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-B-pcap-webmail-mail.google.com` is backed by parsed tool output `tc-002` and should be interpreted with the cited artifact and source caveats."
+    },
+    {
+      "card_id": "evidence-card-004",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-MITRE-ATTACK-DATASOURCES",
+        "CITE-ZEEK-LOGS"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-B-pcap-social-facebook"
+      ],
+      "snippet": "hypothesis: Authenticated social-media login to facebook (`www.facebook.com`) from internal host 192.168.15.4 (HTTP session cookie present) \u2014 ties the activity on 192.168.15.4 to a named social-media account and corroborates the suspect's i",
+      "source_record_refs": [
+        "tc-002"
+      ],
+      "title": "hypothesis: Authenticated social-media login to facebook (`www.facebook.com`) from interna",
+      "tool_call_id": "tc-002",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-B-pcap-social-facebook` is backed by parsed tool output `tc-002` and should be interpreted with the cited artifact and source caveats."
+    },
+    {
+      "card_id": "evidence-card-005",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-MITRE-ATTACK-DATASOURCES",
+        "CITE-ZEEK-LOGS"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-B-pcap-anon-email-www.sendanonymousemail.net"
+      ],
+      "snippet": "hypothesis: Internal host 192.168.15.4 submitted a request (HTTP POST) to anonymous/self-destructing email service `www.sendanonymousemail.net` (sendanonymousemail) over HTTP \u2014 consistent with sending an anonymous or harassing message, and ",
+      "source_record_refs": [
+        "tc-002"
+      ],
+      "title": "hypothesis: Internal host 192.168.15.4 submitted a request (HTTP POST) to anonymous/self-d",
+      "tool_call_id": "tc-002",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-B-pcap-anon-email-www.sendanonymousemail.net` is backed by parsed tool output `tc-002` and should be interpreted with the cited artifact and source caveats."
+    },
+    {
+      "card_id": "evidence-card-006",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-MITRE-ATTACK-DATASOURCES",
+        "CITE-ZEEK-LOGS"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-B-pcap-webmail-b.mail.google.com"
+      ],
+      "snippet": "hypothesis: Authenticated webmail session to `b.mail.google.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host'",
+      "source_record_refs": [
+        "tc-002"
+      ],
+      "title": "hypothesis: Authenticated webmail session to `b.mail.google.com` from internal host 192.16",
+      "tool_call_id": "tc-002",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-B-pcap-webmail-b.mail.google.com` is backed by parsed tool output `tc-002` and should be interpreted with the cited artifact and source caveats."
+    },
+    {
+      "card_id": "evidence-card-007",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-MITRE-ATTACK-DATASOURCES",
+        "CITE-ZEEK-LOGS"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-B-pcap-webmail-mail.live.com"
+      ],
+      "snippet": "hypothesis: Authenticated webmail session to `mail.live.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's id",
+      "source_record_refs": [
+        "tc-002"
+      ],
+      "title": "hypothesis: Authenticated webmail session to `mail.live.com` from internal host 192.168.15",
+      "tool_call_id": "tc-002",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-B-pcap-webmail-mail.live.com` is backed by parsed tool output `tc-002` and should be interpreted with the cited artifact and source caveats."
+    },
+    {
+      "card_id": "evidence-card-008",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-MITRE-ATTACK-DATASOURCES",
+        "CITE-ZEEK-LOGS"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-B-pcap-webmail-chatenabled.mail.google.com"
+      ],
+      "snippet": "hypothesis: Authenticated webmail session to `chatenabled.mail.google.com` from internal host 192.168.1.64 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.1.64 to a specific webmail account, corroborating the so",
+      "source_record_refs": [
+        "tc-002"
+      ],
+      "title": "hypothesis: Authenticated webmail session to `chatenabled.mail.google.com` from internal h",
+      "tool_call_id": "tc-002",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-B-pcap-webmail-chatenabled.mail.google.com` is backed by parsed tool output `tc-002` and should be interpreted with the cited artifact and source caveats."
+    },
+    {
+      "card_id": "evidence-card-009",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-MITRE-ATTACK-DATASOURCES",
+        "CITE-ZEEK-LOGS"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-B-pcap-anon-email-www.willselfdestruct.com"
+      ],
+      "snippet": "hypothesis: Internal host 192.168.15.4 contacted anonymous/self-destructing email service `www.willselfdestruct.com` (willselfdestruct) over HTTP \u2014 consistent with sending an anonymous or harassing message, and identifies 192.168.15.4 as th",
+      "source_record_refs": [
+        "tc-002"
+      ],
+      "title": "hypothesis: Internal host 192.168.15.4 contacted anonymous/self-destructing email service ",
+      "tool_call_id": "tc-002",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-B-pcap-anon-email-www.willselfdestruct.com` is backed by parsed tool output `tc-002` and should be interpreted with the cited artifact and source caveats."
+    }
+  ],
+  "report_qa": {
+    "checks": [
+      {
+        "check_id": "finding_tool_call_required",
+        "evidence": [
+          "tc-001",
+          "tc-002"
+        ],
+        "status": "PASS",
+        "summary": "All 9 Finding(s) cite current-case tool calls."
+      },
+      {
+        "check_id": "execution_requires_two_current_artifact_classes",
+        "evidence": [
+          "disk/filesystem",
+          "network"
+        ],
+        "status": "PASS",
+        "summary": "No unsupported execution wording detected, or current-case corroboration is broad enough for expert review."
+      },
+      {
+        "check_id": "exfiltration_requires_staging_and_movement",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No unsupported exfiltration claim detected."
+      },
+      {
+        "check_id": "disk_auto_mode_custody_only",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No custody-only disk overclaim detected."
+      },
+      {
+        "check_id": "no_evil_is_scoped",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "Verdict wording remains scoped to supplied evidence."
+      },
+      {
+        "check_id": "timeline_source_refs_present",
+        "evidence": [],
+        "status": "WARN",
+        "summary": "No normalized timeline events are available for the executive attack story."
+      },
+      {
+        "check_id": "verify_finding_replay_failures",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No verifier replay failures were recorded as analysis limitations."
+      },
+      {
+        "check_id": "verify_finding_replay_embedded",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "Every Finding carries embedded verifier replay evidence, or there are no Findings to replay."
+      },
+      {
+        "check_id": "limitations_visible",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No run-specific analysis limitations were recorded."
+      },
+      {
+        "check_id": "no_forbidden_unqualified_language",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No forbidden unqualified language detected in Findings or customer-visible report text."
+      },
+      {
+        "check_id": "attack_coverage_blind_spots",
+        "evidence": [
+          "blind_spots=8"
+        ],
+        "status": "WARN",
+        "summary": "ATT&CK coverage includes blind spots that require expert awareness."
+      }
+    ],
+    "customer_releasable": false,
+    "customer_release_blockers": [
+      "explicit human expert approval is required before customer release",
+      "No normalized timeline events are available for the executive attack story.",
+      "ATT&CK coverage includes blind spots that require expert awareness."
+    ],
+    "customer_release_candidate": false,
+    "expert_decision": "pending",
+    "expert_signoff_required": true,
+    "packet_state": "EXPERT_REVIEW_DRAFT",
+    "ready_for_customer_pdf": false,
+    "ready_for_expert_signoff": true,
+    "recommended_expert_review_time": "30-60 minutes",
+    "rules_source": [
+      "agent-config/SOUL.md",
+      "agent-config/MEMORY.md",
+      "agent-config/PLAYBOOK.md",
+      "agent-config/EXPERT.md"
+    ],
+    "status": "WARN",
+    "version": 1,
+    "why_not_ready": [
+      "No normalized timeline events are available for the executive attack story.",
+      "ATT&CK coverage includes blind spots that require expert awareness."
+    ]
+  },
+  "run_id": "auto-1781196592",
+  "source_bibliography": [
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-MITRE-ATTACK-DATASOURCES",
+      "supports": [
+        "ATT&CK data-source coverage mapping"
+      ],
+      "title": "MITRE ATT&CK Data Sources",
+      "url": "https://attack.mitre.org/datasources/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-MITRE-T1003-001",
+      "supports": [
+        "LSASS credential-dumping interpretation"
+      ],
+      "title": "MITRE ATT&CK T1003.001 LSASS Memory",
+      "url": "https://attack.mitre.org/techniques/T1003/001/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-MITRE-T1014",
+      "supports": [
+        "DKOM/rootkit process-view divergence interpretation"
+      ],
+      "title": "MITRE ATT&CK T1014 Rootkit",
+      "url": "https://attack.mitre.org/techniques/T1014/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-NIST-800-61R2",
+      "supports": [
+        "separation of evidence, analysis, response actions, and gaps"
+      ],
+      "title": "NIST SP 800-61 Rev. 2 Computer Security Incident Handling Guide",
+      "url": "https://csrc.nist.gov/pubs/sp/800/61/r2/final"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-PLASO",
+      "supports": [
+        "multi-source forensic timeline normalization"
+      ],
+      "title": "Plaso/log2timeline documentation",
+      "url": "https://plaso.readthedocs.io/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-TIMESKETCH",
+      "supports": [
+        "analyst-oriented forensic timeline review"
+      ],
+      "title": "Timesketch documentation",
+      "url": "https://timesketch.org/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-VOLATILITY3",
+      "supports": [
+        "memory plugin output and process-view validation"
+      ],
+      "title": "Volatility 3 documentation",
+      "url": "https://volatility3.readthedocs.io/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-ZEEK-LOGS",
+      "supports": [
+        "network log and protocol-semantic coverage"
+      ],
+      "title": "Zeek log documentation",
+      "url": "https://docs.zeek.org/en/current/logs/index.html"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-VELOCIRAPTOR-ARTIFACTS",
+      "supports": [
+        "artifact-based endpoint collection"
+      ],
+      "title": "Velociraptor artifact documentation",
+      "url": "https://docs.velociraptor.app/docs/artifacts/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-SIGMAHQ",
+      "supports": [
+        "structured log detection rules as triage leads"
+      ],
+      "title": "SigmaHQ rules repository",
+      "url": "https://github.com/SigmaHQ/sigma"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-HAYABUSA",
+      "supports": [
+        "Windows EVTX timeline and hunting output"
+      ],
+      "title": "Hayabusa repository",
+      "url": "https://github.com/Yamato-Security/hayabusa"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-CAPA",
+      "supports": [
+        "malware capability triage limits"
+      ],
+      "title": "capa repository",
+      "url": "https://github.com/mandiant/capa"
+    }
+  ],
+  "started_at": "2026-06-11T16:49:52Z",
+  "timeline_summary": {
+    "artifact_classes": [],
+    "event_count": 0,
+    "exports": [
+      "timeline.json",
+      "timeline.csv"
+    ],
+    "first_ts": null,
+    "last_ts": null
+  },
+  "tool_calls": [
+    {
+      "arguments": {
+        "image_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+        "label": "evidence"
+      },
+      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "evidence_type": "network",
+      "output_hash": "10ce07d83bcb162e2ea0de08f18f3177060d81c520319b01436a625b3a230bf5",
+      "size_bytes": 49734189,
+      "tool": "case_open",
+      "tool_call_id": "tc-001"
+    },
+    {
+      "analyzer": "tshark",
+      "arguments": {
+        "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+        "limit": 500000,
+        "pcap_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap"
+      },
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+      "conversation_count": 50,
+      "output_hash": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "packets_seen": 83153,
+      "tool": "pcap_triage",
+      "tool_call_id": "tc-002"
+    }
+  ],
+  "verdict": "INDETERMINATE"
+}

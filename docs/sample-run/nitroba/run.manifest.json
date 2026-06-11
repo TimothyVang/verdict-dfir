@@ -1,0 +1,116 @@
+{
+  "audit_log_final_hash": "72606226e15cb9ab496c5fc1fed93c4582d520e0d96dd9b32684cbbb6409650f",
+  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-ba8a48ab-0e56-4650-92d6-eb204088eb96/audit.jsonl",
+  "audit_log_record_count": 70,
+  "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+  "extra": {
+    "evidence_type": "network",
+    "image_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
+    "model": "find-evil-auto",
+    "packet_attestation": {
+      "customer_releasable": false,
+      "customer_release_candidate": false,
+      "expert_signoff_packet_sha256": "e64f1bbcc9190175c3e292e7cefec566962ce34216bf15155b91760eb3c2dc98",
+      "final_finding_ids": [
+        "f-A-pcap_triage-external-conversation",
+        "f-A-pcap-timeline-192.168.15.4",
+        "f-B-pcap-webmail-mail.google.com",
+        "f-B-pcap-social-facebook",
+        "f-B-pcap-anon-email-www.sendanonymousemail.net",
+        "f-B-pcap-webmail-b.mail.google.com",
+        "f-B-pcap-webmail-mail.live.com",
+        "f-B-pcap-webmail-chatenabled.mail.google.com",
+        "f-B-pcap-anon-email-www.willselfdestruct.com"
+      ],
+      "packet_state": "EXPERT_REVIEW_DRAFT",
+      "release_gate_sha256": "9a820196159d35569dbf0346c037c5d6a55220b6b6a895405c2b65e343cec3c6",
+      "report_qa_sha256": "a10d8180faf5f716c054bf3af0b975e7188655f57953f9d3c9e571ba21d44d14",
+      "verdict_artifact_bytes": 97161,
+      "verdict_artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-ba8a48ab-0e56-4650-92d6-eb204088eb96/verdict.json",
+      "verdict_artifact_sha256": "7bb8c688ee828b3cc52753a7f35f3893294c924eef8be79d64d1f2591bd435e3",
+      "verdict_packet_sha256": "725f6bfadc36c5e4b6f8a019d27f96d33bbd0988b745a932aaaaf5e2981bc519"
+    },
+    "signer": "stub"
+  },
+  "finalized_at": "2026-06-11T16:50:14Z",
+  "leaf_count": 11,
+  "leaves": [
+    {
+      "digest_hex": "10ce07d83bcb162e2ea0de08f18f3177060d81c520319b01436a625b3a230bf5",
+      "kind": "tool_call_output",
+      "record_id": "tc-001",
+      "seq": 2
+    },
+    {
+      "digest_hex": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
+      "kind": "tool_call_output",
+      "record_id": "tc-002",
+      "seq": 4
+    },
+    {
+      "digest_hex": "afd2ddb5bc298f322ea60789c435e2576be47d01240ce7c211c483b5579b5790",
+      "kind": "finding",
+      "record_id": "f-A-pcap_triage-external-conversation",
+      "seq": 58
+    },
+    {
+      "digest_hex": "a8113c8601d821af0c62eedb66086d138f67ed17304d593f79844b6582174b52",
+      "kind": "finding",
+      "record_id": "f-A-pcap-timeline-192.168.15.4",
+      "seq": 59
+    },
+    {
+      "digest_hex": "5321a5bc0b2c93db03bdc6ea9e594be9b120a495a291bad4a7d66d59c416390f",
+      "kind": "finding",
+      "record_id": "f-B-pcap-webmail-mail.google.com",
+      "seq": 60
+    },
+    {
+      "digest_hex": "5eca9d5c354b9b5ed248b65e258bd210945248a9ea012ba21cab41bce0bfcdf3",
+      "kind": "finding",
+      "record_id": "f-B-pcap-social-facebook",
+      "seq": 61
+    },
+    {
+      "digest_hex": "8a114153edf09cf64cadc74df236e87d1ff61835eebbb012cde68bea1a1cd8a9",
+      "kind": "finding",
+      "record_id": "f-B-pcap-anon-email-www.sendanonymousemail.net",
+      "seq": 62
+    },
+    {
+      "digest_hex": "1935c2831b5c9ec20869324847a7f0bc4f7ba3f6fcaf42c64507033585ab16ee",
+      "kind": "finding",
+      "record_id": "f-B-pcap-webmail-b.mail.google.com",
+      "seq": 63
+    },
+    {
+      "digest_hex": "94a331570bf2628cc862c901bc75622afe8cfb3c70411e39cfb325d58cd6bfe1",
+      "kind": "finding",
+      "record_id": "f-B-pcap-webmail-mail.live.com",
+      "seq": 64
+    },
+    {
+      "digest_hex": "c8462ff586f345a89b7a06e5873e9af795d93af2c65d344ef65be9a0d145f923",
+      "kind": "finding",
+      "record_id": "f-B-pcap-webmail-chatenabled.mail.google.com",
+      "seq": 65
+    },
+    {
+      "digest_hex": "3d18ce7723d87bd495d69e173d348e88ed262302e03c9332097afd1dc75a72dc",
+      "kind": "finding",
+      "record_id": "f-B-pcap-anon-email-www.willselfdestruct.com",
+      "seq": 66
+    }
+  ],
+  "merkle_root_hex": "f22f7f98265454e167f286ec8cac99564803c29fa9f3894b05cce4c059a7ac46",
+  "run_id": "auto-1781196592",
+  "signature": {
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiZjBkYzQ1OGViMTA4NmZkNmM4NzI5ZjUyM2NhMTY0MDJjNGRkYmM3ZTMzMzY5ZmU4MmNiMDAxMjQwMjUyZWU4ZCIsImtpbmQiOiJzdHViIiwibm90ZSI6IlN0dWJTaWduZXIgb3V0cHV0IFx1MjAxNCBOT1QgYSByZWFsIFNpZ3N0b3JlIHNpZ25hdHVyZS4iLCJwYXlsb2FkX3NoYTI1NiI6Ijg1ZDYyMDM3OTFjZDYxNmE3YmVjNjQ5MmIxODAzZjQ1MGNiYjY2YTU2ODJiM2UxZjVjYTk0Y2FjNjU1NDYwYTYiLCJydW5faWQiOiJhdXRvLTE3ODExOTY1OTIiLCJzZXEiOjF9",
+    "cert_fingerprint": "f0dc458eb1086fd6c8729f523ca16402c4ddbc7e33369fe82cb001240252ee8d",
+    "kind": "stub",
+    "payload_sha256": "85d6203791cd616a7bec6492b1803f450cbb66a5682b3e1f5ca94cac655460a6",
+    "signed_at": "2026-06-11T16:50:14Z"
+  },
+  "started_at": "2026-06-11T16:49:52Z",
+  "version": "1"
+}
