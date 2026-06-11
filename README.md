@@ -156,9 +156,9 @@ pass `--sift`/`--parallel` — the skill adds them. Full reference:
 `investigate <path>` — same tools, interactive.
 
 <p align="center">
-  <img src="assets/screenshots/claudecode.png" alt="Driving VERDICT interactively as a Claude Code agent" width="520">
+  <img src="docs/showcase/claude-code-live-run.png" alt="Driving VERDICT interactively as a Claude Code agent — investigate evidence/attack-samples scoping four EVTX files" width="640">
 </p>
-<p align="center"><sub>Agent mode: VERDICT scopes the evidence, plans the live test, and confirms run mode before it touches a byte.</sub></p>
+<p align="center"><sub>Agent mode: one prompt — VERDICT scopes the evidence (four EVTX samples: lateral movement, defense evasion, credential access) and bootstraps the pipeline.</sub></p>
 
 **No evidence yet?** Evidence files are never committed (they're gitignored), so a fresh clone
 ships with none. Stage public test datasets with `bash scripts/fetch-fixtures.sh` (sources +
