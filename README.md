@@ -49,6 +49,21 @@ Every run writes a self-contained case directory:
 </p>
 <p align="center"><sub>Every run seals into a hash-chained audit log, a Merkle root over canonical tool outputs, and a signed manifest — verifiable offline with <code>manifest_verify</code>.</sub></p>
 
+## See it run
+
+From install to signed verdict — every capture below is a real run (NIST/EVTX evidence), not a
+mockup. Full walkthrough gallery: **[`docs/showcase/`](docs/showcase/)**.
+
+<p align="center">
+  <img src="docs/showcase/investigation.gif" alt="End-to-end DFIR investigation: case_open, EVTX and Hayabusa, verifier, judge, signed manifest, SUSPICIOUS verdict" width="760">
+</p>
+<p align="center"><sub>One command → the typed DFIR pipeline → a signed <code>SUSPICIOUS</code> verdict with <code>manifest_verify = PASS</code>.</sub></p>
+
+<p align="center">
+  <img src="docs/showcase/install-doctor.gif" alt="scripts/doctor.sh preflight printing a green READY summary" width="640">
+</p>
+<p align="center"><sub><code>scripts/doctor.sh</code> — one preflight, an honest green/amber summary, then you're ready to run.</sub></p>
+
 ## How it works
 
 Three ideas, exercised end-to-end on every CI run:
