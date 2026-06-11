@@ -226,6 +226,15 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # the audit chain), so its paths exist on a developer's disk but not in the
     # CI checkout.  Same shape as the git-hub-references/ external-clone allowance.
     re.compile(r"^n8n-references(/|$)"),
+    # obsidian-mind dev/operator memory vault + local Claude settings.
+    # /obsidian-mind/brain/ (Gotchas, Patterns, Key Decisions, North Star) is
+    # gitignored BY DESIGN — .gitignore marks it "private and must NEVER be
+    # published" — and .claude/settings.local.json is a gitignored per-user file.
+    # CLAUDE.md / docs/onboarding.md / docs/runbooks/obsidian-mind-memory.md cite
+    # them but they never enter the CI checkout. Same shape as the
+    # git-hub-references/ + n8n-references/ gitignored-clone allowances.
+    re.compile(r"^obsidian-mind/brain/"),
+    re.compile(r"^\.claude/settings\.local\.json$"),
     # User-level Claude Code auto-memory dir.  CLAUDE.md references
     # `memory/project_autonomous_queue.md` which actually lives at
     # `~/.claude/projects/<project>/memory/...`, not at repo root.
