@@ -99,6 +99,7 @@ class TestJudgeFindings:
         # at least one pool also has a different artifact-class
         # finding to trigger the cross-class corroboration.
         a_main = _finding(
+            finding_id="f-A-1",
             description="Service binary executed from temp directory",
             pool_origin="A",
             confidence="INFERRED",

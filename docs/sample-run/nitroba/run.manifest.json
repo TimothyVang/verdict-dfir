@@ -1,8 +1,8 @@
 {
-  "audit_log_final_hash": "72606226e15cb9ab496c5fc1fed93c4582d520e0d96dd9b32684cbbb6409650f",
-  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-ba8a48ab-0e56-4650-92d6-eb204088eb96/audit.jsonl",
+  "audit_log_final_hash": "91aed184ba46f722bc96df2bd8053223d068b5b6a5164484e3d62a84d857effc",
+  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-14ceb4c2-31b5-488e-b09f-7aac35bb855e/audit.jsonl",
   "audit_log_record_count": 70,
-  "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+  "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
   "extra": {
     "evidence_type": "network",
     "image_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
@@ -10,7 +10,7 @@
     "packet_attestation": {
       "customer_releasable": false,
       "customer_release_candidate": false,
-      "expert_signoff_packet_sha256": "e64f1bbcc9190175c3e292e7cefec566962ce34216bf15155b91760eb3c2dc98",
+      "expert_signoff_packet_sha256": "917d1de2a5373e99add2d5ddc889cc4791c452bc6a7b6dae9b481198a675f3fc",
       "final_finding_ids": [
         "f-A-pcap_triage-external-conversation",
         "f-A-pcap-timeline-192.168.15.4",
@@ -25,14 +25,14 @@
       "packet_state": "EXPERT_REVIEW_DRAFT",
       "release_gate_sha256": "9a820196159d35569dbf0346c037c5d6a55220b6b6a895405c2b65e343cec3c6",
       "report_qa_sha256": "a10d8180faf5f716c054bf3af0b975e7188655f57953f9d3c9e571ba21d44d14",
-      "verdict_artifact_bytes": 97161,
-      "verdict_artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-ba8a48ab-0e56-4650-92d6-eb204088eb96/verdict.json",
-      "verdict_artifact_sha256": "7bb8c688ee828b3cc52753a7f35f3893294c924eef8be79d64d1f2591bd435e3",
-      "verdict_packet_sha256": "725f6bfadc36c5e4b6f8a019d27f96d33bbd0988b745a932aaaaf5e2981bc519"
+      "verdict_artifact_bytes": 97157,
+      "verdict_artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-14ceb4c2-31b5-488e-b09f-7aac35bb855e/verdict.json",
+      "verdict_artifact_sha256": "a93d0dbf0f4b9cf7d48622a85ef0c22b037998037b4d83d767566c818d5ee202",
+      "verdict_packet_sha256": "6f2c2658e8f5a460b93ed6bc90d1ce008675b6b770347532460d63a1e56cd5ab"
     },
     "signer": "stub"
   },
-  "finalized_at": "2026-06-11T16:50:14Z",
+  "finalized_at": "2026-06-11T17:07:25Z",
   "leaf_count": 11,
   "leaves": [
     {
@@ -48,69 +48,69 @@
       "seq": 4
     },
     {
-      "digest_hex": "afd2ddb5bc298f322ea60789c435e2576be47d01240ce7c211c483b5579b5790",
+      "digest_hex": "5ee766d9ea6a6235c0caa1efac2de84cfcf046629099a1fc9327c81d190da785",
       "kind": "finding",
       "record_id": "f-A-pcap_triage-external-conversation",
       "seq": 58
     },
     {
-      "digest_hex": "a8113c8601d821af0c62eedb66086d138f67ed17304d593f79844b6582174b52",
+      "digest_hex": "4d0ed208b242df985084989f816509588434a81ebfb56c57b5436260c1c24d0f",
       "kind": "finding",
       "record_id": "f-A-pcap-timeline-192.168.15.4",
       "seq": 59
     },
     {
-      "digest_hex": "5321a5bc0b2c93db03bdc6ea9e594be9b120a495a291bad4a7d66d59c416390f",
+      "digest_hex": "1dbc87d16a3cf31c2b6ff4b6ba7ba08ce9359ff1a2c22e7f0975469c81605299",
       "kind": "finding",
       "record_id": "f-B-pcap-webmail-mail.google.com",
       "seq": 60
     },
     {
-      "digest_hex": "5eca9d5c354b9b5ed248b65e258bd210945248a9ea012ba21cab41bce0bfcdf3",
+      "digest_hex": "b970047aabc39b3f73472f275af517b97aa42ebaf0d3a2b792f1c2870d6d9f70",
       "kind": "finding",
       "record_id": "f-B-pcap-social-facebook",
       "seq": 61
     },
     {
-      "digest_hex": "8a114153edf09cf64cadc74df236e87d1ff61835eebbb012cde68bea1a1cd8a9",
+      "digest_hex": "0f83bb7b155e9ca6be30e23545340f703852fee080ae123bf34b874e08885bce",
       "kind": "finding",
       "record_id": "f-B-pcap-anon-email-www.sendanonymousemail.net",
       "seq": 62
     },
     {
-      "digest_hex": "1935c2831b5c9ec20869324847a7f0bc4f7ba3f6fcaf42c64507033585ab16ee",
+      "digest_hex": "4ec7ea5076c60d1a0f6b8ecb9e6bbf1cb3bd831114b3723761e7a5241bf36782",
       "kind": "finding",
       "record_id": "f-B-pcap-webmail-b.mail.google.com",
       "seq": 63
     },
     {
-      "digest_hex": "94a331570bf2628cc862c901bc75622afe8cfb3c70411e39cfb325d58cd6bfe1",
+      "digest_hex": "eb06cb975320af88d0e337a47f149599547430233d3586c5f4db69a548242471",
       "kind": "finding",
       "record_id": "f-B-pcap-webmail-mail.live.com",
       "seq": 64
     },
     {
-      "digest_hex": "c8462ff586f345a89b7a06e5873e9af795d93af2c65d344ef65be9a0d145f923",
+      "digest_hex": "85d0a49b7e740367361c1837050e58e42aa4d9699e524311674919d5f707ec33",
       "kind": "finding",
       "record_id": "f-B-pcap-webmail-chatenabled.mail.google.com",
       "seq": 65
     },
     {
-      "digest_hex": "3d18ce7723d87bd495d69e173d348e88ed262302e03c9332097afd1dc75a72dc",
+      "digest_hex": "3ab1be15698003b22e52c042b934abd48b93f20351110711c6f6221ce116e62b",
       "kind": "finding",
       "record_id": "f-B-pcap-anon-email-www.willselfdestruct.com",
       "seq": 66
     }
   ],
-  "merkle_root_hex": "f22f7f98265454e167f286ec8cac99564803c29fa9f3894b05cce4c059a7ac46",
-  "run_id": "auto-1781196592",
+  "merkle_root_hex": "160be4dd293b83b3045ab704cb67c6be7f62bb8070d60e19fb5bd34e914cb430",
+  "run_id": "auto-1781197622",
   "signature": {
-    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiZjBkYzQ1OGViMTA4NmZkNmM4NzI5ZjUyM2NhMTY0MDJjNGRkYmM3ZTMzMzY5ZmU4MmNiMDAxMjQwMjUyZWU4ZCIsImtpbmQiOiJzdHViIiwibm90ZSI6IlN0dWJTaWduZXIgb3V0cHV0IFx1MjAxNCBOT1QgYSByZWFsIFNpZ3N0b3JlIHNpZ25hdHVyZS4iLCJwYXlsb2FkX3NoYTI1NiI6Ijg1ZDYyMDM3OTFjZDYxNmE3YmVjNjQ5MmIxODAzZjQ1MGNiYjY2YTU2ODJiM2UxZjVjYTk0Y2FjNjU1NDYwYTYiLCJydW5faWQiOiJhdXRvLTE3ODExOTY1OTIiLCJzZXEiOjF9",
-    "cert_fingerprint": "f0dc458eb1086fd6c8729f523ca16402c4ddbc7e33369fe82cb001240252ee8d",
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiN2YwYTc5NjY5MDZhMmI0OGFiYTJlMzk3ZmQ3ZWM4NjM3Zjk5NGIwMDAwNzEyNGM4NDZkMTMzMmFjNWM3MjJhMiIsImtpbmQiOiJzdHViIiwibm90ZSI6IlN0dWJTaWduZXIgb3V0cHV0IFx1MjAxNCBOT1QgYSByZWFsIFNpZ3N0b3JlIHNpZ25hdHVyZS4iLCJwYXlsb2FkX3NoYTI1NiI6ImM1MTMwOWE4OTM3MTVmOTY3NmY1ODJjNjEyZWVhZTYwYWMyOTNlZjE1M2QzZDVkZTJiNTFhYmZjMzBkOTlmYzAiLCJydW5faWQiOiJhdXRvLTE3ODExOTc2MjIiLCJzZXEiOjF9",
+    "cert_fingerprint": "7f0a7966906a2b48aba2e397fd7ec8637f994b00007124c846d1332ac5c722a2",
     "kind": "stub",
-    "payload_sha256": "85d6203791cd616a7bec6492b1803f450cbb66a5682b3e1f5ca94cac655460a6",
-    "signed_at": "2026-06-11T16:50:14Z"
+    "payload_sha256": "c51309a893715f9676f582c612eeae60ac293ef153d3d5de2b51abfc30d99fc0",
+    "signed_at": "2026-06-11T17:07:25Z"
   },
-  "started_at": "2026-06-11T16:49:52Z",
+  "started_at": "2026-06-11T17:07:02Z",
   "version": "1"
 }

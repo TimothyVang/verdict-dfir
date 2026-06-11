@@ -4,18 +4,18 @@
 
 [DFIR at machine speed · sigstore-signed chain of custody]{.tagline}
 
-**Case ID:** `7f255a6c-dc69-4f7a-b793-b39745586dda`
-**Run ID:** `auto-1781196592`
-**Started:** 2026-06-11T16:49:52Z
-**Finalized:** 2026-06-11T16:50:14Z
+**Case ID:** `3dec6921-0d8f-4dbc-bb0e-135a560a47a9`
+**Run ID:** `auto-1781197622`
+**Started:** 2026-06-11T17:07:02Z
+**Finalized:** 2026-06-11T17:07:25Z
 **Evidence:** `/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap`
 **Verdict:** **INDETERMINATE**
 
 > **Cryptographic attestation:**
-> Merkle root `f22f7f98265454e167f286ec8cac99564803c29fa9f3894b05cce4c059a7ac46`
-> Audit log final hash `72606226e15cb9ab496c5fc1fed93c4582d520e0d96dd9b32684cbbb6409650f`
-> Sigstore signature SHA-256 `85d6203791cd616a7bec6492b1803f450cbb66a5682b3e1f5ca94cac655460a6`
-> Cert fingerprint `f0dc458eb1086fd6c8729f523ca16402c4ddbc7e33369fe82cb001240252ee8d`
+> Merkle root `160be4dd293b83b3045ab704cb67c6be7f62bb8070d60e19fb5bd34e914cb430`
+> Audit log final hash `91aed184ba46f722bc96df2bd8053223d068b5b6a5164484e3d62a84d857effc`
+> Sigstore signature SHA-256 `c51309a893715f9676f582c612eeae60ac293ef153d3d5de2b51abfc30d99fc0`
+> Cert fingerprint `7f0a7966906a2b48aba2e397fd7ec8637f994b00007124c846d1332ac5c722a2`
 
 ---
 

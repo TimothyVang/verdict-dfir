@@ -872,10 +872,10 @@
     "summary": "2/5 artifact classes touched; 1/5 directly available from supplied evidence",
     "touched_classes": 2
   },
-  "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+  "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
   "cryptographic_attestation": {
     "manifest_finalized_after_verdict": true,
-    "manifest_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-ba8a48ab-0e56-4650-92d6-eb204088eb96/run.manifest.json",
+    "manifest_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-14ceb4c2-31b5-488e-b09f-7aac35bb855e/run.manifest.json",
     "packet_attestation": {
       "customer_releasable": false,
       "customer_release_candidate": false,
@@ -893,7 +893,7 @@
       "packet_state": "EXPERT_REVIEW_DRAFT",
       "release_gate_sha256": "9a820196159d35569dbf0346c037c5d6a55220b6b6a895405c2b65e343cec3c6",
       "report_qa_sha256": "a10d8180faf5f716c054bf3af0b975e7188655f57953f9d3c9e571ba21d44d14",
-      "verdict_packet_sha256": "725f6bfadc36c5e4b6f8a019d27f96d33bbd0988b745a932aaaaf5e2981bc519"
+      "verdict_packet_sha256": "6f2c2658e8f5a460b93ed6bc90d1ce008675b6b770347532460d63a1e56cd5ab"
     }
   },
   "disk_artifact_summary": null,
@@ -1067,11 +1067,11 @@
       "release_gate_sha256": "9a820196159d35569dbf0346c037c5d6a55220b6b6a895405c2b65e343cec3c6",
       "report_qa_sha256": "a10d8180faf5f716c054bf3af0b975e7188655f57953f9d3c9e571ba21d44d14",
       "run_manifest_sha256": null,
-      "verdict_packet_sha256": "725f6bfadc36c5e4b6f8a019d27f96d33bbd0988b745a932aaaaf5e2981bc519"
+      "verdict_packet_sha256": "6f2c2658e8f5a460b93ed6bc90d1ce008675b6b770347532460d63a1e56cd5ab"
     },
     "referenced_paths": {
-      "run_manifest": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-ba8a48ab-0e56-4650-92d6-eb204088eb96/run.manifest.json",
-      "verdict": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-ba8a48ab-0e56-4650-92d6-eb204088eb96/verdict.json"
+      "run_manifest": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-14ceb4c2-31b5-488e-b09f-7aac35bb855e/run.manifest.json",
+      "verdict": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-14ceb4c2-31b5-488e-b09f-7aac35bb855e/verdict.json"
     },
     "release_blockers": [
       "ATT&CK coverage includes blind spots that require expert awareness.",
@@ -1099,11 +1099,11 @@
     {
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
-      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
       "confidence": "HYPOTHESIS",
       "derived_from": null,
       "description": "hypothesis: pcap_triage observed a notable external conversation to 69.59.235.129:10224 (external destination on uncommon port 10224). Treat as network triage context for C2 or transfer hypotheses only; do not claim data loss without separate collection/staging plus tool or data-movement evidence.",
-      "event_id": "ac268ac8-3e1e-4513-9c9f-2932b539182d",
+      "event_id": "0ba8c9a2-d2b5-4168-8824-f1e3c7a08962",
       "event_type": "Finding",
       "finding_id": "f-A-pcap_triage-external-conversation",
       "host": "nitroba.pcap",
@@ -1112,69 +1112,69 @@
       "prior_observations": [
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.35301082094804037,
+          "confidence": 0.3529640395693711,
           "ts": "2026-06-10T05:08:35.589325Z"
         },
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.3530108204585647,
+          "confidence": 0.3529640390799603,
           "ts": "2026-06-10T05:08:35.578543Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.35145285872957455,
+          "confidence": 0.35140628381375616,
           "ts": "2026-06-09T19:35:21.384737Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.35145285821654193,
+          "confidence": 0.3514062833007916,
           "ts": "2026-06-09T19:35:21.373386Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213296907504,
+          "confidence": 0.3508748252137395,
           "ts": "2026-06-09T16:19:12.243265Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213291969514,
+          "confidence": 0.350874824720006,
           "ts": "2026-06-09T16:19:12.232323Z"
         }
       ],
       "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_artifact": {
         "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
-        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "arguments_sha256": "99ad0ffbb55bd7cc568b694444fe287982589752cf171088b9bf48f6d141df8c",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
         "matched": true,
-        "replay_tool_call_id": "3f9d5ded-51d5-4584-836c-e1139f40f145",
+        "replay_tool_call_id": "0049b873-8af4-4cb5-8067-73094dccb55d",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-002",
         "tool_name": "pcap_triage",
-        "wall_clock_ms": 2175
+        "wall_clock_ms": 2138
       },
       "replay_error": null,
       "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_matched": true,
-      "replay_record_sha256": "45f097d407945713a4ace2ad6a6c67d49de40eb03aa4e686538c483a0716713e",
+      "replay_record_sha256": "403f85db5815155b5a02fb93681cdb122257a49a4cf7f541bc3a55d315ba8233",
       "replay_tool_name": "pcap_triage",
       "tool_call_id": "tc-002",
-      "ts": "2026-06-11T16:50:14Z",
+      "ts": "2026-06-11T17:07:25Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
-      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
       "confidence": "HYPOTHESIS",
       "derived_from": [
         "tc-002"
       ],
       "description": "hypothesis: Timeline correlation: the anonymous/harassing-email sends from internal host 192.168.15.4 (first at 2008-07-22T06:01:26Z) fall within the same browsing session as that host's authenticated web activity (2008-07-22T04:29:53Z to 2008-07-22T06:03:44Z) \u2014 the harassing-email send times correlate in time with the suspect host's browsing activity. Cross-flow timing link only; do not name a person from network metadata alone.",
-      "event_id": "b057a0ba-11c5-44ad-b4e0-ab3a92acf2cd",
+      "event_id": "b8c68cd2-2cb3-4abe-b03f-7fb274eb26ec",
       "event_type": "Finding",
       "finding_id": "f-A-pcap-timeline-192.168.15.4",
       "host": "nitroba.pcap",
@@ -1183,69 +1183,69 @@
       "prior_observations": [
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.3530108206680741,
+          "confidence": 0.3529640391568535,
           "ts": "2026-06-10T05:08:35.589325Z"
         },
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.3530108201785984,
+          "confidence": 0.3529640386674427,
           "ts": "2026-06-10T05:08:35.578543Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.35145285845084384,
+          "confidence": 0.3514062834030591,
           "ts": "2026-06-09T19:35:21.384737Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.3514528579378113,
+          "confidence": 0.35140628289009457,
           "ts": "2026-06-09T19:35:21.373386Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.35092132941244125,
+          "confidence": 0.3508748248036636,
           "ts": "2026-06-09T16:19:12.243265Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.35092132891864225,
+          "confidence": 0.35087482430993,
           "ts": "2026-06-09T16:19:12.232323Z"
         }
       ],
       "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_artifact": {
         "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
-        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "arguments_sha256": "99ad0ffbb55bd7cc568b694444fe287982589752cf171088b9bf48f6d141df8c",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
         "matched": true,
-        "replay_tool_call_id": "cd217abe-9c75-4aac-96d2-529e21d0992a",
+        "replay_tool_call_id": "d8503e67-517b-406e-9870-4486c5008923",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-002",
         "tool_name": "pcap_triage",
-        "wall_clock_ms": 2161
+        "wall_clock_ms": 2143
       },
       "replay_error": null,
       "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_matched": true,
-      "replay_record_sha256": "85177b849703d5953e335acefe349343085f6ba2a3353cea8532603c972ee84c",
+      "replay_record_sha256": "90218bbd449661b820146f93019d04bee1fe108824b10e6e7c1f54c8b8a190ee",
       "replay_tool_name": "pcap_triage",
       "tool_call_id": "tc-002",
-      "ts": "2026-06-11T16:50:14Z",
+      "ts": "2026-06-11T17:07:25Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
-      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
       "confidence": "HYPOTHESIS",
       "derived_from": [
         "tc-002"
       ],
       "description": "hypothesis: Authenticated webmail session to `mail.google.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's identity. Account ownership still requires provider records.",
-      "event_id": "72e04261-eaf5-4d69-9d1d-9d837ac817f3",
+      "event_id": "6db657f8-9726-447e-9286-94605ba5776d",
       "event_type": "Finding",
       "finding_id": "f-B-pcap-webmail-mail.google.com",
       "host": "nitroba.pcap",
@@ -1254,69 +1254,69 @@
       "prior_observations": [
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.3530108202510074,
+          "confidence": 0.35296403883185057,
           "ts": "2026-06-10T05:08:35.589325Z"
         },
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.35301081976153176,
+          "confidence": 0.3529640383424398,
           "ts": "2026-06-10T05:08:35.578543Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.3514528580356178,
+          "confidence": 0.3514062830794906,
           "ts": "2026-06-09T19:35:21.384737Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.35145285752258526,
+          "confidence": 0.351406282566526,
           "ts": "2026-06-09T19:35:21.373386Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213289978433,
+          "confidence": 0.3508748244805844,
           "ts": "2026-06-09T16:19:12.243265Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213285040442,
+          "confidence": 0.3508748239868508,
           "ts": "2026-06-09T16:19:12.232323Z"
         }
       ],
       "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_artifact": {
         "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
-        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "arguments_sha256": "99ad0ffbb55bd7cc568b694444fe287982589752cf171088b9bf48f6d141df8c",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
         "matched": true,
-        "replay_tool_call_id": "9b65b1cc-2ad3-4909-91a0-0a73f9d90d3d",
+        "replay_tool_call_id": "1042e441-73fd-4a2b-964b-1f12d0d19578",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-002",
         "tool_name": "pcap_triage",
-        "wall_clock_ms": 2165
+        "wall_clock_ms": 2177
       },
       "replay_error": null,
       "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_matched": true,
-      "replay_record_sha256": "bf8a9a7039f97a0a2f1ae2c4c39350365987aa295a337701bbb8a1f3fbee82e7",
+      "replay_record_sha256": "a4090c2c0abe1dfc4b3f9fbc84db7ea42be74d0a1a7e7801eb8feb6ea5cbcd80",
       "replay_tool_name": "pcap_triage",
       "tool_call_id": "tc-002",
-      "ts": "2026-06-11T16:50:14Z",
+      "ts": "2026-06-11T17:07:25Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
-      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
       "confidence": "HYPOTHESIS",
       "derived_from": [
         "tc-002"
       ],
       "description": "hypothesis: Authenticated social-media login to facebook (`www.facebook.com`) from internal host 192.168.15.4 (HTTP session cookie present) \u2014 ties the activity on 192.168.15.4 to a named social-media account and corroborates the suspect's identity. Account ownership still requires provider records; do not name a person from network metadata alone.",
-      "event_id": "9a3f170e-ebf0-45d5-abd1-c32d5b3abbb2",
+      "event_id": "0a862459-bf49-40c6-9530-4119b08cd8fd",
       "event_type": "Finding",
       "finding_id": "f-B-pcap-social-facebook",
       "host": "nitroba.pcap",
@@ -1325,69 +1325,69 @@
       "prior_observations": [
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.35301081981709825,
+          "confidence": 0.352964038544568,
           "ts": "2026-06-10T05:08:35.589325Z"
         },
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.3530108193276226,
+          "confidence": 0.3529640380551572,
           "ts": "2026-06-10T05:08:35.578543Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.3514528576036237,
+          "confidence": 0.3514062827934759,
           "ts": "2026-06-09T19:35:21.384737Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.3514528570905911,
+          "confidence": 0.3514062822805113,
           "ts": "2026-06-09T19:35:21.373386Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213285665025,
+          "confidence": 0.35087482419500227,
           "ts": "2026-06-09T16:19:12.243265Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.35092132807270343,
+          "confidence": 0.35087482370126866,
           "ts": "2026-06-09T16:19:12.232323Z"
         }
       ],
       "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_artifact": {
         "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
-        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "arguments_sha256": "99ad0ffbb55bd7cc568b694444fe287982589752cf171088b9bf48f6d141df8c",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
         "matched": true,
-        "replay_tool_call_id": "fb706b6b-0d2d-4b8e-99da-047975bc3e9e",
+        "replay_tool_call_id": "8ba0e280-cd04-4d4b-a377-cfa96c05008a",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-002",
         "tool_name": "pcap_triage",
-        "wall_clock_ms": 2154
+        "wall_clock_ms": 2184
       },
       "replay_error": null,
       "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_matched": true,
-      "replay_record_sha256": "3829caf09f68ceac625a729e237b4ebff8d4171220a7ff7d323cecf1b0dcbce2",
+      "replay_record_sha256": "f1f610a8ce21bb2c176d00154fb93aa39ebfc9bfb499098e55333c408cc21a2b",
       "replay_tool_name": "pcap_triage",
       "tool_call_id": "tc-002",
-      "ts": "2026-06-11T16:50:14Z",
+      "ts": "2026-06-11T17:07:25Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
-      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
       "confidence": "HYPOTHESIS",
       "derived_from": [
         "tc-002"
       ],
       "description": "hypothesis: Internal host 192.168.15.4 submitted a request (HTTP POST) to anonymous/self-destructing email service `www.sendanonymousemail.net` (sendanonymousemail) over HTTP \u2014 consistent with sending an anonymous or harassing message, and identifies 192.168.15.4 as the originating source host. Corroborate the message body/recipient before naming a person; do not assert attribution from network metadata alone.",
-      "event_id": "ac9b6608-eef8-4199-947f-f38ca850cbe6",
+      "event_id": "e7491c18-e23c-41b7-aea7-3295752fa3ab",
       "event_type": "Finding",
       "finding_id": "f-B-pcap-anon-email-www.sendanonymousemail.net",
       "host": "nitroba.pcap",
@@ -1396,69 +1396,69 @@
       "prior_observations": [
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.3530108193940845,
+          "confidence": 0.35296403810794746,
           "ts": "2026-06-10T05:08:35.589325Z"
         },
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.3530108189046089,
+          "confidence": 0.3529640376185367,
           "ts": "2026-06-10T05:08:35.578543Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.3514528571824769,
+          "confidence": 0.35140628235878235,
           "ts": "2026-06-09T19:35:21.384737Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.3514528566694443,
+          "confidence": 0.35140628184581774,
           "ts": "2026-06-09T19:35:21.373386Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213281459926,
+          "confidence": 0.3508748237609661,
           "ts": "2026-06-09T16:19:12.243265Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213276521935,
+          "confidence": 0.35087482326723257,
           "ts": "2026-06-09T16:19:12.232323Z"
         }
       ],
       "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_artifact": {
         "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
-        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "arguments_sha256": "99ad0ffbb55bd7cc568b694444fe287982589752cf171088b9bf48f6d141df8c",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
         "matched": true,
-        "replay_tool_call_id": "0a427325-560d-47d9-9bf7-d393f2852de9",
+        "replay_tool_call_id": "878bfaa7-77a7-42f6-82ee-20924bb72b48",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-002",
         "tool_name": "pcap_triage",
-        "wall_clock_ms": 2171
+        "wall_clock_ms": 2158
       },
       "replay_error": null,
       "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_matched": true,
-      "replay_record_sha256": "daeade8801d29d9d0ba069fc8136fc4e32f7c6748ce3fb7f8dabc902efd5c3cc",
+      "replay_record_sha256": "8c8bbfa4944c4401f7888f6b914ab8ee2e2a357d2fc4bf41d0cc6f412fcc2c5b",
       "replay_tool_name": "pcap_triage",
       "tool_call_id": "tc-002",
-      "ts": "2026-06-11T16:50:14Z",
+      "ts": "2026-06-11T17:07:25Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
-      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
       "confidence": "HYPOTHESIS",
       "derived_from": [
         "tc-002"
       ],
       "description": "hypothesis: Authenticated webmail session to `b.mail.google.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's identity. Account ownership still requires provider records.",
-      "event_id": "91efd2b4-1bd9-4a56-8a7e-871715c7725c",
+      "event_id": "1e167917-c41c-43df-b145-d13ebcbc161b",
       "event_type": "Finding",
       "finding_id": "f-B-pcap-webmail-b.mail.google.com",
       "host": "nitroba.pcap",
@@ -1467,69 +1467,69 @@
       "prior_observations": [
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.35301081907875365,
+          "confidence": 0.35296403761104705,
           "ts": "2026-06-10T05:08:35.589325Z"
         },
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.35301081858927796,
+          "confidence": 0.3529640371216363,
           "ts": "2026-06-10T05:08:35.578543Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.35145285686853767,
+          "confidence": 0.35140628186407497,
           "ts": "2026-06-09T19:35:21.384737Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.35145285635550505,
+          "confidence": 0.3514062813511104,
           "ts": "2026-06-09T19:35:21.373386Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213278325281,
+          "confidence": 0.3508748232670069,
           "ts": "2026-06-09T16:19:12.243265Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.35092132733872905,
+          "confidence": 0.35087482277327336,
           "ts": "2026-06-09T16:19:12.232323Z"
         }
       ],
       "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_artifact": {
         "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
-        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "arguments_sha256": "99ad0ffbb55bd7cc568b694444fe287982589752cf171088b9bf48f6d141df8c",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
         "matched": true,
-        "replay_tool_call_id": "d1ca36e2-c873-4502-93d6-72ff8660b591",
+        "replay_tool_call_id": "85118a35-bcba-493c-a7a7-b5be83b217a9",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-002",
         "tool_name": "pcap_triage",
-        "wall_clock_ms": 2162
+        "wall_clock_ms": 2192
       },
       "replay_error": null,
       "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_matched": true,
-      "replay_record_sha256": "c8bc426651be00f9afc07dcab70357a200c556fe13bed6f826255270d3f4cea3",
+      "replay_record_sha256": "29d28ae7626c42f95f509a4f534f5b3bb3d3c382a2026e3ab9e63194d2561891",
       "replay_tool_name": "pcap_triage",
       "tool_call_id": "tc-002",
-      "ts": "2026-06-11T16:50:14Z",
+      "ts": "2026-06-11T17:07:25Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
-      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
       "confidence": "HYPOTHESIS",
       "derived_from": [
         "tc-002"
       ],
       "description": "hypothesis: Authenticated webmail session to `mail.live.com` from internal host 192.168.15.4 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.15.4 to a specific webmail account, corroborating the source host's identity. Account ownership still requires provider records.",
-      "event_id": "c62ea089-b1e6-4ef6-8fa4-5866e7609b0a",
+      "event_id": "aa31980b-d47e-4a2b-a187-4a1268d6735c",
       "event_type": "Finding",
       "finding_id": "f-B-pcap-webmail-mail.live.com",
       "host": "nitroba.pcap",
@@ -1538,69 +1538,69 @@
       "prior_observations": [
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.3530108188235744,
+          "confidence": 0.35296403718296016,
           "ts": "2026-06-10T05:08:35.589325Z"
         },
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.3530108183340987,
+          "confidence": 0.35296403669354937,
           "ts": "2026-06-10T05:08:35.578543Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.35145285661448455,
+          "confidence": 0.35140628143787733,
           "ts": "2026-06-09T19:35:21.384737Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.351452856101452,
+          "confidence": 0.3514062809249127,
           "ts": "2026-06-09T19:35:21.373386Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.35092132757885924,
+          "confidence": 0.35087482284145394,
           "ts": "2026-06-09T16:19:12.243265Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.35092132708506024,
+          "confidence": 0.3508748223477203,
           "ts": "2026-06-09T16:19:12.232323Z"
         }
       ],
       "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_artifact": {
         "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
-        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "arguments_sha256": "99ad0ffbb55bd7cc568b694444fe287982589752cf171088b9bf48f6d141df8c",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
         "matched": true,
-        "replay_tool_call_id": "df2e2cd6-682d-4707-8930-0c5057a4b385",
+        "replay_tool_call_id": "88040209-72bd-4651-b43d-9340da4367d4",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-002",
         "tool_name": "pcap_triage",
-        "wall_clock_ms": 2181
+        "wall_clock_ms": 2152
       },
       "replay_error": null,
       "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_matched": true,
-      "replay_record_sha256": "46b0dcb9cd2a3608d77f772446b608e8476c345e23a5c8d20cabec17e205e7f3",
+      "replay_record_sha256": "f8d1ce29399afa787e15cedcc8da554c20825cbe48176258c5a6aaee094b591e",
       "replay_tool_name": "pcap_triage",
       "tool_call_id": "tc-002",
-      "ts": "2026-06-11T16:50:14Z",
+      "ts": "2026-06-11T17:07:25Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
-      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
       "confidence": "HYPOTHESIS",
       "derived_from": [
         "tc-002"
       ],
       "description": "hypothesis: Authenticated webmail session to `chatenabled.mail.google.com` from internal host 192.168.1.64 (HTTP session cookie present) \u2014 attributes the web/email activity on 192.168.1.64 to a specific webmail account, corroborating the source host's identity. Account ownership still requires provider records.",
-      "event_id": "4c46c6fb-679c-46c2-bf6b-b12ac4133931",
+      "event_id": "f5823500-01ac-4f45-944c-79944aa3037d",
       "event_type": "Finding",
       "finding_id": "f-B-pcap-webmail-chatenabled.mail.google.com",
       "host": "nitroba.pcap",
@@ -1609,69 +1609,69 @@
       "prior_observations": [
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.3530108186090259,
+          "confidence": 0.3529640367557811,
           "ts": "2026-06-10T05:08:35.589325Z"
         },
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.35301081811955026,
+          "confidence": 0.3529640362663703,
           "ts": "2026-06-10T05:08:35.578543Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.3514528564008829,
+          "confidence": 0.35140628101258353,
           "ts": "2026-06-09T19:35:21.384737Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.3514528558878504,
+          "confidence": 0.351406280499619,
           "ts": "2026-06-09T19:35:21.373386Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213273655807,
+          "confidence": 0.35087482241680334,
           "ts": "2026-06-09T16:19:12.243265Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213268717817,
+          "confidence": 0.35087482192306974,
           "ts": "2026-06-09T16:19:12.232323Z"
         }
       ],
       "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_artifact": {
         "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
-        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "arguments_sha256": "99ad0ffbb55bd7cc568b694444fe287982589752cf171088b9bf48f6d141df8c",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
         "matched": true,
-        "replay_tool_call_id": "3305932c-0b27-44b6-b6fc-8a6b355441a9",
+        "replay_tool_call_id": "964eb4ba-3bb4-4771-8410-b06333277b08",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-002",
         "tool_name": "pcap_triage",
-        "wall_clock_ms": 2147
+        "wall_clock_ms": 2157
       },
       "replay_error": null,
       "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_matched": true,
-      "replay_record_sha256": "2ffc1e137ad980968d24448a51be1af22c66d2391a810fa82678ca91f352d349",
+      "replay_record_sha256": "ea968fbcab6db15df2e6df7fc6d6407cbc477764d344d4bf7d6eb82f8c39d165",
       "replay_tool_name": "pcap_triage",
       "tool_call_id": "tc-002",
-      "ts": "2026-06-11T16:50:14Z",
+      "ts": "2026-06-11T17:07:25Z",
       "verifier_action": "approved"
     },
     {
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
-      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
       "confidence": "HYPOTHESIS",
       "derived_from": [
         "tc-002"
       ],
       "description": "hypothesis: Internal host 192.168.15.4 contacted anonymous/self-destructing email service `www.willselfdestruct.com` (willselfdestruct) over HTTP \u2014 consistent with sending an anonymous or harassing message, and identifies 192.168.15.4 as the originating source host. Corroborate the message body/recipient before naming a person; do not assert attribution from network metadata alone.",
-      "event_id": "7f6d3af6-6eae-43d6-b8cc-63e6dfe872dd",
+      "event_id": "806de999-0e55-4a89-88f0-a3dc64cdf679",
       "event_type": "Finding",
       "finding_id": "f-B-pcap-anon-email-www.willselfdestruct.com",
       "host": "nitroba.pcap",
@@ -1680,45 +1680,45 @@
       "prior_observations": [
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.35301081839543075,
+          "confidence": 0.35296403637794255,
           "ts": "2026-06-10T05:08:35.589325Z"
         },
         {
           "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
-          "confidence": 0.35301081790595507,
+          "confidence": 0.35296403588853176,
           "ts": "2026-06-10T05:08:35.578543Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.35145285618823047,
+          "confidence": 0.35140628063641255,
           "ts": "2026-06-09T19:35:21.384737Z"
         },
         {
           "case_id": "5e5c3d5a-91e3-420d-8b48-51af0f6759ee",
-          "confidence": 0.3514528556751979,
+          "confidence": 0.35140628012344793,
           "ts": "2026-06-09T19:35:21.373386Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.35092132715324986,
+          "confidence": 0.3508748220412012,
           "ts": "2026-06-09T16:19:12.243265Z"
         },
         {
           "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
-          "confidence": 0.3509213266594508,
+          "confidence": 0.35087482154746763,
           "ts": "2026-06-09T16:19:12.232323Z"
         }
       ],
       "replay_actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_artifact": {
         "actual_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
-        "arguments_sha256": "9bfcd0383bb3d68ac6f65456edf14301e898bfbfe351d4cd06f7848875062660",
+        "arguments_sha256": "99ad0ffbb55bd7cc568b694444fe287982589752cf171088b9bf48f6d141df8c",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
         "matched": true,
-        "replay_tool_call_id": "9a373af6-6479-47b9-b619-4d01e315f88c",
+        "replay_tool_call_id": "56cdd641-5d78-4818-be14-842f11b006d5",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-002",
         "tool_name": "pcap_triage",
@@ -1727,10 +1727,10 @@
       "replay_error": null,
       "replay_expected_sha256": "644b816b9307bd399200257aedefb0c0d1e065598a0b5a33c7a0953d5506c9a2",
       "replay_matched": true,
-      "replay_record_sha256": "9db23d270f969a55bd87bdd172f038b8894fffe2dfa6251e1331c623c23a34d4",
+      "replay_record_sha256": "e98210dfc99cccfbf721faa934b0102d4acb57ba8589ec5f7ac457157bed9d39",
       "replay_tool_name": "pcap_triage",
       "tool_call_id": "tc-002",
-      "ts": "2026-06-11T16:50:14Z",
+      "ts": "2026-06-11T17:07:25Z",
       "verifier_action": "approved"
     }
   ],
@@ -2255,7 +2255,7 @@
       "ATT&CK coverage includes blind spots that require expert awareness."
     ]
   },
-  "run_id": "auto-1781196592",
+  "run_id": "auto-1781197622",
   "source_bibliography": [
     {
       "accessed_utc": "2026-05-04T00:00:00Z",
@@ -2366,7 +2366,7 @@
       "url": "https://github.com/mandiant/capa"
     }
   ],
-  "started_at": "2026-06-11T16:49:52Z",
+  "started_at": "2026-06-11T17:07:02Z",
   "timeline_summary": {
     "artifact_classes": [],
     "event_count": 0,
@@ -2383,7 +2383,7 @@
         "image_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap",
         "label": "evidence"
       },
-      "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+      "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
       "evidence_type": "network",
       "output_hash": "10ce07d83bcb162e2ea0de08f18f3177060d81c520319b01436a625b3a230bf5",
       "size_bytes": 49734189,
@@ -2393,7 +2393,7 @@
     {
       "analyzer": "tshark",
       "arguments": {
-        "case_id": "7f255a6c-dc69-4f7a-b793-b39745586dda",
+        "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
         "limit": 500000,
         "pcap_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/nitroba.pcap"
       },

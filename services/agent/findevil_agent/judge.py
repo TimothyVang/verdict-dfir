@@ -148,75 +148,84 @@ def judge_findings(
 
     out: list[MergedFinding] = []
     for items in grouped.values():
-        # ``>=`` so a budget of 0.0 always raises on the first iteration,
-        # even on fast systems where time.monotonic() drift is sub-microsecond.
-        if time.monotonic() - started >= budget_seconds:
-            raise JudgeBudgetExceeded(
-                f"judge exceeded {budget_seconds}s budget after {len(out)} merged findings"
+        a_items = [f for (f, p) in items if p == "A"]
+        b_items = [f for (f, p) in items if p == "B"]
+
+        # A single coarse group can legitimately hold several DISTINCT findings
+        # from the SAME pool: one tool call routinely surfaces many subjects —
+        # e.g. one pcap_triage yields an anonymous-email POST, an authenticated
+        # webmail session, and a social login, all T1071.001 on the same capture.
+        # Pair A[i] with B[i] so genuine cross-pool corroboration of the *same*
+        # claim still merges into one, while surplus same-pool findings emit
+        # individually. Taking only a_items[0]/b_items[0] (the old behavior)
+        # collapsed all of them into one and silently destroyed recall.
+        for i in range(max(len(a_items), len(b_items))):
+            # ``>=`` so a budget of 0.0 always raises on the first iteration,
+            # even on fast systems where time.monotonic() drift is sub-microsecond.
+            if time.monotonic() - started >= budget_seconds:
+                raise JudgeBudgetExceeded(
+                    f"judge exceeded {budget_seconds}s budget after {len(out)} merged findings"
+                )
+
+            a_finding = a_items[i] if i < len(a_items) else None
+            b_finding = b_items[i] if i < len(b_items) else None
+
+            score_a = CONFIDENCE_VALUE.get(a_finding.confidence, 0.0) * cred_a if a_finding else 0.0
+            score_b = CONFIDENCE_VALUE.get(b_finding.confidence, 0.0) * cred_b if b_finding else 0.0
+
+            # Corroboration bonus: this pair has findings from BOTH pools AND the
+            # artifact classes overlap with at least one different class on the
+            # other pool.
+            corroborated = False
+            if a_finding and b_finding:
+                cls = _classify_artifact(a_finding) or _classify_artifact(b_finding)
+                other_a = a_classes - {cls}
+                other_b = b_classes - {cls}
+                if other_a or other_b:
+                    corroborated = True
+                    # Boost both scores symmetrically.
+                    score_a *= 1.0 + CORROBORATION_BONUS
+                    score_b *= 1.0 + CORROBORATION_BONUS
+
+            denom = max(cred_a + cred_b, 1e-9)
+            merged = (score_a + score_b) / denom
+
+            # Pick the originating Finding to clone (richer description
+            # wins; tiebreak on highest input confidence).
+            chosen, chosen_pool = _pick_chosen(a_finding, b_finding)
+            if chosen is None:
+                continue  # impossible — pair has at least one item
+            new_label = _confidence_for_score(merged)
+            # A directly-observed CONFIRMED fact reported by a single pool must not
+            # be downgraded purely for lack of cross-pool corroboration. The merge
+            # divides a solo finding's score by BOTH pools' credibility
+            # (score_a / (cred_a + cred_b)), collapsing 1.0 → ~0.5 (INFERRED). But
+            # the verifier already re-executed and approved this finding before the
+            # judge ran — rejected/downgraded findings never reach here still
+            # labeled CONFIRMED — so the judge's job is to corroborate and *raise*,
+            # not to re-litigate a confirmed observation (e.g. an EID 1102
+            # log-clear). Corroboration across pools can still only push higher.
+            is_solo = not (a_finding and b_finding)
+            if is_solo and chosen.confidence == "CONFIRMED":
+                new_label = "CONFIRMED"
+            merged_finding = chosen.model_copy(
+                update={
+                    "confidence": new_label,
+                    "pool_origin": chosen_pool if not (a_finding and b_finding) else "merged",
+                }
             )
-
-        a_items = [(f, p) for (f, p) in items if p == "A"]
-        b_items = [(f, p) for (f, p) in items if p == "B"]
-
-        a_finding = a_items[0][0] if a_items else None
-        b_finding = b_items[0][0] if b_items else None
-
-        score_a = CONFIDENCE_VALUE.get(a_finding.confidence, 0.0) * cred_a if a_finding else 0.0
-        score_b = CONFIDENCE_VALUE.get(b_finding.confidence, 0.0) * cred_b if b_finding else 0.0
-
-        # Corroboration bonus: this group has findings from BOTH pools
-        # AND the artifact classes overlap with at least one different
-        # class on the other pool.
-        corroborated = False
-        if a_finding and b_finding:
-            cls = _classify_artifact(a_finding) or _classify_artifact(b_finding)
-            other_a = a_classes - {cls}
-            other_b = b_classes - {cls}
-            if other_a or other_b:
-                corroborated = True
-                # Boost both scores symmetrically.
-                score_a *= 1.0 + CORROBORATION_BONUS
-                score_b *= 1.0 + CORROBORATION_BONUS
-
-        denom = max(cred_a + cred_b, 1e-9)
-        merged = (score_a + score_b) / denom
-
-        # Pick the originating Finding to clone (richer description
-        # wins; tiebreak on highest input confidence).
-        chosen, chosen_pool = _pick_chosen(a_finding, b_finding)
-        if chosen is None:
-            continue  # impossible — group has at least one item
-        new_label = _confidence_for_score(merged)
-        # A directly-observed CONFIRMED fact reported by a single pool must not
-        # be downgraded purely for lack of cross-pool corroboration. The merge
-        # divides a solo finding's score by BOTH pools' credibility
-        # (score_a / (cred_a + cred_b)), collapsing 1.0 → ~0.5 (INFERRED). But
-        # the verifier already re-executed and approved this finding before the
-        # judge ran — rejected/downgraded findings never reach here still labeled
-        # CONFIRMED — so the judge's job is to corroborate and *raise*, not to
-        # re-litigate a confirmed observation (e.g. an EID 1102 log-clear).
-        # Corroboration across pools can still only push confidence higher.
-        is_solo = not (a_finding and b_finding)
-        if is_solo and chosen.confidence == "CONFIRMED":
-            new_label = "CONFIRMED"
-        merged_finding = chosen.model_copy(
-            update={
-                "confidence": new_label,
-                "pool_origin": chosen_pool if not (a_finding and b_finding) else "merged",
-            }
-        )
-        out.append(
-            MergedFinding(
-                finding=merged_finding,
-                merged_confidence=merged,
-                chosen_pool=chosen_pool if not (a_finding and b_finding) else "merged",
-                pool_a_score=score_a,
-                pool_b_score=score_b,
-                credibility_a=cred_a,
-                credibility_b=cred_b,
-                corroborated=corroborated,
+            out.append(
+                MergedFinding(
+                    finding=merged_finding,
+                    merged_confidence=merged,
+                    chosen_pool=chosen_pool if not (a_finding and b_finding) else "merged",
+                    pool_a_score=score_a,
+                    pool_b_score=score_b,
+                    credibility_a=cred_a,
+                    credibility_b=cred_b,
+                    corroborated=corroborated,
+                )
             )
-        )
 
     return out
 
@@ -239,32 +248,40 @@ def _prior_accuracy(actions: Iterable[VerifierAction]) -> float:
     return approved / len(actions_list)
 
 
+def _claim_id(finding_id: str) -> str:
+    """Pool-independent claim identity: the finding id without its pool tag.
+
+    Pool A and Pool B versions of the *same* claim are emitted as ``f-A-<base>``
+    / ``f-B-<base>`` (and may carry an artifact-hash suffix, which is identical
+    for both because it derives from the same artifact path). Stripping the
+    ``f-A-`` / ``f-B-`` prefix yields the shared base, so the two corroborate;
+    findings about *different* subjects keep different bases and stay apart.
+    """
+    for prefix in ("f-A-", "f-B-", "f-a-", "f-b-"):
+        if finding_id.startswith(prefix):
+            return finding_id[len(prefix) :]
+    return finding_id
+
+
 def _group_key(f: Finding) -> tuple[str, str, str, str]:
-    """Group findings that should merge.
+    """Group findings that make the *same claim* so the A+B judge can corroborate.
 
-    Only findings making the *same claim* should collapse. A single tool
-    call routinely yields MANY independent findings about different subjects
-    that share an artifact AND a MITRE technique — e.g. one ``pcap_triage``
-    call surfaces an anonymous-email POST, an authenticated webmail session,
-    and a social-media login, all ``T1071.001`` on the same capture. Keying
-    only on ``(tool_call_id, artifact_path, mitre_technique)`` collapses all
-    of those into one finding and silently destroys recall (the nitroba
-    case: three distinct facts merged to one). The ``description`` is the
-    available per-finding discriminator — each names its own subject (host),
-    so it is part of the key.
-
-    Cross-pool corroboration still works: Pool A and Pool B versions of the
-    *same* observation share the description and merge (see
-    ``test_both_confirmed_with_corroboration``). Divergent-wording
-    corroboration is not exercised by any real run (no committed sample has a
-    ``corroborated: true`` finding), so splitting on description loses no
-    real merge while fixing a recall-destroying collapse.
+    Keyed on ``(tool_call_id, artifact_path, mitre_technique, claim_id)`` where
+    ``claim_id`` is the finding id with its pool prefix stripped. The coarse
+    triple alone is too loose: a single tool call routinely yields MANY distinct
+    findings that share it — one ``pcap_triage`` surfaces an anonymous-email POST,
+    an authenticated webmail session, and a social login, all ``T1071.001`` on the
+    same capture. Merging by the triple alone collapsed all of them into one and
+    silently destroyed recall. The pool-stripped id keeps distinct subjects apart
+    while still letting a genuine ``f-A-x`` / ``f-B-x`` pair (the same claim seen
+    by both pools) land together and merge. ``description`` stays OUT of the key —
+    the two pools word the same claim differently.
     """
     return (
         f.tool_call_id or "",
         f.artifact_path or "",
         f.mitre_technique or "",
-        f.description or "",
+        _claim_id(f.finding_id or ""),
     )
 
 

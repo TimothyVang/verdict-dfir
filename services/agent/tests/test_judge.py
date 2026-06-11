@@ -88,14 +88,16 @@ class TestBothPoolsFindings:
         # the same artifact (both pools touch other artifact classes).
         a_findings = [
             _f(
-                "f-1",
+                "f-A-mft",
                 pool="A",
                 confidence="CONFIRMED",
                 artifact_path="C:\\$MFT",
                 description="mft entry",
             ),
+            # Shares the claim id `evtx` with the Pool B finding below → same claim,
+            # different pools → corroborates (Pool A/B word it differently).
             _f(
-                "f-2",
+                "f-A-evtx",
                 pool="A",
                 confidence="INFERRED",
                 artifact_path="Security.evtx",
@@ -104,14 +106,14 @@ class TestBothPoolsFindings:
         ]
         b_findings = [
             _f(
-                "f-3",
+                "f-B-evtx",
                 pool="B",
                 confidence="CONFIRMED",
                 artifact_path="Security.evtx",
                 description="evtx logon",
             ),
             _f(
-                "f-4",
+                "f-B-mem",
                 pool="B",
                 confidence="INFERRED",
                 artifact_path="memory.mem",
@@ -252,7 +254,7 @@ class TestPoolOriginPreservation:
             pool="A",
             findings=[
                 _f(
-                    "f-a",
+                    "f-A-x",
                     pool="A",
                     confidence="CONFIRMED",
                     artifact_path="x",
@@ -263,8 +265,9 @@ class TestPoolOriginPreservation:
         b = PoolStats(
             pool="B",
             findings=[
+                # Same claim id `x` as the Pool A finding → corroborates → merged.
                 _f(
-                    "f-b",
+                    "f-B-x",
                     pool="B",
                     confidence="INFERRED",
                     artifact_path="x",
