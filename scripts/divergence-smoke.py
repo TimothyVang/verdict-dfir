@@ -189,7 +189,7 @@ DIVERGENCES = [
     },
     {
         "id": "#4",
-        "label": "Rust MCP tool count is 13 (vol_psscan + vol_psxview added for DKOM)",
+        "label": "Rust MCP tool count is 20 (vol_psscan + vol_psxview added for DKOM)",
         "regex": re.compile(
             r"(?:1[12]\s+typed\s+Rust|"
             r"1[12]\s+DFIR\s+tools|"
@@ -199,7 +199,7 @@ DIVERGENCES = [
         "allowed_in_path": (),
         "remediation": (
             "vol_psscan and vol_psxview are shipped for DKOM "
-            "cross-validation against vol_pslist. Tool count is 13. "
+            "cross-validation against vol_pslist. Tool count is 20. "
             "See CLAUDE.md 'Spec/code divergences' §4."
         ),
     },
