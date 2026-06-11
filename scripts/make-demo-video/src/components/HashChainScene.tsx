@@ -3,6 +3,7 @@ import { interpolate, useCurrentFrame } from "remotion";
 import { C, MARGIN, MONO, SERIF } from "./shared/editorial";
 import { Scene } from "./shared/Scene";
 import { EvidenceTag, Kicker, KineticHeadline, PullQuote, RuleLine, Stamp } from "./shared/editorial-ui";
+import { ExhibitVideo } from "./shared/ExhibitVideo";
 
 // Beat 5 — "Admissible." The hash chain rendered as a provenance LEDGER of
 // record: each audit record is a ledger row (kind in Fraunces, prev→hash in
@@ -200,51 +201,18 @@ export function HashChainScene() {
         </div>
       </div>
 
-      {/* manifest_verify exhibit — bottom mono band spanning the lower gutter */}
-      <div
-        style={{
-          position: "absolute",
-          left: MARGIN,
-          bottom: 96,
-          width: 940,
-          opacity: interpolate(frame - 600, [0, 16], [0, 1], clampOpts),
-        }}
-      >
-        <div
-          style={{
-            fontFamily: MONO,
-            fontSize: 13,
-            letterSpacing: 3,
-            textTransform: "uppercase",
-            color: C.inkMuted,
-            marginBottom: 12,
-          }}
-        >
-          Exhibit E-1 — manifest_verify (offline)
-        </div>
-        <RuleLine frame={frame} delay={612} color={C.hairline} />
-        <div style={{ fontFamily: MONO, fontSize: 15, lineHeight: 1.95, paddingTop: 14 }}>
-          <div style={{ color: C.inkMuted }}>
-            $ <span style={{ color: C.ink }}>uv run python -m findevil_agent_mcp.server manifest_verify</span>
-          </div>
-          {[
-            { k: "chain", v: "OK" },
-            { k: "merkle_root", v: "d1e4bc7a906f2c38" },
-            { k: "sigstore", v: "VERIFIED (rekor.sigstore.dev/24922385)" },
-          ].map((line, i) => {
-            const op = interpolate(frame - (640 + i * 18), [0, 12], [0, 1], clampOpts);
-            return (
-              <div key={line.k} style={{ opacity: op, color: C.confirmed }}>
-                {line.k.padEnd(13, " ")}
-                {line.v}
-              </div>
-            );
-          })}
-          <div style={{ color: C.inkMuted, opacity: interpolate(frame - 700, [0, 12], [0, 1], clampOpts) }}>
-            records 6 · findings 2 · <span style={{ color: C.confirmed }}>CONFIRMED 1</span>
-          </div>
-        </div>
-      </div>
+      {/* Exhibit E-1 — REAL offline manifest_verify footage: pass → flip one
+          byte → fail naming the broken record. Recorded per CAPTURE.md Slot 3;
+          falls back to the AWAITING CAPTURE placeholder until the mp4 exists. */}
+      <ExhibitVideo
+        src="ui/manifest-tamper.mp4"
+        label="manifest_verify — offline · pass · tamper one byte · fail"
+        x={MARGIN}
+        y={668}
+        w={940}
+        h={320}
+        objectFit="contain"
+      />
     </Scene>
   );
 }

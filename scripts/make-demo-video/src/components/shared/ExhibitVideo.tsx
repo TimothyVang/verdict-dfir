@@ -33,6 +33,10 @@ export const CAPTURED: ReadonlySet<string> = new Set<string>([
   // but rough (1.6× speed, EVTX fixture). Replace with the polished take per
   // CAPTURE.md — same filename, no code change.
   "terminal-investigation.mp4",
+  // Real offline tamper demo (CAPTURE.md Slot 3): trace-finding passes on the
+  // committed run, one hex char is flipped in a /tmp copy, the verifier fails
+  // naming the exact broken record (seq 97 prev_hash break).
+  "manifest-tamper.mp4",
 ]);
 
 const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;

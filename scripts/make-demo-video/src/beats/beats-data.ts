@@ -12,33 +12,33 @@ export interface Beat {
 // Narration is the canonical voiceover source (read by make-demo-video-tts.py).
 // startS/endS are re-timed to each beat's measured audio + a short breath
 // (hybrid pacing — no dead air). Durations below are in sync with the generated
-// public/audio/beat_NN.mp3 files (measured 2026-06-07).
+// public/audio/beat_NN.mp3 files (measured 2026-06-11).
 export const BEATS: Beat[] = [
   {
     number: 1,
     title: "What VERDICT is",
     startS: 0,
-    endS: 27,
+    endS: 29,
     rubric: "Cold open",
     accentColor: "#9b59b6",
     narration:
-      "Every security team has the same nightmare: someone breaks into a computer, and now you have to figure out exactly what they did, fast. That work is called digital forensics, and by hand it can take days. VERDICT does it in minutes. It's an AI agent that takes the evidence from a compromised machine, investigates it for you, and signs its conclusions, so you don't just get answers, you get answers you can prove.",
+      "Every security team has the same nightmare: someone breaks into a computer, and now you have to prove exactly what they did, fast. By hand, that's days of forensic work. VERDICT ran a real NIST reference disk, end to end, in minutes: nine findings, eight of them confirmed, verdict, suspicious. And it signed every one. It's an AI agent that investigates the evidence for you, so you don't just get answers, you get answers you can prove.",
   },
   {
     number: 2,
     title: "It starts in Claude Code",
-    startS: 27,
-    endS: 49,
+    startS: 29,
+    endS: 60,
     rubric: "How to run it",
     accentColor: "#6f93b8",
     narration:
-      "And it's surprisingly simple to run. VERDICT lives inside Claude Code, the A.I. assistant in your terminal. You open Claude Code and type one line: investigate, followed by the evidence, a hard-drive image, or a snapshot of a computer's memory. That's the whole command. From there the agent takes over and does the rest while you watch.",
+      "And it's surprisingly simple to run. VERDICT lives inside Claude Code, the A.I. assistant in your terminal. You type one line: investigate, followed by the evidence, a hard-drive image, or a snapshot of a computer's memory. That's the whole command. And watch closely while it runs: midway through, its verifier replays a finding, the hashes don't match, and it rejects it. Throws it back, re-runs the tool, recovers it clean. It catches its own mistakes, on camera.",
   },
   {
     number: 3,
     title: "How the case progresses",
-    startS: 49,
-    endS: 80,
+    startS: 60,
+    endS: 92,
     rubric: "How it works",
     accentColor: "#7fae6e",
     narration:
@@ -47,28 +47,28 @@ export const BEATS: Beat[] = [
   {
     number: 4,
     title: "The toolbox",
-    startS: 80,
-    endS: 105,
+    startS: 92,
+    endS: 120,
     rubric: "The tools",
     accentColor: "#c79a4a",
     narration:
-      "The agent isn't guessing. It runs thirty-one real forensic tools, the same kind professionals use. And by design, not one of them can run arbitrary commands on your system, so it can't be tricked into going rogue. Each tool answers one plain question: What programs ran on this machine? What did the system quietly log? What left over the network? And, can we prove it?",
+      "The agent isn't guessing. It runs thirty-two real forensic tools, twenty written in Rust and twelve in Python, the same kind professionals use. And by design, not one of them can run arbitrary commands on your system, so it can't be tricked into going rogue. Each tool answers one plain question: What programs ran on this machine? What did the system quietly log? What left over the network? And, can we prove it?",
   },
   {
     number: 5,
     title: "Two investigators",
-    startS: 105,
-    endS: 132,
+    startS: 120,
+    endS: 146,
     rubric: "Competing hypotheses",
     accentColor: "#d6452f",
     narration:
-      "Those two teams are the clever part. One assumes the attacker broke in to stay and dig in. The other assumes they came to steal data and leave. Same evidence, opposite theories. A single analyst tends to lock onto their first guess. VERDICT forces both sides to argue on the record, shows you where they disagree, and only then decides. You see the reasoning, not just a conclusion handed down.",
+      "Why two teams? One assumes the attacker broke in to stay and dig in. The other assumes they came to steal data and leave. Same evidence, opposite theories. A single analyst tends to lock onto their first guess. VERDICT forces both sides to argue on the record, shows you where they disagree, and only then decides. You see the reasoning, not just a conclusion handed down.",
   },
   {
     number: 6,
     title: "Watch it live",
-    startS: 132,
-    endS: 158,
+    startS: 146,
+    endS: 172,
     rubric: "The dashboard",
     accentColor: "#9b59b6",
     narration:
@@ -77,42 +77,42 @@ export const BEATS: Beat[] = [
   {
     number: 7,
     title: "Proof you can take to court",
-    startS: 158,
-    endS: 184,
+    startS: 172,
+    endS: 203,
     rubric: "Chain of custody",
     accentColor: "#6f93b8",
     narration:
-      "Here's what really sets it apart. Every action is locked into a tamper-proof chain. Change one link, and the whole thing breaks. At the end, that chain is sealed with a cryptographic signature, logged publicly. So years later anyone, a colleague, an auditor, a court, can verify the entire investigation offline, without ever trusting us. It's evidence that proves its own honesty.",
+      "Here's what really sets it apart. Every action is locked into a tamper-evident chain, sealed with a cryptographic signature, strong enough to back a courtroom self-authentication claim. And you don't have to take that on trust. Watch: the verifier passes. Now we flip a single byte in the audit log and run it again. It fails, and names the exact record that broke. The verdict isn't a claim you have to trust. It's a sealed artifact you can check.",
   },
   {
     number: 8,
-    title: "Then it acts",
-    startS: 184,
-    endS: 206,
-    rubric: "Automation",
+    title: "Then your team takes over",
+    startS: 203,
+    endS: 219,
+    rubric: "Handoff",
     accentColor: "#7fae6e",
     narration:
-      "And the second the verdict is signed, VERDICT acts. This is the automation layer, built on a tool called n8n. Wire it to do whatever your team needs: fire a Slack alert, open a ticket automatically, push a dangerous indicator out to your other defenses. The investigation finishes, and the response kicks off on its own.",
+      "And the moment the verdict is signed, VERDICT hands it to the workflows your team already uses: a Slack alert, a ticket, an indicator pushed out to your defenses. The agent investigates. Your analysts decide what happens next.",
   },
   {
     number: 9,
     title: "From one host to the fleet",
-    startS: 206,
-    endS: 225,
+    startS: 219,
+    endS: 252,
     rubric: "Scale",
     accentColor: "#c79a4a",
     narration:
-      "One computer is just the demo. A real breach touches dozens of machines. VERDICT scales right up. It investigates twenty-two hosts from a single command, saves its place as it goes so a crash costs nothing, and spots patterns across machines that no single look could catch.",
+      "One computer is just the demo. A real breach touches dozens of machines. VERDICT investigated twenty-two hosts, eighty-four gigabytes of evidence, from a single command. Across that fleet it flagged six hosts that ran the same admin tool at the exact same second. That's not natural system behavior, that's an attacker's sweep, and it surfaced it as a hypothesis for the analyst to confirm. And against a published answer key, it found five out of five expected findings. One hundred percent recall.",
   },
   {
     number: 10,
     title: "Get the receipts",
-    startS: 225,
-    endS: 239,
+    startS: 252,
+    endS: 275,
     rubric: "Signed verdict",
     accentColor: "#9b59b6",
     narration:
-      "And at the end you get the one thing that matters: a signed verdict you can stand behind. VERDICT is open source, free, and ready today. Point it at your evidence, and get the truth, with the receipts.",
+      "And at the end you get the one artifact that matters: a signed verdict, and an honest one. It only ever says three things: suspicious, indeterminate, or no evil found in what was examined. Never a promise it can't keep. VERDICT is open source and ready today. Point it at your evidence: minutes instead of days, with a receipt for every finding.",
   },
 ];
 

@@ -261,7 +261,7 @@ of your Project.
 | 3 | README with setup instructions | [`README.md`](README.md) · [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 4 | Deployment / step-by-step instructions | [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 5 | Feature / functionality description | [`README.md`](README.md) | SATISFIED |
-| 6 | Demonstration video | [`scripts/make-demo-video/CAPTURE.md`](scripts/make-demo-video/CAPTURE.md) · [`docs/demo-script-a2.md`](docs/demo-script-a2.md) | NEEDS RE-RECORD (live capture staged; hosted URL pending — see §6) |
+| 6 | Demonstration video | [`scripts/make-demo-video/src/beats/beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) · [`scripts/make-demo-video/CAPTURE.md`](scripts/make-demo-video/CAPTURE.md) (shot recipes) | NEEDS RE-RECORD (live capture staged; hosted URL pending — see §6) |
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
 | 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED |

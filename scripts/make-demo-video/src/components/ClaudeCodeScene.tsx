@@ -76,7 +76,10 @@ export function ClaudeCodeScene() {
         </div>
       </div>
 
-      {/* Right — the genuine terminal capture, framed as an exhibit */}
+      {/* Right — the genuine terminal capture, framed as an exhibit. The raw
+          asciinema take runs fast; 0.3× stretches it to ~9s of motion so the
+          verifier reject → re-dispatch → recover sequence is followable, then
+          the clip holds on the recovery frame while the narration lands. */}
       <ExhibitVideo
         src="ui/terminal-investigation.mp4"
         label="claude · VERDICT DFIR agent"
@@ -85,6 +88,7 @@ export function ClaudeCodeScene() {
         w={TERM_W}
         h={TERM_H}
         objectFit="contain"
+        playbackRate={0.3}
       />
 
       {/* exhibit caption under the terminal panel */}

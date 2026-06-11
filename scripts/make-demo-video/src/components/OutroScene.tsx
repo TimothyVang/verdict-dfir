@@ -16,7 +16,7 @@ const CREDITS: Credit[] = [
   { label: "Source", value: "github.com/TimothyVang/sans-hackathon", mono: true },
   { label: "License", value: "Apache-2.0" },
   { label: "Continuous integration", value: "L0 · L1 · L2 · L3 — all green", tone: C.confirmed },
-  { label: "Tool surface", value: "19 Rust · 12 Python", mono: true },
+  { label: "Tool surface", value: "20 Rust · 12 Python", mono: true },
 ];
 
 export function OutroScene() {

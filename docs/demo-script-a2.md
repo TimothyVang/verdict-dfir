@@ -1,9 +1,14 @@
 # 5-Minute Demo Script (Amendment A2)
 
-> **Status:** draft. Recorded under Amendment A2 — Claude Code is the
+> **Status: SUPERSEDED.** The narration canon is now
+> `scripts/make-demo-video/src/beats/beats-data.ts` (the rendered Remotion
+> film) with shot recipes in `scripts/make-demo-video/CAPTURE.md`. This
+> document is kept for its capture recipes and pre-flight checklist only —
+> do not record from these beats.
+>
+> Original status: draft. Recorded under Amendment A2 — Claude Code is the
 > primary interface. The pre-A2 demo flow in `BUILD_PLAN_v2.md §9` was
-> built around the Next.js SPA which is deferred to bonus polish; this
-> script supersedes it.
+> built around the Next.js SPA which is deferred to bonus polish.
 
 This is the demo-video script for the Devpost submission. Hard cap
 5:00 (Devpost rejects longer). Each beat has the spoken narration,

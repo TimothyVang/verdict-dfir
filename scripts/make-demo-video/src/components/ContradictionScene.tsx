@@ -49,7 +49,7 @@ const POOL_B: Argument = {
   pool: "Pool B",
   bias: "Exfil-biased",
   tier: "HYPOTHESIS",
-  thesis: "svchost32 is a stock Windows component shipped by update KB5023696.",
+  thesis: "svchost32 looks like a stock Windows component installed by a routine update.",
   evidence: [
     "hayabusa_scan  no sigma hits on svchost32",
     "mft_timeline   created alongside OS files",
@@ -117,7 +117,7 @@ export function ContradictionScene() {
   const judgeD = 760;
 
   return (
-    <Scene page={5} caption="Competing hypotheses">
+    <Scene page={5} caption="Competing hypotheses · illustrative reconstruction">
       {/* Masthead — the debate framing */}
       <div style={{ position: "absolute", left: MARGIN, top: 150, width: 1100 }}>
         <Kicker frame={frame} delay={10} color={C.accent}>Analysis of Competing Hypotheses</Kicker>
