@@ -3390,6 +3390,27 @@ def _technique_profile(technique: Any) -> dict[str, Any]:
     return TECHNIQUE_PROFILE.get(base, _GENERIC_PROFILE)
 
 
+def _lead_action_from_description(description: str) -> str:
+    """Short headline action derived from a finding's own description.
+
+    A technique with no specific ``TECHNIQUE_PROFILE`` entry falls back to the
+    generic "suspicious activity", which buries an otherwise descriptive finding
+    (e.g. "cain.exe executed on this host: Windows Prefetch records ..."). Take
+    the first clause (up to the first colon or sentence end) and drop a trailing
+    "on this host" so it doesn't duplicate the host the headline appends
+    separately.
+    """
+    if not description:
+        return ""
+    # Split on the first colon or sentence-ending period (period + space), NOT a
+    # period inside a token like "cain.exe".
+    short = re.split(r":\s|\.\s", description, maxsplit=1)[0].strip()
+    short = re.sub(r"\s+on this host$", "", short, flags=re.IGNORECASE)
+    if len(short) > 90:
+        short = short[:87].rstrip() + "…"
+    return short
+
+
 # Named-technique knowledge overlay: behavioral signatures keyed on a finding's
 # MITRE technique + description text (the same details the finding already cites).
 # First match wins, so specific named-exploit entries precede the general
@@ -4071,6 +4092,18 @@ def build_executive_attack_story(
         }.get(lead_conf, "Finding")
         action = profile.get("action", "suspicious activity")
         category = profile.get("category", "")
+        # A technique with no specific profile falls back to the generic
+        # "suspicious activity", which buries an otherwise descriptive finding.
+        # Prefer a short form of the lead finding's own description so the BLUF
+        # names what actually happened ("cain.exe executed") rather than a
+        # placeholder.
+        if action.strip().lower() == "suspicious activity":
+            derived = _lead_action_from_description(
+                str((lead or {}).get("description") or "")
+            )
+            if derived:
+                action = derived
+                category = ""  # the derived phrase already carries the specifics
         # Only append the category when it adds information — the generic profile
         # uses the same phrase for action and category, which otherwise renders a
         # repetitive "Confirmed: suspicious activity — suspicious activity." BLUF.
