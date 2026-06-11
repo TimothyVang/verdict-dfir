@@ -567,7 +567,7 @@ RAW_DISK_EXTS = (
     if _PLAYBOOK_AVAILABLE
     else (".e01", ".dd", ".aff", ".aff4", ".001")
 )
-EXTRACTED_DISK_CLASSES = {"mft", "prefetch", "registry", "usnjrnl"}
+EXTRACTED_DISK_CLASSES = {"mft", "prefetch", "registry", "usnjrnl", "browser_history"}
 YARA_TARGET_EXTS = (
     ".bat",
     ".cmd",

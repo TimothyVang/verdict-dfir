@@ -98,7 +98,9 @@ def main() -> None:
     if "try_fetch_prebuilt" not in text:
         fail("expected a try_fetch_prebuilt helper")
     if "releases/latest" not in text:
-        fail("prebuilt fetch does not auto-detect the latest release (the default fast path)")
+        fail(
+            "prebuilt fetch does not auto-detect the latest release (the default fast path)"
+        )
     if "FINDEVIL_MCP_FROM_SOURCE" not in text:
         fail("no source-build opt-out (FINDEVIL_MCP_FROM_SOURCE) for CI/judges")
     if "FINDEVIL_MCP_PREBUILT" not in text:
