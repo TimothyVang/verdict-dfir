@@ -4071,7 +4071,14 @@ def build_executive_attack_story(
         }.get(lead_conf, "Finding")
         action = profile.get("action", "suspicious activity")
         category = profile.get("category", "")
-        tail = f" — {category}" if category else ""
+        # Only append the category when it adds information — the generic profile
+        # uses the same phrase for action and category, which otherwise renders a
+        # repetitive "Confirmed: suspicious activity — suspicious activity." BLUF.
+        tail = (
+            f" — {category}"
+            if category and category.strip().lower() != action.strip().lower()
+            else ""
+        )
         headline = f"{tier_word}: {action}{where}{who}{tail}."
         # Lead sentence = what happened (with time/host/account). The interpretation
         # (evil + honest caveat) lives only in `assessment` below, so the BLUF does
