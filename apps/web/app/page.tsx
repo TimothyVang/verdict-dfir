@@ -19,7 +19,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DashboardNav } from "@/components/DashboardNav";
-import { AutomationPanel } from "@/components/investigation/AutomationPanel";
 import { EvidenceBanner } from "@/components/investigation/EvidenceBanner";
 import { GroundingPanel } from "@/components/investigation/GroundingPanel";
 import { InvestigationStreamPanel } from "@/components/investigation/InvestigationStreamPanel";
@@ -27,7 +26,6 @@ import { LiveTimeline } from "@/components/investigation/LiveTimeline";
 import { ReportPanel } from "@/components/investigation/ReportPanel";
 import { StageRail } from "@/components/investigation/StageRail";
 import { VerdictSummary } from "@/components/investigation/VerdictSummary";
-import { N8nAccessCard } from "@/components/investigation/N8nAccessCard";
 import { deriveEvidenceMeta } from "@/lib/evidence-meta";
 import { deriveStageStates } from "@/lib/stage-state";
 import { BrandMark, Kicker, MONO, RuleLine, SerifHeadline, VERDICT } from "@/lib/verdict-ui";
@@ -421,7 +419,7 @@ export default function DashboardPage() {
         {/* Pipeline progression — the "is the machine alive?" glance */}
         <StageRail stages={stages} />
 
-        {/* Mission control: stream + timeline (left), automation + report (right) */}
+        {/* Mission control: stream + timeline (left), report (right) */}
         <style>{`
           .verdict-mission-grid {
             display: grid;
@@ -443,8 +441,6 @@ export default function DashboardPage() {
             />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
-            <AutomationPanel caseDir={connectedCase} manifestDone={manifestDone} />
-            <N8nAccessCard />
             <ReportPanel
               caseDir={connectedCase}
               manifestDone={manifestDone}

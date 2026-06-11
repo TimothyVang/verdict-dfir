@@ -32,7 +32,6 @@ const ALLOWED_FILES = new Set([
   "manifest_verify.json",
   "timeline.json",
   "timeline.csv",
-  "automation.json",
   "grounding.json", // post-verdict grounding sidecar (operator aid; not evidence)
 ]);
 

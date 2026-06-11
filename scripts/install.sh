@@ -453,9 +453,9 @@ fi
 # It does NOT deploy a finding-to-action workflow out of the box (that path is
 # superseded by host-side grounding-aware routing in scripts/ground_actions.py),
 # so unless an operator deploys a workflow (e.g. scripts/setup-grounding-workflow.py)
-# scripts/n8n_post.py records the automation as skipped and the dashboard
-# AutomationPanel shows it idle. The verdict stands either way — automation is
-# never in the audit chain.
+# scripts/n8n_post.py records the automation as skipped in the out-of-band
+# automation.json sidecar. The verdict stands either way — automation is
+# never in the audit chain and is not surfaced in the dashboard.
 # Set FINDEVIL_SKIP_N8N=1 to skip; N8N_AUTO_DOCKER=1 to start a container when
 # none is running. See docs/runbooks/n8n-automation-integration.md.
 

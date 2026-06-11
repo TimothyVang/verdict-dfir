@@ -114,8 +114,8 @@ def ensure_reachable() -> bool:
                     "-v",
                     "n8n_data:/home/node/.n8n",
                     # n8n 2.x mandates an owner login (no no-auth mode); a long JWT
-                    # session means the investigator logs in once and stays in. The
-                    # dashboard surfaces these creds (see /api/n8n + N8nAccessCard).
+                    # session means the investigator logs in once and stays in.
+                    # Creds are saved to gitignored tmp/n8n-credentials.txt.
                     "-e",
                     "N8N_USER_MANAGEMENT_JWT_DURATION_HOURS=8760",
                     "docker.n8n.io/n8nio/n8n",
