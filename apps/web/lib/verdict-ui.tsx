@@ -437,17 +437,11 @@ export function BrandMark({
     >
       <svg width={size} height={size} viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-label="VERDICT logo">
         <circle cx="40" cy="40" r="38" fill="#161318" stroke="#9b59b6" strokeWidth="2" />
-        <rect x="14" y="18" width="38" height="17" rx="4" fill="#9b59b6" />
-        <rect x="22" y="18" width="38" height="6" rx="3" fill="#b98fce" opacity="0.4" />
-        <rect x="31" y="29" width="5" height="30" rx="2.5" fill="#2b2620" transform="rotate(-30 33 44)" />
-        <ellipse cx="20" cy="58" rx="8" ry="5" fill="none" stroke="#8c8576" strokeWidth="2.5" />
-        <ellipse cx="36" cy="58" rx="8" ry="5" fill="none" stroke="#8c8576" strokeWidth="2.5" />
-        <circle cx="56" cy="58" r="8" fill="#7fae6e" opacity="0.9" />
         <polyline
-          points="52,58 55,61 61,54"
+          points="23,40 35,54 60,24"
           fill="none"
-          stroke="#0e0c10"
-          strokeWidth="2"
+          stroke="#ece6da"
+          strokeWidth="8"
           strokeLinecap="round"
           strokeLinejoin="round"
         />

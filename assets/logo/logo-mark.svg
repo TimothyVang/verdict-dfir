@@ -1,16 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80" role="img" aria-label="VERDICT">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#b98fce"/>
-      <stop offset="100%" stop-color="#9b59b6"/>
-    </linearGradient>
-  </defs>
+  <!-- check-as-V: the check of "verified" + the V of VERDICT -->
   <circle cx="40" cy="40" r="38" fill="#161318" stroke="#9b59b6" stroke-width="2"/>
-  <rect x="14" y="18" width="38" height="17" rx="4" fill="url(#g)"/>
-  <rect x="22" y="18" width="38" height="6" rx="3" fill="#b98fce" opacity="0.4"/>
-  <rect x="31" y="29" width="5" height="30" rx="2.5" fill="#2b2620" transform="rotate(-30 33 44)"/>
-  <ellipse cx="20" cy="58" rx="8" ry="5" fill="none" stroke="#8c8576" stroke-width="2.5"/>
-  <ellipse cx="36" cy="58" rx="8" ry="5" fill="none" stroke="#8c8576" stroke-width="2.5"/>
-  <circle cx="56" cy="58" r="8" fill="#7fae6e" opacity="0.9"/>
-  <polyline points="52,58 55,61 61,54" fill="none" stroke="#0e0c10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="23,40 35,54 60,24" fill="none" stroke="#ece6da" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
