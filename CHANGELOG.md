@@ -11,6 +11,25 @@ once the first `v0.x` is cut on the `v-submit` tag.
 
 ## [Unreleased]
 
+### Changed — release polish: brand mark, dashboard focus, showcase media
+
+- **New brand mark: check-as-V.** Replaced the three-object circle (gavel +
+  scale-rings + check, unreadable at small sizes) with a single bold checkmark
+  that doubles as the V of VERDICT. Applied everywhere the mark renders:
+  `BrandMark` (dashboard), `favicon.svg`, both `logo.svg` lockups,
+  `logo-mark.svg`, and a regenerated 1200×400 `assets/logo/logo.png`.
+- **Dashboard: removed the n8n UI** (`AutomationPanel`, `N8nAccessCard`,
+  `/api/n8n`, and `automation.json` from the report-route allowlist) so the
+  product surface is unambiguous: stream + timeline left, signed report right.
+  The post-verdict n8n scripts still run host-side, off the default path,
+  writing the out-of-band `automation.json` sidecar — never in the audit chain.
+- **Showcase media** (`docs/showcase/`): browser-framed screenshots
+  (verdict hero, tool-cited findings, signed report) plus an animated
+  `dashboard-live.gif` of the live stream — all captured from a real
+  SUSPICIOUS run (NIST SCHARDT.dd, 8 confirmed findings) on the current UI.
+  README hero + gallery rewired to these; stale `assets/screenshots/demo.gif`
+  and `dashboard.png` removed.
+
 ### Added — production readiness: easy install, docs, cross-platform distribution
 
 - **Canonical `INSTALL.md`** — one linear path (clone → `scripts/setup` → verify
