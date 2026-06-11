@@ -29,7 +29,6 @@ EXPECTED_COMPONENTS = [
     "OutroScene.tsx",
     "shared/ChipBadge.tsx",
     "shared/AuditLine.tsx",
-    "shared/Watermark.tsx",
 ]
 
 

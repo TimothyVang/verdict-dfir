@@ -4597,6 +4597,7 @@ def _disk_summary_template() -> dict[str, Any]:
             "usnjrnl": 0,
             "prefetch": 0,
             "registry": 0,
+            "browser_history": 0,
             "evtx": 0,
             "yara_target": 0,
         },
