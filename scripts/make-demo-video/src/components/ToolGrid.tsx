@@ -20,12 +20,12 @@ interface ToolGroup {
   tools: string[];
 }
 
-// The 31-tool surface, verbatim: 19 Rust DFIR tools + 12 Python crypto/ACH
+// The 32-tool surface, verbatim: 20 Rust DFIR tools + 12 Python crypto/ACH
 // tools, regrouped by the question each answers.
 const GROUPS: ToolGroup[] = [
   {
     question: "What ran on this machine?",
-    count: 11,
+    count: 12,
     tools: [
       "case_open",
       "disk_mount",
@@ -34,6 +34,7 @@ const GROUPS: ToolGroup[] = [
       "mft_timeline",
       "usnjrnl_query",
       "registry_query",
+      "browser_history",
       "vol_pslist",
       "vol_psscan",
       "vol_psxview",
@@ -145,7 +146,7 @@ export function ToolGrid() {
           Exhibit D · The Instrument Tray
         </Kicker>
         <div style={{ marginTop: 18 }}>
-          <KineticHeadline text="Thirty-one" frame={frame} delay={sd(6)} size={92} />
+          <KineticHeadline text="Thirty-two" frame={frame} delay={sd(6)} size={92} />
           <KineticHeadline text="tools." frame={frame} delay={sd(11)} size={92} />
           <KineticHeadline text="Zero shells." frame={frame} delay={sd(16)} size={92} italic color={C.alert} />
         </div>
@@ -192,7 +193,7 @@ export function ToolGrid() {
           }}
         >
           <span>Exhibit D-1 — Tool Surface</span>
-          <span style={{ color: C.inkFaint }}>19 rust · 12 python · 31 typed</span>
+          <span style={{ color: C.inkFaint }}>20 rust · 12 python · 32 typed</span>
         </div>
         <RuleLine frame={frame} delay={sd(20)} color={C.hairline} />
 

@@ -5,7 +5,7 @@ import { Scene } from "./shared/Scene";
 import { Kicker, KineticHeadline, PullQuote, RuleLine } from "./shared/editorial-ui";
 import { spread } from "./shared/pacing";
 
-// Beat 8 — "Then it acts." VERDICT's post-verdict automation, shown as the REAL
+// Beat 8 — "Your team takes over." VERDICT's post-verdict automation, shown as the REAL
 // n8n canvas (captured from the running instance: the live
 // `findevil-finding-to-action` workflow) framed in a browser window, with an
 // animated status strip whose rows tick to ✓ across the beat. The automation is
@@ -39,16 +39,17 @@ export function AutomationUI() {
           Exhibit H · Handoff
         </Kicker>
         <div style={{ marginTop: 16 }}>
-          <KineticHeadline text="Then it" frame={frame} delay={sd(6)} size={100} />
-          <KineticHeadline text="acts." frame={frame} delay={sd(12)} size={100} italic />
+          <KineticHeadline text="Your team" frame={frame} delay={sd(6)} size={100} />
+          <KineticHeadline text="takes over." frame={frame} delay={sd(12)} size={100} italic />
         </div>
         <div style={{ marginTop: 28, marginBottom: 32 }}>
           <RuleLine frame={frame} delay={sd(20)} width={150} color={C.accent} thickness={2} />
         </div>
 
         <PullQuote frame={frame} delay={sd(28)} size={38} color={C.ink} style={{ maxWidth: 460 }}>
-          The verdict is signed — now <span style={{ color: C.accent }}>route&nbsp;it.</span>{" "}
-          Slack, tickets, your other&nbsp;defenses.
+          The verdict is signed — your workflows{" "}
+          <span style={{ color: C.accent }}>route&nbsp;it.</span> Slack, tickets, your
+          other&nbsp;defenses. Your analysts decide.
         </PullQuote>
 
         <div
