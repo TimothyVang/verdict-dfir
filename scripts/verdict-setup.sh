@@ -60,9 +60,25 @@ VMX="${FIND_EVIL_SIFT_VMX:-${HOME}/vmware/Find-Evil-SIFT/Find-Evil-SIFT.vmx}"
 GKEY="${FIND_EVIL_SSH_KEY:-${HOME}/.ssh/sift_key}"
 GUSER="${FIND_EVIL_GUEST_USER:-sansforensics}"
 
-_resolve_ip() {
-  vmrun getGuestIPAddress "${VMX}" 2>/dev/null \
-    | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1
+_lease_ip() {  # Fallback when VMware Tools isn't running in the guest (so vmrun
+               # getGuestIPAddress is blank): read the VMware NAT DHCP lease file,
+               # preferring a lease whose client-hostname looks like the SIFT VM.
+               # A wrong guess is harmless — _toolchain_ok validates before use.
+  local leases="${FIND_EVIL_VMWARE_LEASES:-/etc/vmware/vmnet8/dhcpd/dhcpd.leases}"
+  [[ -r "${leases}" ]] || return 0
+  awk '
+    /^lease /         { ip=$2 }
+    /client-hostname/ { if (tolower($0) ~ /sift/) sift=ip; last=ip }
+    END               { if (sift!="") print sift; else if (last!="") print last }
+  ' "${leases}" 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1
+}
+_resolve_ip() {  # VMware Tools first (authoritative); DHCP lease as the fallback
+                 # when Tools isn't running, so /verdict stays turnkey either way.
+  local ip
+  ip="$(vmrun getGuestIPAddress "${VMX}" 2>/dev/null \
+        | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1)"
+  [[ -n "${ip}" ]] || ip="$(_lease_ip)"
+  printf '%s' "${ip}"
 }
 _toolchain_ok() {  # SSH reachable AND ewfmount present in the guest
   timeout 12 ssh -i "${GKEY}" -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
