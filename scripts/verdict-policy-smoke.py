@@ -1203,6 +1203,12 @@ def main() -> int:
         and fake_py.call_sequence.index("pool_handoff")
         < fake_py.call_sequence.index("judge_findings")
     )
+    # reason() now also emits supervisor->pool dispatch handoffs (which carry no
+    # replay digest), so the verifier->judge handoff is no longer index 0 — find
+    # it by role rather than position.
+    verifier_handoffs = [
+        h for h in fake_py.pool_handoffs if h.get("from_role") == "verifier"
+    ]
     corr_cases = [
         ("verify_finding called before judge", fake_py.verify_calls, 1),
         (
@@ -1213,8 +1219,8 @@ def main() -> int:
         (
             "verifier handoff cites replay digest",
             bool(
-                fake_py.pool_handoffs
-                and fake_py.pool_handoffs[0]["payload"].get("replay_record_sha256")
+                verifier_handoffs
+                and verifier_handoffs[0]["payload"].get("replay_record_sha256")
             ),
             True,
         ),
