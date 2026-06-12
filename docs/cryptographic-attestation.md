@@ -53,7 +53,20 @@ Each link's role:
 | 1 | SHA-256 of the evidence | The image we read is the image we received | `sha2 = 0.10` (Rust) |
 | 2 | Audit hash chain | No record was deleted, reordered, or back-dated after the fact | `services/agent/findevil_agent/crypto/audit_log.py` |
 | 3 | rs_merkle tree | The set of records named in the manifest is the set the agent actually wrote | `rs_merkle = 1.4.0` (Rust) |
-| 4 | sigstore signature | The manifest was produced by a key whose Fulcio cert is logged in Rekor — non-repudiable provenance via a public transparency log | `sigstore = 3.x` (Python) |
+| 4 | manifest signature | See signer tiers below — every run is signed; the tier determines what the signature proves | `cryptography` (ed25519) / `sigstore = 3.x` |
+
+**Signer tiers** (choose with `--signer` / `FINDEVIL_SIGNER`; the manifest
+records the tier that *actually* sealed the run in `signature.kind`):
+
+| Tier | Default? | What it proves | Verified offline? |
+|---|---|---|---|
+| `ed25519` | **yes** | A real Ed25519 signature over the manifest body, signed with a local keypair (`~/.findevil/signing.key`, auto-generated; override `FINDEVIL_SIGNING_KEY`). Proves **integrity + local key continuity** — the manifest body has not changed since sealing | **yes** — `manifest_verify` rebuilds the canonical body and checks it against the embedded public key: `signature_verified=true` is a genuine cryptographic pass |
+| `sigstore` | opt-in | Everything ed25519 proves, **plus identity**: the sealing key's Fulcio cert is logged in Rekor — non-repudiable provenance via a public transparency log. The customer-release tier | bundle recorded; full verification needs the expected signer identity (deployment policy) |
+| `stub` | explicit opt-in | Nothing cryptographic — a deterministic dev/offline placeholder | never (`signature_verified` honestly says so) |
+
+A failed signer degrades honestly (`sigstore → ed25519 → stub`) with the
+reason recorded in `signature.fallback_reason` — a run never crashes, and
+never silently overstates its tier.
 
 **No single primitive is load-bearing alone.** A SHA-256 by itself
 proves byte equality but not freshness; a Merkle root proves set
@@ -154,10 +167,13 @@ is what the verifier consumes.
 If all checks pass, `overall=true`. Any one fails → `overall=false`
 with a precise diagnostic naming the field and the expected vs actual
 value. Tampering with the audit log, or with the manifest's account of
-it, is loud. The honest limit: a **stub**-signed run proves chain and
-Merkle integrity but not who sealed the manifest body — only a real
-sigstore signature adds non-repudiable provenance, which is why
-customer release requires `signer=sigstore`.
+it, is loud. The honest limits per tier: an **ed25519**-signed run (the
+default) verifies cryptographically offline — `signature_verified=true`
+proves the manifest body is exactly what the local key sealed — but a
+local key carries no third-party identity; a **stub**-signed run proves
+chain and Merkle integrity but nothing about who sealed it. Only a real
+sigstore signature adds non-repudiable identity via the transparency
+log, which is why customer release requires `signer=sigstore`.
 
 ---
 

@@ -35,6 +35,8 @@
 | `OVA_PATH` | repo-root `*.ova` | `sift-vm-bootstrap.sh` | Override SIFT OVA location |
 | `FINDEVIL_SETUP_SIFT` | unset | `install.sh` | Non-interactive: build the SIFT VM without prompting |
 | `FINDEVIL_SKIP_SIFT` | unset | `install.sh` | Skip SIFT VM setup |
+| `FINDEVIL_SIGNER` | `ed25519` | `make_signer` (manifest sealing) | Signer tier: `ed25519` (real local signature, verifies offline), `sigstore` (identity + transparency log; customer tier), `stub` (dev placeholder) |
+| `FINDEVIL_SIGNING_KEY` | `~/.findevil/signing.key` | `LocalEd25519Signer` | Path to the local Ed25519 private key (auto-generated on first use, `0600`) |
 
 ## External DFIR tool binary overrides (Rust server resolves env-var first, then PATH)
 

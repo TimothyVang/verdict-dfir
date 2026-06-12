@@ -123,7 +123,7 @@ Use when: replaying an audit chain to confirm integrity. Walk every `prev_hash` 
 ### manifest_finalize
 Args: `{case_id, run_id, started_at, audit_log_path, output_path, signer, extra?}`
 Returns: `{leaf_count, merkle_root_hex, signature_payload_sha256}` — the on-disk manifest also has `signature.cert_fingerprint`, `leaves[]`, `finalized_at`
-Use when: closing a case. Builds the rs_merkle tree over every audit-log leaf, signs with sigstore (or `signer="stub"` in dev), writes `run.manifest.json`. Terminal crypto-custody step under Amendment A5 (the OpenTimestamps + Bitcoin anchor that previously followed was removed — see `docs/cryptographic-attestation.md` for the FRE 902(14) trade-off).
+Use when: closing a case. Builds the rs_merkle tree over every audit-log leaf, signs the canonical body — `signer="ed25519"` (default: real local signature, verifies offline), `"sigstore"` (identity + transparency log; customer-release tier), or `"stub"` (explicit dev placeholder) — and writes `run.manifest.json`. Terminal crypto-custody step under Amendment A5 (the OpenTimestamps + Bitcoin anchor that previously followed was removed — see `docs/cryptographic-attestation.md` for the FRE 902(14) trade-off).
 
 ### manifest_verify
 Args: `{manifest_path, audit_log_path?}`
