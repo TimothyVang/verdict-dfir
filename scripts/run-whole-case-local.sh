@@ -73,6 +73,8 @@ PY
 done
 
 echo "$(ts) WHOLE-CASE RUN COMPLETE"
+# Make this dir correlate-ready: fleet.json in the shape fleet_correlate reads.
+python3 "$REPO/scripts/fleet_local.py" "$OUT" || true
 echo "=== TABLE ==="
 python3 - "$RESULTS" <<'PY'
 import json, sys
