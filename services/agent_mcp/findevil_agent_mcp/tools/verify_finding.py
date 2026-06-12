@@ -61,6 +61,15 @@ class VerifyFindingInput(BaseModel):
         default=False,
         description="Bypass replay cache when a caller supplies pooled verifier execution.",
     )
+    downgrade_on_drift: bool = Field(
+        default=False,
+        description=(
+            "Terminal drift policy. False (first pass): sha256 drift on a "
+            "CONFIRMED finding is rejected so the orchestrator re-dispatches "
+            "once with a fresh replay. True (the re-dispatch attempt): "
+            "persistent drift takes the terminal downgrade."
+        ),
+    )
 
 
 class VerifyFindingOutput(BaseModel):
@@ -105,6 +114,7 @@ async def _handle(inp: BaseModel) -> VerifyFindingOutput:
             mcp=client,
             tool_call_index=inp.tool_call_index,
             force_fresh=inp.force_fresh_replay,
+            downgrade_on_drift=inp.downgrade_on_drift,
         )
     finally:
         client.close()

@@ -64,6 +64,7 @@ def reverify_finding(
     tool_call_index: dict[str, dict[str, Any]],
     replay_pool: ReplayPool | None = None,
     force_fresh: bool = False,
+    downgrade_on_drift: bool = False,
 ) -> tuple[VerifierAction, CallReplay | None]:
     """Re-run the single tool call cited by ``finding`` and decide
     approve / reject / downgrade.
@@ -72,6 +73,12 @@ def reverify_finding(
     ``{"tool_name", "arguments", "output_sha256"}`` triple recorded
     in the audit log. The supervisor builds this index before
     invoking the verifier.
+
+    ``downgrade_on_drift`` selects the terminal drift policy: the first
+    pass over a CONFIRMED finding leaves it False, so sha256 drift on the
+    strongest tier is REJECTED and re-dispatched once with a fresh replay;
+    the re-dispatch attempt passes True, so persistent drift takes the
+    terminal downgrade instead of looping. Lower tiers always downgrade.
     """
     if not finding.tool_call_id:
         reason = "missing tool_call_id (Spec #2 invariant)"
@@ -138,9 +145,25 @@ def reverify_finding(
             ),
             replay,
         )
-    # Drift: re-run produced different output. Downgrade rather
-    # than reject — the underlying evidence path is still real, but
-    # confidence drops a tier.
+    # Drift: re-run produced different output. On a CONFIRMED finding the
+    # first pass REJECTS (drift_class material_drift is re-dispatchable, so
+    # the orchestrator re-runs the tool once with a fresh replay); the
+    # re-dispatch attempt — and every lower tier — takes the terminal
+    # downgrade: the evidence path is still real, but confidence drops.
+    if finding.confidence == "CONFIRMED" and not downgrade_on_drift:
+        return (
+            VerifierAction(
+                case_id=finding.case_id,
+                action="rejected",
+                finding_id=finding.finding_id,
+                reason=(
+                    f"tool re-run output_sha256 drift on a CONFIRMED finding "
+                    f"(expected={expected[:12]}…, got={(artifact.actual_sha256 or '')[:12]}…) "
+                    "— fresh replay required"
+                ),
+            ),
+            replay,
+        )
     return (
         VerifierAction(
             case_id=finding.case_id,
@@ -162,6 +185,7 @@ def verify_findings(
     tool_call_index: dict[str, dict[str, Any]],
     replay_pool: ReplayPool | None = None,
     force_fresh: bool = False,
+    downgrade_on_drift: bool = False,
 ) -> list[tuple[Finding, VerifierAction, CallReplay | None]]:
     """Verify a batch of findings. Returns aligned (finding, action, replay) tuples.
 
@@ -177,6 +201,7 @@ def verify_findings(
             tool_call_index=tool_call_index,
             replay_pool=replay_pool,
             force_fresh=force_fresh,
+            downgrade_on_drift=downgrade_on_drift,
         )
         out.append((finding, action, replay))
     return out

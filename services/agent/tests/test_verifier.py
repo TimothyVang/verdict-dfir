@@ -88,20 +88,50 @@ class TestSuccessPath:
 
 
 class TestDriftPath:
-    def test_mismatched_sha_downgrades(self) -> None:
-        f = _make_finding()
+    def test_confirmed_drift_rejects_for_redispatch(self) -> None:
+        # A CONFIRMED finding whose replay hash drifts is REJECTED (and
+        # re-dispatched once with a fresh replay by the orchestrator) —
+        # drift on the strongest tier must be re-checked, not silently
+        # accepted at lower confidence.
+        f = _make_finding(confidence="CONFIRMED")
         mcp = MockMcpClient()
         mcp.register("evtx_query", {"row_count": 99})
         # Index says expected SHA is 'a'*64 but the mock returns
         # something else.
         index = _make_index(output_sha256="a" * 64)
         action, replay = reverify_finding(f, mcp=mcp, tool_call_index=index)
-        assert action.action == "downgraded"
+        assert action.action == "rejected"
         assert "drift" in action.reason
         assert replay is not None
         assert replay.matched is False
         assert replay.expected_sha256 == "a" * 64
         assert replay.artifact.drift_class == "material_drift"
+
+    def test_confirmed_drift_with_downgrade_on_drift_downgrades(self) -> None:
+        # The re-dispatch attempt passes downgrade_on_drift=True: persistent
+        # drift then takes the terminal downgrade (the pre-existing ladder).
+        f = _make_finding(confidence="CONFIRMED")
+        mcp = MockMcpClient()
+        mcp.register("evtx_query", {"row_count": 99})
+        index = _make_index(output_sha256="a" * 64)
+        action, replay = reverify_finding(
+            f, mcp=mcp, tool_call_index=index, downgrade_on_drift=True
+        )
+        assert action.action == "downgraded"
+        assert "drift" in action.reason
+        assert replay is not None
+        assert replay.artifact.drift_class == "material_drift"
+
+    def test_inferred_drift_downgrades_immediately(self) -> None:
+        # Lower tiers keep the original behavior: drift -> downgrade, no
+        # re-dispatch round-trip.
+        f = _make_finding(confidence="INFERRED")
+        mcp = MockMcpClient()
+        mcp.register("evtx_query", {"row_count": 99})
+        index = _make_index(output_sha256="a" * 64)
+        action, replay = reverify_finding(f, mcp=mcp, tool_call_index=index)
+        assert action.action == "downgraded"
+        assert "drift" in action.reason
 
 
 class TestRpcErrorPath:

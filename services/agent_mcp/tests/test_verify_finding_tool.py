@@ -83,7 +83,9 @@ class TestVerifyFinding:
         assert result.replay_artifact.drift_class == "exact_match"
         assert result.replay_artifact.expected_sha256 == result.replay_expected_sha256
 
-    async def test_replay_drift_downgrades(self, monkeypatch: Any) -> None:
+    async def test_replay_drift_on_confirmed_rejects_first_pass(self, monkeypatch: Any) -> None:
+        # sha256 drift on a CONFIRMED finding is rejected on the first pass so
+        # the orchestrator re-dispatches once with a fresh replay.
         client = MockMcpClient()
         client.register("evtx_query", lambda args: "DIFFERENT_OUTPUT")
         monkeypatch.setattr(vf, "_make_mcp_client", lambda _cmd: client)
@@ -99,6 +101,33 @@ class TestVerifyFinding:
                     }
                 },
                 findevil_mcp_command=["dummy"],
+            )
+        )
+        assert isinstance(result, VerifyFindingOutput)
+        assert result.action == "rejected"
+        assert result.replay_matched is False
+        assert result.replay_artifact is not None
+        assert result.replay_artifact.drift_class == "material_drift"
+
+    async def test_replay_drift_downgrades_on_redispatch(self, monkeypatch: Any) -> None:
+        # The re-dispatch attempt passes downgrade_on_drift=True: persistent
+        # drift takes the terminal downgrade.
+        client = MockMcpClient()
+        client.register("evtx_query", lambda args: "DIFFERENT_OUTPUT")
+        monkeypatch.setattr(vf, "_make_mcp_client", lambda _cmd: client)
+
+        result = await SPEC.handler(
+            VerifyFindingInput(
+                finding=_finding_dict(),
+                tool_call_index={
+                    "tc-1": {
+                        "tool_name": "evtx_query",
+                        "arguments": {},
+                        "output_sha256": "0" * 64,
+                    }
+                },
+                findevil_mcp_command=["dummy"],
+                downgrade_on_drift=True,
             )
         )
         assert isinstance(result, VerifyFindingOutput)

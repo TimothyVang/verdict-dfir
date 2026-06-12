@@ -8639,6 +8639,9 @@ class Investigation:
                     "tool_call_index": tool_call_index,
                     "findevil_mcp_command": rust_replay_command(),
                     "force_fresh_replay": True,
+                    # Re-dispatch is the second chance: persistent sha256 drift
+                    # takes the terminal downgrade instead of looping.
+                    "downgrade_on_drift": True,
                 },
                 timeout=1800.0,
             )
