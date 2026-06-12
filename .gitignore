@@ -172,3 +172,14 @@ coverage/
 # Piper TTS model + intermediate wavs (demo video) — regenerated, not committed
 scripts/make-demo-video/.tts-cache/
 .elevenlabs_key
+
+# Judge-pack PDFs (organizer material — never publish) + local demo-video
+# working copy (ships only as a release asset / YouTube) + social-post and
+# YouTube-Studio screenshots from the launch session. None of these may ever
+# reach the public repo.
+/Juding Criteria/
+/docs/find-evil-demo.mp4
+/reddit-*.png
+/old-reddit-*.png
+/x-*.png
+/yt-*.png
