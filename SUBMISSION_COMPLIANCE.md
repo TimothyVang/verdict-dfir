@@ -207,7 +207,14 @@ of your Project.
 >   `goldens/nist-hacking-case/expected-findings.json`)
 >
 > Key findings — **SRL-2018 DC** (the showcase report, a different dataset):
-> - **Process-enumeration divergence** (`vol_pslist`=0 vs `vol_psscan`=124) reported as a **HYPOTHESIS**, not confirmed DKOM — on the SRL-2018 DC image it is an acquisition smear / kernel-global read failure (`KeNumberProcessors`=0, core OS singletons recovered only by `psscan`, duplicate `System` EPROCESS); the agent refuses to assert T1014 without ≥2 artifact classes. Corroborable leads: `subject_srv.exe` (T1543.003) + service-spawned `cmd.exe` (T1059.003).
+> - **Process-enumeration divergence** (`vol_pslist`=0 vs `vol_psscan`=124) stands as a
+>   **HYPOTHESIS** (acquisition smear / kernel-global read failure: `KeNumberProcessors`=0, core
+>   OS singletons recovered only by `psscan`, duplicate `System` EPROCESS), not confirmed DKOM.
+>   Stated plainly: the original run over-claimed this as confirmed T1014 and post-run expert
+>   review reconciled it (commit `cd075c9`) — the documented caught-hallucination case study in
+>   [`docs/accuracy-report.md`](docs/accuracy-report.md) §3, and the origin of the engine's
+>   smear-disambiguation rule + `vol_psxview`. Corroborable leads: `subject_srv.exe` (T1543.003)
+>   + service-spawned `cmd.exe` (T1059.003).
 > - Fleet accuracy summary: §9.1 of the report (22-host SRL-2018 rollup)
 
 ---
@@ -227,9 +234,11 @@ of your Project.
 > produces the same `audit.jsonl` in its case run directory.
 >
 > **Multi-agent message logs:** the `acp_handoff` records in each `audit.jsonl` are the
-> agent-to-agent messages (Pool A ↔ Pool B / supervisor handoffs), timestamped and hash-chained
-> with the tool executions — the inter-agent log required of multi-agent submissions is in the
-> same verifiable chain, not a side file.
+> agent-to-agent messages, timestamped and hash-chained with the tool executions — the
+> inter-agent log required of multi-agent submissions is in the same verifiable chain, not a
+> side file. In the committed headless runs each handoff is **verifier → judge** (the payload's
+> `from_role`/`to_role` says so explicitly); supervisor ↔ pool exchanges occur via Claude Code's
+> native Task forking in interactive mode.
 >
 > **Real-time self-correction in the logs:**
 > [`docs/sample-run/natural-self-correction/`](docs/sample-run/natural-self-correction/) shows

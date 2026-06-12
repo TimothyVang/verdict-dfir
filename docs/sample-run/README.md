@@ -28,11 +28,13 @@ sealing an honest partial verdict:
 
 - `audit.jsonl` — the hash-chained, append-only execution log (every `tool_call_start` /
   `tool_call_output` / `finding_approved` / verifier action; each line carries `prev_hash` + `line_hash`
-  and a UTC ISO-8601 `ts`). The `acp_handoff` records are the **agent-to-agent message log** for the
-  multi-agent topology — each one is a Pool A ↔ Pool B / supervisor handoff packet, so the
-  inter-agent communication required of multi-agent submissions is in the same chain as the tool
-  executions. `course_correction`, `heartbeat_failure`, and `heartbeat_terminated` records capture
-  real-time failure handling (see `natural-self-correction/`).
+  and a UTC ISO-8601 `ts`). The `acp_handoff` records are the **agent-to-agent message log**: each is
+  a timestamped ACP packet between two agent roles. In these committed runs every handoff is
+  **verifier → judge** (`from_role`/`to_role` in the payload — the verifier's per-finding approval
+  crossing to the credibility-weighted judge); supervisor ↔ pool handoffs happen via Claude Code's
+  native Task forking in interactive mode and are not serialized in these headless chains.
+  `course_correction`, `heartbeat_failure`, and `heartbeat_terminated` records capture real-time
+  failure handling (see `natural-self-correction/`).
 - `run.manifest.json` — Merkle root over the audit leaves + signature bundle.
 - `manifest_verify.json` — the offline-verification result recorded at run time.
 - `verdict.json` — the final verdict and every Finding (each citing a `tool_call_id`).

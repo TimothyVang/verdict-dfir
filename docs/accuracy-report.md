@@ -96,10 +96,11 @@ floor. Both are staged and scheduled.
 **Calibration demonstrated in committed runs (real, not hypothetical):**
 
 - **SRL-2018 22-host fleet** ([`reports/2026-04-26-srl2018-dc-investigation.pdf`](reports/2026-04-26-srl2018-dc-investigation.pdf)):
-  a stark `vol_pslist` = 0 vs `vol_psscan` = 124 process divergence — the textbook DKOM/T1014
-  signature — was held at **HYPOTHESIS** (acquisition smear), *not* asserted as a confirmed rootkit,
-  because a second artifact class wasn't available to corroborate it. This is the system refusing a
-  plausible-but-uncorroborated finding.
+  the stark `vol_pslist` = 0 vs `vol_psscan` = 124 divergence — the textbook DKOM/T1014 signature —
+  now stands in the report as **HYPOTHESIS** (acquisition smear). Full honesty about how it got
+  there: the original run over-claimed it as confirmed DKOM, and post-run expert review reconciled
+  it (commit `cd075c9`) — the caught-hallucination case study below, and the reason the engine now
+  carries the smear-disambiguation rule and `vol_psxview`.
 - **Single-class downgrades** — across the correlator's 11 tests
   (`services/agent/tests/test_correlator.py`), an Amcache-only, MFT-only, or EVTX-only execution
   claim is downgraded `CONFIRMED → INFERRED → HYPOTHESIS`; a run-wide *different* artifact class does
@@ -107,30 +108,40 @@ floor. Both are staged and scheduled.
 
 ### Hallucinations caught during testing (specific, not aspirational)
 
-LLM agents confidently assert findings the evidence doesn't support; these are the concrete
-instances the architecture caught, each reproducible from a committed artifact:
+LLM agents confidently assert findings the evidence doesn't support. These are the concrete
+instances we caught — each reproducible from a committed artifact, and each honest about *which
+layer* did the catching (in-run machinery vs. post-run expert review; both are part of the
+product's 99%-automation / 1%-expert-signoff doctrine, `agent-config/EXPERT.md`):
 
-1. **The SRL-2018 "rootkit" that wasn't** — the most dangerous near-miss in our testing. A
-   `vol_pslist` = 0 vs `vol_psscan` = 124 divergence is the textbook DKOM/T1014 signature, and an
-   eager analyst (human or model) would have called it. The corroboration gate refused: with
-   `KeNumberProcessors` = 0, OS singletons recovered only by `psscan`, and a duplicate `System`
-   EPROCESS, the evidence fits an acquisition smear, and no second artifact class was available.
-   The claim shipped as **HYPOTHESIS (acquisition smear)**, not a confirmed rootkit
-   ([`reports/2026-04-26-srl2018-dc-investigation.pdf`](reports/2026-04-26-srl2018-dc-investigation.pdf)).
-2. **Cross-pool contradictions surfaced before merge** — the committed `nitroba` chain contains
-   **14 `contradiction_resolved` records** (`docs/sample-run/nitroba/audit.jsonl`): Pool A and
-   Pool B disagreements that `detect_contradictions` forced into the open and the analyst resolved
-   *before* the judge merged findings — each one a would-be unflagged inconsistency killed in-run.
-3. **A corrupted verification caught and retried** — in
+1. **A corrupted verification caught and retried, in-run** — in
    [`docs/sample-run/fault-injection-redispatch/`](sample-run/fault-injection-redispatch/) the
    verifier rejected a deliberately-corrupted replay (`unknown tool: __fault_injected__…`),
    re-dispatched once, and approved on clean evidence — the declared-fault demonstration that the
    catch-and-retry path works on demand.
-4. **Honest scope under failure** — in
+2. **Honest scope under natural failure, in-run** — in
    [`docs/sample-run/natural-self-correction/`](sample-run/natural-self-correction/) six genuine
    tool failures (truncated `RegBack` hives) ended in a HEARTBEAT-escalated **partial verdict with
    the skipped work named in `analysis_limitations`** — the run records what it did *not* examine
    instead of letting absence of evidence read as absence of evil.
+3. **Cross-pool contradictions surfaced before merge, in-run** — the committed `nitroba` chain
+   contains **14 `contradiction_resolved` records** (`docs/sample-run/nitroba/audit.jsonl`):
+   Pool A vs Pool B disagreements that `detect_contradictions` forced into the open before the
+   judge merged. Honest caveat: those committed records carry `contradiction_id: "unknown"` —
+   an engine key bug (reading `id` where the tool emits `contradiction_id`) found by our own
+   pre-submission audit and since fixed (`4dc81f3`), so newer runs name each contradiction; the
+   committed nitroba records prove detection fired, not which pair each record settled.
+4. **The SRL-2018 "rootkit" that wasn't — caught by expert review, not in-run.** The original
+   fleet investigation **over-claimed**: it headlined the `vol_pslist` = 0 vs `vol_psscan` = 124
+   divergence as confirmed DKOM/T1014. Post-run expert review detonated the claim — with
+   `KeNumberProcessors` = 0, OS singletons recovered *only* by `psscan`, and a duplicate `System`
+   EPROCESS, the evidence is an acquisition smear / kernel-global read failure, which a rootkit
+   cannot produce. The report was reconciled to **HYPOTHESIS (acquisition smear)** (commit
+   `cd075c9`, ~6 weeks after the run — the git history shows the correction, on purpose), and the
+   miss was converted into engine code: the smear-disambiguation rule and the `vol_psxview`
+   cross-view tool now in the typed surface, so the same over-claim cannot survive a current run
+   ([`reports/2026-04-26-srl2018-dc-investigation.pdf`](reports/2026-04-26-srl2018-dc-investigation.pdf)).
+   This is precisely the failure mode this report exists to document: a confident wrong answer,
+   caught, corrected in the open, and engineered against.
 
 ---
 

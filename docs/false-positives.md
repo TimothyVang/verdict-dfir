@@ -99,7 +99,17 @@ The DKOM hypothesis is the *fifth* possibility. Before claiming DKOM in your rep
 * Run `vol windows.info` — if symbols load and DTB is reasonable, the kernel is intact.
 * Run `vol_psxview` — now in the typed MCP surface — to cross-reference process-listing methods. DKOM shows as inconsistency between `pslist` and `psscan` columns; corruption shows as inconsistency across broader views.
 
-The `2026-04-26-srl2018-dc-investigation.md` report uses this exact escalation, and it is the cautionary example for *not* jumping: `vol_psscan` recovered 124 processes while `vol_pslist` returned 0, which looks like DKOM at first glance. But the corroborating signals point the other way — `KeNumberProcessors`=0, core OS singletons (e.g. `System`) recovered *only* by `psscan`, and a duplicate `System` EPROCESS — and a rootkit cannot produce those. On that image the divergence is an **acquisition smear / kernel-global read failure**, not T1014. The report therefore records the divergence as a **HYPOTHESIS**, not confirmed DKOM: a T1014 claim needs ≥2 artifact classes, and process-list divergence alone — once an acquisition fault is on the table — does not clear that bar.
+The `2026-04-26-srl2018-dc-investigation.md` report is the cautionary example because we *did*
+jump, and the correction is in the open: the original run headlined `vol_psscan` = 124 vs
+`vol_pslist` = 0 as **confirmed DKOM** — it looks exactly like T1014 at first glance. Post-run
+expert review caught the over-claim: `KeNumberProcessors`=0, core OS singletons (e.g. `System`)
+recovered *only* by `psscan`, and a duplicate `System` EPROCESS — and a rootkit cannot produce
+those. On that image the divergence is an **acquisition smear / kernel-global read failure**, not
+T1014, so the report was reconciled to **HYPOTHESIS** (commit `cd075c9`; the full story is in
+[`accuracy-report.md`](accuracy-report.md) §3). The escalation checklist above and `vol_psxview`
+in the typed surface exist *because of* that miss: a T1014 claim needs ≥2 artifact classes, and
+process-list divergence alone — once an acquisition fault is on the table — does not clear that
+bar.
 
 ### Hayabusa flags legitimate admin activity
 
