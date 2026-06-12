@@ -105,6 +105,33 @@ floor. Both are staged and scheduled.
   claim is downgraded `CONFIRMED → INFERRED → HYPOTHESIS`; a run-wide *different* artifact class does
   **not** rescue it (corroboration must be the finding's own evidence).
 
+### Hallucinations caught during testing (specific, not aspirational)
+
+LLM agents confidently assert findings the evidence doesn't support; these are the concrete
+instances the architecture caught, each reproducible from a committed artifact:
+
+1. **The SRL-2018 "rootkit" that wasn't** — the most dangerous near-miss in our testing. A
+   `vol_pslist` = 0 vs `vol_psscan` = 124 divergence is the textbook DKOM/T1014 signature, and an
+   eager analyst (human or model) would have called it. The corroboration gate refused: with
+   `KeNumberProcessors` = 0, OS singletons recovered only by `psscan`, and a duplicate `System`
+   EPROCESS, the evidence fits an acquisition smear, and no second artifact class was available.
+   The claim shipped as **HYPOTHESIS (acquisition smear)**, not a confirmed rootkit
+   ([`reports/2026-04-26-srl2018-dc-investigation.pdf`](reports/2026-04-26-srl2018-dc-investigation.pdf)).
+2. **Cross-pool contradictions surfaced before merge** — the committed `nitroba` chain contains
+   **14 `contradiction_resolved` records** (`docs/sample-run/nitroba/audit.jsonl`): Pool A and
+   Pool B disagreements that `detect_contradictions` forced into the open and the analyst resolved
+   *before* the judge merged findings — each one a would-be unflagged inconsistency killed in-run.
+3. **A corrupted verification caught and retried** — in
+   [`docs/sample-run/fault-injection-redispatch/`](sample-run/fault-injection-redispatch/) the
+   verifier rejected a deliberately-corrupted replay (`unknown tool: __fault_injected__…`),
+   re-dispatched once, and approved on clean evidence — the declared-fault demonstration that the
+   catch-and-retry path works on demand.
+4. **Honest scope under failure** — in
+   [`docs/sample-run/natural-self-correction/`](sample-run/natural-self-correction/) six genuine
+   tool failures (truncated `RegBack` hives) ended in a HEARTBEAT-escalated **partial verdict with
+   the skipped work named in `analysis_limitations`** — the run records what it did *not* examine
+   instead of letting absence of evidence read as absence of evil.
+
 ---
 
 ## 4. Confidence distribution & citation coverage (committed runs)
@@ -141,7 +168,37 @@ verification — see [`cryptographic-attestation.md`](cryptographic-attestation.
 
 ---
 
-## 6. Honest limits
+## 6. Evidence integrity — the original data cannot be modified
+
+Accuracy claims mean nothing if the agent could have altered what it measured. Evidence
+protection here is **architectural, not prompt-based** — there is no instruction saying "don't
+modify the evidence"; there is no code path that *can*:
+
+- **No write verbs exist.** The entire product surface is 32 typed, read-only MCP tools — no
+  `execute_shell`, no file-write tool, no delete, no mount-rw. A model that "ignores the
+  restriction" has nothing to ignore: the destructive call it might hallucinate does not exist in
+  the tool schema, so it fails at the JSON-RPC validation boundary before touching anything
+  (`services/mcp/src/server.rs`; every tool carries `readOnlyHint` annotations).
+- **Originals are opened read-only and fingerprinted.** `case_open` SHA-256s the image before
+  anything else; `.e01` originals are opened via libewf read-only. All downstream parsing operates
+  on extracted working copies under the case directory — never in place on the evidence path.
+- **Every verification re-touches the hash.** Verifier replays re-run the cited tool and compare
+  output SHA-256s; a drifted hash rejects the finding (`verify_finding`, with the
+  sha256-drift-rejection path exercised by the `verifier_hash_mismatch_once` fault mode).
+- **The boundaries were tested for bypass, adversarially.**
+  [`services/mcp/tests/bypass_paths.rs`](../services/mcp/tests/bypass_paths.rs) feeds the tool
+  surface a shell-injection payload as a *filename* (`evil; touch HACKED && $(rm -rf ~) | nc …`),
+  `../../..` traversal paths, and flag-looking paths (`--output=… -rf`): the payload byte-string is
+  hashed as a literal file, traversals resolve to typed `NotFound` errors, nothing shells out, and
+  the canary file never appears. `vel_collect` arg-key validation blocks flag injection into the
+  one subprocess that takes named args, and a malformed-input panic found by this testing (UTF-8
+  truncation) was fixed and pinned with a regression test (`405117a`). The documented threat model
+  sits at the top of `bypass_paths.rs`.
+- **Tampering after the fact is detectable by anyone.** The audit chain + Merkle root + signature
+  verify offline (§5); flip one bit in any committed run and `scripts/trace-finding` exits non-zero
+  naming the broken record.
+
+## 7. Honest limits
 
 - **Disk classes need the SIFT VM.** A local-mode disk run without SIFT degrades to custody-only and
   returns a scoped verdict (e.g. NIST 1/14) — honest, but below the recall bar. Full disk recall
@@ -159,7 +216,7 @@ verification — see [`cryptographic-attestation.md`](cryptographic-attestation.
 
 ---
 
-## 7. Reproduce it
+## 8. Reproduce it
 
 ```bash
 scripts/fetch-fixtures.sh                       # stage the scoreable fixtures
