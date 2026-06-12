@@ -1440,6 +1440,8 @@ _RECURSIVE_TRIAGE_KEYS = frozenset(
         r"Software\Microsoft\Search Assistant\ACMru",
         r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU",
         r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\LastVisitedMRU",
+        r"Software\Microsoft\Windows\Shell\BagMRU",
+        r"Software\Microsoft\Windows\ShellNoRoam\BagMRU",
     }
 )
 
@@ -1603,6 +1605,98 @@ def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 {
                     "kind": kind,
                     "value": data,
+                    "hive_key": row_key,
+                    "last_write_time_iso": lw,
+                }
+            )
+    return out
+
+
+_BAGMRU_KEY_RE = re.compile(r"\\(shell|shellnoroam)\\bagmru", re.IGNORECASE)
+_BAGMRU_SKIP_VALUES = frozenset({"mrulistex", "nodeslot", "nodeslots", "mrulist"})
+# Staging / tooling tells that lift shellbag navigation from "normal" to a lead.
+# Plain folders (My Documents) exist everywhere and must not trigger.
+_SHELLBAG_TELL_TOKENS: tuple[str, ...] = (
+    "\\\\",  # UNC network share
+    "ftp",
+    "mirror",
+    "temp",
+    "mirc",
+    "whois",
+    "channel",
+    "cain",
+    "ethereal",
+    "netstumbler",
+    "warez",
+    "crack",
+    "hack",
+)
+
+
+def _pidl_folder_name(hex_data: str) -> str | None:
+    """Extract the embedded folder name from a shell PIDL rendered as hex.
+
+    Shell item IDs embed the folder's ANSI long/short name as a printable run.
+    We pull the longest printable run carrying at least three letters (skips the
+    8.3 ``1ry``/``PROGRA~1`` noise and binary GUID bytes). Best-effort, not a
+    full PIDL parser — enough to recover navigated folder names for triage.
+    """
+    try:
+        raw = bytes.fromhex(hex_data)
+    except ValueError:
+        return None
+    runs: list[str] = []
+    cur: list[str] = []
+    for b in raw:
+        if 32 <= b < 127:
+            cur.append(chr(b))
+        else:
+            if len(cur) >= 3:
+                runs.append("".join(cur))
+            cur = []
+    if len(cur) >= 3:
+        runs.append("".join(cur))
+    named = [r.strip() for r in runs if sum(ch.isalpha() for ch in r) >= 3]
+    if not named:
+        return None
+    return max(named, key=len)
+
+
+def registry_shellbag_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Classify NTUSER BagMRU rows into shellbag-navigation candidates (nhc-007).
+
+    Pure function. Recovers folder names from the binary PIDL values and keeps
+    only those carrying a staging/tooling/network tell — plain navigation
+    (My Documents) is on every machine and must not flood a benign disk.
+    Deduped by folder. MRUListEx/NodeSlot bookkeeping values are skipped.
+    """
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        row_key = str(row.get("key_path") or "").replace("/", "\\")
+        if not _BAGMRU_KEY_RE.search(row_key):
+            continue
+        lw = row.get("last_write_time_iso")
+        for v in row.get("values") or []:
+            if not isinstance(v, dict):
+                continue
+            if str(v.get("name") or "").lower() in _BAGMRU_SKIP_VALUES:
+                continue
+            folder = _pidl_folder_name(str(v.get("data_str") or ""))
+            if not folder:
+                continue
+            low = folder.lower()
+            if not any(tok in low for tok in _SHELLBAG_TELL_TOKENS):
+                continue
+            if folder in seen:
+                continue
+            seen.add(folder)
+            out.append(
+                {
+                    "kind": "shellbag",
+                    "folder": folder,
                     "hive_key": row_key,
                     "last_write_time_iso": lw,
                 }
@@ -7358,6 +7452,8 @@ class Investigation:
                 r"Software\Microsoft\Search Assistant\ACMru",
                 r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU",
                 r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\LastVisitedMRU",
+                r"Software\Microsoft\Windows\Shell\BagMRU",
+                r"Software\Microsoft\Windows\ShellNoRoam\BagMRU",
             ]
         if name == "usrclass.dat":
             return [
@@ -7531,6 +7627,35 @@ class Investigation:
                 }
                 self.findings_pool_a.append(finding)
                 print(f"  pool-A activity finding: {finding['finding_id']} (INFERRED)")
+                continue
+            if kind == "shellbag":
+                folders = [str(c.get("folder") or "") for c in candidates if c.get("kind") == "shellbag"]
+                # Emit once for the whole shellbag set (cand is the first); skip
+                # the rest so we don't duplicate the aggregate finding.
+                if cand is not next(c for c in candidates if c.get("kind") == "shellbag"):
+                    continue
+                listing = ", ".join(dict.fromkeys(folders))[:300]
+                finding = {
+                    "case_id": self.handle["id"],
+                    "finding_id": self._finding_id_for("f-B-shellbag", hive_path),
+                    "tool_call_id": tcid,
+                    "artifact_path": hive_path,
+                    "description": (
+                        "hypothesis: NTUSER.DAT shellbag entries record user folder "
+                        f"navigation to staging/tooling locations: {listing} "
+                        f"(registry_query, last_write {cand.get('last_write_time_iso')}). "
+                        "Shellbags persist that a user browsed these folders in Explorer "
+                        "— here including a network staging share and tool directories. "
+                        "Navigation shows interest/access, not that files were staged or "
+                        "exfiltrated; corroborate with file-system and timeline artifacts."
+                    ),
+                    "confidence": "HYPOTHESIS",
+                    "pool_origin": "B",
+                    "mitre_technique": "T1074.001",
+                    "derived_from": [tcid],
+                }
+                self.findings_pool_b.append(finding)
+                print(f"  pool-B activity finding: {finding['finding_id']} (HYPOTHESIS)")
                 continue
             if cand.get("kind") != "usb_device":
                 continue
@@ -8193,6 +8318,7 @@ class Investigation:
                     registry_usb_candidates(rows)
                     + registry_sam_account_candidates(rows)
                     + registry_mru_candidates(rows)
+                    + registry_shellbag_candidates(rows)
                 )
                 if activity_candidates:
                     self._emit_registry_activity_findings(

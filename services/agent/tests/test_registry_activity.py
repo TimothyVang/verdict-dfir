@@ -290,3 +290,76 @@ class TestPoolMruEmitter:
         inv._emit_registry_activity_findings(cands, "/evidence/NTUSER.DAT", OPENSAVE_KEY, "tc-mru-3")
         ids = {f["finding_id"] for f in inv.findings_pool_a}
         assert len(ids) == 2
+
+
+BAGMRU_KEY = "Software\\Microsoft\\Windows\\ShellNoRoam\\BagMRU"
+
+
+def _hexbytes(*names: str) -> str:
+    """Build a fake PIDL-ish blob with the folder name embedded as ANSI."""
+    blob = b"\x14\x00\x1f"  # arbitrary SHITEMID header noise
+    for n in names:
+        blob += b"\x00\x00" + n.encode("latin-1") + b"\x00"
+    return blob.hex()
+
+
+class TestShellbagCandidates:
+    def test_network_share_navigation_is_a_candidate(self) -> None:
+        rows = [
+            _row(BAGMRU_KEY + "\\0\\1", [_val("0", _hexbytes("\\\\4.220.254\\Temp"), "REG_BINARY")]),
+        ]
+        cands = fea.registry_shellbag_candidates(rows)
+        assert any("4.220.254" in c["folder"] for c in cands)
+        assert all(c["kind"] == "shellbag" for c in cands)
+
+    def test_tool_folder_navigation_is_a_candidate(self) -> None:
+        rows = [_row(BAGMRU_KEY + "\\2", [_val("0", _hexbytes("mIRC"), "REG_BINARY")])]
+        cands = fea.registry_shellbag_candidates(rows)
+        assert any(c["folder"].lower() == "mirc" for c in cands)
+
+    def test_ordinary_folders_without_a_tell_are_filtered(self) -> None:
+        # Plain shellbag navigation (My Documents) exists on every machine —
+        # only staging/tool/network tells make it a lead.
+        rows = [_row(BAGMRU_KEY + "\\1", [_val("0", _hexbytes("My Documents"), "REG_BINARY")])]
+        assert fea.registry_shellbag_candidates(rows) == []
+
+    def test_mrulistex_and_nodeslot_values_are_ignored(self) -> None:
+        rows = [
+            _row(
+                BAGMRU_KEY,
+                [
+                    _val("MRUListEx", "00000000", "REG_BINARY"),
+                    _val("NodeSlot", "05000000", "REG_BINARY"),
+                ],
+            )
+        ]
+        assert fea.registry_shellbag_candidates(rows) == []
+
+    def test_non_bagmru_rows_yield_nothing(self) -> None:
+        assert fea.registry_shellbag_candidates([_row(USBSTOR_KEY)]) == []
+
+
+class TestPoolBShellbagEmitter:
+    def _inv(self):
+        inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+        inv.handle = {"id": "case-bag"}
+        return inv
+
+    def test_shellbag_candidates_become_one_pool_b_finding(self) -> None:
+        inv = self._inv()
+        cands = [
+            {"kind": "shellbag", "folder": "\\\\4.220.254\\Temp", "hive_key": BAGMRU_KEY + "\\0\\1",
+             "last_write_time_iso": "2004-08-27T15:00:00Z"},
+            {"kind": "shellbag", "folder": "mIRC", "hive_key": BAGMRU_KEY + "\\2",
+             "last_write_time_iso": "2004-08-27T15:00:00Z"},
+        ]
+        inv._emit_registry_activity_findings(cands, "/evidence/NTUSER.DAT", BAGMRU_KEY, "tc-bag-1")
+        assert len(inv.findings_pool_b) == 1
+        f = inv.findings_pool_b[0]
+        assert f["pool_origin"] == "B"
+        assert f["confidence"] == "HYPOTHESIS"
+        assert f["finding_id"].startswith("f-B-shellbag")
+        desc = f["description"].lower()
+        for tok in ("shellbag", "navigation", "ntuser", "staging"):
+            assert tok in desc
+        assert "4.220.254" in f["description"]
