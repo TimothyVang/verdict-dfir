@@ -51,19 +51,19 @@ to keep the tree light; they regenerate from a live run.
 
 ## Verify it yourself, offline
 
-The manifest's embedded `audit_log_path` points at the original run directory, so pass the
-committed log explicitly as an override. In a Claude Code session in this repo (the
+Each manifest's embedded `audit_log_path` points at the committed log beside it (set at the
+2026-06-12 re-seal), so no path override is needed. In a Claude Code session in this repo (the
 `findevil-agent-mcp` server auto-spawns), call the `manifest_verify` tool:
 
 ```
 manifest_verify(
-  manifest_path  = "docs/sample-run/nist-hacking-case/run.manifest.json",
-  audit_log_path = "docs/sample-run/nist-hacking-case/audit.jsonl",
+  manifest_path = "docs/sample-run/nist-hacking-case/run.manifest.json",
 )
 ```
 
-Both runs return `overall: true` — `audit_chain_ok`, `merkle_root_ok`, `leaf_count_ok`, and
-`signature_present` all pass. No network, no trusted third party (FRE 902(14) self-authentication).
+All six runs return `overall: true` — `audit_chain_ok`, `merkle_root_ok`, `leaf_count_ok`, and
+`signature_verified` (real ed25519 check) all pass. No network, no trusted third party
+(FRE 902(14) self-authentication).
 
 Or, with **nothing but a Python 3 interpreter** (no MCP server, no venv), re-verify the
 hash-chained audit log from scratch and trace every finding in one command:
@@ -109,10 +109,14 @@ finding (or one), and exits non-zero if any finding fails to resolve.
   (HEARTBEAT.md: terminate with a partial, honestly-scoped verdict rather than push on after
   repeated self-test failures). The sealed chain, manifest, and `verdict.json` still verify offline
   like every other run.
-- **Signer is the stub signer** (`extra.signer = "stub"`). The hash chain and Merkle root verify
-  fully offline; `signature_present` confirms a bundle is attached, but these sample runs are not
-  signed with the real Sigstore/Fulcio+Rekor keyless signer. A production run with a real Sigstore
-  signature is a separate artifact.
+- **Signatures are real ed25519, applied at re-seal.** Every committed run is signed with the
+  local ed25519 keypair and `manifest_verify` reports `signature_kind: ed25519,
+  signature_verified: true` — the signature is cryptographically checked, not just present.
+  Disclosure: the runs were originally sealed with the development stub signer and **re-sealed on
+  2026-06-12 over the byte-identical audit chains** (each re-seal asserted the Merkle root was
+  unchanged before being accepted; the chains themselves were never touched — `audit.jsonl` is
+  still the original byte-for-byte run output). The keyless Sigstore/Fulcio+Rekor tier remains the
+  customer-release option (`signer="sigstore"`).
 - **Absolute paths are left intact** (`/home/sansforensics/SCHARDT.dd`, etc.) on purpose — they are
   hashed into the chain, so rewriting them would break verification. They are run-host paths, not
   secrets.

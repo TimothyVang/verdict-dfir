@@ -1,5 +1,5 @@
 {
-  "_mcp_output_sha256": "cd13911db2eb79e25b546af1f8ac94dfff6055c1a017260578e380d42b7d2b69",
+  "_mcp_output_sha256": "421f727e0948e09b6cf53709aef6bbd8d686bf85de81fc593a8d44c0534c81cf",
   "audit_chain_detail": null,
   "audit_chain_ok": true,
   "leaf_count_detail": null,
@@ -7,5 +7,8 @@
   "merkle_root_detail": null,
   "merkle_root_ok": true,
   "overall": true,
-  "signature_present": true
+  "signature_kind": "ed25519",
+  "signature_present": true,
+  "signature_verified": true,
+  "signature_verified_detail": null
 }

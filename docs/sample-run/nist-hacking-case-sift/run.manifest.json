@@ -1,6 +1,6 @@
 {
   "audit_log_final_hash": "1936fbb2105c78643786b6764ac4bc2ec9259e4fc873405044be50c638e06425",
-  "audit_log_path": "/home/sansforensics/find-evil/tmp/auto-607e4454-dc11-4bf9-881f-3a8e0e99e2dd/audit.jsonl",
+  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/docs/sample-run/nist-hacking-case-sift/audit.jsonl",
   "audit_log_record_count": 219,
   "case_id": "782d9a9b-b783-4dee-81cb-a98e11677013",
   "extra": {
@@ -30,9 +30,9 @@
       "verdict_artifact_sha256": "bc045c549aa412147d29300702c78e9d2d8a4b028b40d15a85e0c0749ed42cd5",
       "verdict_packet_sha256": "5e558d42a2a47ea5c615801f1a90f2b17d0eae32645f450d120f62977a6e8b07"
     },
-    "signer": "stub"
+    "signer": "ed25519"
   },
-  "finalized_at": "2026-06-10T14:44:23Z",
+  "finalized_at": "2026-06-12T14:55:01Z",
   "leaf_count": 97,
   "leaves": [
     {
@@ -621,11 +621,11 @@
   "merkle_root_hex": "3c89e39b42710ff33653df9b3bab036e9d96691f62cabc5bf82090d369d22120",
   "run_id": "auto-1781102649",
   "signature": {
-    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiYmI2MjAxYmYyNzg0ODYxZjZiMjhkNWRlOGNlOGQ0YTJjYjgwYjgzNjIwYTdjYTdmYTI3YzBlYzI5OGY2MzZjMSIsImtpbmQiOiJzdHViIiwibm90ZSI6IlN0dWJTaWduZXIgb3V0cHV0IFx1MjAxNCBOT1QgYSByZWFsIFNpZ3N0b3JlIHNpZ25hdHVyZS4iLCJwYXlsb2FkX3NoYTI1NiI6ImNjZDM2MGJjZWU5NThjMzc4ZGZmN2U2NmRhZmZiM2FhMzAyYTQ0MjAxYjg1ZTE5ODYyMzY4ZjYxMzQyOTYwNzgiLCJydW5faWQiOiJhdXRvLTE3ODExMDI2NDkiLCJzZXEiOjF9",
-    "cert_fingerprint": "bb6201bf2784861f6b28d5de8ce8d4a2cb80b83620a7ca7fa27c0ec298f636c1",
-    "kind": "stub",
-    "payload_sha256": "ccd360bcee958c378dff7e66daffb3aa302a44201b85e19862368f6134296078",
-    "signed_at": "2026-06-10T14:44:23Z"
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiYjk4ZGYxYTlkMDlkYTM3NDFlMjk1ZDdkYTIxYjliNjc1Mjg3YWRmYjM2YjEwY2ExN2MyODBlMmExZmVlMGY1NCIsImtpbmQiOiJlZDI1NTE5IiwicGF5bG9hZF9zaGEyNTYiOiI2NjIzNWNhMTM0MmE5YmUzZjg5ZWNmMjY3ODdkNzk4YTUwZWM1ZmVjNzBkMjQ3ZjU1OWY4ODhiNmJjOGJlM2Q0IiwicHVibGljX2tleV9iNjQiOiJUTjl6SldZVFJCTHdDbFNPWG5QalRrM1NieEZUbDhyR0Jlc3hqcjRtaExVPSIsInNpZ25hdHVyZV9iNjQiOiJkN3pvN1YrdktURTJOckZDdmxvbDBjeks3UXVNN3Y4Z1Zwd1Z0c3c4U2pjd1RsTS9CSlFmR1JwUG5JTXZONHo3YjhkMVVHdXJaMXJ5RFFqejM2dmVBUT09In0=",
+    "cert_fingerprint": "b98df1a9d09da3741e295d7da21b9b675287adfb36b10ca17c280e2a1fee0f54",
+    "kind": "ed25519",
+    "payload_sha256": "66235ca1342a9be3f89ecf26787d798a50ec5fec70d247f559f888b6bc8be3d4",
+    "signed_at": "2026-06-12T14:55:01Z"
   },
   "started_at": "2026-06-10T14:44:09Z",
   "version": "1"

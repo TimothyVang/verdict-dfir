@@ -1,5 +1,5 @@
 {
-  "_mcp_output_sha256": "e0d3c8ea6d35ef68dc0ada26228167104861c3368661c2e5742fd43d793dd07a",
+  "_mcp_output_sha256": "421f727e0948e09b6cf53709aef6bbd8d686bf85de81fc593a8d44c0534c81cf",
   "audit_chain_detail": null,
   "audit_chain_ok": true,
   "leaf_count_detail": null,
@@ -7,8 +7,8 @@
   "merkle_root_detail": null,
   "merkle_root_ok": true,
   "overall": true,
-  "signature_kind": "stub",
+  "signature_kind": "ed25519",
   "signature_present": true,
-  "signature_verified": false,
-  "signature_verified_detail": "stub signature: deterministic dev/offline placeholder, not cryptographic proof"
+  "signature_verified": true,
+  "signature_verified_detail": null
 }

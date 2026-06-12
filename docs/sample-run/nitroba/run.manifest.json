@@ -1,6 +1,6 @@
 {
   "audit_log_final_hash": "91aed184ba46f722bc96df2bd8053223d068b5b6a5164484e3d62a84d857effc",
-  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-14ceb4c2-31b5-488e-b09f-7aac35bb855e/audit.jsonl",
+  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/docs/sample-run/nitroba/audit.jsonl",
   "audit_log_record_count": 70,
   "case_id": "3dec6921-0d8f-4dbc-bb0e-135a560a47a9",
   "extra": {
@@ -30,9 +30,9 @@
       "verdict_artifact_sha256": "a93d0dbf0f4b9cf7d48622a85ef0c22b037998037b4d83d767566c818d5ee202",
       "verdict_packet_sha256": "6f2c2658e8f5a460b93ed6bc90d1ce008675b6b770347532460d63a1e56cd5ab"
     },
-    "signer": "stub"
+    "signer": "ed25519"
   },
-  "finalized_at": "2026-06-11T17:07:25Z",
+  "finalized_at": "2026-06-12T14:55:01Z",
   "leaf_count": 11,
   "leaves": [
     {
@@ -105,11 +105,11 @@
   "merkle_root_hex": "160be4dd293b83b3045ab704cb67c6be7f62bb8070d60e19fb5bd34e914cb430",
   "run_id": "auto-1781197622",
   "signature": {
-    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiN2YwYTc5NjY5MDZhMmI0OGFiYTJlMzk3ZmQ3ZWM4NjM3Zjk5NGIwMDAwNzEyNGM4NDZkMTMzMmFjNWM3MjJhMiIsImtpbmQiOiJzdHViIiwibm90ZSI6IlN0dWJTaWduZXIgb3V0cHV0IFx1MjAxNCBOT1QgYSByZWFsIFNpZ3N0b3JlIHNpZ25hdHVyZS4iLCJwYXlsb2FkX3NoYTI1NiI6ImM1MTMwOWE4OTM3MTVmOTY3NmY1ODJjNjEyZWVhZTYwYWMyOTNlZjE1M2QzZDVkZTJiNTFhYmZjMzBkOTlmYzAiLCJydW5faWQiOiJhdXRvLTE3ODExOTc2MjIiLCJzZXEiOjF9",
-    "cert_fingerprint": "7f0a7966906a2b48aba2e397fd7ec8637f994b00007124c846d1332ac5c722a2",
-    "kind": "stub",
-    "payload_sha256": "c51309a893715f9676f582c612eeae60ac293ef153d3d5de2b51abfc30d99fc0",
-    "signed_at": "2026-06-11T17:07:25Z"
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiYjk4ZGYxYTlkMDlkYTM3NDFlMjk1ZDdkYTIxYjliNjc1Mjg3YWRmYjM2YjEwY2ExN2MyODBlMmExZmVlMGY1NCIsImtpbmQiOiJlZDI1NTE5IiwicGF5bG9hZF9zaGEyNTYiOiI2MTk4OTkwM2NkMjAzM2MzNTAxMTdhY2Y3N2I4NGJkMGM0OTIxODIzYjcwMjAwYjAyN2Q5MTIxYmMyMWRiNjkwIiwicHVibGljX2tleV9iNjQiOiJUTjl6SldZVFJCTHdDbFNPWG5QalRrM1NieEZUbDhyR0Jlc3hqcjRtaExVPSIsInNpZ25hdHVyZV9iNjQiOiJWcFZwcnhNM3ZMWXhmSjlMdFJFak5TU3FDUTVEQ3lNK2k5UE5oL2ZGR1lIck1oM0txNzRHMUpEYWFSTlk5UGoreHFQN3JoZmxLcktOUitzdW9qbTJCZz09In0=",
+    "cert_fingerprint": "b98df1a9d09da3741e295d7da21b9b675287adfb36b10ca17c280e2a1fee0f54",
+    "kind": "ed25519",
+    "payload_sha256": "61989903cd2033c350117acf77b84bd0c4921823b70200b027d9121bc21db690",
+    "signed_at": "2026-06-12T14:55:01Z"
   },
   "started_at": "2026-06-11T17:07:02Z",
   "version": "1"
