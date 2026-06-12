@@ -320,11 +320,13 @@ def _utc_iso() -> str:
 def make_signer(*, kind: str | None = None, **kwargs: Any) -> Signer:
     """Factory the rest of the agent calls.
 
-    ``kind`` defaults to ``$FINDEVIL_SIGNER`` env var, falling back
-    to ``"stub"`` so unit tests + offline runs work out of the box.
-    Production deployments set ``FINDEVIL_SIGNER=sigstore``.
+    ``kind`` defaults to ``$FINDEVIL_SIGNER`` env var, falling back to
+    ``"ed25519"`` — a REAL local signature that verifies offline — so every
+    run is cryptographically signed out of the box. ``"stub"`` (a placeholder,
+    never proof) is explicit opt-in only. Production deployments set
+    ``FINDEVIL_SIGNER=sigstore`` for identity + transparency-log tier.
     """
-    actual = kind if kind is not None else os.environ.get("FINDEVIL_SIGNER", "stub")
+    actual = kind if kind is not None else os.environ.get("FINDEVIL_SIGNER", "ed25519")
     if actual == "sigstore":
         # Pick up the ambient OIDC identity from $SIGSTORE_ID_TOKEN when the
         # caller didn't pass one explicitly — this is the non-interactive path
@@ -333,6 +335,8 @@ def make_signer(*, kind: str | None = None, **kwargs: Any) -> Signer:
         # error rather than silently producing an unsigned bundle.
         kwargs.setdefault("identity_token", os.environ.get("SIGSTORE_ID_TOKEN"))
         return SigstoreSigner(**kwargs)
+    if actual == "ed25519":
+        return LocalEd25519Signer(**kwargs)
     if actual == "stub":
         return StubSigner(**kwargs)
     raise ValueError(f"unknown signer kind: {actual!r}")

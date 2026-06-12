@@ -107,10 +107,23 @@ class TestSignedBundleRawProperty:
 
 
 class TestMakeSigner:
-    def test_default_is_stub(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_default_is_ed25519(self, tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # The default tier is a REAL local signature, not the stub placeholder.
+        # Stub stays available but only by explicit opt-in.
         monkeypatch.delenv("FINDEVIL_SIGNER", raising=False)
+        monkeypatch.setenv("FINDEVIL_SIGNING_KEY", str(tmp_path / "signing.key"))
+        from findevil_agent.crypto.signer import LocalEd25519Signer
+
         s = make_signer()
-        assert isinstance(s, StubSigner)
+        assert isinstance(s, LocalEd25519Signer)
+
+    def test_env_resolves_ed25519(self, tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("FINDEVIL_SIGNER", "ed25519")
+        monkeypatch.setenv("FINDEVIL_SIGNING_KEY", str(tmp_path / "signing.key"))
+        from findevil_agent.crypto.signer import LocalEd25519Signer
+
+        s = make_signer()
+        assert isinstance(s, LocalEd25519Signer)
 
     def test_explicit_stub(self) -> None:
         s = make_signer(kind="stub")
