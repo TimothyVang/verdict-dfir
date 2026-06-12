@@ -1,0 +1,14 @@
+{
+  "_mcp_output_sha256": "e0d3c8ea6d35ef68dc0ada26228167104861c3368661c2e5742fd43d793dd07a",
+  "audit_chain_detail": null,
+  "audit_chain_ok": true,
+  "leaf_count_detail": null,
+  "leaf_count_ok": true,
+  "merkle_root_detail": null,
+  "merkle_root_ok": true,
+  "overall": true,
+  "signature_kind": "stub",
+  "signature_present": true,
+  "signature_verified": false,
+  "signature_verified_detail": "stub signature: deterministic dev/offline placeholder, not cryptographic proof"
+}

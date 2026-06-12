@@ -6,12 +6,14 @@ Requirement #8) and can verify the chain of custody **offline**. Every file here
 byte-for-byte output of an actual run — nothing was edited, because editing any record would
 break the hash chain (which is the point).
 
-Five runs are included. The first is the network-recall showcase (`nitroba`, 5/5 against the
+Six runs are included. The first is the network-recall showcase (`nitroba`, 5/5 against the
 published answer key, reproducible offline); the next shows catching evil head-on; the third and
 fourth show the ≥2-artifact-class rule producing CONFIRMED execution findings on the *same* case —
 once in pure **local** mode (no SIFT VM) and again under `--sift`, proving the verdict is identical
-either way; the last proves the **self-correction loop** end-to-end under a deliberately-injected
-fault:
+either way; the fifth proves the **self-correction loop** end-to-end under a deliberately-injected
+fault; and the sixth shows the same recovery machinery firing on **natural, un-staged failures** —
+six real tool errors, six logged course-corrections, and the documented HEARTBEAT escalation
+sealing an honest partial verdict:
 
 | Run | Evidence | Verdict | Findings | What it demonstrates |
 |---|---|---|---|---|
@@ -20,11 +22,17 @@ fault:
 | [`fault-injection-redispatch/`](fault-injection-redispatch/) | Same NIST `SCHARDT.dd`, local mode, recorded with `FIND_EVIL_FAULT_INJECT=verifier_reject_once:prefetch-cain-exe` | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | **Self-correction under an injected fault:** the verifier caught a deliberately-corrupted replay (`unknown tool: __fault_injected__prefetch_parse`), the engine re-dispatched the verify exactly once, the fresh attempt approved, and the verdict is unchanged. The whole loop is in the hash chain, in order: `fault_injection` → `verifier_redispatch` (carrying the first attempt's rejection reason) → `verifier_action: approved`. |
 | [`nist-hacking-case/`](nist-hacking-case/) | NIST CFReDS `SCHARDT.dd` (public domain), **local mode** (Prefetch **+** registry/UserAssist) | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | The ≥2-artifact-class rule on the recommended **no-VM path**: with the disk's Prefetch *and* the NTUSER.DAT **UserAssist** hive both parsed on the host (TSK direct-read — no 9 GB SIFT OVA needed), each hacking-tool execution (cain, netstumbler, mirc, ethereal, lookatlan) is corroborated by **two independent artifact classes**, so it escalates to **CONFIRMED**. Each CONFIRMED finding's `derived_from` cites *both* `tool_call_id`s (a `prefetch_parse` and a `registry_query`), so the 2-class claim is greppable, not prose. |
 | [`nist-hacking-case-sift/`](nist-hacking-case-sift/) | Same `SCHARDT.dd`, run under `--sift` (Prefetch **+** registry/UserAssist inside the SIFT VM over SSH) | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | **Mode parity:** the identical 2-class CONFIRMED escalation, driven inside the SANS SIFT VM over SSH instead of on the host — proving a judge gets the same verdict whether they take the easy local path or the full VM. |
+| [`natural-self-correction/`](natural-self-correction/) | SANS `base-wkstn-01-c-drive.E01` (competition disk image), local mode | **INDETERMINATE** | 1 (`hypothesis:` EID 7045 `mnemosyne` service install, T1543.003) | **Natural self-correction + HEARTBEAT escalation, nothing injected:** the image's `RegBack` hives are genuinely truncated (`hive truncated (header too small)` — a real condition on real evidence, not a fault hook), so six `registry_query` calls fail and each failure is followed by a logged `course_correction` (`narrow: skip this key; continue remaining hive triage`). The failure streak then trips the documented HEARTBEAT escalation (`HEARTBEAT.md`: "2 consecutive failed self-tests → session terminates with partial report"): five `heartbeat_failure` records, one `heartbeat_terminated`, remaining lanes skipped, and the run seals an honestly-scoped partial **INDETERMINATE** with the one defensible lead held at HYPOTHESIS and the skipped work recorded in `analysis_limitations`. The full arc — error → adjusted plan → repeated failure → policy escalation → honest partial verdict — is in the hash chain, in order. |
 
 ## Files in each run (lean set)
 
 - `audit.jsonl` — the hash-chained, append-only execution log (every `tool_call_start` /
-  `tool_call_output` / `finding_approved` / verifier action; each line carries `prev_hash` + `line_hash`).
+  `tool_call_output` / `finding_approved` / verifier action; each line carries `prev_hash` + `line_hash`
+  and a UTC ISO-8601 `ts`). The `acp_handoff` records are the **agent-to-agent message log** for the
+  multi-agent topology — each one is a Pool A ↔ Pool B / supervisor handoff packet, so the
+  inter-agent communication required of multi-agent submissions is in the same chain as the tool
+  executions. `course_correction`, `heartbeat_failure`, and `heartbeat_terminated` records capture
+  real-time failure handling (see `natural-self-correction/`).
 - `run.manifest.json` — Merkle root over the audit leaves + signature bundle.
 - `manifest_verify.json` — the offline-verification result recorded at run time.
 - `verdict.json` — the final verdict and every Finding (each citing a `tool_call_id`).
@@ -80,12 +88,20 @@ finding (or one), and exits non-zero if any finding fails to resolve.
 
 ## Honest caveats
 
-- **The fault-injection run's failure was deliberate.** `fault-injection-redispatch/` was recorded
-  with `FIND_EVIL_FAULT_INJECT` set, which corrupts exactly one verifier replay's tool name for the
-  first attempt. The injection is not hidden: the chain's `fault_injection` record declares it
-  before any verifier action, and the engine prints a loud banner when the env var is set. The
-  recovery itself is the production code path — the same re-dispatch fires on any real transient
-  replay failure.
+- **The fault-injection run's failure was deliberate — the natural run's was not.**
+  `fault-injection-redispatch/` was recorded with `FIND_EVIL_FAULT_INJECT` set, which corrupts
+  exactly one verifier replay's tool name for the first attempt. The injection is not hidden: the
+  chain's `fault_injection` record declares it before any verifier action, and the engine prints a
+  loud banner when the env var is set. It is a harness demonstration that the recovery path works on
+  demand; judge the *organic* self-correction on [`natural-self-correction/`](natural-self-correction/),
+  whose six failures come from genuinely truncated registry hives on real evidence (no fault hook,
+  no `fault_injection` record in its chain — grep it). The recovery code path is the same production
+  re-dispatch/course-correction machinery in both.
+- **The natural-self-correction run is a partial run on purpose.** It ends with
+  `heartbeat_terminated` and ships no `REPORT.md` — that *is* the documented escalation posture
+  (HEARTBEAT.md: terminate with a partial, honestly-scoped verdict rather than push on after
+  repeated self-test failures). The sealed chain, manifest, and `verdict.json` still verify offline
+  like every other run.
 - **Signer is the stub signer** (`extra.signer = "stub"`). The hash chain and Merkle root verify
   fully offline; `signature_present` confirms a bundle is attached, but these sample runs are not
   signed with the real Sigstore/Fulcio+Rekor keyless signer. A production run with a real Sigstore
