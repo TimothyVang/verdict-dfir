@@ -275,6 +275,7 @@ the audit chain.
 | Evidence staging / report customization | `docs/using/evidence-intake.md`, `docs/using/reports.md` |
 | Public test-dataset corpus, goldens, recall scoring | `docs/DATASET.md` |
 | Per-tool analyst playbooks + expected-failure table | `docs/analyst/tool-playbooks.md` |
+| How to add a new typed MCP tool (extension seam) | `docs/extending-the-tool-surface.md` |
 | Dev/operator memory layer (obsidian-mind + boundary) | `docs/runbooks/obsidian-mind-memory.md` |
 | Failure modes → code-enforced detectors → fixes | `docs/troubleshooting.md` |
 | 3-step quick start | `QUICKSTART.md` |
