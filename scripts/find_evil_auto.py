@@ -1548,10 +1548,15 @@ def registry_sam_account_candidates(rows: list[dict[str, Any]]) -> list[dict[str
     return out
 
 
-_ACMRU_KEY_RE = re.compile(r"\\search assistant\\acmru\\", re.IGNORECASE)
+_ACMRU_KEY_RE = re.compile(r"\\search assistant\\acmru", re.IGNORECASE)
 _OPENSAVE_KEY_RE = re.compile(r"\\comdlg32\\(opensave|lastvisited)", re.IGNORECASE)
 # MRU ordering values, not entries.
 _MRU_ORDER_VALUES = frozenset({"mrulist", "mrulistex"})
+
+
+def _is_string_regtype(value_type: str | None) -> bool:
+    """True for REG_SZ / REG_EXPAND_SZ (tolerant of 'RegSz' spellings)."""
+    return str(value_type or "").upper().replace("_", "") in {"REGSZ", "REGEXPANDSZ"}
 
 
 def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1559,11 +1564,16 @@ def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     Pure function. Two text-form MRUs the NIST golden cares about: XP Search
     Assistant ACMru (recent search terms -> nhc-001) and ComDlg32 OpenSave/
-    LastVisited MRU (recently opened file paths -> nhc-011). Binary-PIDL MRUs
-    (RecentDocs) are out of scope. The MRUList/MRUListEx ordering values are
-    not entries.
+    LastVisited MRU (recently opened file paths -> nhc-011).
+
+    Only REG_SZ/REG_EXPAND_SZ values count: LastVisitedMRU and RecentDocs store
+    binary blobs the registry tool renders as hex, and those must NOT be taken
+    for text entries. Values are deduped (OpenSaveMRU\\* and \\exe carry the same
+    paths within one recursive query). MRUList/MRUListEx ordering values are not
+    entries.
     """
     out: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
     for row in rows or []:
         if not isinstance(row, dict):
             continue
@@ -1580,9 +1590,15 @@ def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 continue
             if str(v.get("name") or "").lower() in _MRU_ORDER_VALUES:
                 continue
+            if not _is_string_regtype(v.get("value_type")):
+                continue
             data = str(v.get("data_str") or "").strip()
             if not data:
                 continue
+            dedup_key = (kind, data)
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
             out.append(
                 {
                     "kind": kind,
@@ -1591,6 +1607,64 @@ def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "last_write_time_iso": lw,
                 }
             )
+    return out
+
+
+# Known hacking/anti-forensic tool name tokens for MFT path classification.
+# These mirror SUSPICIOUS_PREFETCH_TOOL_HINTS plus disk-only artifacts (the
+# Anonymizer anti-forensic app, the WinPcap capture driver) that show up as
+# files but not always as prefetch.
+_HACKING_TOOL_PATH_TOKENS: tuple[str, ...] = (
+    "cain",
+    "ethereal",
+    "netstumbler",
+    "lookatlan",
+    "anonymizer",
+    "winpcap",
+    "wireshark",
+)
+# Path roots where a tool file is a "downloaded application" artifact rather
+# than an OS component (keeps system binaries from matching a token by accident).
+_DOWNLOADED_APP_ROOTS: tuple[str, ...] = (
+    "program files",
+    "/desktop/",
+    "/downloads",
+    "/my documents",
+)
+
+
+def mft_hacking_tool_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Classify $MFT rows into hacking-tool artifact candidates (nhc-004).
+
+    Pure function. A row qualifies when its path carries a known tool token AND
+    sits under a downloaded-application root (Program Files / Desktop /
+    Downloads / My Documents) — so an OS binary that merely contains a token
+    substring is not flagged. ``.pf`` prefetch residue is excluded (that's an
+    execution artifact, covered separately). Deduped by tool token.
+    """
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        path = str(row.get("full_path") or row.get("name") or "")
+        low = path.lower().replace("\\", "/")
+        if low.endswith(".pf"):
+            continue
+        if not any(root in low for root in _DOWNLOADED_APP_ROOTS):
+            continue
+        for tok in _HACKING_TOOL_PATH_TOKENS:
+            if tok in low and tok not in seen:
+                seen.add(tok)
+                out.append(
+                    {
+                        "tool": tok,
+                        "path": path,
+                        "created": row.get("fn_created_iso") or row.get("si_created_iso"),
+                        "record_number": row.get("record_number"),
+                    }
+                )
+                break
     return out
 
 
@@ -7398,8 +7472,11 @@ class Investigation:
             kind = cand.get("kind")
             if kind in {"search_term", "opened_file"}:
                 value = str(cand.get("value") or "")
+                # Key the id on the file BASENAME, not the full path — distinct
+                # desktop files must produce distinct ids (the 8-dupes bug).
+                id_seed = value.replace("/", "\\").rsplit("\\", 1)[-1] or value
                 safe = (
-                    re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")[:40] or "mru"
+                    re.sub(r"[^a-z0-9]+", "-", id_seed.lower()).strip("-")[:40] or "mru"
                 )
                 if kind == "search_term":
                     detail = (
@@ -7437,14 +7514,15 @@ class Investigation:
                     "tool_call_id": tcid,
                     "artifact_path": hive_path,
                     "description": (
-                        f"Local user account '{name}' with suspicious naming recorded "
-                        f"in the SAM hive ({cand.get('hive_key')}; Names subkey "
-                        f"last_write {cand.get('last_write_time_iso')} approximates "
-                        "account creation). INFERRED from two facts: the account's "
-                        "existence is tool-backed (registry_query) and its name "
-                        "matches the suspicious-naming heuristic. Privilege level "
-                        "and actual use are NOT claimed — corroborate group "
-                        "membership and logon artifacts."
+                        f"User account '{name}' with suspicious naming was created on "
+                        f"this system: it is recorded in the SAM (Security Account "
+                        f"Manager) hive ({cand.get('hive_key')}; the Names subkey "
+                        f"last_write {cand.get('last_write_time_iso')} approximates the "
+                        "account-creation time). INFERRED from two tool-backed facts: "
+                        "the account's existence (registry_query) and its name matching "
+                        "the suspicious-naming heuristic. Whether it holds elevated "
+                        "privileges is NOT yet claimed — enumerate group membership "
+                        "(Administrators) and logon artifacts to corroborate."
                     ),
                     "confidence": "INFERRED",
                     "pool_origin": "A",
@@ -7488,6 +7566,49 @@ class Investigation:
             }
             self.findings_pool_b.append(finding)
             print(f"  pool-B activity finding: {finding['finding_id']} (HYPOTHESIS)")
+
+    def _emit_mft_hacking_tool_finding(
+        self,
+        candidates: list[dict[str, Any]],
+        mft_path: str,
+        tcid: str,
+    ) -> None:
+        """Emit ONE Pool A finding aggregating hacking-tool artifacts found in
+        the MFT (nhc-004). One finding (not one-per-tool) so the recall matcher
+        binds it to a single ground-truth claim. INFERRED: each file's existence
+        is tool-backed (MFT) and its name matches a known-tool heuristic — two
+        labeled facts. Presence is not execution; the Prefetch findings carry the
+        execution claim separately.
+        """
+        if not candidates:
+            return
+        tools = sorted({str(c.get("tool") or "") for c in candidates})
+        examples = "; ".join(
+            f"{c.get('path')} (created {c.get('created')})" for c in candidates[:6]
+        )
+        finding = {
+            "case_id": self.handle["id"],
+            "finding_id": self._finding_id_for("f-A-mft-tools", mft_path),
+            "tool_call_id": tcid,
+            "artifact_path": mft_path,
+            "description": (
+                "Hacking-tool artifacts present on disk as downloaded applications, "
+                f"recovered from the MFT: {examples}. The filesystem records (MFT) "
+                "show these tool files in Program Files / on the user's Desktop with "
+                "creation timestamps clustered around the incident window; they are "
+                "downloaded applications, not operating-system components. INFERRED "
+                "from two tool-backed facts per file: the artifact's existence (MFT) "
+                f"and its name matching a known-tool heuristic ({', '.join(tools)}). "
+                "Corroborates the Prefetch execution findings for the same toolset; "
+                "file presence itself is not an execution claim."
+            ),
+            "confidence": "INFERRED",
+            "pool_origin": "A",
+            "mitre_technique": "T1588.002",
+            "derived_from": [tcid],
+        }
+        self.findings_pool_a.append(finding)
+        print(f"  pool-A finding: {finding['finding_id']} (INFERRED, {len(candidates)} tool(s))")
 
     def _corroborate_execution_with_userassist(
         self,
@@ -7734,6 +7855,13 @@ class Investigation:
                     },
                 )
             print(f"  mft_timeline: {path} rows={len(rows)}")
+            # Pool A hacking-tool footprint: tool files in Program Files /
+            # Desktop / Downloads become one INFERRED finding citing this MFT
+            # tool call (nhc-004). Scans the full returned row set, not the
+            # 500-row timeline window.
+            tool_candidates = mft_hacking_tool_candidates(rows)
+            if tool_candidates:
+                self._emit_mft_hacking_tool_finding(tool_candidates, path, tcid)
 
         usn_entries = by_class["usnjrnl"][:3]
         usn_specs: list[tuple[str, dict[str, Any]]] = [

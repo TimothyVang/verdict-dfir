@@ -32,8 +32,8 @@ def _row(key_path: str, values: list[dict] | None = None, lw: str = "2004-08-26T
     }
 
 
-def _val(name: str, data: str) -> dict:
-    return {"name": name, "value_type": "RegSz", "data_str": data}
+def _val(name: str, data: str, value_type: str = "REG_SZ") -> dict:
+    return {"name": name, "value_type": value_type, "data_str": data}
 
 
 class TestUsbCandidates:
@@ -170,6 +170,10 @@ class TestPoolASamEmitter:
         # (tool-backed) and its name matches the suspicious-naming heuristic.
         assert "user account" in desc and "suspicious naming" in desc
         assert "mr. evil" in desc
+        # Vocabulary the account-creation claim shares with ground truth so the
+        # recall matcher links it: created / elevated privileges / SAM.
+        assert "created" in desc and "privilege" in desc
+        assert "security account manager" in desc or "sam" in desc
 
 
 ACMRU_KEY = "Software\\Microsoft\\Search Assistant\\ACMru\\5603"
@@ -211,6 +215,27 @@ class TestMruCandidates:
         rows = [_row(ACMRU_KEY, [_val("000", "")])]
         assert fea.registry_mru_candidates(rows) == []
 
+    def test_binary_values_are_skipped(self) -> None:
+        # LastVisitedMRU / RecentDocs store binary blobs; rendered as hex they
+        # must NOT be mistaken for text MRU entries (the f-A-mru-<hex> bug).
+        rows = [
+            _row(
+                OPENSAVE_KEY,
+                [_val("0", "6b006500790073002e007400780074", value_type="REG_BINARY")],
+            )
+        ]
+        assert fea.registry_mru_candidates(rows) == []
+
+    def test_duplicate_values_across_subkeys_are_deduped(self) -> None:
+        # OpenSaveMRU\* and OpenSaveMRU\exe carry the SAME paths — one recursive
+        # query returns both, and they must collapse to one candidate per value.
+        star = "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*"
+        exe = OPENSAVE_KEY
+        path = "C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup-0.10.6.exe"
+        rows = [_row(star, [_val("a", path)]), _row(exe, [_val("a", path)])]
+        cands = fea.registry_mru_candidates(rows)
+        assert len(cands) == 1
+
 
 class TestPoolMruEmitter:
     def _inv(self):
@@ -249,3 +274,19 @@ class TestPoolMruEmitter:
         f = inv.findings_pool_a[0]
         assert f["confidence"] == "INFERRED"
         assert "recently" in f["description"].lower() and "cain.exe" in f["description"].lower()
+        # finding_id is keyed on the file basename, not the full path — two
+        # different desktop paths must produce two distinct ids (the 8-dupes bug).
+        assert f["finding_id"] == inv._finding_id_for("f-A-mru-cain-exe", "/evidence/NTUSER.DAT")
+
+    def test_distinct_opened_files_produce_distinct_ids(self) -> None:
+        inv = self._inv()
+        base = "C:\\Documents and Settings\\Mr. Evil\\Desktop\\"
+        cands = [
+            {"kind": "opened_file", "value": base + "ethereal-setup-0.10.6.exe",
+             "hive_key": OPENSAVE_KEY, "last_write_time_iso": "2004-08-27T15:00:00Z"},
+            {"kind": "opened_file", "value": base + "WinPcap_3_01_a.exe",
+             "hive_key": OPENSAVE_KEY, "last_write_time_iso": "2004-08-27T15:00:00Z"},
+        ]
+        inv._emit_registry_activity_findings(cands, "/evidence/NTUSER.DAT", OPENSAVE_KEY, "tc-mru-3")
+        ids = {f["finding_id"] for f in inv.findings_pool_a}
+        assert len(ids) == 2
