@@ -1,0 +1,29 @@
+{
+ "fleet_id": "mini-fleet-20260612T160033Z",
+ "started_at": "2026-06-12T16:00:33Z",
+ "total": 3,
+ "current": 3,
+ "results": [
+  {
+   "host": "host-01",
+   "case_dir": "docs/sample-run/fleet-mini/hosts/host-01",
+   "verdict": "INDETERMINATE",
+   "manifest_ok": true,
+   "status": "ok"
+  },
+  {
+   "host": "host-02",
+   "case_dir": "docs/sample-run/fleet-mini/hosts/host-02",
+   "verdict": "INDETERMINATE",
+   "manifest_ok": true,
+   "status": "ok"
+  },
+  {
+   "host": "host-03",
+   "case_dir": "docs/sample-run/fleet-mini/hosts/host-03",
+   "verdict": "SUSPICIOUS",
+   "manifest_ok": true,
+   "status": "ok"
+  }
+ ]
+}

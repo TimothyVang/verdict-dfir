@@ -180,9 +180,7 @@ def latest_fleet_dir() -> Path | None:
     base = REPO_ROOT / "tmp" / "fleet-runs"
     if not base.is_dir():
         return None
-    candidates = sorted(
-        base.glob("fleet-*"), key=lambda p: p.stat().st_mtime, reverse=True
-    )
+    candidates = sorted(base.glob("fleet-*"), key=lambda p: p.stat().st_mtime, reverse=True)
     return candidates[0] if candidates else None
 
 
@@ -319,9 +317,7 @@ def cross_host_processes(verdicts: list[dict[str, Any]]) -> dict[str, list[dict]
                     "epistemic_label": "HYPOTHESIS",
                 }
             )
-    return {
-        n: hits for n, hits in by_name.items() if len({h["host"] for h in hits}) >= 2
-    }
+    return {n: hits for n, hits in by_name.items() if len({h["host"] for h in hits}) >= 2}
 
 
 def temporal_clusters(
@@ -393,9 +389,7 @@ def mitre_density(verdicts: list[dict[str, Any]]) -> Counter:
     for v in verdicts:
         host = v.get("_host") or v.get("host") or "?"
         techniques_on_host = {
-            f.get("mitre_technique")
-            for f in v.get("findings", [])
-            if f.get("mitre_technique")
+            f.get("mitre_technique") for f in v.get("findings", []) if f.get("mitre_technique")
         }
         for mt in techniques_on_host:
             by_technique.setdefault(mt, set()).add(host)
@@ -406,11 +400,30 @@ def verdict_distribution(verdicts: list[dict[str, Any]]) -> Counter:
     return Counter(v.get("verdict", "?") for v in verdicts)
 
 
+def _host_merkle_root(verdict: dict[str, Any]) -> str | None:
+    """The per-host Merkle root, from verdict.json or its run.manifest.json.
+
+    manifest_finalize usually runs AFTER verdict.json is written, so the root
+    lives only in run.manifest.json. Read the verdict's embedded value first,
+    then fall back to the host's manifest beside it.
+    """
+    root = verdict.get("cryptographic_attestation", {}).get("merkle_root_hex")
+    if root:
+        return root
+    case_dir = verdict.get("_case_dir")
+    if not case_dir:
+        return None
+    manifest = Path(case_dir) / "run.manifest.json"
+    if not manifest.is_file():
+        return None
+    try:
+        return json.loads(manifest.read_text(encoding="utf-8")).get("merkle_root_hex")
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
 def merkle_uniqueness(verdicts: list[dict[str, Any]]) -> tuple[int, int]:
-    roots = [
-        v.get("cryptographic_attestation", {}).get("merkle_root_hex") for v in verdicts
-    ]
-    roots = [r for r in roots if r]
+    roots = [r for r in (_host_merkle_root(v) for v in verdicts) if r]
     return len(set(roots)), len(roots)
 
 
@@ -507,8 +520,7 @@ def write_outputs(
             md.append("|---|---|---:|---|")
             for ev in cl["events"][:20]:
                 md.append(
-                    f"| `{ev['host']}` | {ev['create_time']} | "
-                    f"{ev['pid']} | `{ev['name']}` |"
+                    f"| `{ev['host']}` | {ev['create_time']} | {ev['pid']} | `{ev['name']}` |"
                 )
             md.append("")
     else:

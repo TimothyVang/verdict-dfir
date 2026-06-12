@@ -1,0 +1,25 @@
+{
+  "cross_host_processes": {},
+  "cryptographic_attestation": {
+    "all_unique": true,
+    "total_merkle_roots": 3,
+    "unique_merkle_roots": 3
+  },
+  "fleet_dir": "docs/sample-run/fleet-mini",
+  "host_count": 3,
+  "mitre_technique_density": {
+    "T1047": 1,
+    "T1070.001": 1,
+    "T1543.003": 1
+  },
+  "selfscore_aggregate": {
+    "by_criterion": {},
+    "hosts_total": 3,
+    "hosts_with_selfscore": 0
+  },
+  "temporal_clusters": [],
+  "verdict_distribution": {
+    "INDETERMINATE": 2,
+    "SUSPICIOUS": 1
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "audit_log_final_hash": "1a1fba5d5655850bfd392238570d4dc2899684ba720aba95a953145de4f559eb",
+  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/docs/sample-run/fleet-mini/hosts/host-02/audit.jsonl",
+  "audit_log_record_count": 17,
+  "case_id": "dir-1e1342a386622505",
+  "extra": {
+    "evidence_inventory": {
+      "inventory_sha256": "1e1342a3866225054efbe3ab0eca250d97f53b0fe27a494f1aa36479161b3a98",
+      "parent_case_id": "dir-1e1342a386622505",
+      "summary": {
+        "class_counts": {
+          "evtx": 1
+        },
+        "disk_artifact_counts": {
+          "browser_history": 0,
+          "evtx": 1,
+          "mft": 0,
+          "prefetch": 0,
+          "registry": 0,
+          "usnjrnl": 0,
+          "yara_target": 0
+        },
+        "duplicate_names": [],
+        "entry_count": 1,
+        "evidence_type_counts": {
+          "evtx": 1
+        },
+        "extracted_disk_count": 0,
+        "limit": 500,
+        "raw_disk_count": 0,
+        "rejected_count": 0,
+        "truncated": false,
+        "yara_target_count": 0
+      }
+    },
+    "evidence_type": "directory",
+    "image_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/cases/mini-fleet/hosts/host-02",
+    "model": "find-evil-auto",
+    "packet_attestation": {
+      "customer_releasable": false,
+      "customer_release_candidate": false,
+      "expert_signoff_packet_sha256": "9af4f7647bbef3536ce2c09baf22387b4842feee77ba0230d90289b33ee0ad13",
+      "final_finding_ids": [
+        "f-B-evtx-wmi-exec"
+      ],
+      "packet_state": "EXPERT_REVIEW_DRAFT",
+      "release_gate_sha256": "52e815768536f6e14f86db4114757a70b7fac8849e07f98d8717acf659811d25",
+      "report_qa_sha256": "a670a1923c91ae0976b4a06aff47c8123c0c08a88277305f59965976378098a5",
+      "verdict_artifact_bytes": 65865,
+      "verdict_artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-b4a89a73-157e-4ca7-bfdf-3da5454c5d23/verdict.json",
+      "verdict_artifact_sha256": "ce3104d1819b611463fa5b2176e049eed6bb0267e299e415833ddd4e5711beb8",
+      "verdict_packet_sha256": "ce2fa83bbeaaf2874aa2a44ef88f13b018d6c0cb27c6c9f84c42975abebac089"
+    },
+    "signer": "ed25519"
+  },
+  "finalized_at": "2026-06-12T16:04:04Z",
+  "leaf_count": 2,
+  "leaves": [
+    {
+      "digest_hex": "51f6fa751e99986b9648b45b942fe534386cbe2853aa33fdcb422c207814dd7a",
+      "kind": "tool_call_output",
+      "record_id": "tc-001",
+      "seq": 4
+    },
+    {
+      "digest_hex": "246b0013f07992a47c6774668082fd032b90e9f38a63a7fd58228c514c811ca2",
+      "kind": "finding",
+      "record_id": "f-B-evtx-wmi-exec",
+      "seq": 13
+    }
+  ],
+  "merkle_root_hex": "0cfadfd2d92e0305601a98f39461bacbb4562e7c92cd2bd5f98107c60a4c2de3",
+  "run_id": "auto-1781280010",
+  "signature": {
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiYjk4ZGYxYTlkMDlkYTM3NDFlMjk1ZDdkYTIxYjliNjc1Mjg3YWRmYjM2YjEwY2ExN2MyODBlMmExZmVlMGY1NCIsImtpbmQiOiJlZDI1NTE5IiwicGF5bG9hZF9zaGEyNTYiOiI1M2ZjNTNhZmU0ZTdhYmI4Yzk2M2E5MWU0ZmM5MGJjMDgzMmZjZGJmNjhiZTU0ZjAzNTQ1OGMyYTIzNzY0OGNiIiwicHVibGljX2tleV9iNjQiOiJUTjl6SldZVFJCTHdDbFNPWG5QalRrM1NieEZUbDhyR0Jlc3hqcjRtaExVPSIsInNpZ25hdHVyZV9iNjQiOiJzZDc0TWgvQU1RVW5yQ1dmbEw2Zks1S1N0L3ZadXZIWVA2UjdnVTZlR0lSTmwvZ0xjenBxZUw0M0oyc0FGdUpwQnNMbm9JYlZQMVV4NEJkTDNDRFRCdz09In0=",
+    "cert_fingerprint": "b98df1a9d09da3741e295d7da21b9b675287adfb36b10ca17c280e2a1fee0f54",
+    "kind": "ed25519",
+    "payload_sha256": "53fc53afe4e7abb8c963a91e4fc90bc0832fcdbf68be54f035458c2a237648cb",
+    "signed_at": "2026-06-12T16:04:04Z"
+  },
+  "started_at": "2026-06-12T16:00:10Z",
+  "version": "1"
+}
