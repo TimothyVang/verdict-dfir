@@ -145,16 +145,23 @@ _FINDING_MODEL_FIELDS = frozenset(
 def fault_inject_spec() -> tuple[str, str] | None:
     """Parse FIND_EVIL_FAULT_INJECT, the reproducible fault-injection hook.
 
-    ``verifier_reject_once:<finding-id-fragment>`` corrupts the cited
-    tool_call_index entry for the FIRST verify attempt of the first finding
-    whose id contains the fragment, driving a genuine rejection through the
-    production verifier path (and letting the re-dispatch loop recover it).
+    Two modes, both corrupting the cited tool_call_index entry for the FIRST
+    verify attempt of the first finding whose id contains the fragment, so a
+    genuine rejection flows through the production verifier path (and the
+    re-dispatch loop recovers it):
+
+    * ``verifier_reject_once:<fragment>`` corrupts the tool_name — the replay
+      fails outright (replay_error -> rejected).
+    * ``verifier_hash_mismatch_once:<fragment>`` corrupts the RECORDED
+      output_sha256 — the clean replay output mismatches the record, driving
+      the true hash-mismatch path (material_drift on CONFIRMED -> rejected).
+
     The injection is chain-visible as a ``fault_injection`` audit record —
     a faulted run can never be mistaken for a clean one. Any other value is
     ignored (inert by default)."""
     raw = os.environ.get("FIND_EVIL_FAULT_INJECT", "")
     mode, sep, fragment = raw.partition(":")
-    if sep and mode == "verifier_reject_once" and fragment:
+    if sep and mode in ("verifier_reject_once", "verifier_hash_mismatch_once") and fragment:
         return mode, fragment
     return None
 
@@ -8503,14 +8510,25 @@ class Investigation:
 
     def _consume_fault_targets(
         self, py: SshMcpClient, findings: list[dict[str, Any]]
-    ) -> set[str]:
+    ) -> dict[str, str]:
         """Serial pre-pass for FIND_EVIL_FAULT_INJECT: pick the first matching
         finding (at most once per run) and audit the injection BEFORE any
-        verifier action, so the chain itself declares the fault."""
+        verifier action, so the chain itself declares the fault. Returns
+        {finding_id: mode} so the verify stage applies the mode's corruption."""
         spec = fault_inject_spec()
         if spec is None or self._faults_consumed:
-            return set()
+            return {}
         mode, fragment = spec
+        detail = {
+            "verifier_reject_once": (
+                "tool_call_index tool_name corrupted for the first "
+                "verify attempt (FIND_EVIL_FAULT_INJECT)"
+            ),
+            "verifier_hash_mismatch_once": (
+                "tool_call_index output_sha256 corrupted for the first "
+                "verify attempt (FIND_EVIL_FAULT_INJECT)"
+            ),
+        }[mode]
         for finding in findings:
             finding_id = str(finding.get("finding_id") or "")
             if fragment in finding_id:
@@ -8521,20 +8539,17 @@ class Investigation:
                     {
                         "finding_id": finding_id,
                         "mode": mode,
-                        "detail": (
-                            "tool_call_index tool_name corrupted for the first "
-                            "verify attempt (FIND_EVIL_FAULT_INJECT)"
-                        ),
+                        "detail": detail,
                     },
                 )
-                return {finding_id}
-        return set()
+                return {finding_id: mode}
+        return {}
 
     def _verify_findings_parallel(
         self,
         py: SshMcpClient,
         findings: list[dict[str, Any]],
-        fault_targets: set[str] | None = None,
+        fault_targets: dict[str, str] | None = None,
     ) -> list[dict[str, Any]]:
         """Stage A: re-run each finding's cited tool. verify_finding spawns its
         own fresh findevil-mcp subprocess per call, so the re-runs are
@@ -8553,9 +8568,12 @@ class Investigation:
                 index = {tcid: dict(entry) for tcid, entry in tool_call_index.items()}
                 entry = index.get(str(finding.get("tool_call_id") or ""))
                 if entry is not None:
-                    entry["tool_name"] = "__fault_injected__" + str(
-                        entry.get("tool_name") or ""
-                    )
+                    if fault_targets[finding_id] == "verifier_hash_mismatch_once":
+                        entry["output_sha256"] = "f" * 64
+                    else:  # verifier_reject_once
+                        entry["tool_name"] = "__fault_injected__" + str(
+                            entry.get("tool_name") or ""
+                        )
             verify_args: dict[str, Any] = {
                 "finding": finding_for_verifier(finding),
                 "tool_call_index": index,

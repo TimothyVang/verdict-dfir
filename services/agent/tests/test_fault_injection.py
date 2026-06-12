@@ -58,6 +58,20 @@ class _FakePy:
                     "replay_error": "tool re-run failed: unknown tool",
                     "replay_artifact": {"drift_class": "replay_error"},
                 }
+            if entry.get("output_sha256") == "f" * 64:
+                # Mirrors the production verifier's drift-reject on a
+                # CONFIRMED finding (first pass) — a corrupted recorded hash
+                # makes the (clean) replay output mismatch.
+                return {
+                    "finding_id": fid,
+                    "action": "rejected",
+                    "reason": (
+                        "tool re-run output_sha256 drift on a CONFIRMED "
+                        "finding — fresh replay required"
+                    ),
+                    "replay_matched": False,
+                    "replay_artifact": {"drift_class": "material_drift"},
+                }
             return {
                 "finding_id": fid,
                 "action": "approved",
@@ -141,6 +155,50 @@ def test_no_env_no_behavior_change(monkeypatch) -> None:
     assert verify_calls[0]["tool_call_index"] == inv._tool_call_index()
     assert "fault_injection" not in py.kinds()
     assert [a["action"] for a in actions] == ["approved"]
+
+
+def test_hash_mismatch_mode_drives_true_drift_reject_then_recovery(monkeypatch) -> None:
+    # The verifier_hash_mismatch_once mode corrupts the RECORDED output_sha256
+    # (not the tool name), so attempt 1 exercises the genuine hash-mismatch
+    # reject path; the re-dispatch sees the clean index and recovers.
+    monkeypatch.setenv("FIND_EVIL_FAULT_INJECT", "verifier_hash_mismatch_once:f-h1")
+    inv = _inv()
+    finding = _with_tool_call(inv, "f-h1")
+    py = _FakePy()
+
+    actions = inv._verify_pool(py, [finding])
+
+    verify_calls = py.verify_calls("f-h1")
+    assert len(verify_calls) == 2
+    first_entry = verify_calls[0]["tool_call_index"]["tc-f-h1"]
+    second_entry = verify_calls[1]["tool_call_index"]["tc-f-h1"]
+    assert first_entry["output_sha256"] == "f" * 64  # corrupted recorded hash
+    assert first_entry["tool_name"] == "evtx_query"  # tool name untouched
+    assert second_entry["output_sha256"] == "abc"  # re-dispatch sees clean index
+    # The re-dispatch carries the terminal drift policy.
+    assert verify_calls[1].get("downgrade_on_drift") is True
+
+    fault_payloads = [p for k, p in py.audits if k == "fault_injection"]
+    assert len(fault_payloads) == 1
+    assert fault_payloads[0]["mode"] == "verifier_hash_mismatch_once"
+
+    assert [a["action"] for a in actions] == ["approved"]
+    assert inv.verifier_redispatches["f-h1"]["recovered"] is True
+
+
+def test_hash_mismatch_mode_fires_at_most_once(monkeypatch) -> None:
+    monkeypatch.setenv("FIND_EVIL_FAULT_INJECT", "verifier_hash_mismatch_once:f-hh")
+    inv = _inv()
+    pool_a = [_with_tool_call(inv, "f-hh-1")]
+    pool_b = [_with_tool_call(inv, "f-hh-2")]
+    py = _FakePy()
+
+    inv._verify_pool(py, pool_a)
+    inv._verify_pool(py, pool_b)
+
+    assert py.kinds().count("fault_injection") == 1
+    assert len(py.verify_calls("f-hh-1")) == 2
+    assert len(py.verify_calls("f-hh-2")) == 1
 
 
 def test_fault_fires_at_most_once_per_run(monkeypatch) -> None:
