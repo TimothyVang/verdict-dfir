@@ -110,12 +110,14 @@ of your Project.
 
 **Requirement:** Include a demonstration video of your Project.
 
-**STATUS: SATISFIED — rendered, hosted, published (2026-06-11)**
+**STATUS: SATISFIED — rendered, hosted on YouTube, published (2026-06-12)**
 
 > **The hosted cut.** The full 4:35 film (10 beats, voiceover, real-footage exhibits) is
-> rendered and published as a release asset:
+> public on YouTube, with the mp4 mirrored as a release asset:
 >
-> **Hosted URL:** <https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4>
+> **Hosted URL (YouTube):** <https://youtu.be/4RQnVden6L8>
+>
+> **mp4 mirror (release asset):** <https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4>
 >
 > **Real exhibits in the cut (genuine capture, not animation):**
 > 1. **Beat 2** — an actual asciinema capture of a live investigation, slowed to 0.3× and
@@ -130,9 +132,9 @@ of your Project.
 >    the verifier fails naming the exact broken record (`seq 97: prev_hash break`).
 >
 > Narration canon is [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts);
-> re-render with `pnpm render` (output goes to `/tmp`, not the repo — the mp4 ships as a
-> release asset only). Optional upgrade: re-host on YouTube/Vimeo for Devpost's embedded
-> player and update the URL here + in the Devpost form.
+> re-render with `pnpm render` (output goes to `/tmp`, not the repo — the mp4 ships on
+> YouTube + as a release-asset mirror, never in the tree). The Devpost form's video field
+> carries the same YouTube URL.
 
 ---
 
@@ -282,7 +284,7 @@ of your Project.
 | 3 | README with setup instructions | [`README.md`](README.md) · [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 4 | Deployment / step-by-step instructions | [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 5 | Feature / functionality description | [`README.md`](README.md) | SATISFIED |
-| 6 | Demonstration video | [hosted mp4 (release asset)](https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
+| 6 | Demonstration video | [YouTube (4:35)](https://youtu.be/4RQnVden6L8) · [mp4 mirror](https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
 | 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) (incl. §6 evidence integrity + named caught hallucinations) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED (best: nitroba 100% recall, reproducible; NIST 7% — honest coverage gap) |

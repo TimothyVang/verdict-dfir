@@ -53,7 +53,7 @@ images).
 <p align="center">
   <img src="docs/showcase/sift-scenario/srl-basefile-sift.gif" alt="VERDICT investigating the SRL-2018 base-file host with the forensic tools running inside the SANS SIFT VM" width="760">
 </p>
-<p align="center"><sub>The hardest case — SANS <b>SRL-2018</b>, a 198&nbsp;GB / 22-host compromised enterprise — run host-by-host with the forensic toolchain executing inside the SANS SIFT VM over SSH. <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">Watch the full walkthrough (4:35) →</a></sub></p>
+<p align="center"><sub>The hardest case — SANS <b>SRL-2018</b>, a 198&nbsp;GB / 22-host compromised enterprise — run host-by-host with the forensic toolchain executing inside the SANS SIFT VM over SSH. <a href="https://youtu.be/4RQnVden6L8">Watch the full walkthrough on YouTube (4:35) →</a> · <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">mp4 mirror</a></sub></p>
 
 <p align="center">
   <img src="docs/showcase/sift-scenario/srl-fleet-report-hero.png" alt="Fleet rollup — 22 hosts investigated, 74 cross-host process correlations, 53 multi-host temporal clusters" width="250">
