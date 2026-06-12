@@ -40,6 +40,11 @@ sealing an honest partial verdict:
 - `verdict.json` — the final verdict and every Finding (each citing a `tool_call_id`).
 - `REPORT.md` — the human-readable investigative narrative.
 - `evidence_inventory.json` (attack-samples only) — artifact classes touched.
+- `recall-score.json` (`nitroba`, `nist-hacking-case`) — the committed grading receipt against the
+  published golden: nitroba **5/5 = 100% PASS**, nist-hacking-case **1/14 = 7% FAIL**. The FAIL is
+  committed on purpose — it is the honest coverage gap `docs/accuracy-report.md` §2 publishes, and
+  either file regenerates with
+  `python3 scripts/score-recall.py docs/sample-run/<case> --golden goldens/<case>`.
 
 The heavy render artifacts (`REPORT.pdf`, `REPORT.html`, `figures/`, `timeline.*`) are omitted
 to keep the tree light; they regenerate from a live run.
