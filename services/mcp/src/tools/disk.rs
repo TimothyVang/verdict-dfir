@@ -1225,9 +1225,42 @@ fn tail_utf8_lossy(bytes: &[u8]) -> String {
 mod tests {
     use super::{
         artifact_subrank, class_priority, classify_artifact_path, mock_list, parse_fls_line,
-        parse_mmls_first_partition_offset, select_artifacts, unmount_steps,
+        parse_mmls_first_partition_offset, safe_join, select_artifacts, unmount_steps,
     };
     use std::path::Path;
+
+    #[test]
+    fn safe_join_strips_traversal_and_stays_under_base() {
+        let base = Path::new("/cases/abc/extracted");
+        // A `..`-laden relative path must not escape the base: every `..`,
+        // `.`, and empty segment is dropped, so the result is always a
+        // descendant of base. This is the only write-side path guard.
+        for rel in [
+            "../../etc/passwd",
+            "..\\..\\windows\\system32\\config\\sam",
+            "/abs/looking/path",
+            "./a/../../../b",
+            "../",
+            "..",
+        ] {
+            let joined = safe_join(base, rel);
+            assert!(joined.starts_with(base), "{rel:?} escaped base: {joined:?}");
+            assert!(
+                !joined.components().any(|c| c.as_os_str() == ".."),
+                "{rel:?} left a .. component: {joined:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn safe_join_keeps_legitimate_nested_paths() {
+        let base = Path::new("/cases/abc/extracted");
+        let joined = safe_join(base, "registry/Windows/System32/config/SOFTWARE");
+        assert_eq!(
+            joined,
+            Path::new("/cases/abc/extracted/registry/Windows/System32/config/SOFTWARE")
+        );
+    }
 
     #[test]
     fn mock_list_walks_tree_and_keeps_relative_paths() {
