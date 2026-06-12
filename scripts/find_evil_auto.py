@@ -1389,7 +1389,9 @@ def registry_persistence_candidates(
 
 
 # Triage keys whose payload lives in nested subkeys (everything else is flat).
-_RECURSIVE_TRIAGE_KEYS = frozenset({r"ControlSet001\Enum\USBSTOR"})
+_RECURSIVE_TRIAGE_KEYS = frozenset(
+    {r"ControlSet001\Enum\USBSTOR", r"SAM\Domains\Account\Users\Names"}
+)
 
 _USBSTOR_SERIAL_RE = re.compile(
     r"\\enum\\usbstor\\disk&ven_(?P<ven>[^&\\]*)&prod_(?P<prod>[^&\\]*)[^\\]*\\(?P<serial>[^\\]+)$",
@@ -1426,6 +1428,56 @@ def registry_usb_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "product": m.group("prod"),
                 "serial": m.group("serial"),
                 "friendly_name": friendly,
+                "hive_key": row_key,
+                "last_write_time_iso": row.get("last_write_time_iso"),
+            }
+        )
+    return out
+
+
+_SAM_BUILTIN_ACCOUNTS: frozenset[str] = frozenset(
+    {
+        "administrator",
+        "guest",
+        "helpassistant",
+        "support_388945a0",
+        "defaultaccount",
+        "wdagutilityaccount",
+        "krbtgt",
+        "aspnet",
+    }
+)
+
+_SUSPICIOUS_ACCOUNT_NAME_TOKENS = ("evil", "hack", "crack", "pwn", "0wn", "warez", "hax")
+
+_SAM_NAMES_RE = re.compile(r"\\domains\\account\\users\\names\\(?P<name>[^\\]+)$", re.IGNORECASE)
+
+
+def registry_sam_account_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Classify SAM Users\\Names rows into suspicious local-account candidates.
+
+    Pure function. Plain accounts exist on every machine, so only a naming
+    tell makes an account a lead — the gate keeps benign disks quiet. The
+    Names subkey's last_write approximates account creation time.
+    """
+    out: list[dict[str, Any]] = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        row_key = str(row.get("key_path") or "").replace("/", "\\")
+        m = _SAM_NAMES_RE.search(row_key)
+        if not m:
+            continue
+        name = m.group("name")
+        lower = name.lower()
+        if lower in _SAM_BUILTIN_ACCOUNTS:
+            continue
+        if not any(tok in lower for tok in _SUSPICIOUS_ACCOUNT_NAME_TOKENS):
+            continue
+        out.append(
+            {
+                "kind": "sam_account",
+                "account_name": name,
                 "hive_key": row_key,
                 "last_write_time_iso": row.get("last_write_time_iso"),
             }
@@ -6943,6 +6995,8 @@ class Investigation:
             ]
         if name == "system":
             return [r"ControlSet001\Services", r"ControlSet001\Enum\USBSTOR"]
+        if name == "sam":
+            return [r"SAM\Domains\Account\Users\Names"]
         if name in {"ntuser.dat", "usrclass.dat"}:
             return [
                 r"Software\Microsoft\Windows\CurrentVersion\Run",
@@ -7041,8 +7095,38 @@ class Investigation:
         USB device history (USBSTOR) is the exfil/staging lead — Pool B's
         bias. Insertion history is normal on most machines, so the level is
         HYPOTHESIS, never CONFIRMED: it must not flip a benign disk's verdict.
+        Suspiciously-named SAM accounts go to Pool A (account creation is a
+        persistence mechanism, T1136.001) at INFERRED — two labeled facts
+        (account exists tool-backed + naming-tell match), and generic
+        INFERRED never flips a verdict.
         """
         for cand in candidates:
+            if cand.get("kind") == "sam_account":
+                name = str(cand.get("account_name") or "account")
+                safe = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "account"
+                finding = {
+                    "case_id": self.handle["id"],
+                    "finding_id": self._finding_id_for(f"f-A-sam-{safe}", hive_path),
+                    "tool_call_id": tcid,
+                    "artifact_path": hive_path,
+                    "description": (
+                        f"Local user account '{name}' with suspicious naming recorded "
+                        f"in the SAM hive ({cand.get('hive_key')}; Names subkey "
+                        f"last_write {cand.get('last_write_time_iso')} approximates "
+                        "account creation). INFERRED from two facts: the account's "
+                        "existence is tool-backed (registry_query) and its name "
+                        "matches the suspicious-naming heuristic. Privilege level "
+                        "and actual use are NOT claimed — corroborate group "
+                        "membership and logon artifacts."
+                    ),
+                    "confidence": "INFERRED",
+                    "pool_origin": "A",
+                    "mitre_technique": "T1136.001",
+                    "derived_from": [tcid],
+                }
+                self.findings_pool_a.append(finding)
+                print(f"  pool-A activity finding: {finding['finding_id']} (INFERRED)")
+                continue
             if cand.get("kind") != "usb_device":
                 continue
             device = str(
@@ -7619,9 +7703,11 @@ class Investigation:
                     )
                 # Pool B activity emitters: USBSTOR insertion history becomes
                 # a HYPOTHESIS exfil/staging lead citing this registry_query.
-                usb_candidates = registry_usb_candidates(rows)
-                if usb_candidates:
-                    self._emit_registry_activity_findings(usb_candidates, path, key_path, tcid)
+                activity_candidates = registry_usb_candidates(
+                    rows
+                ) + registry_sam_account_candidates(rows)
+                if activity_candidates:
+                    self._emit_registry_activity_findings(activity_candidates, path, key_path, tcid)
 
         self._corroborate_execution_with_userassist(rust, py, by_class)
 

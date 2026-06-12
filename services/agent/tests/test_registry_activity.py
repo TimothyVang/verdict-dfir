@@ -107,3 +107,66 @@ class TestPoolBUsbEmitter:
             [{"kind": "mystery"}], "/evidence/SYSTEM", USBSTOR_KEY, "tc-usb-2"
         )
         assert inv.findings_pool_b == []
+
+
+SAM_NAMES_KEY = "SAM\\Domains\\Account\\Users\\Names"
+
+
+class TestSamAccountCandidates:
+    def test_suspiciously_named_account_is_a_candidate(self) -> None:
+        rows = [
+            _row(SAM_NAMES_KEY),
+            _row(SAM_NAMES_KEY + "\\Mr. Evil", lw="2004-08-19T23:03:54Z"),
+        ]
+        cands = fea.registry_sam_account_candidates(rows)
+        assert len(cands) == 1
+        c = cands[0]
+        assert c["kind"] == "sam_account"
+        assert c["account_name"] == "Mr. Evil"
+        assert c["last_write_time_iso"] == "2004-08-19T23:03:54Z"
+
+    def test_builtin_accounts_are_filtered(self) -> None:
+        rows = [
+            _row(SAM_NAMES_KEY + "\\Administrator"),
+            _row(SAM_NAMES_KEY + "\\Guest"),
+            _row(SAM_NAMES_KEY + "\\HelpAssistant"),
+            _row(SAM_NAMES_KEY + "\\SUPPORT_388945a0"),
+        ]
+        assert fea.registry_sam_account_candidates(rows) == []
+
+    def test_ordinary_named_account_is_not_a_candidate(self) -> None:
+        # Plain user accounts exist on every machine — only a naming tell
+        # makes the account a lead.
+        rows = [_row(SAM_NAMES_KEY + "\\alice")]
+        assert fea.registry_sam_account_candidates(rows) == []
+
+    def test_non_sam_rows_yield_nothing(self) -> None:
+        assert fea.registry_sam_account_candidates([_row(USBSTOR_KEY)]) == []
+
+
+class TestPoolASamEmitter:
+    def _inv(self):
+        inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+        inv.handle = {"id": "case-samtest"}
+        return inv
+
+    def test_sam_candidate_becomes_inferred_pool_a_finding(self) -> None:
+        inv = self._inv()
+        cand = {
+            "kind": "sam_account",
+            "account_name": "Mr. Evil",
+            "hive_key": SAM_NAMES_KEY + "\\Mr. Evil",
+            "last_write_time_iso": "2004-08-19T23:03:54Z",
+        }
+        inv._emit_registry_activity_findings([cand], "/evidence/SAM", SAM_NAMES_KEY, "tc-sam-1")
+        assert len(inv.findings_pool_a) == 1
+        f = inv.findings_pool_a[0]
+        assert f["pool_origin"] == "A"
+        assert f["confidence"] == "INFERRED"
+        assert f["mitre_technique"] == "T1136.001"
+        assert f["finding_id"].startswith("f-A-sam-")
+        desc = f["description"].lower()
+        # The two labeled facts behind the INFERRED tier: the account exists
+        # (tool-backed) and its name matches the suspicious-naming heuristic.
+        assert "user account" in desc and "suspicious naming" in desc
+        assert "mr. evil" in desc
