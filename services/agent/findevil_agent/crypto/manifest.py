@@ -353,13 +353,10 @@ def verify_manifest(
                 f"declares {declared_count} (tail truncation or post-seal append)"
             )
         elif replayed_final != declared_final:
-            audit_status = (
-                "audit log final hash does not match the manifest's " "audit_log_final_hash"
-            )
+            audit_status = "audit log final hash does not match the manifest's audit_log_final_hash"
         elif derived_leaves != declared_leaves:
             audit_status = (
-                "leaves re-derived from the audit log do not match the "
-                "manifest's declared leaves"
+                "leaves re-derived from the audit log do not match the manifest's declared leaves"
             )
 
     # 2. Merkle root.
@@ -388,7 +385,7 @@ def verify_manifest(
     sig = obj.get("signature") or {}
     sig_present = bool(sig.get("bundle_b64") and sig.get("payload_sha256"))
     sig_kind = str(sig.get("kind") or "stub")
-    sig_verified = _signature_verified(sig_present, sig_kind)
+    sig_verified = _signature_verified(sig_present, sig_kind, sig, obj)
 
     # `overall` stays presence-based (chain + merkle + count + a bundle exists)
     # so dev/offline stub runs — every committed sample run — still verify
@@ -407,25 +404,67 @@ def verify_manifest(
     )
 
 
-def _signature_verified(present: bool, kind: str) -> bool | str:
+def _signature_verified(
+    present: bool,
+    kind: str,
+    sig: dict[str, Any] | None = None,
+    manifest_obj: dict[str, Any] | None = None,
+) -> bool | str:
     """Honest answer to 'was the signature cryptographically verified?'.
 
     Never returns ``True`` for a stub (a deterministic placeholder is not
     proof) and never falsely claims to have verified a sigstore bundle it did
-    not. A real sigstore bundle is *recorded* for offline verification by a
-    party that supplies the expected signer identity (a deployment policy this
-    library can't assume) — so we report that explicitly rather than overclaim.
+    not. An ``ed25519`` bundle embeds its public key, so it IS verified here,
+    offline: the canonical manifest body (everything except ``signature``) is
+    rebuilt and checked against the embedded signature. A real sigstore bundle
+    is *recorded* for offline verification by a party that supplies the
+    expected signer identity (a deployment policy this library can't assume) —
+    so we report that explicitly rather than overclaim.
     """
     if not present:
         return "no signature bundle present"
     if kind == "stub":
         return "stub signature: deterministic dev/offline placeholder, not cryptographic proof"
+    if kind == "ed25519":
+        return _verify_ed25519_signature(sig or {}, manifest_obj or {})
     if kind == "sigstore":
         return (
             "sigstore bundle present and recorded; offline cryptographic verification "
             "requires the verifier to supply the expected signer identity (deployment policy)"
         )
     return f"unknown signer kind {kind!r}"
+
+
+def _verify_ed25519_signature(sig: dict[str, Any], manifest_obj: dict[str, Any]) -> bool | str:
+    """Offline cryptographic verification of a LocalEd25519Signer bundle.
+
+    Rebuilds the exact bytes that were signed — the JCS-canonicalized manifest
+    body with the ``signature`` field removed (mirror of ``build_manifest``,
+    which signs ``canonicalize_json(_to_json_safe(body, exclude_signature=True))``)
+    — and verifies the embedded Ed25519 signature against the embedded public
+    key. Returns ``True`` only on a genuine cryptographic pass.
+    """
+    import base64
+
+    try:
+        bundle = json.loads(base64.b64decode(str(sig.get("bundle_b64") or "")))
+        public_key_b64 = bundle["public_key_b64"]
+        signature_b64 = bundle["signature_b64"]
+    except (KeyError, ValueError, TypeError) as exc:
+        return f"ed25519 bundle malformed: {exc}"
+    body = {k: v for k, v in manifest_obj.items() if k != "signature"}
+    body_bytes = canonicalize_json(body)
+    try:
+        from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+        pub = Ed25519PublicKey.from_public_bytes(base64.b64decode(public_key_b64))
+        pub.verify(base64.b64decode(signature_b64), body_bytes)
+    except InvalidSignature:
+        return "ed25519 signature verification FAILED: manifest body does not match the signature"
+    except Exception as exc:  # key decode / import errors — honest reason, never a crash
+        return f"ed25519 signature verification failed: {exc}"
+    return True
 
 
 # ---------------------------------------------------------------------------

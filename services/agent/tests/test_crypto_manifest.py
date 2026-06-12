@@ -263,6 +263,75 @@ class TestVerifyManifest:
         assert result.audit_chain_ok is True, result.audit_chain_ok
         assert result.overall is True
 
+    def test_ed25519_manifest_verifies_cryptographically_offline(self, tmp_path: Path) -> None:
+        from findevil_agent.crypto.signer import LocalEd25519Signer
+
+        log = _seed_log(tmp_path / "audit.jsonl")
+        manifest = build_manifest(
+            case_id="case-ed",
+            run_id="ver-ed",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=LocalEd25519Signer(key_path=tmp_path / "signing.key"),
+        )
+        path = write_manifest(manifest, tmp_path / "run.manifest.json")
+        assert manifest.signature["kind"] == "ed25519"
+
+        result = verify_manifest(path)
+        assert result.overall is True
+        assert result.signature_kind == "ed25519"
+        # The real claim: a genuine offline cryptographic verification.
+        assert result.signature_verified is True
+
+    def test_ed25519_tampered_body_fails_signature_verification(self, tmp_path: Path) -> None:
+        from findevil_agent.crypto.signer import LocalEd25519Signer
+
+        log = _seed_log(tmp_path / "audit.jsonl")
+        manifest = build_manifest(
+            case_id="case-ed2",
+            run_id="ver-ed2",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=LocalEd25519Signer(key_path=tmp_path / "signing.key"),
+        )
+        path = write_manifest(manifest, tmp_path / "run.manifest.json")
+        obj = json.loads(path.read_text(encoding="utf-8"))
+        obj["case_id"] = "case-FORGED"
+        path.write_text(json.dumps(obj), encoding="utf-8")
+
+        result = verify_manifest(path)
+        # Body no longer matches the signed bytes: honest reason string, not True.
+        assert result.signature_verified is not True
+        assert "ed25519" in str(result.signature_verified)
+
+    def test_ed25519_tampered_bundle_fails_signature_verification(self, tmp_path: Path) -> None:
+        import base64 as _b64
+
+        from findevil_agent.crypto.signer import LocalEd25519Signer
+
+        log = _seed_log(tmp_path / "audit.jsonl")
+        manifest = build_manifest(
+            case_id="case-ed3",
+            run_id="ver-ed3",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=LocalEd25519Signer(key_path=tmp_path / "signing.key"),
+        )
+        path = write_manifest(manifest, tmp_path / "run.manifest.json")
+        obj = json.loads(path.read_text(encoding="utf-8"))
+        bundle = json.loads(_b64.b64decode(obj["signature"]["bundle_b64"]))
+        sig = bytearray(_b64.b64decode(bundle["signature_b64"]))
+        sig[0] ^= 0xFF  # flip one bit of the signature
+        bundle["signature_b64"] = _b64.b64encode(bytes(sig)).decode("ascii")
+        obj["signature"]["bundle_b64"] = _b64.b64encode(
+            json.dumps(bundle, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).decode("ascii")
+        path.write_text(json.dumps(obj), encoding="utf-8")
+
+        result = verify_manifest(path)
+        assert result.signature_verified is not True
+        assert "ed25519" in str(result.signature_verified)
+
     def test_records_signer_kind_and_honest_verification(self, tmp_path: Path) -> None:
         log = _seed_log(tmp_path / "audit.jsonl")
         manifest = build_manifest(
