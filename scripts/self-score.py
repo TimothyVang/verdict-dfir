@@ -28,16 +28,14 @@ from typing import Any
 # The six criteria. Reused from the agent package when importable so there is a
 # single source of truth; falls back to an inline copy for a zero-dependency run.
 try:  # pragma: no cover - import shim
-    sys.path.insert(
-        0, str(Path(__file__).resolve().parent.parent / "services" / "agent")
-    )
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "services" / "agent"))
     from findevil_agent.playbook import JUDGE_SELFSCORE_CRITERIA as CRITERIA
 except Exception:  # pragma: no cover
     CRITERIA = [
         {
             "criterion": 1,
-            "question": "Did any tool call fail this run? If yes, did the audit log show explicit course-correction?",
-            "answer_style": "failures=N corrections=N",
+            "question": "Did any tool call fail this run? If yes, did the audit log show explicit course-correction — and was the trigger natural or an injected fault?",
+            "answer_style": "failures=N corrections=N injected_faults=N",
         },
         {
             "criterion": 2,
@@ -56,8 +54,8 @@ except Exception:  # pragma: no cover
         },
         {
             "criterion": 5,
-            "question": "Does every Finding cite a tool_call_id? (must be 100%; verifier vetoes otherwise)",
-            "answer_style": "cited=N/N",
+            "question": "Does every Finding cite a tool_call_id, and does each cited id resolve to a tool execution in the chain? (must be 100%; verifier vetoes otherwise)",
+            "answer_style": "cited=N/N traced=N/N",
         },
         {
             "criterion": 6,
@@ -113,6 +111,7 @@ def score(case_dir: Path) -> dict[str, Any]:
     findings: list[dict[str, Any]] = []
     rejected = 0
     corrections = 0  # kind=course_correction records (real-time failure recovery)
+    injected = 0  # kind=fault_injection records — staged, judges discount these
 
     for rec in lines:
         kind = rec.get("kind")
@@ -131,6 +130,8 @@ def score(case_dir: Path) -> dict[str, Any]:
             rejected += 1
         elif kind == "course_correction":
             corrections += 1
+        elif kind == "fault_injection":
+            injected += 1
 
     n = max(1, len(findings))
     conf = [f.get("confidence") for f in findings]
@@ -138,22 +139,21 @@ def score(case_dir: Path) -> dict[str, Any]:
     i = conf.count("INFERRED")
     h = conf.count("HYPOTHESIS")
     classes = sorted(
-        {
-            ARTIFACT_CLASS_FOR_TOOL[t]
-            for t in tools.values()
-            if t in ARTIFACT_CLASS_FOR_TOOL
-        }
+        {ARTIFACT_CLASS_FOR_TOOL[t] for t in tools.values() if t in ARTIFACT_CLASS_FOR_TOOL}
     )
     failures = sum(1 for tcid in tools if tcid not in have_output)
     cited = sum(1 for f in findings if f.get("tool_call_id"))
+    # The judges' three-claim trace, over every finding: the cited id must
+    # resolve to a tool_call_start in this same chain (cited != traced).
+    traced = sum(1 for f in findings if f.get("tool_call_id") in tools)
     reproducible = "yes" if tools and have_output >= set(tools) else "no"
 
     answers = [
-        f"failures={failures} corrections={corrections}",
+        f"failures={failures} corrections={corrections} injected_faults={injected}",
         f"C={c * 100 // n}% I={i * 100 // n}% H={h * 100 // n}% (n={len(findings)})",
         f"classes={classes} crossed={'yes' if len(classes) >= 2 else 'no'}",
         f"rejected={rejected} reasons=[]",
-        f"cited={cited}/{len(findings)}",
+        f"cited={cited}/{len(findings)} traced={traced}/{len(findings)}",
         f"reproducible={reproducible}",
     ]
     rows = [

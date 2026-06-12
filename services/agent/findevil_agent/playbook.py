@@ -271,8 +271,8 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
 JUDGE_SELFSCORE_CRITERIA: list[dict[str, str]] = [
     {
         "criterion": 1,
-        "question": "Did any tool call fail this run? If yes, did the audit log show explicit course-correction?",
-        "answer_style": "failures=N corrections=N",
+        "question": "Did any tool call fail this run? If yes, did the audit log show explicit course-correction — and was the trigger natural or an injected fault?",
+        "answer_style": "failures=N corrections=N injected_faults=N",
     },
     {
         "criterion": 2,
@@ -291,8 +291,8 @@ JUDGE_SELFSCORE_CRITERIA: list[dict[str, str]] = [
     },
     {
         "criterion": 5,
-        "question": "Does every Finding cite a tool_call_id? (must be 100%; verifier vetoes otherwise)",
-        "answer_style": "cited=N/N",
+        "question": "Does every Finding cite a tool_call_id, and does each cited id resolve to a tool execution in the chain? (must be 100%; verifier vetoes otherwise)",
+        "answer_style": "cited=N/N traced=N/N",
     },
     {
         "criterion": 6,

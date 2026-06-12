@@ -48,3 +48,59 @@ def test_zero_corrections_when_none(tmp_path: Path) -> None:
     result = self_score.score(tmp_path)
     crit1 = next(r for r in result["rows"] if r["criterion"] == 1)
     assert "corrections=0" in crit1["answer"]
+
+
+def test_distinguishes_injected_faults_from_natural_corrections(tmp_path: Path) -> None:
+    # The Judge Pack discounts staged self-correction: a correction triggered by
+    # FIND_EVIL_FAULT_INJECT (kind=fault_injection in the chain) must be reported
+    # separately from one triggered by a natural tool failure.
+    _write_audit(
+        tmp_path,
+        [
+            {"kind": "fault_injection", "payload": {"mode": "verifier_reject_once"}},
+            {
+                "kind": "course_correction",
+                "payload": {"failed_tool": "registry_query", "action": "narrow"},
+            },
+        ],
+    )
+    result = self_score.score(tmp_path)
+    crit1 = next(r for r in result["rows"] if r["criterion"] == 1)
+    assert "injected_faults=1" in crit1["answer"]
+
+
+def test_zero_injected_faults_on_natural_run(tmp_path: Path) -> None:
+    _write_audit(
+        tmp_path,
+        [
+            {
+                "kind": "course_correction",
+                "payload": {"failed_tool": "registry_query", "action": "narrow"},
+            },
+        ],
+    )
+    result = self_score.score(tmp_path)
+    crit1 = next(r for r in result["rows"] if r["criterion"] == 1)
+    assert "injected_faults=0" in crit1["answer"]
+
+
+def test_traced_counts_findings_whose_tool_call_id_resolves(tmp_path: Path) -> None:
+    # The judges' three-claim trace, run over every finding: a cited tool_call_id
+    # must resolve to a tool_call_start in the same chain. A finding citing a
+    # ghost id is cited-but-not-traced — the failure mode that fails judging.
+    _write_audit(
+        tmp_path,
+        [
+            {"kind": "tool_call_start", "payload": {"tool_call_id": "tc-1", "tool": "evtx_query"}},
+            {
+                "kind": "tool_call_output",
+                "payload": {"tool_call_id": "tc-1", "output_hash": "abc"},
+            },
+            {"kind": "finding_approved", "payload": {"tool_call_id": "tc-1"}},
+            {"kind": "finding_approved", "payload": {"tool_call_id": "tc-ghost"}},
+        ],
+    )
+    result = self_score.score(tmp_path)
+    crit5 = next(r for r in result["rows"] if r["criterion"] == 5)
+    assert "cited=2/2" in crit5["answer"]
+    assert "traced=1/2" in crit5["answer"]
