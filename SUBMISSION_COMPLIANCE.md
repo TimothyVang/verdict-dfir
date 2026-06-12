@@ -228,7 +228,7 @@ of your Project.
 **STATUS: SATISFIED**
 
 > **Committed sample runs (self-contained on a fresh clone):**
-> [`docs/sample-run/`](docs/sample-run/) ships six real, completed investigations — their
+> [`docs/sample-run/`](docs/sample-run/) ships seven real, completed investigations — their
 > `audit.jsonl`, `run.manifest.json`, `verdict.json`, `manifest_verify.json`, and `REPORT.md`.
 > All verify **offline** (`manifest_verify` returns `overall: true`), and
 > [`docs/sample-run/README.md`](docs/sample-run/README.md) walks a single finding all the way
@@ -288,13 +288,15 @@ of your Project.
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
 | 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) (incl. §6 evidence integrity + named caught hallucinations) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED (best: nitroba 100% recall, reproducible; NIST 7% — honest coverage gap) |
-| 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (6 committed runs, verify offline; `acp_handoff` = agent-to-agent log) | SATISFIED |
+| 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (7 committed runs — one per evidence class, verify offline; `acp_handoff` = agent-to-agent log) | SATISFIED |
 
 ---
 
-*Last verified: 2026-06-12 — execution-log deliverable (#10) now ships six committed,
+*Last verified: 2026-06-12 — execution-log deliverable (#10) now ships seven committed,
 offline-verifiable runs under [`docs/sample-run/`](docs/sample-run/); all return
 `manifest_verify overall: true`. The two NIST SCHARDT runs (Prefetch-only INDETERMINATE vs.
 `--sift` Prefetch+UserAssist CONFIRMED) show the ≥2-artifact-class rule cutting both ways, and
 `natural-self-correction/` adds the un-staged failure-recovery arc (six `course_correction`
-records + HEARTBEAT escalation) judges can trace offline.*
+records + HEARTBEAT escalation), and `memory-dc/` adds a live Volatility 3 run that holds a
+pslist/psscan divergence at HYPOTHESIS (acquisition smear, not DKOM) on first pass — both
+ed25519-signed and offline-traceable.*

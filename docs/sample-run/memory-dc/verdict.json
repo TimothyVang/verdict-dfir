@@ -1,0 +1,4976 @@
+{
+  "agent": "find-evil-auto MVP",
+  "analysis_limitations": [],
+  "attack_coverage": {
+    "blind_spot_count": 9,
+    "covered_target_count": 3,
+    "finding_target_count": 0,
+    "observed_techniques": [],
+    "summary": "3/12 ATT&CK targets covered by typed-tool output; 0 target(s) produced finding-level evidence; 9 target(s) remain blind spots",
+    "targets": [
+      {
+        "analyst_value": "Cross-view process enumeration for DKOM/rootkit signals.",
+        "artifact_classes": [
+          "memory"
+        ],
+        "artifact_classes_observed": [
+          "memory"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Defense Evasion",
+        "technique_id": "T1014",
+        "technique_name": "Rootkit",
+        "tools_expected": [
+          "vol_pslist",
+          "vol_psscan",
+          "vol_psxview"
+        ],
+        "tools_observed": [
+          "vol_pslist",
+          "vol_psscan",
+          "vol_psxview"
+        ]
+      },
+      {
+        "analyst_value": "Suspicious VADs, injected code, and payload triage.",
+        "artifact_classes": [
+          "memory"
+        ],
+        "artifact_classes_observed": [
+          "memory"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Defense Evasion / Privilege Escalation",
+        "technique_id": "T1055",
+        "technique_name": "Process Injection",
+        "tools_expected": [
+          "vol_malfind",
+          "yara_scan"
+        ],
+        "tools_observed": [
+          "vol_malfind"
+        ]
+      },
+      {
+        "analyst_value": "PowerShell process, script-block, and execution artifacts.",
+        "artifact_classes": [
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: disk/filesystem, evtx",
+        "status": "blind_spot",
+        "tactic": "Execution",
+        "technique_id": "T1059.001",
+        "technique_name": "PowerShell",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan",
+          "prefetch_parse"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Logon events and remote-session evidence.",
+        "artifact_classes": [
+          "evtx"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: evtx",
+        "status": "blind_spot",
+        "tactic": "Lateral Movement",
+        "technique_id": "T1021.001",
+        "technique_name": "Remote Desktop Protocol",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Account logon, privilege use, and local-account artifacts.",
+        "artifact_classes": [
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: disk/filesystem, evtx",
+        "status": "blind_spot",
+        "tactic": "Defense Evasion / Persistence / Privilege Escalation",
+        "technique_id": "T1078",
+        "technique_name": "Valid Accounts",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan",
+          "registry_query"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "LSASS access, dumping utilities, and credential-theft traces.",
+        "artifact_classes": [
+          "memory",
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [
+          "memory"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Credential Access",
+        "technique_id": "T1003",
+        "technique_name": "OS Credential Dumping",
+        "tools_expected": [
+          "vol_malfind",
+          "evtx_query",
+          "hayabusa_scan",
+          "yara_scan"
+        ],
+        "tools_observed": [
+          "vol_malfind"
+        ]
+      },
+      {
+        "analyst_value": "New files, download traces, and transfer telemetry.",
+        "artifact_classes": [
+          "disk/filesystem",
+          "network"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: disk/filesystem, network",
+        "status": "blind_spot",
+        "tactic": "Command and Control",
+        "technique_id": "T1105",
+        "technique_name": "Ingress Tool Transfer",
+        "tools_expected": [
+          "mft_timeline",
+          "usnjrnl_query",
+          "yara_scan",
+          "vel_collect",
+          "pcap_triage",
+          "zeek_summary"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "HTTP/S hosts, external web connections, and process-to-web telemetry for cautious C2 triage.",
+        "artifact_classes": [
+          "network"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: network",
+        "status": "blind_spot",
+        "tactic": "Command and Control",
+        "technique_id": "T1071.001",
+        "technique_name": "Web Protocols",
+        "tools_expected": [
+          "pcap_triage",
+          "zeek_summary",
+          "sysmon_network_query"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "DNS queries and resolver conversations for suspicious-domain triage.",
+        "artifact_classes": [
+          "network"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: network",
+        "status": "blind_spot",
+        "tactic": "Command and Control",
+        "technique_id": "T1071.004",
+        "technique_name": "DNS",
+        "tools_expected": [
+          "pcap_triage",
+          "zeek_summary"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Network telemetry needed to prove or reject exfiltration.",
+        "artifact_classes": [
+          "network"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: network",
+        "status": "blind_spot",
+        "tactic": "Exfiltration",
+        "technique_id": "T1041",
+        "technique_name": "Exfiltration Over C2 Channel",
+        "tools_expected": [
+          "pcap_triage",
+          "zeek_summary",
+          "sysmon_network_query",
+          "vel_collect"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Autorun persistence and execution corroboration.",
+        "artifact_classes": [
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: disk/filesystem",
+        "status": "blind_spot",
+        "tactic": "Persistence / Privilege Escalation",
+        "technique_id": "T1547.001",
+        "technique_name": "Registry Run Keys / Startup Folder",
+        "tools_expected": [
+          "registry_query",
+          "prefetch_parse",
+          "mft_timeline"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Scheduled-task creation, TaskCache, and task XML evidence.",
+        "artifact_classes": [
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: disk/filesystem, evtx",
+        "status": "blind_spot",
+        "tactic": "Execution / Persistence / Privilege Escalation",
+        "technique_id": "T1053.005",
+        "technique_name": "Scheduled Task",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan",
+          "registry_query"
+        ],
+        "tools_observed": []
+      }
+    ]
+  },
+  "attack_story": {
+    "assessment": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+    "attack_chain": [
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "see finding artifact"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-A-enum-smear",
+        "host": "base-dc-memory.img",
+        "hunt": "",
+        "mitre_technique": null,
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 1,
+        "phase": "Other",
+        "phase_index": 12,
+        "source_event_ids": [],
+        "summary": "hypothesis: Active-process enumeration failed (vol_pslist=0) while vol_psscan recovered 124 EPROCESS objects INCLUDING core OS singletons a rootkit cannot hide (core OS singletons recovered only by psscan (csrss.exe, lsass.exe, services.exe, smss.exe, system, ",
+        "timestamp_utc": null,
+        "title": "hypothesis: Active-process enumeration failed (vol_pslist=0) while vol_psscan recovered 124 EPROCESS objects I",
+        "tool_call_id": "tc-005",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      },
+      {
+        "action": "suspicious activity",
+        "actor": "",
+        "analyst_note": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.",
+        "artifact_classes": [
+          "memory"
+        ],
+        "confidence": "HYPOTHESIS",
+        "cves": [],
+        "finding_id": "f-B-uncommon-procs",
+        "host": "base-dc-memory.img",
+        "hunt": "",
+        "mitre_technique": null,
+        "named_technique": "",
+        "next_pivot": "",
+        "order": 2,
+        "phase": "Other",
+        "phase_index": 12,
+        "source_event_ids": [
+          "timeline-0001",
+          "timeline-0002",
+          "timeline-0003",
+          "timeline-0004",
+          "timeline-0005"
+        ],
+        "summary": "hypothesis: 58 processes have uncommon image names; sample: mmc.exe, mmc.exe, ManagementAgen, Microsoft.Acti, VGAuthService.. Cross-reference with disk artifacts to determine legitimacy.",
+        "timestamp_utc": "2018-08-16T21:05:18+00:00",
+        "title": "hypothesis: 58 processes have uncommon image names; sample: mmc.exe, mmc.exe, ManagementAgen, Microsoft.Acti, ",
+        "tool_call_id": "tc-004",
+        "why_it_matters": "The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes."
+      }
+    ],
+    "business_impact": "",
+    "certainty": "Low \u2014 a single-source lead; a direction to pursue, not a conclusion.",
+    "confidence_posture": {
+      "CONFIRMED": 0,
+      "HYPOTHESIS": 2,
+      "INFERRED": 0
+    },
+    "customer_releasable": false,
+    "customer_release_candidate": false,
+    "customer_summary": "The supplied evidence shows hypothesis.",
+    "evidence_scope": {
+      "artifact_classes_touched": [
+        "memory"
+      ],
+      "coverage_summary": "1/5 artifact classes touched; 1/5 directly available from supplied evidence",
+      "evidence_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/base-dc-memory.img",
+      "evidence_type": "memory"
+    },
+    "expert_decision": "pending",
+    "expert_miss_summary": {
+      "by_type": {},
+      "items": [],
+      "ledger_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/state/expert_misses.jsonl",
+      "summary": "Expert misses captured this case: 0 (uncaptured edits are a QA defect; see EXPERT.md Replacement metric).",
+      "total": 0
+    },
+    "headline": "Triage lead: hypothesis.",
+    "how_they_got_in": "",
+    "ready_for_customer_pdf": false,
+    "ready_for_expert_signoff": true,
+    "recommended_next_decisions": [
+      "Collect Security, Sysmon, and PowerShell Operational EVTX and rerun EVTX/Hayabusa analysis.",
+      "Use read-only SIFT disk workflow to extract Prefetch, Registry, MFT, USN Journal, and YARA targets before parsing them with typed tools.",
+      "Acquire DNS, proxy, firewall, NetFlow, or PCAP telemetry to test C2 and exfiltration hypotheses."
+    ],
+    "root_cause": "",
+    "signoff_question": "Would I send this report to a company without rewriting it?",
+    "verdict": "INDETERMINATE",
+    "verdict_meaning": "Use the verdict as a triage priority, then read each Finding confidence and citation before acting.",
+    "version": 1,
+    "what_we_can_say": [
+      "The run produced only triage-level leads; read each cited tool call in the findings detail before acting."
+    ],
+    "what_we_cannot_say": [
+      "Who operated the activity \u2014 this report does not assert attribution; naming an account reflects a record field, not the human behind it.",
+      "Whether the wider environment is affected \u2014 this run examined the supplied evidence only.",
+      "Undetermined: execution and persistence cannot be confirmed without disk artifacts. To resolve: parse a triage collection \u2014 $MFT, $UsnJrnl, Amcache, ShimCache, Prefetch, and Registry run keys/services/tasks.",
+      "Undetermined: command-and-control and exfiltration cannot be assessed without network data. To resolve: collect DNS, proxy, firewall, or NetFlow logs, or a PCAP.",
+      "Undetermined: logon, process-creation, and PowerShell activity cannot be reviewed without event logs. To resolve: collect the Security, Sysmon/Operational, and PowerShell/Operational logs."
+    ]
+  },
+  "attck_practitioner_coverage": {
+    "data_source_coverage": [
+      {
+        "data_source_id": "DS0008",
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "tools_observed": [
+          "vol_malfind",
+          "vol_pslist",
+          "vol_psscan",
+          "vol_psxview"
+        ]
+      },
+      {
+        "data_source_id": "DS0009",
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "tools_observed": [
+          "vol_malfind",
+          "vol_pslist",
+          "vol_psscan",
+          "vol_psxview"
+        ]
+      },
+      {
+        "data_source_id": "DS0011",
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "tools_observed": [
+          "vol_malfind",
+          "vol_pslist",
+          "vol_psscan",
+          "vol_psxview"
+        ]
+      }
+    ],
+    "lanes": {
+      "endpoint_host": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: disk/filesystem"
+        ],
+        "findings_linked": [],
+        "label": "Host & Endpoint Forensics",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      },
+      "live_response": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: velociraptor"
+        ],
+        "findings_linked": [],
+        "label": "Endpoint Telemetry & Live Response",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      },
+      "malware": {
+        "artifact_classes_seen": [
+          "memory"
+        ],
+        "attck_data_sources_seen": [
+          "DS0008",
+          "DS0009",
+          "DS0011"
+        ],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: disk/filesystem",
+          "malware lane is triage only without payload extraction, capa-style capabilities, and cross-artifact corroboration"
+        ],
+        "findings_linked": [],
+        "label": "Malware Analysis & Triage",
+        "next_actions": [
+          "Corroborate lane-specific leads with another artifact class before upgrading confidence."
+        ],
+        "status": "partial",
+        "tools_run": [
+          "vol_malfind"
+        ]
+      },
+      "memory": {
+        "artifact_classes_seen": [
+          "memory"
+        ],
+        "attck_data_sources_seen": [
+          "DS0008",
+          "DS0009",
+          "DS0011"
+        ],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [],
+        "findings_linked": [
+          "f-A-enum-smear",
+          "f-B-uncommon-procs"
+        ],
+        "label": "Memory Forensics",
+        "next_actions": [
+          "Corroborate lane-specific leads with another artifact class before upgrading confidence."
+        ],
+        "status": "automated",
+        "tools_run": [
+          "vol_malfind",
+          "vol_pslist",
+          "vol_psscan",
+          "vol_psxview"
+        ]
+      },
+      "network": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: network",
+          "no PCAP, Zeek, proxy, DNS, firewall, or NetFlow telemetry supplied"
+        ],
+        "findings_linked": [],
+        "label": "Network Forensics",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      },
+      "windows_event": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: evtx"
+        ],
+        "findings_linked": [],
+        "label": "Windows Event & Account Analysis",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      }
+    },
+    "overclaim_guardrails_applied": [
+      "covered_no_finding is limited coverage, not a clean/cleared claim",
+      "Domain coverage describes triage/orchestration across the typed tools that ran, not certified-analyst judgment",
+      "visual exhibits do not create findings or upgrade confidence",
+      "execution claims still require at least two artifact classes"
+    ],
+    "research_basis": [
+      "MITRE ATT&CK data sources and techniques",
+      "SANS FOR508/FOR572/FOR610 public course themes",
+      "Zeek, Velociraptor, Sigma/Hayabusa, YARA, capa public docs",
+      "DFIR Report, Red Canary, Elastic Security Labs practitioner reporting patterns",
+      "Reddit DFIR/computerforensics/blueteamsec prioritization signals"
+    ],
+    "source_citation_ids": [
+      "CITE-MITRE-ATTACK-DATASOURCES",
+      "CITE-MITRE-T1003-001",
+      "CITE-MITRE-T1014",
+      "CITE-NIST-800-61R2",
+      "CITE-VOLATILITY3",
+      "CITE-ZEEK-LOGS"
+    ],
+    "technique_coverage": [
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-T1014",
+          "CITE-VOLATILITY3"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1014",
+        "technique_name": "Rootkit"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-VOLATILITY3"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1055",
+        "technique_name": "Process Injection"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1059.001",
+        "technique_name": "PowerShell"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1021.001",
+        "technique_name": "Remote Desktop Protocol"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1078",
+        "technique_name": "Valid Accounts"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-T1003-001"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1003",
+        "technique_name": "OS Credential Dumping"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1105",
+        "technique_name": "Ingress Tool Transfer"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-ZEEK-LOGS"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1071.001",
+        "technique_name": "Web Protocols"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-ZEEK-LOGS"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1071.004",
+        "technique_name": "DNS"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-ZEEK-LOGS"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1041",
+        "technique_name": "Exfiltration Over C2 Channel"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1547.001",
+        "technique_name": "Registry Run Keys / Startup Folder"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1053.005",
+        "technique_name": "Scheduled Task"
+      }
+    ],
+    "version": 1
+  },
+  "case_completeness": {
+    "available_classes": 1,
+    "checks": [
+      {
+        "artifact_class": "memory",
+        "available": true,
+        "confidence_impact": "process and injection evidence available",
+        "tools": [
+          "vol_malfind",
+          "vol_pslist",
+          "vol_psscan",
+          "vol_psxview"
+        ],
+        "touched": true
+      },
+      {
+        "artifact_class": "evtx",
+        "available": false,
+        "confidence_impact": "no event log supplied in this single-evidence run",
+        "tools": [],
+        "touched": false
+      },
+      {
+        "artifact_class": "disk/filesystem",
+        "available": false,
+        "confidence_impact": "no disk image supplied; execution/persistence corroboration is limited",
+        "tools": [],
+        "touched": false
+      },
+      {
+        "artifact_class": "network",
+        "available": false,
+        "confidence_impact": "no PCAP, Zeek, firewall, DNS, or proxy logs supplied",
+        "tools": [],
+        "touched": false
+      },
+      {
+        "artifact_class": "velociraptor",
+        "available": false,
+        "confidence_impact": "no Velociraptor collection supplied",
+        "tools": [],
+        "touched": false
+      }
+    ],
+    "evidence_type": "memory",
+    "inventory_summary": null,
+    "summary": "1/5 artifact classes touched; 1/5 directly available from supplied evidence",
+    "touched_classes": 1
+  },
+  "case_id": "2d3bc561-31c7-4135-a6d2-3003d180609a",
+  "cryptographic_attestation": {
+    "manifest_finalized_after_verdict": true,
+    "manifest_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/mem-base-dc-live/run.manifest.json",
+    "packet_attestation": {
+      "customer_releasable": false,
+      "customer_release_candidate": false,
+      "final_finding_ids": [
+        "f-A-enum-smear",
+        "f-B-uncommon-procs"
+      ],
+      "packet_state": "EXPERT_REVIEW_DRAFT",
+      "release_gate_sha256": "52e815768536f6e14f86db4114757a70b7fac8849e07f98d8717acf659811d25",
+      "report_qa_sha256": "a0b9b973f84cf8ec04be3e3aa42ade00c95e29c5bd7927521c56591b6a7bee31",
+      "verdict_packet_sha256": "868104203a8768180fb17becefc05b9931783239bc0bd54ad43b633fa4a0fdfb"
+    }
+  },
+  "disk_artifact_summary": null,
+  "entity_index": {
+    "accounts": [],
+    "destination_ips": [],
+    "entity_count": 50,
+    "hosts": [],
+    "processes": [
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 25,
+        "first_seen": "2018-08-16T21:37:38+00:00",
+        "last_seen": "2018-09-06T22:53:58+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "cmd.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 15,
+        "first_seen": "2018-08-16T21:05:25+00:00",
+        "last_seen": "2018-08-16T21:36:57+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "svchost.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 7,
+        "first_seen": "2018-08-16T21:37:38+00:00",
+        "last_seen": "2018-09-06T22:53:58+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "conhost.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 5,
+        "first_seen": "2018-08-16T21:05:44+00:00",
+        "last_seen": "2018-09-05T21:19:37+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "WmiPrvSE.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 5,
+        "first_seen": "2018-08-16T22:04:30+00:00",
+        "last_seen": "2018-09-05T14:47:09+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "mmc.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 3,
+        "first_seen": "2018-08-16T21:05:21+00:00",
+        "last_seen": "2018-08-30T20:18:31+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "csrss.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 3,
+        "first_seen": "2018-08-16T21:05:18+00:00",
+        "last_seen": "2018-08-30T20:18:31+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "smss.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 2,
+        "first_seen": "2018-08-30T13:23:55+00:00",
+        "last_seen": "2018-08-30T20:18:31+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "LogonUI.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 2,
+        "first_seen": "2018-08-16T21:05:18+00:00",
+        "last_seen": "2018-08-16T21:05:18+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "System"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 2,
+        "first_seen": "2018-08-16T21:05:44+00:00",
+        "last_seen": "2018-08-16T22:10:47+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "dllhost.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 2,
+        "first_seen": "2018-08-16T21:05:26+00:00",
+        "last_seen": "2018-08-30T20:18:31+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "dwm.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 2,
+        "first_seen": "2018-09-01T18:18:19+00:00",
+        "last_seen": "2018-09-06T11:14:39+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "findstr.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 2,
+        "first_seen": "2018-09-04T19:58:33+00:00",
+        "last_seen": "2018-09-06T17:57:41+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "tasklist.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 2,
+        "first_seen": "2018-08-16T21:05:42+00:00",
+        "last_seen": "2018-08-16T21:37:10+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "vmtoolsd.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 2,
+        "first_seen": "2018-08-16T21:05:21+00:00",
+        "last_seen": "2018-08-30T20:18:31+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "winlogon.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:37:08+00:00",
+        "last_seen": "2018-08-16T21:37:08+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "ApplicationFra"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-30T13:23:56+00:00",
+        "last_seen": "2018-08-30T13:23:56+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "LockAppHost.ex"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:07:53+00:00",
+        "last_seen": "2018-08-16T21:07:53+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "ManagementAgen"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:42+00:00",
+        "last_seen": "2018-08-16T21:05:42+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "Microsoft.Acti"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:42+00:00",
+        "last_seen": "2018-08-16T21:05:42+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "MsMpEng.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:48+00:00",
+        "last_seen": "2018-08-16T21:05:48+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "NisSrv.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:36:57+00:00",
+        "last_seen": "2018-08-16T21:36:57+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "RuntimeBroker."
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-17T17:35:21+00:00",
+        "last_seen": "2018-08-17T17:35:21+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "SearchUI.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:37:01+00:00",
+        "last_seen": "2018-08-16T21:37:01+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "ServerManager."
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:36:59+00:00",
+        "last_seen": "2018-08-16T21:36:59+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "ShellExperienc"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:37:08+00:00",
+        "last_seen": "2018-08-16T21:37:08+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "SystemSettings"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-30T20:18:33+00:00",
+        "last_seen": "2018-08-30T20:18:33+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "TabTip.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-30T20:18:33+00:00",
+        "last_seen": "2018-08-30T20:18:33+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "TabTip32.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T22:33:08+00:00",
+        "last_seen": "2018-08-16T22:33:08+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "Taskmgr.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:37:11+00:00",
+        "last_seen": "2018-08-16T21:37:11+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "UpdaterUI.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:42+00:00",
+        "last_seen": "2018-08-16T21:05:42+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "VGAuthService."
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:42+00:00",
+        "last_seen": "2018-08-16T21:05:42+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "dfsrs.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:42+00:00",
+        "last_seen": "2018-08-16T21:05:42+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "dfssvc.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:42+00:00",
+        "last_seen": "2018-08-16T21:05:42+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "dns.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:36:57+00:00",
+        "last_seen": "2018-08-16T21:36:57+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "explorer.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:07:47+00:00",
+        "last_seen": "2018-08-16T21:07:47+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "iashost.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:42+00:00",
+        "last_seen": "2018-08-16T21:05:42+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "ismserv.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:22+00:00",
+        "last_seen": "2018-08-16T21:05:22+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "lsass.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:42+00:00",
+        "last_seen": "2018-08-16T21:05:42+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "macmnsvc.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:45+00:00",
+        "last_seen": "2018-08-16T21:05:45+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "macompatsvc.ex"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:42+00:00",
+        "last_seen": "2018-08-16T21:05:42+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "masvc.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:37:12+00:00",
+        "last_seen": "2018-08-16T21:37:12+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "mctray.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:48+00:00",
+        "last_seen": "2018-08-16T21:05:48+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "mfemactl.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T21:05:44+00:00",
+        "last_seen": "2018-08-16T21:05:44+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "msdtc.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-17T04:42:25+00:00",
+        "last_seen": "2018-08-17T04:42:25+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "notepad.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T22:10:54+00:00",
+        "last_seen": "2018-08-16T22:10:54+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "powershell.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-30T20:18:32+00:00",
+        "last_seen": "2018-08-30T20:18:32+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "rdpclip.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-30T20:18:33+00:00",
+        "last_seen": "2018-08-30T20:18:33+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "rdpinput.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-17T00:34:12+00:00",
+        "last_seen": "2018-08-17T00:34:12+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "regedit.exe"
+      },
+      {
+        "artifact_classes": [
+          "memory"
+        ],
+        "event_count": 1,
+        "first_seen": "2018-08-16T22:03:28+00:00",
+        "last_seen": "2018-08-16T22:03:28+00:00",
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "tool_call_ids": [
+          "tc-004"
+        ],
+        "value": "rundll32.exe"
+      }
+    ],
+    "services": [],
+    "source_ips": [],
+    "version": 1,
+    "workstations": []
+  },
+  "event_narratives": [
+    {
+      "confidence": "HYPOTHESIS",
+      "entities": {
+        "pid": 4,
+        "process": "System"
+      },
+      "linked_finding_ids": [
+        "f-B-uncommon-procs"
+      ],
+      "summary": "recovered process object: System pid=4",
+      "text": "At 2018-08-16T21:05:18+00:00 UTC, Recovered process object: System pid=4 (tool call tc-004, HYPOTHESIS).",
+      "timestamp_utc": "2018-08-16T21:05:18+00:00",
+      "tool_call_id": "tc-004"
+    }
+  ],
+  "evidence_inventory": null,
+  "evidence_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/base-dc-memory.img",
+  "evidence_type": "memory",
+  "evtx_summary": null,
+  "expert_doctrine": {
+    "claim_rules": [
+      {
+        "category": "citation",
+        "fail_behavior": "block_customer_pdf",
+        "id": "finding_tool_call_required",
+        "requirement": "Every Finding must cite a non-empty tool_call_id that exists in the case tool-call list.",
+        "severity": "blocker"
+      },
+      {
+        "category": "reproducibility",
+        "fail_behavior": "block_customer_pdf",
+        "id": "verify_finding_replay_embedded",
+        "requirement": "Customer-ready reports must embed verifier replay evidence for each Finding and every replay must match the audited tool output.",
+        "severity": "blocker"
+      },
+      {
+        "category": "reproducibility",
+        "fail_behavior": "block_customer_pdf",
+        "id": "verify_finding_replay_failures",
+        "requirement": "A verifier rejection or replay failure must force INDETERMINATE or blocked customer release, never NO_EVIL.",
+        "severity": "blocker"
+      },
+      {
+        "category": "execution",
+        "fail_behavior": "downgrade_or_block",
+        "id": "execution_requires_two_current_artifact_classes",
+        "requirement": "Execution claims require at least two current-case artifact classes. Prefetch is preferred; Amcache, ShimCache, memory-only process evidence, YARA, Hayabusa, and malfind are not standalone execution proof.",
+        "severity": "blocker"
+      },
+      {
+        "category": "exfiltration",
+        "fail_behavior": "downgrade_or_block",
+        "id": "exfiltration_requires_staging_and_movement",
+        "requirement": "Exfiltration claims require staging or collection evidence plus network, tool, or data-movement evidence.",
+        "severity": "blocker"
+      },
+      {
+        "category": "verdict",
+        "fail_behavior": "require_scope_caveat",
+        "id": "no_evil_is_scoped",
+        "requirement": "NO_EVIL means no reportable Finding in the artifact classes examined. It must not imply environment-wide assurance.",
+        "severity": "warning"
+      },
+      {
+        "category": "coverage",
+        "fail_behavior": "force_indeterminate_or_expert_review",
+        "id": "disk_auto_mode_custody_only",
+        "requirement": "Raw disk auto mode is custody-only unless mounted or extracted artifacts are supplied and parsed.",
+        "severity": "blocker"
+      },
+      {
+        "category": "reporting",
+        "fail_behavior": "require_report_caveat",
+        "id": "visuals_do_not_upgrade_confidence",
+        "requirement": "Charts, evidence cards, screenshots, and PDF exhibits support cited tool output but never create Findings or raise confidence.",
+        "severity": "warning"
+      },
+      {
+        "category": "language",
+        "fail_behavior": "block_customer_pdf",
+        "id": "no_attribution",
+        "requirement": "Never assert actor attribution from supplied host artifacts.",
+        "severity": "blocker"
+      },
+      {
+        "category": "language",
+        "fail_behavior": "block_customer_pdf",
+        "id": "no_forbidden_unqualified_language",
+        "requirement": "Customer-visible Finding and report text must not use unqualified language that overstates scope, attribution, execution, compromise, or malware status.",
+        "severity": "blocker"
+      }
+    ],
+    "forbidden_unqualified_terms": [
+      "clean",
+      "cleared",
+      "disproven",
+      "absent",
+      "no compromise",
+      "absence of compromise",
+      "absence of the technique",
+      "attributed to",
+      "malware operator",
+      "the attacker",
+      "is malware",
+      "breach confirmed",
+      "customer-ready",
+      "customer ready"
+    ],
+    "operating_model": "The agent prepares an evidence-bound signoff packet; the human expert remains final authority for customer release.",
+    "source_files": [
+      "agent-config/SOUL.md",
+      "agent-config/MEMORY.md",
+      "agent-config/PLAYBOOK.md",
+      "agent-config/EXPERT.md"
+    ],
+    "supported_domains": {
+      "autonomous_today": [
+        "windows_memory",
+        "windows_evtx",
+        "disk_custody_registration",
+        "timeline_normalization",
+        "evidence_backed_pdf_reporting",
+        "miss-feedback-loop"
+      ],
+      "escalation_only": [
+        "legal_notification",
+        "attribution",
+        "unsupported_cloud_or_saas",
+        "mobile_forensics",
+        "ot_ics_forensics",
+        "failed_report_qa"
+      ],
+      "partial_today": [
+        "disk_content_analysis_without_mount",
+        "exfiltration_without_network_telemetry",
+        "malware_capability_without_reverse_engineering",
+        "identity_compromise_from_single_log_source"
+      ]
+    },
+    "version": 1
+  },
+  "expert_miss_summary": {
+    "by_type": {},
+    "items": [],
+    "ledger_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/state/expert_misses.jsonl",
+    "summary": "Expert misses captured this case: 0 (uncaptured edits are a QA defect; see EXPERT.md Replacement metric).",
+    "total": 0
+  },
+  "expert_signoff": {
+    "customer_releasable": false,
+    "customer_release_candidate": false,
+    "expert_decision": "pending",
+    "expert_signoff_required": true,
+    "ready_for_customer_pdf": false,
+    "signer": "ed25519",
+    "signoff_question": "Would I send this report to a company without rewriting it?",
+    "status": "PENDING_EXPERT_REVIEW"
+  },
+  "expert_signoff_packet": {
+    "customer_releasable": false,
+    "decision": "pending",
+    "expert_miss_summary": {
+      "by_type": {},
+      "items": [],
+      "ledger_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/state/expert_misses.jsonl",
+      "summary": "Expert misses captured this case: 0 (uncaptured edits are a QA defect; see EXPERT.md Replacement metric).",
+      "total": 0
+    },
+    "feedback_items": [],
+    "referenced_hashes": {
+      "release_gate_sha256": "52e815768536f6e14f86db4114757a70b7fac8849e07f98d8717acf659811d25",
+      "report_qa_sha256": "a0b9b973f84cf8ec04be3e3aa42ade00c95e29c5bd7927521c56591b6a7bee31",
+      "run_manifest_sha256": null,
+      "verdict_packet_sha256": "868104203a8768180fb17becefc05b9931783239bc0bd54ad43b633fa4a0fdfb"
+    },
+    "referenced_paths": {
+      "run_manifest": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/mem-base-dc-live/run.manifest.json",
+      "verdict": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/mem-base-dc-live/verdict.json"
+    },
+    "release_blockers": [
+      "ATT&CK coverage includes blind spots that require expert awareness.",
+      "customer release requires an effective manifest_finalize signer=sigstore (identity + transparency log); ed25519 proves integrity offline but not identity, and stub signatures are dev/offline only",
+      "explicit human expert approval is required before customer release",
+      "finalized manifest signature metadata must be present before customer release",
+      "manifest_verify must pass before customer release"
+    ],
+    "release_conditions": {
+      "expert_approved": false,
+      "machine_qa_passed": false,
+      "sigstore_signer": false
+    },
+    "required_before_customer_release": true,
+    "review_time_minutes": null,
+    "reviewed_at": null,
+    "reviewer_identity": null,
+    "signoff_question": "Would I send this report to a company without rewriting it?",
+    "status": "PENDING_EXPERT_REVIEW",
+    "version": 1
+  },
+  "finalized_at": null,
+  "findings": [
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/base-dc-memory.img",
+      "case_id": "2d3bc561-31c7-4135-a6d2-3003d180609a",
+      "confidence": "HYPOTHESIS",
+      "derived_from": null,
+      "description": "hypothesis: Active-process enumeration failed (vol_pslist=0) while vol_psscan recovered 124 EPROCESS objects INCLUDING core OS singletons a rootkit cannot hide (core OS singletons recovered only by psscan (csrss.exe, lsass.exe, services.exe, smss.exe, system, wininit.exe); 2 duplicate System(PID 4) EPROCESS objects). Consistent with an acquisition smear / kernel-global read failure, NOT selective DKOM (T1014). Process-hiding is INDETERMINATE; a T1014 claim requires >=2 artifact classes (e.g. a carved non-Microsoft .sys driver or a YARA rootkit hit).",
+      "event_id": "50069fbf-1467-4e6d-a5f2-13e64b43fb5a",
+      "event_type": "Finding",
+      "finding_id": "f-A-enum-smear",
+      "host": "base-dc-memory.img",
+      "mitre_technique": null,
+      "pool_origin": "A",
+      "prior_observations": [],
+      "replay_actual_sha256": "f87489cb1b4111123e3f77d1ea3f5da1efbb1cedafde47abf82b5c2db4afbdb7",
+      "replay_artifact": {
+        "actual_sha256": "f87489cb1b4111123e3f77d1ea3f5da1efbb1cedafde47abf82b5c2db4afbdb7",
+        "arguments_sha256": "90e0665d40f3bfdb0549172252ba12b20702e7aa20d194ee5c059d615d02370c",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "f87489cb1b4111123e3f77d1ea3f5da1efbb1cedafde47abf82b5c2db4afbdb7",
+        "matched": true,
+        "replay_tool_call_id": "089aad9a-6fbb-4e95-b1aa-824349ff75cb",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-005",
+        "tool_name": "vol_psxview",
+        "wall_clock_ms": 40385
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "f87489cb1b4111123e3f77d1ea3f5da1efbb1cedafde47abf82b5c2db4afbdb7",
+      "replay_matched": true,
+      "replay_record_sha256": "a71d61b88e11c83c347aaf1c6117bb87531aa4b6bcd0e73e3473c39dac079fe4",
+      "replay_tool_name": "vol_psxview",
+      "tool_call_id": "tc-005",
+      "ts": "2026-06-12T15:44:58Z",
+      "verifier_action": "approved"
+    },
+    {
+      "artifact_offset": null,
+      "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/base-dc-memory.img",
+      "case_id": "2d3bc561-31c7-4135-a6d2-3003d180609a",
+      "confidence": "HYPOTHESIS",
+      "derived_from": [
+        "tc-004"
+      ],
+      "description": "hypothesis: 58 processes have uncommon image names; sample: mmc.exe, mmc.exe, ManagementAgen, Microsoft.Acti, VGAuthService.. Cross-reference with disk artifacts to determine legitimacy.",
+      "event_id": "34d72b62-ce24-4ea4-86a4-626dc2ce1887",
+      "event_type": "Finding",
+      "finding_id": "f-B-uncommon-procs",
+      "host": "base-dc-memory.img",
+      "mitre_technique": null,
+      "pool_origin": "B",
+      "prior_observations": [],
+      "replay_actual_sha256": "6fae8a6cd8ccb3f0d03a8ce0fc9c6867bd0ed25eb40abd108eea38c111da23ae",
+      "replay_artifact": {
+        "actual_sha256": "6fae8a6cd8ccb3f0d03a8ce0fc9c6867bd0ed25eb40abd108eea38c111da23ae",
+        "arguments_sha256": "90e0665d40f3bfdb0549172252ba12b20702e7aa20d194ee5c059d615d02370c",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "error": null,
+        "expected_sha256": "6fae8a6cd8ccb3f0d03a8ce0fc9c6867bd0ed25eb40abd108eea38c111da23ae",
+        "matched": true,
+        "replay_tool_call_id": "58552995-b517-4ebe-9e0c-45baa3b268f4",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-004",
+        "tool_name": "vol_psscan",
+        "wall_clock_ms": 19422
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "6fae8a6cd8ccb3f0d03a8ce0fc9c6867bd0ed25eb40abd108eea38c111da23ae",
+      "replay_matched": true,
+      "replay_record_sha256": "dbc4ba99ef039e1bf857b73fa565bf59ae68b359c9dba39f9653fa25acda993d",
+      "replay_tool_name": "vol_psscan",
+      "tool_call_id": "tc-004",
+      "ts": "2026-06-12T15:44:58Z",
+      "verifier_action": "approved"
+    }
+  ],
+  "findings_summary": {
+    "by_confidence": {
+      "CONFIRMED": 0,
+      "HYPOTHESIS": 2,
+      "INFERRED": 0
+    },
+    "contradictions_surfaced": 1,
+    "correlation_outcomes": [
+      {
+        "action": "kept",
+        "finding_id": "f-A-enum-smear",
+        "reason": "non-execution claim"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-uncommon-procs",
+        "reason": "non-execution claim"
+      }
+    ],
+    "soul_md_downgraded": 0,
+    "soul_md_kept": 2,
+    "total_merged": 2,
+    "verifier_redispatches": {}
+  },
+  "heartbeat": {
+    "consecutive_failures": 0,
+    "escalated": false,
+    "terminated_partial": false
+  },
+  "host_groups": [
+    {
+      "by_confidence": {
+        "CONFIRMED": 0,
+        "HYPOTHESIS": 2,
+        "INFERRED": 0
+      },
+      "event_count": 124,
+      "evidence_sources": [
+        "base-dc-memory.img"
+      ],
+      "finding_count": 2,
+      "finding_ids": [
+        "f-A-enum-smear",
+        "f-B-uncommon-procs"
+      ],
+      "first_seen": "2018-08-16T21:05:18+00:00",
+      "host": "base-dc-memory.img",
+      "last_seen": "2018-09-06T22:53:58+00:00",
+      "top_confidence": "HYPOTHESIS"
+    }
+  ],
+  "indicators": {
+    "accounts": [],
+    "domains": [
+      "Microsoft.Acti"
+    ],
+    "file_paths": [],
+    "hashes": [],
+    "hosts": [],
+    "indicator_count": 61,
+    "ip_addresses": [],
+    "note": "Observed artifacts pulled from the timeline and findings; validate or corroborate before detection deployment or blocking.",
+    "processes": [
+      "ApplicationFra",
+      "LockAppHost.ex",
+      "LogonUI.exe",
+      "ManagementAgen",
+      "Microsoft.Acti",
+      "MsMpEng.exe",
+      "NisSrv.exe",
+      "RuntimeBroker.",
+      "SearchUI.exe",
+      "ServerManager.",
+      "ShellExperienc",
+      "System",
+      "SystemSettings",
+      "TabTip.exe",
+      "TabTip32.exe",
+      "Taskmgr.exe",
+      "UpdaterUI.exe",
+      "VGAuthService.",
+      "WmiPrvSE.exe",
+      "cmd.exe",
+      "conhost.exe",
+      "csrss.exe",
+      "dfsrs.exe",
+      "dfssvc.exe",
+      "dllhost.exe",
+      "dns.exe",
+      "dwm.exe",
+      "explorer.exe",
+      "findstr.exe",
+      "iashost.exe",
+      "ismserv.exe",
+      "lsass.exe",
+      "macmnsvc.exe",
+      "macompatsvc.ex",
+      "masvc.exe",
+      "mctray.exe",
+      "mfemactl.exe",
+      "mmc.exe",
+      "msdtc.exe",
+      "notepad.exe",
+      "powershell.exe",
+      "rdpclip.exe",
+      "rdpinput.exe",
+      "regedit.exe",
+      "rundll32.exe",
+      "services.exe",
+      "sihost.exe",
+      "smss.exe",
+      "spoolsv.exe",
+      "subject_srv.ex",
+      "svchost.exe",
+      "taskhostw.exe",
+      "tasklist.exe",
+      "userinit.exe",
+      "vds.exe",
+      "vmacthlp.exe",
+      "vmtoolsd.exe",
+      "wermgr.exe",
+      "wininit.exe",
+      "winlogon.exe"
+    ],
+    "services": [],
+    "urls": [],
+    "version": 1
+  },
+  "malware_triage": {
+    "aggregate_iocs": {
+      "domains": [],
+      "emails": [],
+      "hashes": [],
+      "ips": [],
+      "mutex_like": [],
+      "paths": [],
+      "registry_keys": [],
+      "urls": [],
+      "user_agents": []
+    },
+    "analysis_constraints": [
+      "Memory-only malware triage requires disk, process, network, or registry corroboration before upgrading claims.",
+      "YARA and malfind outputs are triage leads unless corroborated.",
+      "This section does not identify who operated the code or why it was present."
+    ],
+    "next_actions": [
+      "Dump and hash suspicious VAD bytes before static analysis.",
+      "Scan dumped bytes with curated YARA rules.",
+      "Corroborate process ancestry, backing file path, registry persistence, and network telemetry."
+    ],
+    "observables": [],
+    "scope": "triage_only",
+    "source_tools": [
+      {
+        "artifact_class": "memory",
+        "tool": "vol_malfind",
+        "tool_call_id": "tc-003"
+      }
+    ],
+    "summary": {
+      "ioc_count": 0,
+      "malfind_injection_count": 0,
+      "observable_count": 0,
+      "verdict_contribution": "none",
+      "yara_match_count": 0
+    },
+    "version": 1
+  },
+  "next_actions": [
+    {
+      "action": "Collect Security, Sysmon, and PowerShell Operational EVTX and rerun EVTX/Hayabusa analysis.",
+      "based_on": [
+        "evtx_gap"
+      ],
+      "expected_evidence": "Security 4624/4625/4688, Sysmon 1/3/7/10/11, PowerShell 4103/4104",
+      "priority": "P2",
+      "why": "Current findings lack event-log corroboration for logon, process creation, and PowerShell execution hypotheses."
+    },
+    {
+      "action": "Use read-only SIFT disk workflow to extract Prefetch, Registry, MFT, USN Journal, and YARA targets before parsing them with typed tools.",
+      "based_on": [
+        "disk_gap"
+      ],
+      "expected_evidence": "ewfmount read-only mount, Sleuth Kit file extraction, Prefetch, Amcache/ShimCache, Run keys, services, scheduled tasks, MFT/USN entries",
+      "priority": "P2",
+      "why": "Execution and persistence claims need disk-backed corroboration; memory-only observations are not enough for final execution claims."
+    },
+    {
+      "action": "Acquire DNS, proxy, firewall, NetFlow, or PCAP telemetry to test C2 and exfiltration hypotheses.",
+      "based_on": [
+        "network_gap"
+      ],
+      "expected_evidence": "DNS queries, proxy URLs, firewall sessions, PCAP, Velociraptor network collection",
+      "priority": "P3",
+      "why": "Network telemetry was not supplied or parsed in this run, so exfiltration and command-and-control coverage remains a blind spot."
+    },
+    {
+      "action": "Close ATT&CK blind spots before making closure decisions.",
+      "based_on": [
+        "T1059.001",
+        "T1021.001",
+        "T1078",
+        "T1105",
+        "T1071.001"
+      ],
+      "expected_evidence": "Additional evidence classes mapped in attack_coverage.targets[].artifact_classes",
+      "priority": "P3",
+      "why": "The coverage matrix identifies target techniques with no supporting artifact class in this run."
+    },
+    {
+      "action": "Pivot from the first and last normalized timeline events into adjacent artifact classes.",
+      "based_on": [
+        "timeline"
+      ],
+      "expected_evidence": "timeline.csv plus adjacent EVTX, Prefetch, MFT, and network events",
+      "priority": "P4",
+      "why": "Temporal clustering often exposes execution chains that a single artifact class cannot prove alone."
+    }
+  ],
+  "normalized_timeline": {
+    "events": [
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4,
+          "process": "System"
+        },
+        "event_id": "timeline-0001",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4;image_name=System",
+        "summary": "recovered process object: System pid=4",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:18+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 340,
+          "process": "smss.exe"
+        },
+        "event_id": "timeline-0002",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=340;image_name=smss.exe",
+        "summary": "recovered process object: smss.exe pid=340",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:18+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4,
+          "process": "System"
+        },
+        "event_id": "timeline-0003",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4;image_name=System",
+        "summary": "recovered process object: System pid=4",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:18+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 428,
+          "process": "csrss.exe"
+        },
+        "event_id": "timeline-0004",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=428;image_name=csrss.exe",
+        "summary": "recovered process object: csrss.exe pid=428",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:21+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 576,
+          "process": "winlogon.exe"
+        },
+        "event_id": "timeline-0005",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=576;image_name=winlogon.exe",
+        "summary": "recovered process object: winlogon.exe pid=576",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:21+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 516,
+          "process": "csrss.exe"
+        },
+        "event_id": "timeline-0006",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=516;image_name=csrss.exe",
+        "summary": "recovered process object: csrss.exe pid=516",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:21+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 500,
+          "process": "smss.exe"
+        },
+        "event_id": "timeline-0007",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=500;image_name=smss.exe",
+        "summary": "recovered process object: smss.exe pid=500",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:21+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 508,
+          "process": "wininit.exe"
+        },
+        "event_id": "timeline-0008",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=508;image_name=wininit.exe",
+        "summary": "recovered process object: wininit.exe pid=508",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:21+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 660,
+          "process": "lsass.exe"
+        },
+        "event_id": "timeline-0009",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=660;image_name=lsass.exe",
+        "summary": "recovered process object: lsass.exe pid=660",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:22+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 644,
+          "process": "services.exe"
+        },
+        "event_id": "timeline-0010",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=644;image_name=services.exe",
+        "summary": "recovered process object: services.exe pid=644",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:22+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 836,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0011",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=836;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=836",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:25+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1108,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0012",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1108;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=1108",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:26+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 856,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0013",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=856;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=856",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:26+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 828,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0014",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=828;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=828",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:26+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 520,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0015",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=520;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=520",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:26+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 312,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0016",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=312;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=312",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:26+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 80,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0017",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=80;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=80",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:26+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 896,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0018",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=896;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=896",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:26+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 384,
+          "process": "dwm.exe"
+        },
+        "event_id": "timeline-0019",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=384;image_name=dwm.exe",
+        "summary": "recovered process object: dwm.exe pid=384",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:26+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1632,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0020",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1632;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=1632",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:27+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1244,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0021",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1244;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=1244",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:27+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1276,
+          "process": "vmacthlp.exe"
+        },
+        "event_id": "timeline-0022",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1276;image_name=vmacthlp.exe",
+        "summary": "recovered process object: vmacthlp.exe pid=1276",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:27+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1580,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0023",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1580;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=1580",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:27+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2188,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0024",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2188;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=2188",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:35+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2488,
+          "process": "Microsoft.Acti"
+        },
+        "event_id": "timeline-0025",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2488;image_name=Microsoft.Acti",
+        "summary": "recovered process object: Microsoft.Acti pid=2488",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2612,
+          "process": "VGAuthService."
+        },
+        "event_id": "timeline-0026",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2612;image_name=VGAuthService.",
+        "summary": "recovered process object: VGAuthService. pid=2612",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2592,
+          "process": "MsMpEng.exe"
+        },
+        "event_id": "timeline-0027",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2592;image_name=MsMpEng.exe",
+        "summary": "recovered process object: MsMpEng.exe pid=2592",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2584,
+          "process": "macmnsvc.exe"
+        },
+        "event_id": "timeline-0028",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2584;image_name=macmnsvc.exe",
+        "summary": "recovered process object: macmnsvc.exe pid=2584",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2564,
+          "process": "dns.exe"
+        },
+        "event_id": "timeline-0029",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2564;image_name=dns.exe",
+        "summary": "recovered process object: dns.exe pid=2564",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2556,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0030",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2556;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=2556",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2680,
+          "process": "ismserv.exe"
+        },
+        "event_id": "timeline-0031",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2680;image_name=ismserv.exe",
+        "summary": "recovered process object: ismserv.exe pid=2680",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2664,
+          "process": "dfssvc.exe"
+        },
+        "event_id": "timeline-0032",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2664;image_name=dfssvc.exe",
+        "summary": "recovered process object: dfssvc.exe pid=2664",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2576,
+          "process": "dfsrs.exe"
+        },
+        "event_id": "timeline-0033",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2576;image_name=dfsrs.exe",
+        "summary": "recovered process object: dfsrs.exe pid=2576",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2640,
+          "process": "vmtoolsd.exe"
+        },
+        "event_id": "timeline-0034",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2640;image_name=vmtoolsd.exe",
+        "summary": "recovered process object: vmtoolsd.exe pid=2640",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2456,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0035",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2456;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=2456",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2444,
+          "process": "masvc.exe"
+        },
+        "event_id": "timeline-0036",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2444;image_name=masvc.exe",
+        "summary": "recovered process object: masvc.exe pid=2444",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2368,
+          "process": "spoolsv.exe"
+        },
+        "event_id": "timeline-0037",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2368;image_name=spoolsv.exe",
+        "summary": "recovered process object: spoolsv.exe pid=2368",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:42+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2344,
+          "process": "WmiPrvSE.exe"
+        },
+        "event_id": "timeline-0038",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2344;image_name=WmiPrvSE.exe",
+        "summary": "recovered process object: WmiPrvSE.exe pid=2344",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:44+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3288,
+          "process": "msdtc.exe"
+        },
+        "event_id": "timeline-0039",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3288;image_name=msdtc.exe",
+        "summary": "recovered process object: msdtc.exe pid=3288",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:44+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3088,
+          "process": "dllhost.exe"
+        },
+        "event_id": "timeline-0040",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3088;image_name=dllhost.exe",
+        "summary": "recovered process object: dllhost.exe pid=3088",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:44+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3212,
+          "process": "vds.exe"
+        },
+        "event_id": "timeline-0041",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3212;image_name=vds.exe",
+        "summary": "recovered process object: vds.exe pid=3212",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:44+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3320,
+          "process": "macompatsvc.ex"
+        },
+        "event_id": "timeline-0042",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3320;image_name=macompatsvc.ex",
+        "summary": "recovered process object: macompatsvc.ex pid=3320",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:45+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3684,
+          "process": "NisSrv.exe"
+        },
+        "event_id": "timeline-0043",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3684;image_name=NisSrv.exe",
+        "summary": "recovered process object: NisSrv.exe pid=3684",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:48+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3476,
+          "process": "mfemactl.exe"
+        },
+        "event_id": "timeline-0044",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3476;image_name=mfemactl.exe",
+        "summary": "recovered process object: mfemactl.exe pid=3476",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:05:48+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2764,
+          "process": "iashost.exe"
+        },
+        "event_id": "timeline-0045",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2764;image_name=iashost.exe",
+        "summary": "recovered process object: iashost.exe pid=2764",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:07:47+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 908,
+          "process": "ManagementAgen"
+        },
+        "event_id": "timeline-0046",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=908;image_name=ManagementAgen",
+        "summary": "recovered process object: ManagementAgen pid=908",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:07:53+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1604,
+          "process": "userinit.exe"
+        },
+        "event_id": "timeline-0047",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1604;image_name=userinit.exe",
+        "summary": "recovered process object: userinit.exe pid=1604",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:36:57+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4300,
+          "process": "explorer.exe"
+        },
+        "event_id": "timeline-0048",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4300;image_name=explorer.exe",
+        "summary": "recovered process object: explorer.exe pid=4300",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:36:57+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3152,
+          "process": "sihost.exe"
+        },
+        "event_id": "timeline-0049",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3152;image_name=sihost.exe",
+        "summary": "recovered process object: sihost.exe pid=3152",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:36:57+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 716,
+          "process": "taskhostw.exe"
+        },
+        "event_id": "timeline-0050",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=716;image_name=taskhostw.exe",
+        "summary": "recovered process object: taskhostw.exe pid=716",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:36:57+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3488,
+          "process": "svchost.exe"
+        },
+        "event_id": "timeline-0051",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3488;image_name=svchost.exe",
+        "summary": "recovered process object: svchost.exe pid=3488",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:36:57+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4932,
+          "process": "RuntimeBroker."
+        },
+        "event_id": "timeline-0052",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4932;image_name=RuntimeBroker.",
+        "summary": "recovered process object: RuntimeBroker. pid=4932",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:36:57+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2232,
+          "process": "ShellExperienc"
+        },
+        "event_id": "timeline-0053",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2232;image_name=ShellExperienc",
+        "summary": "recovered process object: ShellExperienc pid=2232",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:36:59+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4272,
+          "process": "ServerManager."
+        },
+        "event_id": "timeline-0054",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4272;image_name=ServerManager.",
+        "summary": "recovered process object: ServerManager. pid=4272",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:37:01+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1684,
+          "process": "ApplicationFra"
+        },
+        "event_id": "timeline-0055",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1684;image_name=ApplicationFra",
+        "summary": "recovered process object: ApplicationFra pid=1684",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:37:08+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5084,
+          "process": "SystemSettings"
+        },
+        "event_id": "timeline-0056",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5084;image_name=SystemSettings",
+        "summary": "recovered process object: SystemSettings pid=5084",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:37:08+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4048,
+          "process": "vmtoolsd.exe"
+        },
+        "event_id": "timeline-0057",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4048;image_name=vmtoolsd.exe",
+        "summary": "recovered process object: vmtoolsd.exe pid=4048",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:37:10+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4544,
+          "process": "UpdaterUI.exe"
+        },
+        "event_id": "timeline-0058",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4544;image_name=UpdaterUI.exe",
+        "summary": "recovered process object: UpdaterUI.exe pid=4544",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:37:11+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3872,
+          "process": "mctray.exe"
+        },
+        "event_id": "timeline-0059",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3872;image_name=mctray.exe",
+        "summary": "recovered process object: mctray.exe pid=3872",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:37:12+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2748,
+          "process": "conhost.exe"
+        },
+        "event_id": "timeline-0060",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2748;image_name=conhost.exe",
+        "summary": "recovered process object: conhost.exe pid=2748",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:37:38+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4508,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0061",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4508;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=4508",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T21:37:38+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4432,
+          "process": "rundll32.exe"
+        },
+        "event_id": "timeline-0062",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4432;image_name=rundll32.exe",
+        "summary": "recovered process object: rundll32.exe pid=4432",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T22:03:28+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4152,
+          "process": "mmc.exe"
+        },
+        "event_id": "timeline-0063",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4152;image_name=mmc.exe",
+        "summary": "recovered process object: mmc.exe pid=4152",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T22:04:30+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1152,
+          "process": "dllhost.exe"
+        },
+        "event_id": "timeline-0064",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1152;image_name=dllhost.exe",
+        "summary": "recovered process object: dllhost.exe pid=1152",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T22:10:47+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5612,
+          "process": "powershell.exe"
+        },
+        "event_id": "timeline-0065",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5612;image_name=powershell.exe",
+        "summary": "recovered process object: powershell.exe pid=5612",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T22:10:54+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5488,
+          "process": "conhost.exe"
+        },
+        "event_id": "timeline-0066",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5488;image_name=conhost.exe",
+        "summary": "recovered process object: conhost.exe pid=5488",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T22:10:54+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4392,
+          "process": "mmc.exe"
+        },
+        "event_id": "timeline-0067",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4392;image_name=mmc.exe",
+        "summary": "recovered process object: mmc.exe pid=4392",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T22:32:12+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1956,
+          "process": "Taskmgr.exe"
+        },
+        "event_id": "timeline-0068",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1956;image_name=Taskmgr.exe",
+        "summary": "recovered process object: Taskmgr.exe pid=1956",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-16T22:33:08+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1272,
+          "process": "regedit.exe"
+        },
+        "event_id": "timeline-0069",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1272;image_name=regedit.exe",
+        "summary": "recovered process object: regedit.exe pid=1272",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-17T00:34:12+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2284,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0070",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2284;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=2284",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-17T00:59:00+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3032,
+          "process": "conhost.exe"
+        },
+        "event_id": "timeline-0071",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3032;image_name=conhost.exe",
+        "summary": "recovered process object: conhost.exe pid=3032",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-17T00:59:00+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 7936,
+          "process": "notepad.exe"
+        },
+        "event_id": "timeline-0072",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=7936;image_name=notepad.exe",
+        "summary": "recovered process object: notepad.exe pid=7936",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-17T04:42:25+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 692,
+          "process": "mmc.exe"
+        },
+        "event_id": "timeline-0073",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=692;image_name=mmc.exe",
+        "summary": "recovered process object: mmc.exe pid=692",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-17T13:59:08+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4292,
+          "process": "mmc.exe"
+        },
+        "event_id": "timeline-0074",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4292;image_name=mmc.exe",
+        "summary": "recovered process object: mmc.exe pid=4292",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-17T15:22:33+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 7460,
+          "process": "SearchUI.exe"
+        },
+        "event_id": "timeline-0075",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=7460;image_name=SearchUI.exe",
+        "summary": "recovered process object: SearchUI.exe pid=7460",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-17T17:35:21+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 7928,
+          "process": "LogonUI.exe"
+        },
+        "event_id": "timeline-0076",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=7928;image_name=LogonUI.exe",
+        "summary": "recovered process object: LogonUI.exe pid=7928",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T13:23:55+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 8520,
+          "process": "LockAppHost.ex"
+        },
+        "event_id": "timeline-0077",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=8520;image_name=LockAppHost.ex",
+        "summary": "recovered process object: LockAppHost.ex pid=8520",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T13:23:56+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 668,
+          "process": "winlogon.exe"
+        },
+        "event_id": "timeline-0078",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=668;image_name=winlogon.exe",
+        "summary": "recovered process object: winlogon.exe pid=668",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T20:18:31+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 8292,
+          "process": "smss.exe"
+        },
+        "event_id": "timeline-0079",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=8292;image_name=smss.exe",
+        "summary": "recovered process object: smss.exe pid=8292",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T20:18:31+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 6544,
+          "process": "LogonUI.exe"
+        },
+        "event_id": "timeline-0080",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=6544;image_name=LogonUI.exe",
+        "summary": "recovered process object: LogonUI.exe pid=6544",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T20:18:31+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 7656,
+          "process": "csrss.exe"
+        },
+        "event_id": "timeline-0081",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=7656;image_name=csrss.exe",
+        "summary": "recovered process object: csrss.exe pid=7656",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T20:18:31+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5332,
+          "process": "dwm.exe"
+        },
+        "event_id": "timeline-0082",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5332;image_name=dwm.exe",
+        "summary": "recovered process object: dwm.exe pid=5332",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T20:18:31+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1708,
+          "process": "rdpclip.exe"
+        },
+        "event_id": "timeline-0083",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1708;image_name=rdpclip.exe",
+        "summary": "recovered process object: rdpclip.exe pid=1708",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T20:18:32+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 6664,
+          "process": "TabTip.exe"
+        },
+        "event_id": "timeline-0084",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=6664;image_name=TabTip.exe",
+        "summary": "recovered process object: TabTip.exe pid=6664",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T20:18:33+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 8248,
+          "process": "TabTip32.exe"
+        },
+        "event_id": "timeline-0085",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=8248;image_name=TabTip32.exe",
+        "summary": "recovered process object: TabTip32.exe pid=8248",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T20:18:33+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5036,
+          "process": "rdpinput.exe"
+        },
+        "event_id": "timeline-0086",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5036;image_name=rdpinput.exe",
+        "summary": "recovered process object: rdpinput.exe pid=5036",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-08-30T20:18:33+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5068,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0087",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5068;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=5068",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-01T17:18:03+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 6648,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0088",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=6648;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=6648",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-01T17:43:10+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3400,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0089",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3400;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=3400",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-01T17:43:10+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4588,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0090",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4588;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=4588",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-01T17:48:11+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 8492,
+          "process": "findstr.exe"
+        },
+        "event_id": "timeline-0091",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=8492;image_name=findstr.exe",
+        "summary": "recovered process object: findstr.exe pid=8492",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-01T18:18:19+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5816,
+          "process": "WmiPrvSE.exe"
+        },
+        "event_id": "timeline-0092",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5816;image_name=WmiPrvSE.exe",
+        "summary": "recovered process object: WmiPrvSE.exe pid=5816",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-01T21:19:05+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 6640,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0093",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=6640;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=6640",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-01T21:19:14+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 6604,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0094",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=6604;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=6604",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-02T00:30:13+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 7204,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0095",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=7204;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=7204",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-02T01:15:25+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5948,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0096",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5948;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=5948",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-02T01:15:25+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 8172,
+          "process": "WmiPrvSE.exe"
+        },
+        "event_id": "timeline-0097",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=8172;image_name=WmiPrvSE.exe",
+        "summary": "recovered process object: WmiPrvSE.exe pid=8172",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-03T14:59:14+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 8872,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0098",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=8872;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=8872",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-03T18:11:30+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 8872,
+          "process": "WmiPrvSE.exe"
+        },
+        "event_id": "timeline-0099",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=8872;image_name=WmiPrvSE.exe",
+        "summary": "recovered process object: WmiPrvSE.exe pid=8872",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-03T21:09:16+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 8792,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0100",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=8792;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=8792",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-03T21:22:22+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4960,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0101",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4960;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=4960",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-03T21:22:22+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 7732,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0102",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=7732;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=7732",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-04T14:42:09+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 6156,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0103",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=6156;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=6156",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-04T15:07:15+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 7284,
+          "process": "tasklist.exe"
+        },
+        "event_id": "timeline-0104",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=7284;image_name=tasklist.exe",
+        "summary": "recovered process object: tasklist.exe pid=7284",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-04T19:58:33+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5356,
+          "process": "mmc.exe"
+        },
+        "event_id": "timeline-0105",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5356;image_name=mmc.exe",
+        "summary": "recovered process object: mmc.exe pid=5356",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-05T14:47:09+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4016,
+          "process": "conhost.exe"
+        },
+        "event_id": "timeline-0106",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4016;image_name=conhost.exe",
+        "summary": "recovered process object: conhost.exe pid=4016",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-05T17:44:27+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 6312,
+          "process": "WmiPrvSE.exe"
+        },
+        "event_id": "timeline-0107",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=6312;image_name=WmiPrvSE.exe",
+        "summary": "recovered process object: WmiPrvSE.exe pid=6312",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-05T21:19:37+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 7848,
+          "process": "conhost.exe"
+        },
+        "event_id": "timeline-0108",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=7848;image_name=conhost.exe",
+        "summary": "recovered process object: conhost.exe pid=7848",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T08:33:53+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4980,
+          "process": "findstr.exe"
+        },
+        "event_id": "timeline-0109",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4980;image_name=findstr.exe",
+        "summary": "recovered process object: findstr.exe pid=4980",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T11:14:39+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1156,
+          "process": "conhost.exe"
+        },
+        "event_id": "timeline-0110",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1156;image_name=conhost.exe",
+        "summary": "recovered process object: conhost.exe pid=1156",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T17:47:38+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 1036,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0111",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=1036;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=1036",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T17:47:38+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 4648,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0112",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=4648;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=4648",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T17:47:38+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 6940,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0113",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=6940;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=6940",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T17:47:39+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 2308,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0114",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=2308;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=2308",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T17:47:39+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 7612,
+          "process": "tasklist.exe"
+        },
+        "event_id": "timeline-0115",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=7612;image_name=tasklist.exe",
+        "summary": "recovered process object: tasklist.exe pid=7612",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T17:57:41+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 6572,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0116",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=6572;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=6572",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T18:17:46+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 3380,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0117",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=3380;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=3380",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T18:17:46+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 8384,
+          "process": "wermgr.exe"
+        },
+        "event_id": "timeline-0118",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=8384;image_name=wermgr.exe",
+        "summary": "recovered process object: wermgr.exe pid=8384",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T21:22:09+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5128,
+          "process": "subject_srv.ex"
+        },
+        "event_id": "timeline-0119",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5128;image_name=subject_srv.ex",
+        "summary": "recovered process object: subject_srv.ex pid=5128",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T22:11:15+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 9012,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0120",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=9012;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=9012",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T22:53:58+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 6628,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0121",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=6628;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=6628",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T22:53:58+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 7260,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0122",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=7260;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=7260",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T22:53:58+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 5728,
+          "process": "conhost.exe"
+        },
+        "event_id": "timeline-0123",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=5728;image_name=conhost.exe",
+        "summary": "recovered process object: conhost.exe pid=5728",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T22:53:58+00:00",
+        "tool_call_id": "tc-004"
+      },
+      {
+        "artifact_class": "memory",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "HYPOTHESIS",
+        "entities": {
+          "pid": 8220,
+          "process": "cmd.exe"
+        },
+        "event_id": "timeline-0124",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-B-uncommon-procs"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "vol_psscan:pid=8220;image_name=cmd.exe",
+        "summary": "recovered process object: cmd.exe pid=8220",
+        "timestamp_source": "CreateTime",
+        "timestamp_utc": "2018-09-06T22:53:58+00:00",
+        "tool_call_id": "tc-004"
+      }
+    ],
+    "limitations": [],
+    "source_coverage": [
+      {
+        "artifact_class": "memory",
+        "event_count": 124
+      }
+    ],
+    "version": 1
+  },
+  "release_gate": {
+    "customer_releasable": false,
+    "customer_release_candidate": false,
+    "expert_approved": false,
+    "expert_decision": "pending",
+    "expert_signoff_required": true,
+    "failed_checks": [],
+    "machine_qa_passed": false,
+    "manifest_signature_present": false,
+    "manifest_verified": false,
+    "packet_state": "EXPERT_REVIEW_DRAFT",
+    "qa_status": "WARN",
+    "ready_for_customer_pdf": false,
+    "release_blockers": [
+      "ATT&CK coverage includes blind spots that require expert awareness.",
+      "customer release requires an effective manifest_finalize signer=sigstore (identity + transparency log); ed25519 proves integrity offline but not identity, and stub signatures are dev/offline only",
+      "explicit human expert approval is required before customer release",
+      "finalized manifest signature metadata must be present before customer release",
+      "manifest_verify must pass before customer release"
+    ],
+    "report_render_allowed": true,
+    "signer": "ed25519",
+    "signer_customer_release_ok": false,
+    "signer_effective": "ed25519",
+    "warning_checks": [
+      "attack_coverage_blind_spots"
+    ]
+  },
+  "report_evidence_cards": [
+    {
+      "card_id": "evidence-card-001",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-NIST-800-61R2"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-A-enum-smear"
+      ],
+      "snippet": "hypothesis: Active-process enumeration failed (vol_pslist=0) while vol_psscan recovered 124 EPROCESS objects INCLUDING core OS singletons a rootkit cannot hide (core OS singletons recovered only by psscan (csrss.exe, lsass.exe, services.exe",
+      "source_record_refs": [
+        "tc-005"
+      ],
+      "title": "hypothesis: Active-process enumeration failed (vol_pslist=0) while vol_psscan recovered 12",
+      "tool_call_id": "tc-005",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-A-enum-smear` is backed by parsed tool output `tc-005` and should be interpreted with the cited artifact and source caveats."
+    },
+    {
+      "card_id": "evidence-card-002",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output.",
+        "HYPOTHESIS confidence requires additional artifact corroboration."
+      ],
+      "citation_ids": [
+        "CITE-NIST-800-61R2"
+      ],
+      "confidence": "HYPOTHESIS",
+      "linked_finding_ids": [
+        "f-B-uncommon-procs"
+      ],
+      "snippet": "hypothesis: 58 processes have uncommon image names; sample: mmc.exe, mmc.exe, ManagementAgen, Microsoft.Acti, VGAuthService.. Cross-reference with disk artifacts to determine legitimacy.",
+      "source_record_refs": [
+        "vol_psscan:pid=4;image_name=System",
+        "vol_psscan:pid=340;image_name=smss.exe",
+        "vol_psscan:pid=4;image_name=System"
+      ],
+      "title": "hypothesis: 58 processes have uncommon image names; sample: mmc.exe, mmc.exe, ManagementAg",
+      "tool_call_id": "tc-004",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-B-uncommon-procs` is backed by parsed tool output `tc-004` and should be interpreted with the cited artifact and source caveats."
+    }
+  ],
+  "report_qa": {
+    "checks": [
+      {
+        "check_id": "finding_tool_call_required",
+        "evidence": [
+          "tc-001",
+          "tc-002",
+          "tc-003",
+          "tc-004",
+          "tc-005"
+        ],
+        "status": "PASS",
+        "summary": "All 2 Finding(s) cite current-case tool calls."
+      },
+      {
+        "check_id": "execution_requires_two_current_artifact_classes",
+        "evidence": [
+          "memory"
+        ],
+        "status": "PASS",
+        "summary": "No unsupported execution wording detected, or current-case corroboration is broad enough for expert review."
+      },
+      {
+        "check_id": "exfiltration_requires_staging_and_movement",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No unsupported exfiltration claim detected."
+      },
+      {
+        "check_id": "disk_auto_mode_custody_only",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No custody-only disk overclaim detected."
+      },
+      {
+        "check_id": "no_evil_is_scoped",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "Verdict wording remains scoped to supplied evidence."
+      },
+      {
+        "check_id": "timeline_source_refs_present",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "Timeline includes 124 normalized event(s) with source references."
+      },
+      {
+        "check_id": "verify_finding_replay_failures",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No verifier replay failures were recorded as analysis limitations."
+      },
+      {
+        "check_id": "verify_finding_replay_embedded",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "Every Finding carries embedded verifier replay evidence, or there are no Findings to replay."
+      },
+      {
+        "check_id": "limitations_visible",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No run-specific analysis limitations were recorded."
+      },
+      {
+        "check_id": "no_forbidden_unqualified_language",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No forbidden unqualified language detected in Findings or customer-visible report text."
+      },
+      {
+        "check_id": "attack_coverage_blind_spots",
+        "evidence": [
+          "blind_spots=9"
+        ],
+        "status": "WARN",
+        "summary": "ATT&CK coverage includes blind spots that require expert awareness."
+      }
+    ],
+    "customer_releasable": false,
+    "customer_release_blockers": [
+      "explicit human expert approval is required before customer release",
+      "ATT&CK coverage includes blind spots that require expert awareness."
+    ],
+    "customer_release_candidate": false,
+    "expert_decision": "pending",
+    "expert_signoff_required": true,
+    "packet_state": "EXPERT_REVIEW_DRAFT",
+    "ready_for_customer_pdf": false,
+    "ready_for_expert_signoff": true,
+    "recommended_expert_review_time": "30-60 minutes",
+    "rules_source": [
+      "agent-config/SOUL.md",
+      "agent-config/MEMORY.md",
+      "agent-config/PLAYBOOK.md",
+      "agent-config/EXPERT.md"
+    ],
+    "status": "WARN",
+    "version": 1,
+    "why_not_ready": [
+      "ATT&CK coverage includes blind spots that require expert awareness."
+    ]
+  },
+  "run_id": "auto-1781278973",
+  "source_bibliography": [
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-MITRE-ATTACK-DATASOURCES",
+      "supports": [
+        "ATT&CK data-source coverage mapping"
+      ],
+      "title": "MITRE ATT&CK Data Sources",
+      "url": "https://attack.mitre.org/datasources/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-MITRE-T1003-001",
+      "supports": [
+        "LSASS credential-dumping interpretation"
+      ],
+      "title": "MITRE ATT&CK T1003.001 LSASS Memory",
+      "url": "https://attack.mitre.org/techniques/T1003/001/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-MITRE-T1014",
+      "supports": [
+        "DKOM/rootkit process-view divergence interpretation"
+      ],
+      "title": "MITRE ATT&CK T1014 Rootkit",
+      "url": "https://attack.mitre.org/techniques/T1014/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-NIST-800-61R2",
+      "supports": [
+        "separation of evidence, analysis, response actions, and gaps"
+      ],
+      "title": "NIST SP 800-61 Rev. 2 Computer Security Incident Handling Guide",
+      "url": "https://csrc.nist.gov/pubs/sp/800/61/r2/final"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-PLASO",
+      "supports": [
+        "multi-source forensic timeline normalization"
+      ],
+      "title": "Plaso/log2timeline documentation",
+      "url": "https://plaso.readthedocs.io/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-TIMESKETCH",
+      "supports": [
+        "analyst-oriented forensic timeline review"
+      ],
+      "title": "Timesketch documentation",
+      "url": "https://timesketch.org/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-VOLATILITY3",
+      "supports": [
+        "memory plugin output and process-view validation"
+      ],
+      "title": "Volatility 3 documentation",
+      "url": "https://volatility3.readthedocs.io/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-ZEEK-LOGS",
+      "supports": [
+        "network log and protocol-semantic coverage"
+      ],
+      "title": "Zeek log documentation",
+      "url": "https://docs.zeek.org/en/current/logs/index.html"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-VELOCIRAPTOR-ARTIFACTS",
+      "supports": [
+        "artifact-based endpoint collection"
+      ],
+      "title": "Velociraptor artifact documentation",
+      "url": "https://docs.velociraptor.app/docs/artifacts/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-SIGMAHQ",
+      "supports": [
+        "structured log detection rules as triage leads"
+      ],
+      "title": "SigmaHQ rules repository",
+      "url": "https://github.com/SigmaHQ/sigma"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-HAYABUSA",
+      "supports": [
+        "Windows EVTX timeline and hunting output"
+      ],
+      "title": "Hayabusa repository",
+      "url": "https://github.com/Yamato-Security/hayabusa"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-CAPA",
+      "supports": [
+        "malware capability triage limits"
+      ],
+      "title": "capa repository",
+      "url": "https://github.com/mandiant/capa"
+    }
+  ],
+  "started_at": "2026-06-12T15:42:53Z",
+  "timeline_summary": {
+    "artifact_classes": [
+      "memory"
+    ],
+    "event_count": 124,
+    "exports": [
+      "timeline.json",
+      "timeline.csv"
+    ],
+    "first_ts": "2018-08-16T21:05:18+00:00",
+    "last_ts": "2018-09-06T22:53:58+00:00"
+  },
+  "tool_calls": [
+    {
+      "arguments": {
+        "image_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/base-dc-memory.img",
+        "label": "evidence"
+      },
+      "case_id": "2d3bc561-31c7-4135-a6d2-3003d180609a",
+      "evidence_type": "memory",
+      "output_hash": "9679193c2b7852817006c55481124666422fea67ba63c872cf5e4203c6fa629a",
+      "size_bytes": 5368709120,
+      "tool": "case_open",
+      "tool_call_id": "tc-001"
+    },
+    {
+      "arguments": {
+        "case_id": "2d3bc561-31c7-4135-a6d2-3003d180609a",
+        "limit": 500,
+        "memory_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/base-dc-memory.img"
+      },
+      "output_hash": "f3d314472515986bc7abf864b49c3a02a7b29d80b467af70ad474dd86e103470",
+      "processes_returned": 0,
+      "processes_seen": 0,
+      "tool": "vol_pslist",
+      "tool_call_id": "tc-002"
+    },
+    {
+      "arguments": {
+        "case_id": "2d3bc561-31c7-4135-a6d2-3003d180609a",
+        "limit": 200,
+        "memory_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/base-dc-memory.img"
+      },
+      "injections_returned": 0,
+      "output_hash": "de25601628ceaf3410255f92ae7d8574c36122737f827f9dcbdcf067f864ab99",
+      "tool": "vol_malfind",
+      "tool_call_id": "tc-003"
+    },
+    {
+      "arguments": {
+        "case_id": "2d3bc561-31c7-4135-a6d2-3003d180609a",
+        "limit": 500,
+        "memory_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/base-dc-memory.img"
+      },
+      "output_hash": "6fae8a6cd8ccb3f0d03a8ce0fc9c6867bd0ed25eb40abd108eea38c111da23ae",
+      "processes_seen": 124,
+      "tool": "vol_psscan",
+      "tool_call_id": "tc-004"
+    },
+    {
+      "arguments": {
+        "case_id": "2d3bc561-31c7-4135-a6d2-3003d180609a",
+        "limit": 500,
+        "memory_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/base-dc-memory.img"
+      },
+      "output_hash": "f87489cb1b4111123e3f77d1ea3f5da1efbb1cedafde47abf82b5c2db4afbdb7",
+      "processes_seen": 121,
+      "tool": "vol_psxview",
+      "tool_call_id": "tc-005"
+    }
+  ],
+  "verdict": "INDETERMINATE"
+}

@@ -95,12 +95,22 @@ floor. Both are staged and scheduled.
 
 **Calibration demonstrated in committed runs (real, not hypothetical):**
 
+- **Live memory run — the smear-vs-DKOM call on first pass** ([`docs/sample-run/memory-dc/`](sample-run/memory-dc/)):
+  a fresh `base-dc-memory.img` run reproduced the exact dangerous signature — `vol_pslist` = 0 vs
+  `vol_psscan` = 124 — and held it at **HYPOTHESIS (acquisition smear)** *without* any post-run
+  reconciliation. The engine recognized core OS singletons (csrss/lsass/services/smss) recovered
+  only by `psscan` and a duplicate `System` (PID 4) as a kernel-read failure a rootkit cannot
+  produce, re-sequenced to `vol_psxview` to cross-check, and scoped the verdict to `INDETERMINATE`.
+  The supervisor's reasoning is in the audit chain as `agent_message` records, and the run is
+  ed25519-signed and offline-verifiable (`scripts/trace-finding docs/sample-run/memory-dc`). This is
+  the calibration working in code on a first-pass run, not a doc edit.
 - **SRL-2018 22-host fleet** ([`reports/2026-04-26-srl2018-dc-investigation.pdf`](reports/2026-04-26-srl2018-dc-investigation.pdf)):
-  the stark `vol_pslist` = 0 vs `vol_psscan` = 124 divergence — the textbook DKOM/T1014 signature —
+  the same `vol_pslist` = 0 vs `vol_psscan` = 124 divergence
   now stands in the report as **HYPOTHESIS** (acquisition smear). Full honesty about how it got
   there: the original run over-claimed it as confirmed DKOM, and post-run expert review reconciled
   it (commit `cd075c9`) — the caught-hallucination case study below, and the reason the engine now
-  carries the smear-disambiguation rule and `vol_psxview`.
+  carries the smear-disambiguation rule and `vol_psxview`. The live memory run above is the same
+  doctrine catching the same trap *before* it reaches the report.
 - **Single-class downgrades** — across the correlator's 11 tests
   (`services/agent/tests/test_correlator.py`), an Amcache-only, MFT-only, or EVTX-only execution
   claim is downgraded `CONFIRMED → INFERRED → HYPOTHESIS`; a run-wide *different* artifact class does
@@ -151,6 +161,7 @@ Every committed sample run is offline-verifiable; these are the actual recorded 
 
 | Run | Verdict | Findings | CONFIRMED | INFERRED | HYPOTHESIS | tool_call_id cited | manifest_verify |
 |---|---|---|---|---|---|---|---|
+| `memory-dc` (live Volatility 3) | INDETERMINATE | 2 | 0 | 0 | 2 | **2/2 (100%)** | `overall=true` |
 | `attack-samples-evtx` | SUSPICIOUS | 3 | 1 | 0 | 2 | **3/3 (100%)** | `overall=true` |
 | `nist-hacking-case` (local) | SUSPICIOUS | 9 | 8 | 0 | 1 | **9/9 (100%)** | `overall=true` |
 | `nist-hacking-case-sift` | SUSPICIOUS | 9 | 8 | 0 | 1 | **9/9 (100%)** | `overall=true` |

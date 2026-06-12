@@ -6,14 +6,17 @@ Requirement #8) and can verify the chain of custody **offline**. Every file here
 byte-for-byte output of an actual run — nothing was edited, because editing any record would
 break the hash chain (which is the point).
 
-Six runs are included. The first is the network-recall showcase (`nitroba`, 5/5 against the
-published answer key, reproducible offline); the next shows catching evil head-on; the third and
-fourth show the ≥2-artifact-class rule producing CONFIRMED execution findings on the *same* case —
-once in pure **local** mode (no SIFT VM) and again under `--sift`, proving the verdict is identical
-either way; the fifth proves the **self-correction loop** end-to-end under a deliberately-injected
-fault; and the sixth shows the same recovery machinery firing on **natural, un-staged failures** —
-six real tool errors, six logged course-corrections, and the documented HEARTBEAT escalation
-sealing an honest partial verdict:
+Seven runs are included, one per evidence class plus the failure-handling showcases. The first is
+the network-recall showcase (`nitroba`, 5/5 against the published answer key, reproducible offline);
+the next shows catching evil head-on; the third and fourth show the ≥2-artifact-class rule producing
+CONFIRMED execution findings on the *same* case — once in pure **local** mode (no SIFT VM) and again
+under `--sift`, proving the verdict is identical either way; the fifth proves the **self-correction
+loop** end-to-end under a deliberately-injected fault; the sixth shows the same recovery machinery
+firing on **natural, un-staged failures** (six real tool errors, six logged course-corrections, and
+the documented HEARTBEAT escalation sealing an honest partial verdict); and the seventh is a **live
+memory investigation** whose `vol_pslist`=0 / `vol_psscan`=124 divergence is held at HYPOTHESIS as an
+acquisition smear, **not** over-claimed as a rootkit — the textbook DKOM caution, demonstrated on a
+first-pass run with the supervisor's reasoning in the log:
 
 | Run | Evidence | Verdict | Findings | What it demonstrates |
 |---|---|---|---|---|
@@ -22,6 +25,7 @@ sealing an honest partial verdict:
 | [`fault-injection-redispatch/`](fault-injection-redispatch/) | Same NIST `SCHARDT.dd`, local mode, recorded with `FIND_EVIL_FAULT_INJECT=verifier_reject_once:prefetch-cain-exe` | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | **Self-correction under an injected fault:** the verifier caught a deliberately-corrupted replay (`unknown tool: __fault_injected__prefetch_parse`), the engine re-dispatched the verify exactly once, the fresh attempt approved, and the verdict is unchanged. The whole loop is in the hash chain, in order: `fault_injection` → `verifier_redispatch` (carrying the first attempt's rejection reason) → `verifier_action: approved`. |
 | [`nist-hacking-case/`](nist-hacking-case/) | NIST CFReDS `SCHARDT.dd` (public domain), **local mode** (Prefetch **+** registry/UserAssist) | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | The ≥2-artifact-class rule on the recommended **no-VM path**: with the disk's Prefetch *and* the NTUSER.DAT **UserAssist** hive both parsed on the host (TSK direct-read — no 9 GB SIFT OVA needed), each hacking-tool execution (cain, netstumbler, mirc, ethereal, lookatlan) is corroborated by **two independent artifact classes**, so it escalates to **CONFIRMED**. Each CONFIRMED finding's `derived_from` cites *both* `tool_call_id`s (a `prefetch_parse` and a `registry_query`), so the 2-class claim is greppable, not prose. |
 | [`nist-hacking-case-sift/`](nist-hacking-case-sift/) | Same `SCHARDT.dd`, run under `--sift` (Prefetch **+** registry/UserAssist inside the SIFT VM over SSH) | **SUSPICIOUS** | 9 (8 CONFIRMED + 1 HYPOTHESIS) | **Mode parity:** the identical 2-class CONFIRMED escalation, driven inside the SANS SIFT VM over SSH instead of on the host — proving a judge gets the same verdict whether they take the easy local path or the full VM. |
+| [`memory-dc/`](memory-dc/) | `base-dc-memory.img` (5 GB domain-controller RAM), local Volatility 3 | **INDETERMINATE** | 2 (both `hypothesis:`) | **Live memory lane + the smear-vs-DKOM call, first pass.** All five memory tools ran (`case_open` → `vol_pslist` → `vol_malfind` → `vol_psscan` → `vol_psxview`). `vol_pslist` returned 0 active processes while `vol_psscan` recovered 124 EPROCESS objects — the textbook DKOM/T1014 signature. The engine **refused to claim a rootkit**: core OS singletons (csrss, lsass, services, smss) recovered *only* by `psscan` plus a duplicate `System` (PID 4) point to an **acquisition smear / kernel-global read failure**, which a rootkit cannot produce, so it held the divergence at **HYPOTHESIS** and scoped the verdict to **INDETERMINATE**. The supervisor's reasoning is in the chain as `agent_message` records — *"process views diverge … re-sequencing to cross-validate with vol_psxview before any DKOM claim (divergence can be an acquisition smear, not T1014)."* This is the SRL-2018 caution reproduced as a live, un-reconciled result. |
 | [`natural-self-correction/`](natural-self-correction/) | SANS `base-wkstn-01-c-drive.E01` (competition disk image), local mode | **INDETERMINATE** | 1 (`hypothesis:` EID 7045 `mnemosyne` service install, T1543.003) | **Natural self-correction + HEARTBEAT escalation, nothing injected:** the image's `RegBack` hives are genuinely truncated (`hive truncated (header too small)` — a real condition on real evidence, not a fault hook), so six `registry_query` calls fail and each failure is followed by a logged `course_correction` (`narrow: skip this key; continue remaining hive triage`). The failure streak then trips the documented HEARTBEAT escalation (`HEARTBEAT.md`: "2 consecutive failed self-tests → session terminates with partial report"): five `heartbeat_failure` records, one `heartbeat_terminated`, remaining lanes skipped, and the run seals an honestly-scoped partial **INDETERMINATE** with the one defensible lead held at HYPOTHESIS and the skipped work recorded in `analysis_limitations`. The full arc — error → adjusted plan → repeated failure → policy escalation → honest partial verdict — is in the hash chain, in order. |
 
 ## Files in each run (lean set)
