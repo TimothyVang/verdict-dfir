@@ -1,8 +1,6 @@
 {
   "agent": "find-evil-auto MVP",
-  "analysis_limitations": [
-    "hayabusa did not complete (tool error); raw output is in the run audit log. Resolve the tool's prerequisites and re-run."
-  ],
+  "analysis_limitations": [],
   "attack_coverage": {
     "blind_spot_count": 7,
     "covered_target_count": 5,
@@ -278,41 +276,28 @@
     ]
   },
   "attack_story": {
-    "assessment": "Clearing the Windows Security log removes the local record of what happened before it \u2014 logons, privilege use, object access, and process creation. It is a recognized anti-forensic / defense-evasion action. Log clearing is not by itself proof of malicious intent; it also happens during legitimate administration, re-imaging, or backup onboarding. The record proves the clearing occurred and names the account, not who operated it or why.",
+    "assessment": "Clearing the Windows Security log removes the local record of activity before it \u2014 a defense-evasion / anti-forensics act. Event 1102 is itself written AFTER the clear, so the action is recorded even though what it erased is not; the interval before this record is the blind window.",
     "attack_chain": [
-      {
-        "action": "a Security audit log clearing",
-        "actor": "EXAMPLE\\user01",
-        "artifact_classes": [
-          "evtx"
-        ],
-        "caveat": "Confirmed means the cited tool output is reproducible; it does not imply attribution or complete scope.",
-        "confidence": "CONFIRMED",
-        "finding_id": "f-A-evtx-audit-log-cleared",
-        "host": "PC01.example.corp",
-        "mitre_technique": "T1070.001",
-        "order": 1,
-        "source_event_ids": [
-          "timeline-0012"
-        ],
-        "summary": "EVTX contains Security EID 1102 audit-log clear event (record 1); this is confirmed event-log evidence of log clearing and requires analyst review.",
-        "timestamp_utc": "2019-03-19T23:35:07.524202Z",
-        "title": "EVTX contains Security EID 1102 audit-log clear event (record 1); this is confirmed event-log evidence of log ",
-        "tool_call_id": "tc-002",
-        "why_it_matters": "This is part of the customer-facing attack story only because it is backed by a cited Finding."
-      },
       {
         "action": "a Windows service installation",
         "actor": "",
+        "analyst_note": "A service named 'spoolfool' with a shell image is the public signature of the SpoolFool exploit (CVE-2022-21999), which abuses the Print Spooler's SpoolDirectory handling to drop a DLL and execute as SYSTEM. The service is the persistence / payload-delivery artifact, not the exploit primitive.",
         "artifact_classes": [
           "evtx"
         ],
-        "caveat": "Hypothesis means a triage lead that should not drive response without more corroboration.",
         "confidence": "HYPOTHESIS",
+        "cves": [
+          "CVE-2022-21999"
+        ],
         "finding_id": "f-B-evtx-service-install",
         "host": "WIN-77LTAPHIQ1R.example.corp",
+        "hunt": "Security 7045 where ServiceName like 'spool%' and ImagePath has cmd.exe/powershell; System 7000/7009 spoolsv failures; new DLLs under \\spool\\drivers",
         "mitre_technique": "T1543.003",
-        "order": 2,
+        "named_technique": "SpoolFool \u2014 Windows Print Spooler privilege escalation",
+        "next_pivot": "Pull the Spooler driver directory (C:\\Windows\\System32\\spool\\drivers), the spoolsv.exe child-process tree, and System EIDs 7045/7000/7009 around this time; hash the service image and check Amcache/Prefetch for execution.",
+        "order": 1,
+        "phase": "Persistence",
+        "phase_index": 2,
         "source_event_ids": [
           "timeline-0001"
         ],
@@ -320,32 +305,65 @@
         "timestamp_utc": "2019-03-03T09:20:28.621489Z",
         "title": "hypothesis: EVTX EID 7045 records installation of service 'spoolfool' (image cmd.exe) (record 1); service inst",
         "tool_call_id": "tc-003",
-        "why_it_matters": "This is part of the customer-facing attack story only because it is backed by a cited Finding."
+        "why_it_matters": "A service named 'spoolfool' with a shell image is the public signature of the SpoolFool exploit (CVE-2022-21999), which abuses the Print Spooler's SpoolDirectory handling to drop a DLL and execute as SYSTEM. The service is the persistence / payload-delivery artifact, not the exploit primitive."
+      },
+      {
+        "action": "a Security audit log clearing",
+        "actor": "EXAMPLE\\user01",
+        "analyst_note": "Clearing the Windows Security log removes the local record of activity before it \u2014 a defense-evasion / anti-forensics act. Event 1102 is itself written AFTER the clear, so the action is recorded even though what it erased is not; the interval before this record is the blind window.",
+        "artifact_classes": [
+          "evtx"
+        ],
+        "confidence": "CONFIRMED",
+        "cves": [],
+        "finding_id": "f-A-evtx-audit-log-cleared",
+        "host": "PC01.example.corp",
+        "hunt": "Security 1102 (security-log clearing) and 4719 (audit-policy change); EventRecordID gaps immediately before the 1102",
+        "mitre_technique": "T1070.001",
+        "named_technique": "Security event-log clearing / anti-forensics (T1070.001)",
+        "next_pivot": "Recover the erased window from WEF/SIEM-forwarded copies, EDR telemetry, or a VSS/backup of the EVTX predating it; check 4719 (audit-policy change) and the account's other logons around this time.",
+        "order": 2,
+        "phase": "Defense Evasion",
+        "phase_index": 4,
+        "source_event_ids": [
+          "timeline-0014"
+        ],
+        "summary": "EVTX contains Security EID 1102 audit-log clear event (record 1); this is confirmed event-log evidence of log clearing and requires analyst review.",
+        "timestamp_utc": "2019-03-19T23:35:07.524202Z",
+        "title": "EVTX contains Security EID 1102 audit-log clear event (record 1); this is confirmed event-log evidence of log ",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "Clearing the Windows Security log removes the local record of activity before it \u2014 a defense-evasion / anti-forensics act. Event 1102 is itself written AFTER the clear, so the action is recorded even though what it erased is not; the interval before this record is the blind window."
       },
       {
         "action": "remote WMI process execution",
         "actor": "EXAMPLE\\WIN-77LTAPHIQ1R$",
+        "analyst_note": "A process whose parent is WmiPrvSE.exe is the signature of remote WMI execution (Win32_Process.Create, e.g. `wmic /node` or Invoke-WmiMethod) \u2014 a largely fileless, hands-on-keyboard lateral-movement technique.",
         "artifact_classes": [
           "evtx"
         ],
-        "caveat": "Hypothesis means a triage lead that should not drive response without more corroboration.",
         "confidence": "HYPOTHESIS",
+        "cves": [],
         "finding_id": "f-B-evtx-wmi-exec",
         "host": "WIN-77LTAPHIQ1R.example.corp",
+        "hunt": "Security 4688 where ParentProcessName endswith WmiPrvSE.exe and NewProcessName not in {wmiprvse.exe, scrcons.exe}; WMI-Activity/Operational 5857-5861",
         "mitre_technique": "T1047",
+        "named_technique": "Remote WMI process execution (T1047)",
+        "next_pivot": "Pull Microsoft-Windows-WMI-Activity/Operational for the originating host and user, the 4624 Type 3 logon immediately preceding this 4688, and the child command line; check the source host for the initiating wmic/powershell.",
         "order": 3,
+        "phase": "Lateral Movement",
+        "phase_index": 7,
         "source_event_ids": [
-          "timeline-0008"
+          "timeline-0010"
         ],
         "summary": "hypothesis: EVTX Security EID 4688 shows calc.exe with WmiPrvSE.exe as its parent process, under EXAMPLE\\WIN-77LTAPHIQ1R$ (record 6) \u2014 consistent with remote WMI activity (a lateral-movement pattern); corroborate the source host and process bytes.",
         "timestamp_utc": "2019-03-18T22:15:49.676748Z",
         "title": "hypothesis: EVTX Security EID 4688 shows calc.exe with WmiPrvSE.exe as its parent process, under EXAMPLE\\WIN-7",
         "tool_call_id": "tc-004",
-        "why_it_matters": "This is part of the customer-facing attack story only because it is backed by a cited Finding."
+        "why_it_matters": "A process whose parent is WmiPrvSE.exe is the signature of remote WMI execution (Win32_Process.Create, e.g. `wmic /node` or Invoke-WmiMethod) \u2014 a largely fileless, hands-on-keyboard lateral-movement technique."
       }
     ],
     "business_impact": "",
-    "certainty": "High \u2014 reproducible from the cited tool call (the verifier re-runs it and matches the SHA-256) and sealed in the signed run manifest. This does not authenticate the source artifact upstream of this engine, nor does it prove intent or a breach.",
+    "certainty": "High \u2014 the cited tool output is reproducible (the verifier re-ran it and the SHA-256 matched). The confidence is in the artifact, not in intent or actor.",
     "confidence_posture": {
       "CONFIRMED": 1,
       "HYPOTHESIS": 2,
@@ -371,9 +389,9 @@
       "total": 0
     },
     "headline": "Confirmed: a Security audit log clearing on PC01.example.corp under the account EXAMPLE\\user01 \u2014 defense evasion / anti-forensics.",
-    "how_they_got_in": "",
+    "how_they_got_in": "Remote WMI process execution (T1047) on WIN-77LTAPHIQ1R.example.corp",
     "ready_for_customer_pdf": false,
-    "ready_for_expert_signoff": true,
+    "ready_for_expert_signoff": false,
     "recommended_next_decisions": [
       "Use read-only SIFT disk workflow to extract Prefetch, Registry, MFT, USN Journal, and YARA targets before parsing them with typed tools.",
       "Acquire DNS, proxy, firewall, NetFlow, or PCAP telemetry to test C2 and exfiltration hypotheses.",
@@ -754,6 +772,7 @@
         "evtx": 4
       },
       "disk_artifact_counts": {
+        "browser_history": 0,
         "evtx": 4,
         "mft": 0,
         "prefetch": 0,
@@ -776,10 +795,10 @@
     "summary": "1/5 artifact classes touched; 1/5 directly available from supplied evidence",
     "touched_classes": 1
   },
-  "case_id": "dir-70ca157294e2094d",
+  "case_id": "dir-65e16198ac581860",
   "cryptographic_attestation": {
     "manifest_finalized_after_verdict": true,
-    "manifest_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-1a37a49e-4fb1-4345-a96f-528c79e2953a/run.manifest.json",
+    "manifest_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/evtx-handoff-live/run.manifest.json",
     "packet_attestation": {
       "customer_releasable": false,
       "customer_release_candidate": false,
@@ -788,10 +807,10 @@
         "f-B-evtx-service-install",
         "f-B-evtx-wmi-exec"
       ],
-      "packet_state": "EXPERT_REVIEW_DRAFT",
-      "release_gate_sha256": "fffce88ebefafdaa21a96a1fc24db4fad289ae1c8a13a0d3f54cc2a8b47d3db6",
-      "report_qa_sha256": "430a2b8f33800fbda9335b222901d456b884b31184c2196de3934b5c87c88840",
-      "verdict_packet_sha256": "790c10ea6eace81ef7623e8253e3e64e113a50e75f0715cc3d0e946b749a71a8"
+      "packet_state": "BLOCKED_MANUAL_INVESTIGATION",
+      "release_gate_sha256": "851dabfbad70c7f09651b5e300c32aad16f09a9d8ff75d44599efd1a7fe20dda",
+      "report_qa_sha256": "a0c957ecde785cab571e1e18aa2c10ab098730032fa9b54982ea1fb5629b476c",
+      "verdict_packet_sha256": "eb787b67a580c8222c5ad370bc0de8d13eb41bc7e28670fa7780ea11a3601132"
     }
   },
   "disk_artifact_summary": {
@@ -802,6 +821,7 @@
       "Every promoted Finding must cite a tool_call_id and pass verifier replay before judge consumption."
     ],
     "artifact_counts": {
+      "browser_history": 0,
       "evtx": 4,
       "mft": 0,
       "prefetch": 0,
@@ -1320,9 +1340,9 @@
         "symlink_status": "not_symlink"
       }
     ],
-    "inventory_sha256": "70ca157294e2094d4fb262395a4edd332d209c2451db095d8054d95d611e891d",
+    "inventory_sha256": "65e16198ac581860527022cb34de6931b6ad891864240e7a212644fdbc85781f",
     "limit": 500,
-    "parent_case_id": "dir-70ca157294e2094d",
+    "parent_case_id": "dir-65e16198ac581860",
     "root_is_directory": true,
     "root_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples",
     "summary": {
@@ -1330,6 +1350,7 @@
         "evtx": 4
       },
       "disk_artifact_counts": {
+        "browser_history": 0,
         "evtx": 4,
         "mft": 0,
         "prefetch": 0,
@@ -1510,7 +1531,7 @@
     "expert_decision": "pending",
     "expert_signoff_required": true,
     "ready_for_customer_pdf": false,
-    "signer": "stub",
+    "signer": "ed25519",
     "signoff_question": "Would I send this report to a company without rewriting it?",
     "status": "PENDING_EXPERT_REVIEW"
   },
@@ -1526,19 +1547,18 @@
     },
     "feedback_items": [],
     "referenced_hashes": {
-      "release_gate_sha256": "fffce88ebefafdaa21a96a1fc24db4fad289ae1c8a13a0d3f54cc2a8b47d3db6",
-      "report_qa_sha256": "430a2b8f33800fbda9335b222901d456b884b31184c2196de3934b5c87c88840",
+      "release_gate_sha256": "851dabfbad70c7f09651b5e300c32aad16f09a9d8ff75d44599efd1a7fe20dda",
+      "report_qa_sha256": "a0c957ecde785cab571e1e18aa2c10ab098730032fa9b54982ea1fb5629b476c",
       "run_manifest_sha256": null,
-      "verdict_packet_sha256": "790c10ea6eace81ef7623e8253e3e64e113a50e75f0715cc3d0e946b749a71a8"
+      "verdict_packet_sha256": "eb787b67a580c8222c5ad370bc0de8d13eb41bc7e28670fa7780ea11a3601132"
     },
     "referenced_paths": {
-      "run_manifest": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-1a37a49e-4fb1-4345-a96f-528c79e2953a/run.manifest.json",
-      "verdict": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/auto-1a37a49e-4fb1-4345-a96f-528c79e2953a/verdict.json"
+      "run_manifest": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/evtx-handoff-live/run.manifest.json",
+      "verdict": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/evtx-handoff-live/verdict.json"
     },
     "release_blockers": [
-      "ATT&CK coverage includes blind spots that require expert awareness.",
-      "Analysis limitations must remain visible before customer release.",
-      "customer release requires manifest_finalize signer=sigstore; stub signatures are dev/offline only",
+      "Execution wording appears without per-Finding current-case corroboration from two acceptable artifact classes.",
+      "customer release requires an effective manifest_finalize signer=sigstore (identity + transparency log); ed25519 proves integrity offline but not identity, and stub signatures are dev/offline only",
       "explicit human expert approval is required before customer release",
       "finalized manifest signature metadata must be present before customer release",
       "manifest_verify must pass before customer release"
@@ -1559,17 +1579,18 @@
   "finalized_at": null,
   "findings": [
     {
-      "analyst_note": "The Windows Security log was cleared \u2014 a defense-evasion / anti-forensics act. Event 1102 is itself written AFTER the clear, so the action is recorded even though what it erased is not; the interval before this record is the blind window.",
+      "analyst_note": "Clearing the Windows Security log removes the local record of activity before it \u2014 a defense-evasion / anti-forensics act. Event 1102 is itself written AFTER the clear, so the action is recorded even though what it erased is not; the interval before this record is the blind window.",
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/DE_1102_security_log_cleared.evtx",
-      "case_id": "dir-70ca157294e2094d",
+      "case_id": "dir-65e16198ac581860",
       "confidence": "CONFIRMED",
       "derived_from": null,
       "description": "EVTX contains Security EID 1102 audit-log clear event (record 1); this is confirmed event-log evidence of log clearing and requires analyst review.",
-      "event_id": "4d214292-29a1-49f9-a60c-cfaa08535652",
+      "event_id": "5cafca52-865b-4e08-aa9a-da5a17e2ebd7",
       "event_type": "Finding",
       "finding_id": "f-A-evtx-audit-log-cleared",
       "host": "PC01.example.corp",
+      "hunt": "Security 1102 (security-log clearing) and 4719 (audit-policy change); EventRecordID gaps immediately before the 1102",
       "mitre_technique": "T1070.001",
       "named_technique": "Security event-log clearing / anti-forensics (T1070.001)",
       "next_pivot": "Recover the erased window from WEF/SIEM-forwarded copies, EDR telemetry, or a VSS/backup of the EVTX predating it; check 4719 (audit-policy change) and the account's other logons around this time.",
@@ -1577,74 +1598,95 @@
       "prior_observations": [
         {
           "case_id": "dir-70ca157294e2094d",
-          "confidence": 0.9999807371533664,
+          "confidence": 0.6627857630147271,
+          "ts": "2026-06-09T04:45:41.176377Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.6627566441492028,
+          "ts": "2026-06-09T04:39:59.537668Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.6627439897497703,
+          "ts": "2026-06-09T04:37:31.064544Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.6627264353954572,
+          "ts": "2026-06-09T04:34:05.095921Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.6627143176342527,
           "ts": "2026-06-09T04:31:42.912710Z"
         },
         {
           "case_id": "dir-70ca157294e2094d",
-          "confidence": 0.9943361908242774,
+          "confidence": 0.6589735239070796,
           "ts": "2026-06-08T16:18:05.726834Z"
         },
         {
           "case_id": "dir-70ca157294e2094d",
-          "confidence": 0.9942768277143853,
+          "confidence": 0.6589341823663848,
           "ts": "2026-06-08T16:10:21.476084Z"
         },
         {
           "case_id": "dir-70ca157294e2094d",
-          "confidence": 0.9942616186643656,
+          "confidence": 0.6589241029170202,
           "ts": "2026-06-08T16:08:22.528851Z"
         },
         {
           "case_id": "09b5e9d3-08ad-429d-b1dc-b5a3b1c80fd1",
-          "confidence": 0.9934542156848138,
+          "confidence": 0.6583890150950561,
           "ts": "2026-06-08T14:23:05.362377Z"
         },
         {
           "case_id": "bf35a765-b8d4-481d-a6c8-2c5905a94a72",
-          "confidence": 0.9934377911342811,
+          "confidence": 0.6583781301005813,
           "ts": "2026-06-08T14:20:56.802491Z"
         }
       ],
       "replay_actual_sha256": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
       "replay_artifact": {
         "actual_sha256": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
-        "arguments_sha256": "96dd2b2f90700f80bec8c10e1a5ac8108ec30851fc6b04b1fc894e5843af72d2",
+        "arguments_sha256": "5ea58f3c03b75495ee1eda5d294c89ba4c94feff9f1c3fca9612e3009b5f7b40",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
         "matched": true,
-        "replay_tool_call_id": "2011d88e-2ca4-4506-bfb7-d899ded8a0a0",
+        "replay_tool_call_id": "c356aacf-4263-4cc5-9ad1-743b609eb1df",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-002",
         "tool_name": "evtx_query",
-        "wall_clock_ms": 10
+        "wall_clock_ms": 11
       },
       "replay_error": null,
       "replay_expected_sha256": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
       "replay_matched": true,
-      "replay_record_sha256": "fd173e61f84b0564f9c3397421448a4042a8a39a05a37cc232ee7f61bf77b1b3",
+      "replay_record_sha256": "be0b1ad96aee3c7e65b27ca035eeb471f0331a1bbdab314939c9c4d8300ac251",
       "replay_tool_name": "evtx_query",
       "tool_call_id": "tc-002",
-      "ts": "2026-06-09T04:34:05Z",
+      "ts": "2026-06-12T16:29:35Z",
       "verifier_action": "approved"
     },
     {
       "analyst_note": "A service named 'spoolfool' with a shell image is the public signature of the SpoolFool exploit (CVE-2022-21999), which abuses the Print Spooler's SpoolDirectory handling to drop a DLL and execute as SYSTEM. The service is the persistence / payload-delivery artifact, not the exploit primitive.",
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/LM_Remote_Service02_7045.evtx",
-      "case_id": "dir-70ca157294e2094d",
+      "case_id": "dir-65e16198ac581860",
       "confidence": "HYPOTHESIS",
       "cves": [
         "CVE-2022-21999"
       ],
       "derived_from": null,
       "description": "hypothesis: EVTX EID 7045 records installation of service 'spoolfool' (image cmd.exe) (record 1); service installation is a durable persistence and lateral-movement mechanism \u2014 the image path looks suspicious; corroborate the binary and origin before response.",
-      "event_id": "9ae50879-7a4f-4731-a6f0-3579ff68f402",
+      "event_id": "9020f630-4c50-4041-81b5-0dcbb1478785",
       "event_type": "Finding",
       "finding_id": "f-B-evtx-service-install",
       "host": "WIN-77LTAPHIQ1R.example.corp",
+      "hunt": "Security 7045 where ServiceName like 'spool%' and ImagePath has cmd.exe/powershell; System 7000/7009 spoolsv failures; new DLLs under \\spool\\drivers",
       "mitre_technique": "T1543.003",
       "named_technique": "SpoolFool \u2014 Windows Print Spooler privilege escalation",
       "next_pivot": "Pull the Spooler driver directory (C:\\Windows\\System32\\spool\\drivers), the spoolsv.exe child-process tree, and System EIDs 7045/7000/7009 around this time; hash the service image and check Amcache/Prefetch for execution.",
@@ -1653,39 +1695,40 @@
       "replay_actual_sha256": "c02ce481d2f1a84b7657d60c0e7c308f17209bbd2c6f2bdfe473345353942df5",
       "replay_artifact": {
         "actual_sha256": "c02ce481d2f1a84b7657d60c0e7c308f17209bbd2c6f2bdfe473345353942df5",
-        "arguments_sha256": "72f1c5c713ca282f262a3f930b42d522e3ad50e80d65b6d37de891c34c1a98a3",
+        "arguments_sha256": "e462c387d9a8d04f0aaf25493e416b8f60a3fa2cd4bca6944f5c8452a9fdbcc0",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "c02ce481d2f1a84b7657d60c0e7c308f17209bbd2c6f2bdfe473345353942df5",
         "matched": true,
-        "replay_tool_call_id": "b0659ab2-6d01-4443-aebd-64ec495a740f",
+        "replay_tool_call_id": "ea0d3bd2-914f-4420-9f5f-2814cb73049f",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-003",
         "tool_name": "evtx_query",
-        "wall_clock_ms": 3
+        "wall_clock_ms": 5
       },
       "replay_error": null,
       "replay_expected_sha256": "c02ce481d2f1a84b7657d60c0e7c308f17209bbd2c6f2bdfe473345353942df5",
       "replay_matched": true,
-      "replay_record_sha256": "0b496be6209ba9b5a126cac2dd23f15b9cfac8523f007c62e5482593ce7bee8a",
+      "replay_record_sha256": "6f57788e3ed22a68dd724ca494cbfda6cc15b56e3d4e51a16921c8aae692aef6",
       "replay_tool_name": "evtx_query",
       "tool_call_id": "tc-003",
-      "ts": "2026-06-09T04:34:05Z",
+      "ts": "2026-06-12T16:29:35Z",
       "verifier_action": "approved"
     },
     {
       "analyst_note": "A process whose parent is WmiPrvSE.exe is the signature of remote WMI execution (Win32_Process.Create, e.g. `wmic /node` or Invoke-WmiMethod) \u2014 a largely fileless, hands-on-keyboard lateral-movement technique.",
       "artifact_offset": null,
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/LM_WMI_4624_4688_TargetHost.evtx",
-      "case_id": "dir-70ca157294e2094d",
+      "case_id": "dir-65e16198ac581860",
       "confidence": "HYPOTHESIS",
       "derived_from": null,
       "description": "hypothesis: EVTX Security EID 4688 shows calc.exe with WmiPrvSE.exe as its parent process, under EXAMPLE\\WIN-77LTAPHIQ1R$ (record 6) \u2014 consistent with remote WMI activity (a lateral-movement pattern); corroborate the source host and process bytes.",
-      "event_id": "279b754a-cf76-4534-b35f-284cd30a7d10",
+      "event_id": "aad514ad-76ee-46c3-886d-d48703c90984",
       "event_type": "Finding",
       "finding_id": "f-B-evtx-wmi-exec",
       "host": "WIN-77LTAPHIQ1R.example.corp",
+      "hunt": "Security 4688 where ParentProcessName endswith WmiPrvSE.exe and NewProcessName not in {wmiprvse.exe, scrcons.exe}; WMI-Activity/Operational 5857-5861",
       "mitre_technique": "T1047",
       "named_technique": "Remote WMI process execution (T1047)",
       "next_pivot": "Pull Microsoft-Windows-WMI-Activity/Operational for the originating host and user, the 4624 Type 3 logon immediately preceding this 4688, and the child command line; check the source host for the initiating wmic/powershell.",
@@ -1694,25 +1737,25 @@
       "replay_actual_sha256": "51f6fa751e99986b9648b45b942fe534386cbe2853aa33fdcb422c207814dd7a",
       "replay_artifact": {
         "actual_sha256": "51f6fa751e99986b9648b45b942fe534386cbe2853aa33fdcb422c207814dd7a",
-        "arguments_sha256": "3e2c1b561f388e87a49286c93f944602f3c8b076c0f3537ca84d2ea9259d13ef",
+        "arguments_sha256": "941046613903c26e076762e9d2cc55eba34ace101f88f9c1b41f38c29ea556cd",
         "drift_class": "exact_match",
         "drift_reason": "replay output_sha256 matches audit log",
         "error": null,
         "expected_sha256": "51f6fa751e99986b9648b45b942fe534386cbe2853aa33fdcb422c207814dd7a",
         "matched": true,
-        "replay_tool_call_id": "a72cbfd3-9d0c-4baa-883d-4dcf426d58ae",
+        "replay_tool_call_id": "9efd273f-00d0-478c-982b-4cd2f1d08699",
         "schema_version": "findevil.replay.v1",
         "tool_call_id": "tc-004",
         "tool_name": "evtx_query",
-        "wall_clock_ms": 4
+        "wall_clock_ms": 8
       },
       "replay_error": null,
       "replay_expected_sha256": "51f6fa751e99986b9648b45b942fe534386cbe2853aa33fdcb422c207814dd7a",
       "replay_matched": true,
-      "replay_record_sha256": "11e9a9330bbb1fa70a78ca1349627432f342bc8aa50de8a520e519f0ffdf1fed",
+      "replay_record_sha256": "c6dda5dc5b3eba55f28d8d45ca47e560cc8677f8c7bf380dc19638d9bf471425",
       "replay_tool_name": "evtx_query",
       "tool_call_id": "tc-004",
-      "ts": "2026-06-09T04:34:05Z",
+      "ts": "2026-06-12T16:29:35Z",
       "verifier_action": "approved"
     }
   ],
@@ -1723,9 +1766,32 @@
       "INFERRED": 0
     },
     "contradictions_surfaced": 0,
+    "correlation_outcomes": [
+      {
+        "action": "kept",
+        "finding_id": "f-A-evtx-audit-log-cleared",
+        "reason": "non-execution claim"
+      },
+      {
+        "action": "downgraded",
+        "finding_id": "f-B-evtx-service-install",
+        "reason": "execution claim from a single artifact class without prefetch/EDR corroboration"
+      },
+      {
+        "action": "kept",
+        "finding_id": "f-B-evtx-wmi-exec",
+        "reason": "non-execution claim"
+      }
+    ],
     "soul_md_downgraded": 1,
     "soul_md_kept": 2,
-    "total_merged": 3
+    "total_merged": 3,
+    "verifier_redispatches": {}
+  },
+  "heartbeat": {
+    "consecutive_failures": 0,
+    "escalated": false,
+    "terminated_partial": false
   },
   "host_groups": [
     {
@@ -1897,12 +1963,28 @@
         "attck_techniques": [],
         "citation_ids": [],
         "confidence": "CONFIRMED",
+        "entities": {},
+        "event_id": "timeline-0002",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "hayabusa_scan:event_id=7045",
+        "summary": "Hayabusa high alert: Suspicious Service Path",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-03T09:20:28.621489Z",
+        "tool_call_id": "tc-005"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
         "entities": {
           "host": "WIN-77LTAPHIQ1R.example.corp",
           "service_name": "spoolsv",
           "service_path": "cmd.exe"
         },
-        "event_id": "timeline-0002",
+        "event_id": "timeline-0003",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -1911,6 +1993,22 @@
         "timestamp_source": "Event.System.TimeCreated",
         "timestamp_utc": "2019-03-03T09:24:24.699653Z",
         "tool_call_id": "tc-003"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {},
+        "event_id": "timeline-0004",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "hayabusa_scan:event_id=7045",
+        "summary": "Hayabusa high alert: Suspicious Service Path",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-03T09:24:24.699653Z",
+        "tool_call_id": "tc-005"
       },
       {
         "artifact_class": "evtx",
@@ -1927,7 +2025,7 @@
           "source_ip": "fe80::79bf:8ee2:433c:2567",
           "source_port": "55585"
         },
-        "event_id": "timeline-0003",
+        "event_id": "timeline-0005",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -1952,7 +2050,7 @@
           "source_ip": "10.0.2.17",
           "source_port": "49244"
         },
-        "event_id": "timeline-0004",
+        "event_id": "timeline-0006",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -1977,7 +2075,7 @@
           "source_ip": "10.0.2.17",
           "source_port": "49249"
         },
-        "event_id": "timeline-0005",
+        "event_id": "timeline-0007",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2003,7 +2101,7 @@
           "source_port": "49249",
           "workstation": "PC01"
         },
-        "event_id": "timeline-0006",
+        "event_id": "timeline-0008",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2025,7 +2123,7 @@
           "pid": "0xae8",
           "process": "C:\\Windows\\System32\\wbem\\WmiPrvSE.exe"
         },
-        "event_id": "timeline-0007",
+        "event_id": "timeline-0009",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2051,7 +2149,7 @@
           "pid": "0x424",
           "process": "C:\\Windows\\System32\\calc.exe"
         },
-        "event_id": "timeline-0008",
+        "event_id": "timeline-0010",
         "limitations": [],
         "linked_finding_ids": [
           "f-B-evtx-wmi-exec"
@@ -2078,7 +2176,7 @@
           "source_ip": "10.0.2.17",
           "source_port": "49249"
         },
-        "event_id": "timeline-0009",
+        "event_id": "timeline-0011",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2103,7 +2201,7 @@
           "source_ip": "::1",
           "source_port": "55589"
         },
-        "event_id": "timeline-0010",
+        "event_id": "timeline-0012",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2123,7 +2221,7 @@
           "service_name": "remotesvc",
           "service_path": "calc.exe"
         },
-        "event_id": "timeline-0011",
+        "event_id": "timeline-0013",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2147,7 +2245,7 @@
           "domain": "EXAMPLE",
           "host": "PC01.example.corp"
         },
-        "event_id": "timeline-0012",
+        "event_id": "timeline-0014",
         "limitations": [],
         "linked_finding_ids": [
           "f-A-evtx-audit-log-cleared"
@@ -2164,10 +2262,26 @@
         "attck_techniques": [],
         "citation_ids": [],
         "confidence": "CONFIRMED",
+        "entities": {},
+        "event_id": "timeline-0015",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "hayabusa_scan:event_id=1102",
+        "summary": "Hayabusa high alert: Log Cleared",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:07.524202Z",
+        "tool_call_id": "tc-005"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
         "entities": {
           "host": "PC01.example.corp"
         },
-        "event_id": "timeline-0013",
+        "event_id": "timeline-0016",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2189,7 +2303,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0014",
+        "event_id": "timeline-0017",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2211,7 +2325,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0015",
+        "event_id": "timeline-0018",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2233,7 +2347,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0016",
+        "event_id": "timeline-0019",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2255,7 +2369,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0017",
+        "event_id": "timeline-0020",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2277,7 +2391,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0018",
+        "event_id": "timeline-0021",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2299,7 +2413,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0019",
+        "event_id": "timeline-0022",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2321,7 +2435,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0020",
+        "event_id": "timeline-0023",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2343,7 +2457,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0021",
+        "event_id": "timeline-0024",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2365,7 +2479,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0022",
+        "event_id": "timeline-0025",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2387,7 +2501,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0023",
+        "event_id": "timeline-0026",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2409,7 +2523,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0024",
+        "event_id": "timeline-0027",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2431,7 +2545,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0025",
+        "event_id": "timeline-0028",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2453,7 +2567,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0026",
+        "event_id": "timeline-0029",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2475,7 +2589,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0027",
+        "event_id": "timeline-0030",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2497,7 +2611,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0028",
+        "event_id": "timeline-0031",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2519,7 +2633,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0029",
+        "event_id": "timeline-0032",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2541,7 +2655,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0030",
+        "event_id": "timeline-0033",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2563,7 +2677,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0031",
+        "event_id": "timeline-0034",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2585,7 +2699,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0032",
+        "event_id": "timeline-0035",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2607,7 +2721,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0033",
+        "event_id": "timeline-0036",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2629,7 +2743,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0034",
+        "event_id": "timeline-0037",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2651,7 +2765,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0035",
+        "event_id": "timeline-0038",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2673,7 +2787,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0036",
+        "event_id": "timeline-0039",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2695,7 +2809,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0037",
+        "event_id": "timeline-0040",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2717,7 +2831,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0038",
+        "event_id": "timeline-0041",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2739,7 +2853,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0039",
+        "event_id": "timeline-0042",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2761,7 +2875,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0040",
+        "event_id": "timeline-0043",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2783,7 +2897,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0041",
+        "event_id": "timeline-0044",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2805,7 +2919,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0042",
+        "event_id": "timeline-0045",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2827,7 +2941,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0043",
+        "event_id": "timeline-0046",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2849,7 +2963,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0044",
+        "event_id": "timeline-0047",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2871,7 +2985,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0045",
+        "event_id": "timeline-0048",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2893,7 +3007,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0046",
+        "event_id": "timeline-0049",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2915,7 +3029,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0047",
+        "event_id": "timeline-0050",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2937,7 +3051,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0048",
+        "event_id": "timeline-0051",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2959,7 +3073,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0049",
+        "event_id": "timeline-0052",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -2981,7 +3095,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0050",
+        "event_id": "timeline-0053",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3003,7 +3117,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0051",
+        "event_id": "timeline-0054",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3025,7 +3139,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0052",
+        "event_id": "timeline-0055",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3047,7 +3161,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0053",
+        "event_id": "timeline-0056",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3069,7 +3183,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0054",
+        "event_id": "timeline-0057",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3091,7 +3205,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0055",
+        "event_id": "timeline-0058",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3113,7 +3227,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0056",
+        "event_id": "timeline-0059",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3135,7 +3249,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0057",
+        "event_id": "timeline-0060",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3157,7 +3271,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0058",
+        "event_id": "timeline-0061",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3179,7 +3293,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0059",
+        "event_id": "timeline-0062",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3201,7 +3315,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0060",
+        "event_id": "timeline-0063",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3223,7 +3337,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0061",
+        "event_id": "timeline-0064",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3245,7 +3359,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0062",
+        "event_id": "timeline-0065",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3267,7 +3381,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0063",
+        "event_id": "timeline-0066",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3289,7 +3403,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0064",
+        "event_id": "timeline-0067",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3311,7 +3425,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0065",
+        "event_id": "timeline-0068",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3333,7 +3447,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0066",
+        "event_id": "timeline-0069",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3355,7 +3469,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0067",
+        "event_id": "timeline-0070",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3377,7 +3491,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0068",
+        "event_id": "timeline-0071",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3399,7 +3513,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0069",
+        "event_id": "timeline-0072",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3421,7 +3535,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0070",
+        "event_id": "timeline-0073",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3443,7 +3557,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0071",
+        "event_id": "timeline-0074",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3465,7 +3579,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0072",
+        "event_id": "timeline-0075",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3487,7 +3601,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0073",
+        "event_id": "timeline-0076",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3509,7 +3623,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0074",
+        "event_id": "timeline-0077",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3531,7 +3645,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0075",
+        "event_id": "timeline-0078",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3553,7 +3667,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0076",
+        "event_id": "timeline-0079",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3575,7 +3689,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0077",
+        "event_id": "timeline-0080",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3597,7 +3711,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0078",
+        "event_id": "timeline-0081",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3619,7 +3733,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0079",
+        "event_id": "timeline-0082",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3641,7 +3755,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0080",
+        "event_id": "timeline-0083",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3663,7 +3777,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0081",
+        "event_id": "timeline-0084",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3685,7 +3799,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0082",
+        "event_id": "timeline-0085",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3707,7 +3821,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0083",
+        "event_id": "timeline-0086",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3729,7 +3843,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0084",
+        "event_id": "timeline-0087",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3751,7 +3865,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0085",
+        "event_id": "timeline-0088",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3773,7 +3887,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0086",
+        "event_id": "timeline-0089",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3795,7 +3909,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0087",
+        "event_id": "timeline-0090",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3817,7 +3931,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0088",
+        "event_id": "timeline-0091",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3839,7 +3953,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0089",
+        "event_id": "timeline-0092",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3861,7 +3975,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0090",
+        "event_id": "timeline-0093",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3883,7 +3997,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0091",
+        "event_id": "timeline-0094",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3905,7 +4019,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0092",
+        "event_id": "timeline-0095",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3927,7 +4041,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0093",
+        "event_id": "timeline-0096",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3949,7 +4063,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0094",
+        "event_id": "timeline-0097",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3971,7 +4085,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0095",
+        "event_id": "timeline-0098",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -3993,7 +4107,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0096",
+        "event_id": "timeline-0099",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4015,7 +4129,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0097",
+        "event_id": "timeline-0100",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4037,7 +4151,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0098",
+        "event_id": "timeline-0101",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4059,7 +4173,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0099",
+        "event_id": "timeline-0102",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4081,7 +4195,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0100",
+        "event_id": "timeline-0103",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4103,7 +4217,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0101",
+        "event_id": "timeline-0104",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4125,7 +4239,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0102",
+        "event_id": "timeline-0105",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4147,7 +4261,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0103",
+        "event_id": "timeline-0106",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4169,7 +4283,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0104",
+        "event_id": "timeline-0107",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4191,7 +4305,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0105",
+        "event_id": "timeline-0108",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4213,7 +4327,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0106",
+        "event_id": "timeline-0109",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4235,7 +4349,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0107",
+        "event_id": "timeline-0110",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4257,7 +4371,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0108",
+        "event_id": "timeline-0111",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4279,7 +4393,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0109",
+        "event_id": "timeline-0112",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4301,7 +4415,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0110",
+        "event_id": "timeline-0113",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4323,7 +4437,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0111",
+        "event_id": "timeline-0114",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4345,7 +4459,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0112",
+        "event_id": "timeline-0115",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4367,7 +4481,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0113",
+        "event_id": "timeline-0116",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4389,7 +4503,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0114",
+        "event_id": "timeline-0117",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4411,7 +4525,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0115",
+        "event_id": "timeline-0118",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4433,7 +4547,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0116",
+        "event_id": "timeline-0119",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4455,7 +4569,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0117",
+        "event_id": "timeline-0120",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4477,7 +4591,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0118",
+        "event_id": "timeline-0121",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4499,7 +4613,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0119",
+        "event_id": "timeline-0122",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4521,7 +4635,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0120",
+        "event_id": "timeline-0123",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4543,7 +4657,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0121",
+        "event_id": "timeline-0124",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4565,7 +4679,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0122",
+        "event_id": "timeline-0125",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4587,7 +4701,7 @@
           "pid": "0x5a8",
           "process": "C:\\Windows\\System32\\svchost.exe"
         },
-        "event_id": "timeline-0123",
+        "event_id": "timeline-0126",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4612,7 +4726,7 @@
           "process": "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
           "workstation": "MSEDGEWIN10"
         },
-        "event_id": "timeline-0124",
+        "event_id": "timeline-0127",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4636,7 +4750,7 @@
           "pid": "0x25c",
           "process": "C:\\Windows\\System32\\services.exe"
         },
-        "event_id": "timeline-0125",
+        "event_id": "timeline-0128",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4661,7 +4775,7 @@
           "process": "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
           "workstation": "MSEDGEWIN10"
         },
-        "event_id": "timeline-0126",
+        "event_id": "timeline-0129",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4686,7 +4800,7 @@
           "process": "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
           "workstation": "MSEDGEWIN10"
         },
-        "event_id": "timeline-0127",
+        "event_id": "timeline-0130",
         "limitations": [],
         "linked_finding_ids": [],
         "significance": "context",
@@ -4701,7 +4815,7 @@
     "source_coverage": [
       {
         "artifact_class": "evtx",
-        "event_count": 127
+        "event_count": 130
       }
     ],
     "version": 1
@@ -4712,26 +4826,27 @@
     "expert_approved": false,
     "expert_decision": "pending",
     "expert_signoff_required": true,
-    "failed_checks": [],
+    "failed_checks": [
+      "execution_requires_two_current_artifact_classes"
+    ],
     "machine_qa_passed": false,
     "manifest_signature_present": false,
     "manifest_verified": false,
-    "packet_state": "EXPERT_REVIEW_DRAFT",
-    "qa_status": "WARN",
+    "packet_state": "BLOCKED_MANUAL_INVESTIGATION",
+    "qa_status": "FAIL",
     "ready_for_customer_pdf": false,
     "release_blockers": [
-      "ATT&CK coverage includes blind spots that require expert awareness.",
-      "Analysis limitations must remain visible before customer release.",
-      "customer release requires manifest_finalize signer=sigstore; stub signatures are dev/offline only",
+      "Execution wording appears without per-Finding current-case corroboration from two acceptable artifact classes.",
+      "customer release requires an effective manifest_finalize signer=sigstore (identity + transparency log); ed25519 proves integrity offline but not identity, and stub signatures are dev/offline only",
       "explicit human expert approval is required before customer release",
       "finalized manifest signature metadata must be present before customer release",
       "manifest_verify must pass before customer release"
     ],
-    "report_render_allowed": true,
-    "signer": "stub",
+    "report_render_allowed": false,
+    "signer": "ed25519",
     "signer_customer_release_ok": false,
+    "signer_effective": "ed25519",
     "warning_checks": [
-      "limitations_visible",
       "attack_coverage_blind_spots"
     ]
   },
@@ -4825,10 +4940,10 @@
       {
         "check_id": "execution_requires_two_current_artifact_classes",
         "evidence": [
-          "evtx"
+          "f-B-evtx-service-install"
         ],
-        "status": "PASS",
-        "summary": "No unsupported execution wording detected, or current-case corroboration is broad enough for expert review."
+        "status": "FAIL",
+        "summary": "Execution wording appears without per-Finding current-case corroboration from two acceptable artifact classes."
       },
       {
         "check_id": "exfiltration_requires_staging_and_movement",
@@ -4852,7 +4967,7 @@
         "check_id": "timeline_source_refs_present",
         "evidence": [],
         "status": "PASS",
-        "summary": "Timeline includes 127 normalized event(s) with source references."
+        "summary": "Timeline includes 130 normalized event(s) with source references."
       },
       {
         "check_id": "verify_finding_replay_failures",
@@ -4868,11 +4983,9 @@
       },
       {
         "check_id": "limitations_visible",
-        "evidence": [
-          "hayabusa did not complete (tool error); raw output is in the run audit log. Resolve the tool's prerequisites and re-run."
-        ],
-        "status": "WARN",
-        "summary": "Analysis limitations must remain visible before customer release."
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No run-specific analysis limitations were recorded."
       },
       {
         "check_id": "no_forbidden_unqualified_language",
@@ -4892,30 +5005,28 @@
     "customer_releasable": false,
     "customer_release_blockers": [
       "explicit human expert approval is required before customer release",
-      "Analysis limitations must remain visible before customer release.",
-      "ATT&CK coverage includes blind spots that require expert awareness."
+      "Execution wording appears without per-Finding current-case corroboration from two acceptable artifact classes."
     ],
     "customer_release_candidate": false,
     "expert_decision": "pending",
     "expert_signoff_required": true,
-    "packet_state": "EXPERT_REVIEW_DRAFT",
+    "packet_state": "BLOCKED_MANUAL_INVESTIGATION",
     "ready_for_customer_pdf": false,
-    "ready_for_expert_signoff": true,
-    "recommended_expert_review_time": "30-60 minutes",
+    "ready_for_expert_signoff": false,
+    "recommended_expert_review_time": "manual investigation required",
     "rules_source": [
       "agent-config/SOUL.md",
       "agent-config/MEMORY.md",
       "agent-config/PLAYBOOK.md",
       "agent-config/EXPERT.md"
     ],
-    "status": "WARN",
+    "status": "FAIL",
     "version": 1,
     "why_not_ready": [
-      "Analysis limitations must remain visible before customer release.",
-      "ATT&CK coverage includes blind spots that require expert awareness."
+      "Execution wording appears without per-Finding current-case corroboration from two acceptable artifact classes."
     ]
   },
-  "run_id": "auto-1780979644",
+  "run_id": "auto-1781281772",
   "source_bibliography": [
     {
       "accessed_utc": "2026-05-04T00:00:00Z",
@@ -5026,12 +5137,12 @@
       "url": "https://github.com/mandiant/capa"
     }
   ],
-  "started_at": "2026-06-09T04:34:04Z",
+  "started_at": "2026-06-12T16:29:32Z",
   "timeline_summary": {
     "artifact_classes": [
       "evtx"
     ],
-    "event_count": 127,
+    "event_count": 130,
     "exports": [
       "timeline.json",
       "timeline.csv"
@@ -5042,7 +5153,7 @@
   "tool_calls": [
     {
       "arguments": {
-        "case_id": "dir-70ca157294e2094d",
+        "case_id": "dir-65e16198ac581860",
         "evtx_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/CA_4624_4625_LogonType2_LogonProc_chrome.evtx",
         "limit": 500
       },
@@ -5055,7 +5166,7 @@
     },
     {
       "arguments": {
-        "case_id": "dir-70ca157294e2094d",
+        "case_id": "dir-65e16198ac581860",
         "evtx_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/DE_1102_security_log_cleared.evtx",
         "limit": 500
       },
@@ -5068,7 +5179,7 @@
     },
     {
       "arguments": {
-        "case_id": "dir-70ca157294e2094d",
+        "case_id": "dir-65e16198ac581860",
         "evtx_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/LM_Remote_Service02_7045.evtx",
         "limit": 500
       },
@@ -5081,7 +5192,7 @@
     },
     {
       "arguments": {
-        "case_id": "dir-70ca157294e2094d",
+        "case_id": "dir-65e16198ac581860",
         "evtx_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples/LM_WMI_4624_4688_TargetHost.evtx",
         "limit": 500
       },
@@ -5093,17 +5204,16 @@
       "tool_call_id": "tc-004"
     },
     {
-      "alerts_returned": 0,
-      "alerts_seen": 0,
+      "alerts_returned": 3,
+      "alerts_seen": 3,
       "arguments": {
-        "case_id": "dir-70ca157294e2094d",
+        "case_id": "dir-65e16198ac581860",
         "evtx_dir": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples",
         "limit": 500,
         "min_level": "high"
       },
       "artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples",
-      "error": "rust-mcp tools/call: hayabusa_scan: hayabusa exited 2: error: the following required arguments were not provided:\n  --no-wizard\n\nUsage: hayabusa json-timeline --no-wizard --output <FILE> --quiet --min-level <LEVEL> <--directory <DIR>|--file <FILE>|--live-analysis>\n\nFor more information, try '--help'.\n",
-      "output_hash": "9165650bea01228cd015fd0c1770f2d8d02bc982e59224e1b68ae273ef4679d7",
+      "output_hash": "c3e5b2511052e381942e11e18a5036a52f28e8570ffe1af5cbae4c9933f9145c",
       "tool": "hayabusa_scan",
       "tool_call_id": "tc-005"
     }

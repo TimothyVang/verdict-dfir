@@ -44,10 +44,12 @@ Two committed fleet rollups back the demo's "host by host across the fleet" beat
 - `audit.jsonl` — the hash-chained, append-only execution log (every `tool_call_start` /
   `tool_call_output` / `finding_approved` / verifier action; each line carries `prev_hash` + `line_hash`
   and a UTC ISO-8601 `ts`). The `acp_handoff` records are the **agent-to-agent message log**: each is
-  a timestamped ACP packet between two agent roles. In these committed runs every handoff is
-  **verifier → judge** (`from_role`/`to_role` in the payload — the verifier's per-finding approval
-  crossing to the credibility-weighted judge); supervisor ↔ pool handoffs happen via Claude Code's
-  native Task forking in interactive mode and are not serialized in these headless chains.
+  a timestamped ACP packet between two agent roles (`from_role`/`to_role` in the payload). The
+  [`attack-samples-evtx/`](attack-samples-evtx/) run records the **full ACH topology** on the
+  record: **supervisor → pool_a** and **supervisor → pool_b** (the dispatch, each carrying its
+  opposite hypothesis), **pool_a → judge** and **pool_b → judge** (the merge), and the per-finding
+  **verifier → judge** approvals. That is the multi-agent message log a judge can read end to end,
+  in the same hash chain as the tool calls.
   `course_correction`, `heartbeat_failure`, and `heartbeat_terminated` records capture real-time
   failure handling (see `natural-self-correction/`).
 - `run.manifest.json` — Merkle root over the audit leaves + signature bundle.

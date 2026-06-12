@@ -50,9 +50,9 @@
       "symlink_status": "not_symlink"
     }
   ],
-  "inventory_sha256": "70ca157294e2094d4fb262395a4edd332d209c2451db095d8054d95d611e891d",
+  "inventory_sha256": "65e16198ac581860527022cb34de6931b6ad891864240e7a212644fdbc85781f",
   "limit": 500,
-  "parent_case_id": "dir-70ca157294e2094d",
+  "parent_case_id": "dir-65e16198ac581860",
   "root_is_directory": true,
   "root_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/attack-samples",
   "summary": {
@@ -60,6 +60,7 @@
       "evtx": 4
     },
     "disk_artifact_counts": {
+      "browser_history": 0,
       "evtx": 4,
       "mft": 0,
       "prefetch": 0,

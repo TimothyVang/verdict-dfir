@@ -9332,6 +9332,87 @@ class Investigation:
                 py, record["kind"], {k: v for k, v in record.items() if k != "kind"}
             )
 
+    def _emit_pool_handoff(
+        self,
+        py: SshMcpClient,
+        from_role: str,
+        to_role: str,
+        correlation_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Write one ACP agent-to-agent handoff into the audit chain.
+
+        The acp_handoff records ARE the multi-agent message log: a timestamped
+        packet from one agent role to another. Failures degrade to a logged
+        limitation, never crash the run.
+        """
+        handoff = py.call_tool(
+            "pool_handoff",
+            {
+                "audit_path": self.audit_path,
+                "from_role": from_role,
+                "to_role": to_role,
+                "correlation_id": correlation_id,
+                "payload": payload,
+            },
+        )
+        if isinstance(handoff, dict) and "_error" in handoff:
+            self.analysis_limitations.append(
+                f"pool_handoff failed for {from_role}->{to_role}: "
+                f"{handoff['_error'].get('message', 'unknown handoff failure')}"
+            )
+
+    def _emit_pool_dispatch_handoffs(self, py: SshMcpClient) -> None:
+        """Supervisor -> Pool A / Pool B dispatch, on the record.
+
+        The ACH split is the heart of the design: each pool carries the
+        opposite working hypothesis. Recording the dispatch as agent-to-agent
+        handoffs makes the two-team topology visible in audit.jsonl, not just
+        in the architecture diagram.
+        """
+        self._emit_pool_handoff(
+            py,
+            "supervisor",
+            "pool_a",
+            "dispatch-pool-a",
+            {
+                "hypothesis": "persistence — the attacker stayed to dig in (T1543/T1547/T1136)",
+                "findings": len(self.findings_pool_a),
+            },
+        )
+        self._emit_pool_handoff(
+            py,
+            "supervisor",
+            "pool_b",
+            "dispatch-pool-b",
+            {
+                "hypothesis": "exfiltration — the attacker came for data and left (T1041/T1048/T1567)",
+                "findings": len(self.findings_pool_b),
+            },
+        )
+
+    def _emit_pool_merge_handoffs(
+        self,
+        py: SshMcpClient,
+        pool_a_verified: list[dict[str, Any]],
+        pool_b_verified: list[dict[str, Any]],
+    ) -> None:
+        """Pool A / Pool B -> judge merge, on the record."""
+        self._emit_pool_handoff(
+            py,
+            "pool_a",
+            "judge",
+            "merge-pool-a",
+            {"findings": len(pool_a_verified)},
+        )
+        self._emit_pool_handoff(
+            py,
+            "pool_b",
+            "judge",
+            "merge-pool-b",
+            {"findings": len(pool_b_verified)},
+        )
+
     def reason(self, py: SshMcpClient) -> tuple[list[dict[str, Any]], int, int, int]:
         print("\n=== reasoning phase ===")
 
@@ -9339,6 +9420,10 @@ class Investigation:
         # verifier/judge see them (Hermes memory_recall). Non-evidentiary
         # context only — never changes a tool_call_id or the >=2-artifact rule.
         self._enrich_findings_with_recall(py)
+
+        # Supervisor -> Pool A / Pool B dispatch, recorded as agent-to-agent
+        # handoffs so the ACH two-team topology is visible in the audit chain.
+        self._emit_pool_dispatch_handoffs(py)
 
         # detect_contradictions
         cs = py.call_tool(
@@ -9371,6 +9456,9 @@ class Investigation:
         pool_b_verified = self._apply_verifier_actions(
             self.findings_pool_b, pool_b_actions
         )
+
+        # Pool A / Pool B -> judge merge, recorded as agent-to-agent handoffs.
+        self._emit_pool_merge_handoffs(py, pool_a_verified, pool_b_verified)
 
         # judge_findings
         j = py.call_tool(

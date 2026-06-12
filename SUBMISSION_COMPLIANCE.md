@@ -238,9 +238,10 @@ of your Project.
 > **Multi-agent message logs:** the `acp_handoff` records in each `audit.jsonl` are the
 > agent-to-agent messages, timestamped and hash-chained with the tool executions — the
 > inter-agent log required of multi-agent submissions is in the same verifiable chain, not a
-> side file. In the committed headless runs each handoff is **verifier → judge** (the payload's
-> `from_role`/`to_role` says so explicitly); supervisor ↔ pool exchanges occur via Claude Code's
-> native Task forking in interactive mode.
+> side file. The [`attack-samples-evtx/`](docs/sample-run/attack-samples-evtx/) run records the
+> full ACH topology: **supervisor → pool_a / pool_b** (dispatch, opposite hypotheses),
+> **pool_a / pool_b → judge** (merge), and per-finding **verifier → judge** approvals — the
+> `from_role`/`to_role` payload fields make each one explicit.
 >
 > **Real-time self-correction in the logs:**
 > [`docs/sample-run/natural-self-correction/`](docs/sample-run/natural-self-correction/) shows
