@@ -16,20 +16,72 @@ to the audit chain — that chain is sealed at `manifest_finalize`.
 Each criterion below names *which artifact in the completed audit trail*
 the grader points at to answer it.
 
+## How judges actually score (per the official June-2026 Judge Pack)
+
+- **1–5 stars per criterion, equal weight.** 5 = best in a ~4,000-entrant
+  pool, "engagement-ready"; 3 = competent, unremarkable; judges are told
+  NOT to default to 4. Most teams run the same Claude Code + MCP + SIFT
+  stack — the spread is guardrail architecture, accuracy honesty, log
+  quality.
+- **Cascading tiebreaker** in the criteria order below: ties resolve on
+  criterion 1 first, then 2, … Panel vote only if tied on all six. Near
+  the top, precision on criteria 1–2 decides prizes.
+- **The three-claim trace is non-negotiable:** judges pick 3 findings
+  from the report and must locate the producing tool execution in the
+  logs. A submission that fails the trace is done, whatever else it has.
+  (`scripts/trace-finding <run-dir>` performs this exact check for every
+  finding — run it before submission.)
+- **Deadline scope:** judged as the public repo stood June 15, 11:45 PM
+  EDT. Post-deadline commits are out of scope; a demo or headline claim
+  depending on them gets flagged.
+- **The video is the least trustworthy artifact.** Judges score from the
+  accuracy report, architecture diagram, and execution logs; the project
+  "must function as depicted in the video", so log-vs-video mismatch is
+  a scoring matter.
+- **The asymmetry ("Honesty valued over perfection"):** hallucinations
+  the team caught and documented count FOR the team; hallucinations a
+  judge finds that the team didn't count heavily against; confident wrong
+  answers get zero partial credit.
+
 ## 1. Autonomous Execution Quality (tiebreaker)
 > Does the agent reason about next steps, handle failures, and
 > self-correct in real time?
+
+**Star anchors (official):** 1★ fixed pipeline or scripted retry; 3★
+reacts to failures (adjusted parameters, pivoted tools), one genuine
+self-correction, but a static overall plan; 5★ visibly reasons — forms a
+hypothesis, picks tools to test it, recognizes when results don't add
+up, re-sequences mid-run, full arc in the logs.
 
 **Demonstrate via:** the audit JSONL itself. Every iteration writes a
 plan-step → tool-call → observation → next-plan-step record. Tool
 failures appear as `tool_call.error` entries followed by a planner
 record adjusting course (e.g. fallback tool, narrower scope, or
-explicit "deferring" with reason). HEARTBEAT.md self-tests count too.
+explicit "deferring" with reason). HEARTBEAT.md self-tests count too —
+and the escalation rule is enforced in code (`scripts/find_evil_auto.py`
+`_consecutive_failures` / `heartbeat_failure` / `heartbeat_terminated`),
+not just documented.
+**Natural beats staged.** Judges are explicitly trained to discount
+"staged self-correction" — a contrived error with an instant clean fix.
+The committed exhibit is `docs/sample-run/natural-self-correction/`
+(six genuine truncated-hive failures → six logged `course_correction`
+records → HEARTBEAT escalation → honest partial verdict, zero
+`fault_injection` records). Keep `fault-injection-redispatch/` labeled
+as the on-demand harness demonstration it is; never present it as the
+organic evidence.
 **Anti-pattern:** silent retry. Failures must be logged and named.
 
 ## 2. IR Accuracy
 > Are findings correct? Hallucinations caught and flagged? Confirmed
 > findings distinguished from inferences?
+
+**Star anchors (official):** 1★ findings don't trace or an unflagged
+hallucination; 3★ findings trace cleanly and labeling is present but the
+accuracy report is thin (vague about false positives, no methodology);
+5★ every claim traces, labeling is rigorous, and the accuracy report is
+genuinely self-critical — specific false positives, specific misses,
+specific hallucinations caught, methodology described ("would survive
+opposing counsel").
 
 **Demonstrate via:** SOUL.md epistemic hierarchy. Every Finding carries
 `level ∈ {CONFIRMED, INFERRED, HYPOTHESIS}`. CONFIRMED ↔ tool_call_id
@@ -37,7 +89,11 @@ explicit "deferring" with reason). HEARTBEAT.md self-tests count too.
 HYPOTHESIS ↔ `"hypothesis:"` prefix. The verifier role re-runs every
 cited tool_call before report write-out. The `detect_contradictions`
 MCP tool flags within-run hallucinations; the judge merges
-credibility-weighted across Pool A/B.
+credibility-weighted across Pool A/B. The named caught-hallucination
+instances (SRL-2018 DKOM near-miss, nitroba's 14 `contradiction_resolved`
+records, the verifier catch-and-redispatch, heartbeat-partial honest
+scoping) live in `docs/accuracy-report.md` §3 — keep them specific and
+reproducible; the asymmetry pays for specifics, not adjectives.
 
 ## 3. Breadth and Depth of Analysis
 > How much case data can the agent handle? Depth on fewer types beats
@@ -106,11 +162,11 @@ from the sealed `audit.jsonl` and answers one row per criterion:
 
 | # | Question | Answer style |
 |---|----------|--------------|
-| 1 | Did any tool call fail this run? If yes, did the audit log show explicit course-correction? | `failures=N corrections=N` |
+| 1 | Did any tool call fail this run? If yes, did the audit log show explicit course-correction — and was the trigger natural or an injected fault? | `failures=N corrections=N injected_faults=N` |
 | 2 | What % of Findings are CONFIRMED vs INFERRED vs HYPOTHESIS? | `C=X% I=Y% H=Z%` |
 | 3 | How many artifact classes did this case touch? Which Findings cross ≥2? | `classes=[…] crossed=[…]` |
 | 4 | Were any tool calls rejected by typed-surface validation this run? | `rejected=N reasons=[…]` |
-| 5 | Does every Finding cite a tool_call_id? (must be 100%; verifier vetoes otherwise) | `cited=N/N` |
+| 5 | Does every Finding cite a tool_call_id, and does each cited id resolve to a tool execution in the chain (the judges' three-claim trace, run over all findings)? | `cited=N/N traced=N/N` |
 | 6 | Is the run reproducible from the manifest alone (no external state)? | `reproducible=yes/no` |
 
 The grader prints these rows and writes them to `<case>/self-score.json`.
