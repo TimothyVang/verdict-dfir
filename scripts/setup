@@ -88,11 +88,15 @@ fi
 
 # 1. Full install. Capture the rc but do NOT abort — we still want to snapshot
 #    and report honestly even if a sub-step failed.
+#    --bootstrap: setup is the "make this work" entry point, so a missing
+#    cargo/uv/node gets installed rather than fail-closed (the README's "one
+#    command installs everything" promise). install.sh keeps its fail-closed
+#    default for judges/CI invoking it directly.
 install_rc=0
 if [ -n "${JSON_MODE}" ]; then
-  bash scripts/install.sh >/dev/null 2>&1 || install_rc=$?
+  bash scripts/install.sh --bootstrap >/dev/null 2>&1 || install_rc=$?
 else
-  bash scripts/install.sh || install_rc=$?
+  bash scripts/install.sh --bootstrap || install_rc=$?
 fi
 
 # install-dfir-tools.sh drops binaries in ~/.local/bin; make doctor's child see them.
