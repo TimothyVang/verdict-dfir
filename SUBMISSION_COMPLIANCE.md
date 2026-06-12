@@ -219,12 +219,24 @@ of your Project.
 **STATUS: SATISFIED**
 
 > **Committed sample runs (self-contained on a fresh clone):**
-> [`docs/sample-run/`](docs/sample-run/) ships five real, completed investigations — their
+> [`docs/sample-run/`](docs/sample-run/) ships six real, completed investigations — their
 > `audit.jsonl`, `run.manifest.json`, `verdict.json`, `manifest_verify.json`, and `REPORT.md`.
 > All verify **offline** (`manifest_verify` returns `overall: true`), and
 > [`docs/sample-run/README.md`](docs/sample-run/README.md) walks a single finding all the way
 > back to the tool execution and Merkle leaf that produced it. Every live investigation also
 > produces the same `audit.jsonl` in its case run directory.
+>
+> **Multi-agent message logs:** the `acp_handoff` records in each `audit.jsonl` are the
+> agent-to-agent messages (Pool A ↔ Pool B / supervisor handoffs), timestamped and hash-chained
+> with the tool executions — the inter-agent log required of multi-agent submissions is in the
+> same verifiable chain, not a side file.
+>
+> **Real-time self-correction in the logs:**
+> [`docs/sample-run/natural-self-correction/`](docs/sample-run/natural-self-correction/) shows
+> six genuine tool failures (truncated registry hives on real evidence — no fault hook) each
+> answered by a logged `course_correction`, then the documented HEARTBEAT escalation sealing an
+> honestly-scoped partial verdict. Trace it yourself:
+> `scripts/trace-finding docs/sample-run/natural-self-correction`.
 >
 > **Format:** Hash-chained JSONL — each line contains `seq`, `kind`, `ts` (UTC ISO-8601),
 > `payload`, `line_hash`, and `prev_hash`. The chain is verified by the
@@ -264,12 +276,14 @@ of your Project.
 | 6 | Demonstration video | [hosted mp4 (release asset)](https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
-| 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED (best: nitroba 100% recall, reproducible; NIST 7% — honest coverage gap) |
-| 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (5 committed runs, verify offline) | SATISFIED |
+| 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) (incl. §6 evidence integrity + named caught hallucinations) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED (best: nitroba 100% recall, reproducible; NIST 7% — honest coverage gap) |
+| 10 | Agent execution logs | [`docs/sample-run/`](docs/sample-run/) (6 committed runs, verify offline; `acp_handoff` = agent-to-agent log) | SATISFIED |
 
 ---
 
-*Last verified: 2026-06-09 — execution-log deliverable (#10) now ships three committed,
+*Last verified: 2026-06-12 — execution-log deliverable (#10) now ships six committed,
 offline-verifiable runs under [`docs/sample-run/`](docs/sample-run/); all return
 `manifest_verify overall: true`. The two NIST SCHARDT runs (Prefetch-only INDETERMINATE vs.
-`--sift` Prefetch+UserAssist CONFIRMED) show the ≥2-artifact-class rule cutting both ways.*
+`--sift` Prefetch+UserAssist CONFIRMED) show the ≥2-artifact-class rule cutting both ways, and
+`natural-self-correction/` adds the un-staged failure-recovery arc (six `course_correction`
+records + HEARTBEAT escalation) judges can trace offline.*
