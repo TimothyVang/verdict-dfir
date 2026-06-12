@@ -44,7 +44,7 @@ as of this report:
 | # | Case | Class | Golden verdict | Recall bar | Result | Status |
 |---|---|---|---|---|---|---|
 | 1 | `nitroba` | network (pcap) | CONFIRMED_EVIL | 80% | **5/5 = 100%** · run `INDETERMINATE` | **PASS** (committed: `docs/sample-run/nitroba`) |
-| 2 | `nist-hacking-case` | disk (XP) | CONFIRMED_EVIL | 71% | 1/14 = 7% · run `SUSPICIOUS` | **FAIL** — coverage gap (committed: `docs/sample-run/nist-hacking-case`) |
+| 2 | `nist-hacking-case` | disk (XP) | CONFIRMED_EVIL | 71% | **5/14 = 36%** · run `SUSPICIOUS` | **FAIL** — narrowed gap, up from 7% (committed: `docs/sample-run/nist-hacking-case`) |
 | 3 | `nist-data-leakage` | disk | CONFIRMED_EVIL | 60% | — | staged, scheduled (SIFT) |
 | 4 | `alihadi-09-encrypt` | disk (FP control) | **INDETERMINATE** | 50% | — | staged, scheduled (SIFT) |
 | 5 | `alihadi-01-webserver` | disk | CONFIRMED_EVIL | 60% | — | staged, scheduled (SIFT) |
@@ -54,13 +54,18 @@ as of this report:
 | 9 | `volatility-cridex` | memory | CONFIRMED_EVIL | 50% | — | staged, scheduled |
 | 10 | `synthetic-benign` | negative control | **NO_EVIL** (0 findings) | 100% | — | staged, scheduled |
 
-**Honest summary:** 1 of 10 fully scored and passing (`nitroba`, 100%); 1 scored and failing
-(`nist-hacking-case`, **7% = 1/14**). The NIST gap is a real coverage gap, not custody: both the
-local and `--sift` committed runs score 1/14 — the engine surfaces hacking-tool execution but does
-not yet parse the account-creation, MRU, thumbcache, and named-pipe artifacts the golden's 14
-canonical claims also expect, so it honestly scopes the run to `SUSPICIOUS` rather than claim the
-case. The remaining 8 are fixture-staged and pending a SIFT-VM batch — **scheduled, not yet run.**
-We publish the gap rather than hide it.
+**Honest summary:** 1 of 10 fully scored and passing (`nitroba`, 100%); 1 scored and failing but
+**measurably improving** (`nist-hacking-case`, **36% = 5/14, up from 7% = 1/14**). The committed run
+now recalls five of the golden's fourteen canonical claims — hacking-tool execution (Prefetch,
+8 CONFIRMED), on-disk tool artifacts, **shellbag** navigation to staged files, the **suspiciously-named
+account `Mr. Evil`** (SAM, T1136.001), and the **recently-opened-file MRU** — after the SAM /
+NTUSER-MRU / shellbag artifact lanes landed. It still misses the deleted-email, internet-history,
+LNK, recycle-bin, event-log, thumbcache, USB-history, and named-pipe artifacts the golden also
+expects, so it honestly scopes to `SUSPICIOUS` rather than claim the case (verdict polarity matches
+the golden's CONFIRMED_EVIL). The number is reproducible:
+`scripts/score-recall.py docs/sample-run/nist-hacking-case --golden goldens/nist-hacking-case`. The
+remaining 8 goldens are fixture-staged and pending a SIFT-VM batch — **scheduled, not yet run.** We
+publish the gap, and the progress, rather than hide either.
 
 `nitroba` is the strongest single result, and it is reproducible from the committed run
 (`scripts/score-recall.py docs/sample-run/nitroba --golden goldens/nitroba` → 5/5 PASS): against a
@@ -163,19 +168,23 @@ Every committed sample run is offline-verifiable; these are the actual recorded 
 |---|---|---|---|---|---|---|---|
 | `memory-dc` (live Volatility 3) | INDETERMINATE | 2 | 0 | 0 | 2 | **2/2 (100%)** | `overall=true` |
 | `attack-samples-evtx` | SUSPICIOUS | 3 | 1 | 0 | 2 | **3/3 (100%)** | `overall=true` |
-| `nist-hacking-case` (local) | SUSPICIOUS | 9 | 8 | 0 | 1 | **9/9 (100%)** | `overall=true` |
-| `nist-hacking-case-sift` | SUSPICIOUS | 9 | 8 | 0 | 1 | **9/9 (100%)** | `overall=true` |
+| `nist-hacking-case` (local, current engine) | SUSPICIOUS | 19 | 8 | 2 | 9 | **19/19 (100%)** | `overall=true` |
+| `nist-hacking-case-sift` (earlier baseline) | SUSPICIOUS | 9 | 8 | 0 | 1 | **9/9 (100%)** | `overall=true` |
 | `fault-injection-redispatch` | SUSPICIOUS | 9 | 8 | 0 | 1 | **9/9 (100%)** | `overall=true` |
 
 - **Citation coverage is 100%** — every finding in every committed run cites a `tool_call_id`. This is
   not aspirational: the verifier vetoes uncited findings and `manifest_finalize` refuses to seal a run
   containing one (see [`cryptographic-attestation.md`](cryptographic-attestation.md)).
-- **Confidence is earned** — the 8 CONFIRMED findings in the NIST runs each cite *two* artifact
-  classes (a `prefetch_parse` **and** a `registry_query`/UserAssist) in their `derived_from`; the lone
-  HYPOTHESIS is honestly held. The EVTX-only `attack-samples` run confirms only the directly-observed
-  EID 1102 log-clear and holds the weaker leads at HYPOTHESIS.
-- **Mode parity** — the local and SIFT NIST runs produce the *identical* finding set and verdict,
-  proving the result doesn't depend on the heavier path.
+- **Confidence is earned** — the 8 CONFIRMED hacking-tool executions in the NIST run each cite *two*
+  artifact classes (a `prefetch_parse` **and** a `registry_query`/UserAssist) in their `derived_from`;
+  the newer SAM/MRU/shellbag findings are honestly held at HYPOTHESIS/INFERRED. The EVTX-only
+  `attack-samples` run confirms only the directly-observed EID 1102 log-clear and holds the weaker
+  leads at HYPOTHESIS.
+- **Mode parity (CONFIRMED core)** — the 8-CONFIRMED prefetch+UserAssist escalation is identical in
+  the local and `--sift` runs, proving the load-bearing result doesn't depend on the heavier path.
+  The committed **local** run additionally carries the newest artifact lanes (SAM account / NTUSER
+  MRU / shellbags) and so now reports 19 findings vs the SIFT companion's 9; the `--sift` baseline
+  predates those lanes and a refreshed SIFT parity run is pending the VM.
 
 ---
 
@@ -223,7 +232,7 @@ modify the evidence"; there is no code path that *can*:
 ## 7. Honest limits
 
 - **Disk classes need the SIFT VM.** A local-mode disk run without SIFT degrades to custody-only and
-  returns a scoped verdict (e.g. NIST 1/14) — honest, but below the recall bar. Full disk recall
+  returns a scoped verdict (e.g. NIST 5/14 = 36%) — honest, but below the recall bar. Full disk recall
   requires `scripts/verdict --sift`. This is why 8 goldens are pending.
 - **Single-source claims floor at HYPOTHESIS.** The ≥2-artifact-class rule is conservative by design;
   it will hold a real-but-uncorroborated execution claim below CONFIRMED. That trades some recall for

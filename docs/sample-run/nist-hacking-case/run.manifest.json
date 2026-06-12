@@ -1,8 +1,8 @@
 {
-  "audit_log_final_hash": "64263c769823cbca52ca0d99a7c223951aff59e348feb6f675d08da26c731d98",
-  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/nist-hacking-case/audit.jsonl",
+  "audit_log_final_hash": "17a7935593581d5dc7dd98ce9f6911e05178d5c71913234bbaf9a40ab96df0e7",
+  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/docs/sample-run/nist-hacking-case/audit.jsonl",
   "audit_log_record_count": 353,
-  "case_id": "b639fdda-146c-48ec-9080-1e144ec7ceae",
+  "case_id": "fb49c71e-d8e5-4976-a868-be7e4a4ee5ca",
   "extra": {
     "evidence_type": "disk",
     "image_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/SCHARDT.dd",
@@ -10,7 +10,7 @@
     "packet_attestation": {
       "customer_releasable": false,
       "customer_release_candidate": false,
-      "expert_signoff_packet_sha256": "025ed75a229f4cdf4ac722fac2924f0a5291694b7c5f191fcb20bf4500f6bbf9",
+      "expert_signoff_packet_sha256": "d466ddb317132746ef2f962003b71f35fd0dac4dbcc3c23ff9359dc5721e5306",
       "final_finding_ids": [
         "f-A-mft-tools",
         "f-A-mru-lalsetup250-exe",
@@ -35,14 +35,14 @@
       "packet_state": "BLOCKED_MANUAL_INVESTIGATION",
       "release_gate_sha256": "6ccc18d63657d1703a4527779a3ffe494c86cc4471a570c4ef9d86287997d5f7",
       "report_qa_sha256": "39a6e2fe24b35efc4439d267e4005fdbd66978b6e0df9d96c00c9bfdd40b1f5d",
-      "verdict_artifact_bytes": 746597,
-      "verdict_artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/nist-hacking-case/verdict.json",
-      "verdict_artifact_sha256": "cf45122d048becc871c5c55cd25f1cd07390b01110a62299d39da57f4eb2dfa6",
-      "verdict_packet_sha256": "0d9065e66699bdec85947a03977e6612ead25c53a291a114424aa1885afdcb7d"
+      "verdict_artifact_bytes": 746596,
+      "verdict_artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/schardt-rescore/verdict.json",
+      "verdict_artifact_sha256": "9f53d0ce8b1f8ec66d1cd08763f36154ab31e3d71eaa5dcea1563e0851fa122c",
+      "verdict_packet_sha256": "c10b815eae49deb2085520e08734de544f8241e023234c052e5d98486ff9c7f1"
     },
     "signer": "ed25519"
   },
-  "finalized_at": "2026-06-12T18:33:33Z",
+  "finalized_at": "2026-06-12T20:35:28Z",
   "leaf_count": 134,
   "leaves": [
     {
@@ -52,13 +52,13 @@
       "seq": 2
     },
     {
-      "digest_hex": "20ac1b7deb2ac32ac6b91919ca2abd80931561e22ef41385065d9922656fb854",
+      "digest_hex": "8724480ccf9920b30f00b28e0a918a3a6cceb0a09ef3c72e79c49c460826841b",
       "kind": "tool_call_output",
       "record_id": "tc-002",
       "seq": 4
     },
     {
-      "digest_hex": "72cfa63de2c6371895f8b34aaf1d2cf24918cd8b3bebccb2d6129f5e8a34d25d",
+      "digest_hex": "57f0efbaef3145dfc0863fa592a094190d9b7cc721a5fdc86a75ada67e8ff403",
       "kind": "tool_call_output",
       "record_id": "tc-003",
       "seq": 6
@@ -730,135 +730,135 @@
       "seq": 228
     },
     {
-      "digest_hex": "6ea65363ab0cfed0e6a39a8d5a28c48a768260448380e0d133fda7b1a04b69a9",
+      "digest_hex": "b8a0536bbc553008c0637ff2f39bf2582ab1ab663c26675a5961bc40ebf1d0cc",
       "kind": "tool_call_output",
       "record_id": "tc-115",
       "seq": 230
     },
     {
-      "digest_hex": "20331758fc2f9f00a96af20c033bf96f90b98d0d15dbaeb6e99409ebf40bad4a",
+      "digest_hex": "1afbce21ee03e9a84b90afba603d2b219b3e1f12364217fad139f256f4a08e3f",
       "kind": "finding",
       "record_id": "f-A-mft-tools",
       "seq": 323
     },
     {
-      "digest_hex": "10b271a8b0b969bb1aa568f7cbf790d48c2df43a0371800f68e50cc57765f601",
+      "digest_hex": "6b5caa4cca4f8f4bb9094c0f38251bbe6ceaccdd45542a935ecf5774c39e28b2",
       "kind": "finding",
       "record_id": "f-A-mru-lalsetup250-exe",
       "seq": 324
     },
     {
-      "digest_hex": "eeb039a0814f8ea16cd71209e33f4a0547dda384f0722eb15e78921c06be98b3",
+      "digest_hex": "23941b3fd224528266daa597ba3ccb7719b1c817c38c91f72ec2b61e93f6c4b2",
       "kind": "finding",
       "record_id": "f-A-mru-netstumblerinstaller-0-4-0-exe",
       "seq": 325
     },
     {
-      "digest_hex": "c1b1c28c1cebbad2b009bd545b76fe1141870e654c423dc0e5e84e58460189b7",
+      "digest_hex": "60c76e4aa794b9a78b7e54e8fa8066bae6737b59ce2320225f2e773e9494b892",
       "kind": "finding",
       "record_id": "f-A-mru-ethereal-setup-0-10-6-exe",
       "seq": 326
     },
     {
-      "digest_hex": "20a5a69cc38d5ab4b81486cb011d5bff7cd9a16fda71c0a976a93f78d31478a7",
+      "digest_hex": "15fbc3e67431661c8809cdadc6252cee35cf306c910b2324b9ad05bd6a7347ed",
       "kind": "finding",
       "record_id": "f-A-mru-winpcap-3-01-a-exe",
       "seq": 327
     },
     {
-      "digest_hex": "d78895b0164a425a1853493765878e6fb5d8528bd03d43821f605b24baa18cb8",
+      "digest_hex": "a1a34c50c5e9ad91bc4ac9683679d8b9cf6618d9546d47aab5051e9d21399f6a",
       "kind": "finding",
       "record_id": "f-A-reg-persist-srfirstrun",
       "seq": 328
     },
     {
-      "digest_hex": "6f9306122615a14052d2da105ef7e103fb50b6c2714f4d44de8792e97ca9a38a",
+      "digest_hex": "f07c31910ee455dbe28bdda29d331297db8e8f9ed9944a2e4b413276981d84ee",
       "kind": "finding",
       "record_id": "f-A-reg-persist-schedulingagent",
       "seq": 329
     },
     {
-      "digest_hex": "e76356c6f9ba2cc8545d9613cb8815af2037a685b350c1fde83a11143ee5895c",
+      "digest_hex": "933a257ce22845fec24ab028aa33f8d566cf3b05986e26cd013c5c12f08e3335",
       "kind": "finding",
       "record_id": "f-A-sam-mr-evil",
       "seq": 330
     },
     {
-      "digest_hex": "6e008b6970ec6b8f324d081af34ca3b3e561f3545cbf06783948e0064219c999",
+      "digest_hex": "ab26a3ba95ec75369d2fb72b9d5b3b781e6a6e332b5f24767663f5cdca7d8221",
       "kind": "finding",
       "record_id": "f-B-prefetch-cain-exe",
       "seq": 331
     },
     {
-      "digest_hex": "7dab406cb26c5952aba87e8b02e65080b95ae9314ce26dffe2f292e2d84e8714",
+      "digest_hex": "07024230749e47de44da2b321483ca4ebc568312bec93dc6f9b03fd6b05e9987",
       "kind": "finding",
       "record_id": "f-B-prefetch-cain25b45-exe",
       "seq": 332
     },
     {
-      "digest_hex": "80ca0184f87259d5c02dc583dca23705e85920f491cda525a4381add08ed6416",
+      "digest_hex": "6e7812af4a890daaedf68f1c102ec844df1179296e0a11fa1dc082845fd405d3",
       "kind": "finding",
       "record_id": "f-B-prefetch-ethereal-setup-0-10-6-exe",
       "seq": 333
     },
     {
-      "digest_hex": "8aaa5cb0c2b663cf7d6533e0fff91326eff87333bf3bc26249a41d902c3a4b49",
+      "digest_hex": "f46a95a235c9a7a482e29f532d45b13aae85a8d42c42d8eb8e79a05dcff72aba",
       "kind": "finding",
       "record_id": "f-B-prefetch-ethereal-exe",
       "seq": 334
     },
     {
-      "digest_hex": "916d70a0a90adc768ea2b5152bffa6a1e2a4d56451946167ddfb97ef03449586",
+      "digest_hex": "b0ce251b68e09133da70d8e6edd1fa4502846c3587ef0fbb022296ff2e4307fb",
       "kind": "finding",
       "record_id": "f-B-prefetch-lookatlan-exe",
       "seq": 335
     },
     {
-      "digest_hex": "a07f34f4b09db6ffb84b903ae3990108a35f00e16d554814c7b93fb2ed450983",
+      "digest_hex": "320b8fe9c5efd386592436d7b1069db1d2777a96abffa134750a677436bcfe49",
       "kind": "finding",
       "record_id": "f-B-prefetch-mirc-exe",
       "seq": 336
     },
     {
-      "digest_hex": "d4305ce7609a2d3a3002d28b9bc04ea37830e80a5655c01590584fb5acca9e1b",
+      "digest_hex": "11709342e595c37e8463ef5e06216d34696c29562cdb7da574f569844e914a86",
       "kind": "finding",
       "record_id": "f-B-prefetch-mirc612-exe",
       "seq": 337
     },
     {
-      "digest_hex": "99014487f3a65bc96a98e1bbed652aa97c41a62ea686bb1f975d4bb519460f3b",
+      "digest_hex": "b3dd2b17f18507634f0a44fed9cefcc648317cb6268eb1f6fc79323e4e68c434",
       "kind": "finding",
       "record_id": "f-B-prefetch-netstumbler-exe",
       "seq": 338
     },
     {
-      "digest_hex": "432b62d4eea9afef9546f6188f837c4342fc43d2feb9bb832590fea0e8680a84",
+      "digest_hex": "01340b76025a413474d2823e92b432a678a713a0dae50341dd5a11f207fe3935",
       "kind": "finding",
       "record_id": "f-B-prefetch-netstumblerinstaller-0-4-0-ex",
       "seq": 339
     },
     {
-      "digest_hex": "39d86901b6057646bed7aa9e2e8000a1ad5603ffb63ad7cdee92db28663b4270",
+      "digest_hex": "1414c9b76b7dc686d7b7ccfc4eb4560645dbd4a7ad8367061c468bf71379b595",
       "kind": "finding",
       "record_id": "f-B-shellbag",
       "seq": 340
     },
     {
-      "digest_hex": "9c2cd52893765ccc23d28981471cd25f8528290dffc1feb5486ba32039b2c388",
+      "digest_hex": "7ab3e500f0c0942ae2529c03124a595ef52fe3a7a25becca9cb19d9aee95e76c",
       "kind": "finding",
       "record_id": "f-B-shellbag",
       "seq": 341
     }
   ],
-  "merkle_root_hex": "eb6dd243b6ab4129278260ebd97c94e1f5fc24837572e8359980fed5fdce3386",
-  "run_id": "auto-1781289206",
+  "merkle_root_hex": "9b2ed3f03454b5481a01956108e7c5fdc4807ead533beefacaf85a8b2351e3c9",
+  "run_id": "auto-1781296381",
   "signature": {
-    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiYjk4ZGYxYTlkMDlkYTM3NDFlMjk1ZDdkYTIxYjliNjc1Mjg3YWRmYjM2YjEwY2ExN2MyODBlMmExZmVlMGY1NCIsImtpbmQiOiJlZDI1NTE5IiwicGF5bG9hZF9zaGEyNTYiOiI4M2UyZTZiY2E5MjM5NTJkYWIxYjdhYWI5ZjdmMDY5NTllMTFlODQzZDQ3OTI0ZmQyYmQ0NGVhNzQ5NWVhOGQ0IiwicHVibGljX2tleV9iNjQiOiJUTjl6SldZVFJCTHdDbFNPWG5QalRrM1NieEZUbDhyR0Jlc3hqcjRtaExVPSIsInNpZ25hdHVyZV9iNjQiOiJoRENQYmFYR2VoRmpDWkE3S1BBYm1sOUpiYmtMcnFNNWZXdTB2UUpmdUxrb1BMQmJBaHM4MkRoOHBPUllpdUJMLzVRQXFCelFDa0dDMXM4Q29XbVBEdz09In0=",
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiYjk4ZGYxYTlkMDlkYTM3NDFlMjk1ZDdkYTIxYjliNjc1Mjg3YWRmYjM2YjEwY2ExN2MyODBlMmExZmVlMGY1NCIsImtpbmQiOiJlZDI1NTE5IiwicGF5bG9hZF9zaGEyNTYiOiI3MDBiODEwMDkzNzU2ZTMyZGNlODVhYjU4YmQ4ZWY5MjgwOWNhMGQ3NjgwMDE0NzQ3NzEwMDhkNDhiNDVjMWIzIiwicHVibGljX2tleV9iNjQiOiJUTjl6SldZVFJCTHdDbFNPWG5QalRrM1NieEZUbDhyR0Jlc3hqcjRtaExVPSIsInNpZ25hdHVyZV9iNjQiOiJWaGhralpWS3B2QVgwMXhUOWdCYyszalhGNkJGN1hMbWRUdkp5NWUydlFlUFVweWJxZDFVZjU4aEhYT0RuclVVUTRXRFRhUDhlbDFrYkhhYmxkUmFEZz09In0=",
     "cert_fingerprint": "b98df1a9d09da3741e295d7da21b9b675287adfb36b10ca17c280e2a1fee0f54",
     "kind": "ed25519",
-    "payload_sha256": "83e2e6bca923952dab1b7aab9f7f06959e11e843d47924fd2bd44ea7495ea8d4",
-    "signed_at": "2026-06-12T18:33:33Z"
+    "payload_sha256": "700b810093756e32dce85ab58bd8ef92809ca0d768001474771008d48b45c1b3",
+    "signed_at": "2026-06-12T20:35:28Z"
   },
-  "started_at": "2026-06-12T18:33:26Z",
+  "started_at": "2026-06-12T20:33:01Z",
   "version": "1"
 }
