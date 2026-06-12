@@ -18,6 +18,11 @@
 #   --sift            run the DFIR tools inside the SANS SIFT VM over SSH
 #                     (default: tools on the local host). Requires the VM to be
 #                     bootstrapped once: bash scripts/sift-vm-bootstrap.sh
+#   --fleet           whole multi-host case in ONE command: per-host
+#                     investigations -> cross-host correlation -> FLEET_REPORT.
+#                     Auto-detected when <evidence> is a folder with hosts/ or
+#                     disks/ (the whole-case layout). Resumable: re-run the
+#                     same command and completed hosts are skipped.
 #   --watch           no path? wait for a file dropped into evidence/, then go
 #                     (debounced until the copy finishes). Omitting both a path
 #                     and --watch uses the newest file already in evidence/.
@@ -47,6 +52,7 @@ cd "${REPO_ROOT}"
 DASH="http://localhost:3000"
 EVIDENCE_DIR="${REPO_ROOT}/evidence"
 SIFT=0
+FLEET=0
 NO_DASHBOARD=0
 SKIP_BUILD=0
 DRY=0
@@ -58,6 +64,7 @@ PASSTHROUGH=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --sift)          SIFT=1; shift ;;
+    --fleet)         FLEET=1; shift ;;
     --no-dashboard)  NO_DASHBOARD=1; shift ;;
     --skip-build)    SKIP_BUILD=1; shift ;;
     --dry-run)       DRY=1; shift ;;
@@ -150,6 +157,70 @@ if [[ -z "${EVIDENCE}" ]]; then
 fi
 [[ -n "${EVIDENCE}" || "${DRY}" == "1" ]] || fail "no evidence. Usage: scripts/verdict <evidence> | --watch (drop into evidence/)"
 
+# 0b. FLEET mode — one command for a whole multi-host case folder ------------
+# Auto-detected (a directory holding hosts/ or disks/ is the whole-case
+# layout) or forced with --fleet. Runs all three fleet stages end to end:
+# per-host investigations -> cross-host correlation -> fleet report.
+if [[ "${FLEET}" == "0" && -n "${EVIDENCE}" && -d "${EVIDENCE}" ]] \
+   && [[ -d "${EVIDENCE}/hosts" || -d "${EVIDENCE}/disks" ]]; then
+  FLEET=1
+  ok "multi-host case folder detected (hosts/ or disks/) — fleet mode"
+fi
+
+run_fleet() {
+  local case_root="${EVIDENCE}"
+  local name fleet_dir
+  name="$(basename "${case_root:-fleet}")"
+  fleet_dir="${REPO_ROOT}/tmp/fleet-runs/fleet-local-${name}"
+  log "FLEET — ${case_root:-"(SIFT-enumerated)"} (3 stages)"
+  if [[ "${DRY}" == "1" ]]; then
+    if [[ "${SIFT}" == "1" ]]; then
+      ok "DRY-RUN: python3 scripts/fleet_investigate.py   # stage 1 (per-host, in the SIFT VM)"
+    else
+      ok "DRY-RUN: bash scripts/run-whole-case-local.sh ${case_root} ${fleet_dir}   # stage 1 (per-host)"
+    fi
+    ok "DRY-RUN: python3 scripts/fleet_correlate.py   # stage 2 (cross-host correlation)"
+    ok "DRY-RUN: python3 scripts/render_fleet_report.py   # stage 3 (FLEET_REPORT)"
+    echo; log "done (dry-run)"
+    exit 0
+  fi
+  if [[ "${SIFT}" == "1" ]]; then
+    # SIFT fleet: fleet_investigate enumerates the VM's evidence share and
+    # writes its own timestamped fleet dir; stages 2-3 default to latest.
+    log "fleet 1/3 — per-host investigations inside the SIFT VM"
+    python3 scripts/fleet_investigate.py || fail "fleet_investigate failed"
+    fleet_dir=""
+  else
+    # Local fleet: resumable per-host runs (a host with a non-empty
+    # run-summary is skipped, so re-running the same command resumes), then
+    # fleet_local writes the correlate-ready fleet.json.
+    log "fleet 1/3 — per-host investigations (local, resumable)"
+    mkdir -p "${fleet_dir}"
+    bash scripts/run-whole-case-local.sh "${case_root}" "${fleet_dir}" \
+      || fail "whole-case run failed (see ${fleet_dir}/*.log)"
+  fi
+  log "fleet 2/3 — cross-host correlation"
+  if [[ -n "${fleet_dir}" ]]; then
+    python3 scripts/fleet_correlate.py "${fleet_dir}" || fail "fleet_correlate failed"
+  else
+    python3 scripts/fleet_correlate.py || fail "fleet_correlate failed"
+  fi
+  log "fleet 3/3 — fleet report (figures + FLEET_REPORT)"
+  if [[ -n "${fleet_dir}" ]]; then
+    python3 scripts/render_fleet_report.py "${fleet_dir}" \
+      || warn "render_fleet_report failed (matplotlib/pandoc are optional) — fleet_correlation.{json,md} still written"
+  else
+    python3 scripts/render_fleet_report.py \
+      || warn "render_fleet_report failed (matplotlib/pandoc are optional) — fleet_correlation.{json,md} still written"
+  fi
+  echo
+  log "fleet done"
+  [[ -n "${fleet_dir}" ]] && printf '   fleet  : %s\n' "${fleet_dir}" >&2
+  printf '   verdicts + correlation: fleet.json · fleet_correlation.{json,md} · FLEET_REPORT.md\n' >&2
+  exit 0
+}
+[[ "${FLEET}" == "1" ]] && run_fleet
+
 # 1. preflight ---------------------------------------------------------------
 log "1/4 preflight"
 if [[ "${DRY}" == "1" ]]; then
@@ -210,7 +281,7 @@ if [[ "${SIFT}" == "1" && "${DRY}" != "1" ]]; then
   SSHB=(ssh -i "${GKEY}" -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8)
   if [[ -e "${EVIDENCE}" ]]; then
     if [[ -d "${EVIDENCE}" && ( -d "${EVIDENCE}/hosts" || -d "${EVIDENCE}/disks" ) ]]; then
-      fail "--sift: '${EVIDENCE}' is a multi-host case folder — use the fleet pipeline (scripts/run-whole-case-local.sh or scripts/fleet_investigate.py), or pass a single host's evidence."
+      fail "--sift: '${EVIDENCE}' is a multi-host case folder — run: scripts/verdict ${EVIDENCE} --fleet (one command for all three fleet stages), or pass a single host's evidence."
     fi
     rbase="$(basename "${EVIDENCE}")"
     remote="${GEVDIR}/${rbase}"
