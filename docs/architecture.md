@@ -127,8 +127,8 @@ flowchart TB
 
 | # | Boundary | Enforcement mechanism | Type |
 |---|---|---|---|
-| 0 | Evidence vault | **Architectural:** `mount -o ro` + `chmod 444`; `inotifywait` in L3 asserts zero writes to `/evidence` | Filesystem-enforced |
-| 1 | SIFT tool subprocesses | **Architectural:** unprivileged user (no root, no CAP_SYS_ADMIN), 120s wall-clock budget per call, cpulimit 50%, tmpfs `/tmp/case-<id>-work/`, binary allowlist (no curl/wget/nc) | OS-enforced |
+| 0 | Evidence vault | **Architectural (shipped):** originals opened read-only (libewf for `.e01`); SHA-256 fingerprinted at `case_open` and re-checked at every verifier replay; no write verb exists anywhere in the 32-tool surface. **Hardened-deployment posture (recommended, not code-enforced):** `mount -o ro` + `chmod 444` on the vault, `inotifywait` write-monitoring | Code-enforced today; filesystem hardening is operator posture |
+| 1 | SIFT tool subprocesses | **Architectural (shipped):** unprivileged user (no root, no CAP_SYS_ADMIN); fixed-argv invocation — `Command::new(bin).args([...])`, never `sh -c`, so a path/arg is never shell-parsed (adversarially pinned by `services/mcp/tests/bypass_paths.rs`). **Roadmap (documented, not yet enforced in code):** per-call wall-clock budget, cpulimit, tmpfs work dir, binary allowlist | Process-enforced today; resource sandboxing is roadmap |
 | 2 | Two typed MCP servers | **Architectural:** Rust `findevil-mcp` type system forbids `execute_shell`; Python `findevil-agent-mcp` Pydantic input models use `extra="forbid"`; tool surfaces fixed at compile/build time. Adding a shell passthrough would require a code change + PR + review | Compiler/schema-enforced |
 | 3 | Claude Code agent loop | **Mixed:** agent system prompts (`agent-config/SOUL.md` — epistemic hierarchy, AGENTS.md — roles) are **prompt-based guardrails**; verifier veto (no Finding without `tool_call_id`) is **architectural** (Pydantic schema-level enforced at the `findevil-agent-mcp` boundary) | Mixed — prompt guards behavior, Pydantic guards data |
 | 4 | Crypto Custody | **Architectural:** sigstore signing and Merkle root computation happen inside `findevil-agent-mcp` before any finding is user-visible; the pre-A5 OpenTimestamps/Bitcoin tier was removed so `manifest_finalize` is the terminal custody step | Cryptographic |
@@ -142,10 +142,15 @@ flowchart TB
 - `agent-config/MEMORY.md` DFIR artifact semantics (Amcache ≠ execution time, etc.)
 - `agent-config/HEARTBEAT.md` canary string self-check every turn
 
-These are **testable for bypass** in L3 golden runs — prompt-injection fixtures live alongside the standard golden cases in `goldens/`. Prompt guardrails can fail; when they do, the architectural guardrails below must catch the fallout.
+Prompt guardrails can fail — that is the design assumption, not a surprise; when they do, the
+architectural guardrails below must catch the fallout. What is bypass-tested **today** is the
+architectural layer (`services/mcp/tests/bypass_paths.rs`: shell-payload paths, `..` traversal,
+flag-looking paths — all inert), plus the HEARTBEAT.md canary as the in-run prompt-injection
+tripwire. Dedicated prompt-injection *fixtures* in `goldens/` are planned and not yet shipped —
+we say so here rather than claim them.
 
 **Architectural guardrails (structural controls that PHYSICALLY PREVENT bad outcomes):**
-- Read-only evidence mount (filesystem-enforced; even root can't mutate original .e01)
+- Read-only evidence access (code-enforced: libewf read-only open, SHA-256 at `case_open` re-checked at every replay, no write verb in the tool surface; pair with a read-only mount in hardened deployments)
 - Typed Rust MCP server (`findevil-mcp`) with no `execute_shell` (compiler-enforced; adding shell passthrough requires a code change and PR review)
 - Typed Python MCP server (`findevil-agent-mcp`) with Pydantic `extra="forbid"` on every input model (boundary-enforced; unknown fields surface as validation errors)
 - Pydantic schema on `Finding` events requires `tool_call_id` (schema-enforced; unvalidated Findings can't exit the agent_mcp boundary)
@@ -154,7 +159,12 @@ These are **testable for bypass** in L3 golden runs — prompt-injection fixture
 - Merkle tree append-only at the `findevil-agent-mcp` layer (agent cannot rebuild the tree to favor a different leaf set)
 - Sigstore/Rekor transparency-log inclusion proof (agent cannot forge the signed manifest provenance)
 
-**Cisco `mcp-scanner` run pre-submission** asserts zero findings for `execute_shell` or equivalent arbitrary-execution patterns in `services/mcp/` — the architectural claim is machine-verified.
+The no-arbitrary-execution claim is machine-checkable in-repo today: the tool registry is fixed
+at compile time (`services/mcp/src/tools/mod.rs` — adding a verb is a code change + review),
+`scripts/divergence-smoke.py` asserts the product MCP servers register no
+`execute_shell`/`bash -c`-shaped surface, and `services/mcp/tests/bypass_paths.rs` exercises the
+boundary adversarially. (A third-party `mcp-scanner` pass is on the pre-submission checklist; no
+scanner artifact ships in this tree yet.)
 
 ---
 
