@@ -178,8 +178,10 @@ Beyond the three ideas above, a single case run also:
 VERDICT is graded against published answer keys, not vibes — and the numbers below are
 reproducible from committed runs, not asserted. On the **nitroba** network case it finds **5 of 5
 expected findings — 100% recall**, which you can re-run yourself:
-`scripts/score-recall.py docs/sample-run/nitroba --golden goldens/nitroba`. **Every finding across
-committed runs cites a `tool_call_id`.** On the **NIST hacking case** it reaches **7% recall (1 of
+`scripts/score-recall.py docs/sample-run/nitroba --golden goldens/nitroba`. (Recall measures
+whether the golden *facts* were surfaced; the run verdict stays `INDETERMINATE` because network
+metadata attributes activity to a host, not a person — full recall and a scoped verdict are
+consistent, not a contradiction.) **Every finding across committed runs cites a `tool_call_id`.** On the **NIST hacking case** it reaches **7% recall (1 of
 14)**: it surfaces real hacking-tool execution, but not the account-creation, MRU, thumbcache, and
 named-pipe artifacts the answer key also expects — so it scopes to `SUSPICIOUS` rather than
 overclaim, and we publish the gap rather than hide it. Full method, the recall table, the
