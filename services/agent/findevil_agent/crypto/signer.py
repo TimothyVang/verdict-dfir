@@ -181,6 +181,94 @@ class StubSigner:
         )
 
 
+class LocalEd25519Signer:
+    """Real local-keypair signer — the offline default tier.
+
+    Signs the canonical payload bytes with an Ed25519 private key kept at a
+    stable local path (``~/.findevil/signing.key`` unless overridden via
+    ``FINDEVIL_SIGNING_KEY`` or the ``key_path`` argument). The key is
+    auto-generated on first use (dir 0o700, file 0o600). The bundle embeds the
+    public key, so ``manifest_verify`` can cryptographically verify the
+    signature OFFLINE — unlike the stub (a placeholder, never proof) and
+    unlike sigstore (which adds identity + a transparency log but needs an
+    OIDC token and network at signing time).
+
+    This proves *integrity and local key continuity*, not *identity*: the
+    customer-release gate still requires sigstore.
+    """
+
+    def __init__(self, key_path: os.PathLike[str] | str | None = None) -> None:
+        from pathlib import Path
+
+        self._key_path = Path(key_path) if key_path is not None else _default_key_path()
+        self._lock = threading.Lock()
+        self._private_key: Any = None  # lazy Ed25519PrivateKey
+
+    def _ensure_key(self) -> Any:
+        with self._lock:
+            if self._private_key is not None:
+                return self._private_key
+            # Lazy import — cryptography ships as a sigstore dependency, but
+            # keep module import time free of it for offline-light callers.
+            from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+            from cryptography.hazmat.primitives.serialization import (
+                Encoding,
+                NoEncryption,
+                PrivateFormat,
+                load_pem_private_key,
+            )
+
+            if self._key_path.exists():
+                self._private_key = load_pem_private_key(self._key_path.read_bytes(), password=None)
+            else:
+                key = Ed25519PrivateKey.generate()
+                self._key_path.parent.mkdir(parents=True, exist_ok=True)
+                os.chmod(self._key_path.parent, 0o700)
+                pem = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+                # Write owner-only: create with 0o600 before the bytes land.
+                fd = os.open(self._key_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+                with os.fdopen(fd, "wb") as fh:
+                    fh.write(pem)
+                self._private_key = key
+            return self._private_key
+
+    def sign(self, payload: bytes) -> SignedBundle:
+        from cryptography.hazmat.primitives.serialization import (
+            Encoding,
+            PublicFormat,
+        )
+
+        key = self._ensure_key()
+        digest = hashlib.sha256(payload).hexdigest()
+        signature = key.sign(payload)
+        public_raw = key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+        cert_fp = hashlib.sha256(public_raw).hexdigest()
+        bundle_obj: dict[str, Any] = {
+            "kind": "ed25519",
+            "public_key_b64": base64.b64encode(public_raw).decode("ascii"),
+            "signature_b64": base64.b64encode(signature).decode("ascii"),
+            "payload_sha256": digest,
+            "cert_fingerprint": cert_fp,
+        }
+        bundle_json = json.dumps(bundle_obj, sort_keys=True, separators=(",", ":"))
+        return SignedBundle(
+            payload_sha256=digest,
+            bundle_b64=base64.b64encode(bundle_json.encode("utf-8")).decode("ascii"),
+            cert_fingerprint=cert_fp,
+            signed_at=_utc_iso(),
+            kind="ed25519",
+        )
+
+
+def _default_key_path() -> Any:
+    from pathlib import Path
+
+    env = os.environ.get("FINDEVIL_SIGNING_KEY")
+    if env:
+        return Path(env)
+    return Path.home() / ".findevil" / "signing.key"
+
+
 class FallbackSigner:
     """Tries a primary signer (real sigstore) and honestly degrades to a
     fallback (stub) when the primary fails — the typical offline / no-token
@@ -252,6 +340,7 @@ def make_signer(*, kind: str | None = None, **kwargs: Any) -> Signer:
 
 __all__ = [
     "FallbackSigner",
+    "LocalEd25519Signer",
     "SignedBundle",
     "Signer",
     "SigstoreSigner",

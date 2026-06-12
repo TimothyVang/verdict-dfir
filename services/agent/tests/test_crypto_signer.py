@@ -142,6 +142,73 @@ class TestMakeSigner:
         assert s._identity_token == "explicit"
 
 
+class TestLocalEd25519Signer:
+    """Real local-keypair signing — the offline default tier.
+
+    Unlike the stub, an ed25519 bundle is genuine cryptographic proof of
+    integrity: the signature verifies against the embedded public key.
+    """
+
+    def _signer(self, tmp_path):
+        from findevil_agent.crypto.signer import LocalEd25519Signer
+
+        return LocalEd25519Signer(key_path=tmp_path / "signing.key")
+
+    def test_sign_produces_ed25519_bundle(self, tmp_path) -> None:
+        b = self._signer(tmp_path).sign(b'{"foo":1}')
+        assert b.kind == "ed25519"
+        assert b.fallback_reason is None
+        assert len(b.payload_sha256) == 64
+        bundle_obj = json.loads(b.raw_bundle_json)
+        assert bundle_obj["kind"] == "ed25519"
+        assert bundle_obj["public_key_b64"]
+        assert bundle_obj["signature_b64"]
+        assert bundle_obj["payload_sha256"] == b.payload_sha256
+
+    def test_key_file_created_with_owner_only_permissions(self, tmp_path) -> None:
+        key_path = tmp_path / "keys" / "signing.key"
+        from findevil_agent.crypto.signer import LocalEd25519Signer
+
+        LocalEd25519Signer(key_path=key_path).sign(b"x")
+        assert key_path.exists()
+        assert (key_path.stat().st_mode & 0o777) == 0o600
+        assert (key_path.parent.stat().st_mode & 0o777) == 0o700
+
+    def test_same_key_path_means_stable_fingerprint(self, tmp_path) -> None:
+        b1 = self._signer(tmp_path).sign(b"a")
+        b2 = self._signer(tmp_path).sign(b"b")
+        # Two signer instances over the SAME key file = same identity.
+        assert b1.cert_fingerprint == b2.cert_fingerprint
+
+    def test_signature_round_trips_with_cryptography(self, tmp_path) -> None:
+        payload = b'{"case":"x","root":"deadbeef"}'
+        b = self._signer(tmp_path).sign(payload)
+        bundle_obj = json.loads(b.raw_bundle_json)
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+        pub = Ed25519PublicKey.from_public_bytes(base64.b64decode(bundle_obj["public_key_b64"]))
+        # verify() raises InvalidSignature on mismatch — no raise = valid.
+        pub.verify(base64.b64decode(bundle_obj["signature_b64"]), payload)
+
+    def test_tampered_payload_fails_verification(self, tmp_path) -> None:
+        b = self._signer(tmp_path).sign(b"original")
+        bundle_obj = json.loads(b.raw_bundle_json)
+        from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+        pub = Ed25519PublicKey.from_public_bytes(base64.b64decode(bundle_obj["public_key_b64"]))
+        with pytest.raises(InvalidSignature):
+            pub.verify(base64.b64decode(bundle_obj["signature_b64"]), b"tampered")
+
+    def test_env_var_overrides_key_path(self, tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+        env_key = tmp_path / "env-signing.key"
+        monkeypatch.setenv("FINDEVIL_SIGNING_KEY", str(env_key))
+        from findevil_agent.crypto.signer import LocalEd25519Signer
+
+        LocalEd25519Signer().sign(b"x")
+        assert env_key.exists()
+
+
 class TestSigstoreSignerLazyImport:
     def test_sign_without_sigstore_installed_raises(self) -> None:
         # We can't fully test the production sigstore path without
