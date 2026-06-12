@@ -3,8 +3,8 @@
   "case_dir": "docs/sample-run/nist-hacking-case",
   "golden": "goldens/nist-hacking-case/expected-findings.json",
   "expected_n": 14,
-  "recalled_n": 1,
-  "recall_percent": 7,
+  "recalled_n": 5,
+  "recall_percent": 36,
   "min_recall_percent": 71,
   "run_verdict": "SUSPICIOUS",
   "golden_verdict": "CONFIRMED_EVIL",
@@ -12,10 +12,34 @@
   "pass": false,
   "matched": [
     {
+      "finding_id": "nhc-004",
+      "description": "Hacking tool artifacts in Program Files / downloaded applications",
+      "mitre_technique": "T1588.002",
+      "matched_run_finding_id": "f-A-mft-tools"
+    },
+    {
       "finding_id": "nhc-005",
       "description": "Prefetch evidence of hacking tool execution",
       "mitre_technique": null,
-      "matched_run_finding_id": "f-B-prefetch-cain-exe"
+      "matched_run_finding_id": "f-A-mru-netstumblerinstaller-0-4-0-exe"
+    },
+    {
+      "finding_id": "nhc-007",
+      "description": "Shellbag entries show navigation to removable media holding staged files",
+      "mitre_technique": null,
+      "matched_run_finding_id": "f-B-shellbag"
+    },
+    {
+      "finding_id": "nhc-010",
+      "description": "User account with suspicious naming / elevated privileges created",
+      "mitre_technique": "T1136.001",
+      "matched_run_finding_id": "f-A-sam-mr-evil"
+    },
+    {
+      "finding_id": "nhc-011",
+      "description": "MRU list shows recently opened files consistent with intrusion planning",
+      "mitre_technique": null,
+      "matched_run_finding_id": "f-A-mru-lalsetup250-exe"
     }
   ],
   "unmatched": [
@@ -35,19 +59,9 @@
       "mitre_technique": null
     },
     {
-      "finding_id": "nhc-004",
-      "description": "Hacking tool artifacts in Program Files / downloaded applications",
-      "mitre_technique": "T1588.002"
-    },
-    {
       "finding_id": "nhc-006",
       "description": "Internet history indicating downloads of illicit content",
       "mitre_technique": "T1071.001"
-    },
-    {
-      "finding_id": "nhc-007",
-      "description": "Shellbag entries show navigation to removable media holding staged files",
-      "mitre_technique": null
     },
     {
       "finding_id": "nhc-008",
@@ -58,16 +72,6 @@
       "finding_id": "nhc-009",
       "description": "Recycle bin contains deleted staging artifacts",
       "mitre_technique": "T1070.004"
-    },
-    {
-      "finding_id": "nhc-010",
-      "description": "User account with suspicious naming / elevated privileges created",
-      "mitre_technique": "T1136.001"
-    },
-    {
-      "finding_id": "nhc-011",
-      "description": "MRU list shows recently opened files consistent with intrusion planning",
-      "mitre_technique": null
     },
     {
       "finding_id": "nhc-012",

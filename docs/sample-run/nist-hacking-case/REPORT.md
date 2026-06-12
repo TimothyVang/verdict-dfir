@@ -4,18 +4,18 @@
 
 [DFIR at machine speed · sigstore-signed chain of custody]{.tagline}
 
-**Case ID:** `d0d0d732-1bdb-484a-bc3a-57f75302817f`
-**Run ID:** `auto-1781021943`
-**Started:** 2026-06-09T16:19:03Z
-**Finalized:** 2026-06-09T16:19:12Z
-**Evidence:** `/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/SCHARDT.dd`
+**Case ID:** `b639fdda-146c-48ec-9080-1e144ec7ceae`
+**Run ID:** `auto-1781289206`
+**Started:** 2026-06-12T18:33:26Z
+**Finalized:** 2026-06-12T18:33:33Z
+**Evidence:** `evidence/SCHARDT.dd`
 **Verdict:** **SUSPICIOUS**
 
 > **Cryptographic attestation:**
-> Merkle root `fd9f37382ccfbaff3c19073507fabd08bf6f676cd0931c5200c386d6cd1b9320`
-> Audit log final hash `66c8e3358b03a0f34a2de1690f7f1faae79cc9268b760deb6d23fe7e93cac583`
-> Sigstore signature SHA-256 `84796ba990e38e459fc4012be9fceab9bb03082d0fcaab4683edc744a64d5f82`
-> Cert fingerprint `646e0d51e63465a9a82984010affa9f11c2dd05338e76b92fc0636c92e03f15b`
+> Merkle root `eb6dd243b6ab4129278260ebd97c94e1f5fc24837572e8359980fed5fdce3386`
+> Audit log final hash `64263c769823cbca52ca0d99a7c223951aff59e348feb6f675d08da26c731d98`
+> Ed25519 signature SHA-256 `83e2e6bca923952dab1b7aab9f7f06959e11e843d47924fd2bd44ea7495ea8d4`
+> Cert fingerprint `b98df1a9d09da3741e295d7da21b9b675287adfb36b10ca17c280e2a1fee0f54`
 
 ---
 
@@ -25,11 +25,11 @@
 ::: {.report-fig data-fig="scorecard"}
 :::
 
-**Verdict: SUSPICIOUS.** Confirmed: suspicious activity — suspicious activity.
+**Verdict: SUSPICIOUS.** Confirmed: cain.exe executed.
 
-The supplied evidence shows suspicious activity at 2004-08-27T15:33:03Z.
+The supplied evidence shows cain.exe executed at 2004-08-27T15:33:03Z.
 
-**Scope:** findings span 9 hosts — ETHEREAL.EXE-1C148EEF.pf \(confirmed\); CAIN.EXE-23D61279.pf \(confirmed\); ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf \(confirmed\); NETSTUMBLER.EXE-0BFEE568.pf \(confirmed\); LOOKATLAN.EXE-1F991DD9.pf \(confirmed\); MIRC.EXE-0661EC22.pf \(confirmed\); MIRC612.EXE-02791C37.pf \(confirmed\); CAIN25B45.EXE-056F3A6E.pf \(confirmed\); NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf \(hypothesis\). Each is assessed separately below; the evidence does not establish them as one incident.
+**Scope:** findings span 13 hosts — ETHEREAL.EXE-1C148EEF.pf \(confirmed\); CAIN.EXE-23D61279.pf \(confirmed\); ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf \(confirmed\); NETSTUMBLER.EXE-0BFEE568.pf \(confirmed\); LOOKATLAN.EXE-1F991DD9.pf \(confirmed\); MIRC.EXE-0661EC22.pf \(confirmed\); MIRC612.EXE-02791C37.pf \(confirmed\); CAIN25B45.EXE-056F3A6E.pf \(confirmed\); software \(inferred\); NTUSER.DAT \(hypothesis\); NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf \(hypothesis\); SAM \(hypothesis\); $MFT \(hypothesis\). Each is assessed separately below; the evidence does not establish them as one incident.
 
 **Assessment:** The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.
 
@@ -37,6 +37,8 @@ The supplied evidence shows suspicious activity at 2004-08-27T15:33:03Z.
 
 **Key findings:**
 
+* A Run-key persistence entry \(INFERRED, T1547.001, cited by tc-098\).
+* A Run-key persistence entry \(INFERRED, T1547.001, cited by tc-098\).
 * Suspicious activity \(CONFIRMED, T1588.002, cited by tc-010\).
 * Suspicious activity \(CONFIRMED, T1588.002, cited by tc-011\).
 * Suspicious activity \(CONFIRMED, T1040, cited by tc-020\).
@@ -46,7 +48,7 @@ The supplied evidence shows suspicious activity at 2004-08-27T15:33:03Z.
 * Suspicious activity \(CONFIRMED, T1071.001, cited by tc-041\).
 * Suspicious activity \(CONFIRMED, T1046, cited by tc-047\).
 
-* Findings: 9 total — 8 confirmed, 0 inferred, 1 hypothesis.
+* Findings: 19 total — 8 confirmed, 2 inferred, 9 hypothesis.
 * Most important next step: Collect Security, Sysmon, and PowerShell Operational EVTX and rerun EVTX/Hayabusa analysis.
 
 
@@ -67,13 +69,13 @@ The cited tool output meets a defined detection rule for this technique. Treat s
 | Time (UTC) | Event | Account | Tool Call |
 |---|---|---|---|
 | 2004-08-27T15:34:54Z | prefetch run: ETHEREAL.EXE | — | `tc-021` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-085` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-112` |
 
 ### CAIN.EXE-23D61279.pf
 
@@ -86,13 +88,13 @@ The cited tool output meets a defined detection rule for this technique. Treat s
 | Time (UTC) | Event | Account | Tool Call |
 |---|---|---|---|
 | 2004-08-27T15:33:03Z | prefetch run: CAIN.EXE | — | `tc-010` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-085` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-112` |
 
 ### ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf
 
@@ -105,13 +107,13 @@ The cited tool output meets a defined detection rule for this technique. Treat s
 | Time (UTC) | Event | Account | Tool Call |
 |---|---|---|---|
 | 2004-08-27T15:28:36Z | prefetch run: ETHEREAL-SETUP-0.10.6.EXE | — | `tc-020` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-085` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-112` |
 
 ### NETSTUMBLER.EXE-0BFEE568.pf
 
@@ -124,13 +126,13 @@ The cited tool output meets a defined detection rule for this technique. Treat s
 | Time (UTC) | Event | Account | Tool Call |
 |---|---|---|---|
 | 2004-08-27T15:12:35Z | prefetch run: NETSTUMBLER.EXE | — | `tc-047` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-085` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-112` |
 
 ### LOOKATLAN.EXE-1F991DD9.pf
 
@@ -143,13 +145,13 @@ The cited tool output meets a defined detection rule for this technique. Treat s
 | Time (UTC) | Event | Account | Tool Call |
 |---|---|---|---|
 | 2004-08-26T15:06:14Z | prefetch run: LOOKATLAN.EXE | — | `tc-038` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-085` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-112` |
 
 ### MIRC.EXE-0661EC22.pf
 
@@ -162,13 +164,13 @@ The cited tool output meets a defined detection rule for this technique. Treat s
 | Time (UTC) | Event | Account | Tool Call |
 |---|---|---|---|
 | 2004-08-25T16:20:34Z | prefetch run: MIRC.EXE | — | `tc-040` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-085` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-112` |
 
 ### MIRC612.EXE-02791C37.pf
 
@@ -181,13 +183,13 @@ The cited tool output meets a defined detection rule for this technique. Treat s
 | Time (UTC) | Event | Account | Tool Call |
 |---|---|---|---|
 | 2004-08-20T15:09:46Z | prefetch run: MIRC612.EXE | — | `tc-041` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-085` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-112` |
 
 ### CAIN25B45.EXE-056F3A6E.pf
 
@@ -200,13 +202,68 @@ The cited tool output meets a defined detection rule for this technique. Treat s
 | Time (UTC) | Event | Account | Tool Call |
 |---|---|---|---|
 | 2004-08-20T15:05:52Z | prefetch run: CAIN25B45.EXE | — | `tc-011` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-085` |
-| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-085` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of cain25b45.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal-setup-0.10.6.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of ethereal.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of lookatlan.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc.exe | — | `tc-112` |
+| 2004-08-27T15:46:13Z | UserAssist records execution of mirc612.exe | — | `tc-112` |
+
+### software
+
+*2 finding(s) — 0 confirmed, 2 inferred, 0 hypothesis · 1 events · 2004-08-19T22:37:33Z · source: software*
+
+**Persistence: Boot or Logon Autostart Execution: Registry Run Keys** `[INFERRED]` `tc-098`
+
+Run keys launch a program at logon — a simple, durable persistence spot. Most Run-key entries are legitimate software; the target path is the lead.
+
+**Persistence: Boot or Logon Autostart Execution: Registry Run Keys** `[INFERRED]` `tc-098`
+
+Run keys launch a program at logon — a simple, durable persistence spot. Most Run-key entries are legitimate software; the target path is the lead.
+
+| Time (UTC) | Event | Account | Tool Call |
+|---|---|---|---|
+| 2004-08-19T22:37:33Z | registry key: Microsoft\\Windows\\CurrentVersion\\Run | — | `tc-098` |
+
+### NTUSER.DAT
+
+*6 finding(s) — 0 confirmed, 0 inferred, 6 hypothesis · 43 events · 2004-08-20T15:07:26Z → 2004-08-27T15:32:08Z · source: NTUSER.DAT*
+
+**Other: T1074.001** `[HYPOTHESIS]` `tc-078`
+
+The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.
+
+**Other: T1074.001** `[HYPOTHESIS]` `tc-079`
+
+The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.
+
+**Other: T1217** `[HYPOTHESIS]` `tc-076`
+
+The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.
+
+**Other: T1217** `[HYPOTHESIS]` `tc-076`
+
+The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.
+
+**Other: T1217** `[HYPOTHESIS]` `tc-076`
+
+The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.
+
+**Other: T1217** `[HYPOTHESIS]` `tc-076`
+
+The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.
+
+| Time (UTC) | Event | Account | Tool Call |
+|---|---|---|---|
+| 2004-08-20T15:07:26Z | registry key: Software\\Microsoft\\Windows\\ShellNoRoam\\BagMRU\\0\\1\\0 | — | `tc-079` |
+| 2004-08-20T15:07:26Z | registry key: Software\\Microsoft\\Windows\\ShellNoRoam\\BagMRU\\0\\1\\0\\0 | — | `tc-079` |
+| 2004-08-20T15:07:26Z | registry key: Software\\Microsoft\\Windows\\ShellNoRoam\\BagMRU\\0\\1\\0\\0\\0 | — | `tc-079` |
+| 2004-08-20T15:07:26Z | registry key: Software\\Microsoft\\Windows\\ShellNoRoam\\BagMRU\\0\\1\\0\\0\\0\\0\\0 | — | `tc-079` |
+| 2004-08-20T15:09:56Z | registry key: Software\\Microsoft\\Windows\\ShellNoRoam\\BagMRU\\0\\1\\0\\0\\0\\0\\1 | — | `tc-079` |
+| 2004-08-20T15:10:06Z | registry key: Software\\Microsoft\\Windows\\ShellNoRoam\\BagMRU\\0\\1\\0\\0\\0\\0 | — | `tc-079` |
+| 2004-08-20T15:11:11Z | registry key: Software\\Microsoft\\Windows\\ShellNoRoam\\BagMRU\\0\\1\\1\\0 | — | `tc-079` |
+| 2004-08-20T15:19:00Z | registry key: Software\\Microsoft\\Windows\\ShellNoRoam\\BagMRU\\0\\0 | — | `tc-079` |
 
 ### NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf
 
@@ -219,6 +276,42 @@ The cited tool output meets a defined detection rule for this technique. Treat s
 | Time (UTC) | Event | Account | Tool Call |
 |---|---|---|---|
 | 2004-08-27T15:12:11Z | prefetch run: NETSTUMBLERINSTALLER_0_4_0.EX | — | `tc-048` |
+
+### SAM
+
+*1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 6 events · 2004-08-19T16:59:24Z → 2004-08-19T23:03:54Z · source: SAM*
+
+**Persistence: T1136.001** `[HYPOTHESIS]` `tc-103`
+
+The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.
+
+| Time (UTC) | Event | Account | Tool Call |
+|---|---|---|---|
+| 2004-08-19T16:59:24Z | registry key: SAM\\Domains\\Account\\Users\\Names\\Administrator | — | `tc-103` |
+| 2004-08-19T16:59:24Z | registry key: SAM\\Domains\\Account\\Users\\Names\\Guest | — | `tc-103` |
+| 2004-08-19T22:28:24Z | registry key: SAM\\Domains\\Account\\Users\\Names\\HelpAssistant | — | `tc-103` |
+| 2004-08-19T22:35:19Z | registry key: SAM\\Domains\\Account\\Users\\Names\\SUPPORT_388945a0 | — | `tc-103` |
+| 2004-08-19T23:03:54Z | registry key: SAM\\Domains\\Account\\Users\\Names | — | `tc-103` |
+| 2004-08-19T23:03:54Z | registry key: SAM\\Domains\\Account\\Users\\Names\\Mr. Evil | — | `tc-103` |
+
+### $MFT
+
+*1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 497 events · 1601-01-01T00:00:00Z → 2004-08-27T15:08:33Z · source: $MFT*
+
+**Other: T1588.002** `[HYPOTHESIS]` `tc-004`
+
+The cited tool output meets a defined detection rule for this technique. Treat single-source signals as leads until corroborated across artifact classes.
+
+| Time (UTC) | Event | Account | Tool Call |
+|---|---|---|---|
+| 1601-01-01T00:00:00Z | mft entry: $Secure | — | `tc-004` |
+| 1999-04-23T22:22:00Z | mft entry: WIN98/BASE4.CAB | — | `tc-004` |
+| 1999-04-23T22:22:00Z | mft entry: WIN98/BASE5.CAB | — | `tc-004` |
+| 1999-04-23T22:22:00Z | mft entry: WIN98/BASE6.CAB | — | `tc-004` |
+| 1999-04-23T22:22:00Z | mft entry: WIN98/CATALOG3.CAB | — | `tc-004` |
+| 1999-04-23T22:22:00Z | mft entry: WIN98/CHL99.CAB | — | `tc-004` |
+| 1999-04-23T22:22:00Z | mft entry: WIN98/DELTEMP.COM | — | `tc-004` |
+| 1999-04-23T22:22:00Z | mft entry: WIN98/DOSSETUP.BIN | — | `tc-004` |
 
 
 
@@ -241,6 +334,8 @@ What the supplied evidence cannot establish, and how to resolve it.
 * Undetermined: command-and-control and exfiltration cannot be assessed without network data. To resolve: collect DNS, proxy, firewall, or NetFlow logs, or a PCAP.
 * Undetermined: injected code and hidden processes cannot be examined without a memory image. To resolve: capture RAM and run the volatility process and injection plugins.
 * Undetermined: logon, process-creation, and PowerShell activity cannot be reviewed without event logs. To resolve: collect the Security, Sysmon/Operational, and PowerShell/Operational logs.
+* INFERRED finding f-A-reg-persist-srfirstrun cites 1 confirmed fact\(s\) in derived_from; the SOUL.md ≥2-fact rule wants two independent sources before an inference is fully corroborated. Treat as a single-source lead pending a second artifact class.
+* INFERRED finding f-A-reg-persist-schedulingagent cites 1 confirmed fact\(s\) in derived_from; the SOUL.md ≥2-fact rule wants two independent sources before an inference is fully corroborated. Treat as a single-source lead pending a second artifact class.
 
 
 
@@ -253,86 +348,166 @@ chain-of-custody appendices.
 
 ## Case Summary
 
-* **Total merged findings:** 9
+* **Total merged findings:** 19
 * **By confidence:**
   - CONFIRMED: 8
-  - INFERRED:  0
-  - HYPOTHESIS: 1
-* **Contradictions surfaced (Pool A vs Pool B):** 0
-* **SOUL.md correlator:** 9 kept, 0 downgraded
+  - INFERRED:  2
+  - HYPOTHESIS: 9
+* **Contradictions surfaced (Pool A vs Pool B):** 8
+* **SOUL.md correlator:** 19 kept, 0 downgraded
 
 ## Detailed Findings
 
-### Finding 1 — confidence: CONFIRMED, pool: B, MITRE: T1588.002, replay: exact_match (match)
+### Finding 1 — confidence: HYPOTHESIS, pool: A, MITRE: T1588.002, replay: exact_match (match)
+
+hypothesis: Hacking-tool artifacts present on disk as downloaded applications, recovered from the MFT: Program Files/Anonymizer \(created 2004-08-20T15:05:06Z\). The filesystem records \(MFT\) show these tool files in Program Files / on the user's Desktop with creation timestamps clustered around the incident window; they are downloaded applications, not operating-system components. INFERRED from two tool-backed facts per file: the artifact's existence \(MFT\) and its name matching a known-tool heuristic \(anonymizer\). Corroborates the Prefetch execution findings for the same toolset; file presence itself is not an execution claim.
+
+- `tool_call_id`: `tc-004`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/mft/$MFT`
+- confidence: Hypothesis — a single-source triage lead; corroborate before any response action.
+
+### Finding 2 — confidence: HYPOTHESIS, pool: A, MITRE: T1217, replay: exact_match (match)
+
+hypothesis: User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\lalsetup250.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z\). INFERRED user activity: the MRU entry's existence is tool-backed and reflects deliberate user action. It records intent/recency, not execution of any binary.
+
+- `tool_call_id`: `tc-076`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT`
+- confidence: Hypothesis — a single-source triage lead; corroborate before any response action.
+
+### Finding 3 — confidence: HYPOTHESIS, pool: A, MITRE: T1217, replay: exact_match (match)
+
+hypothesis: User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\netstumblerinstaller_0_4_0.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z\). INFERRED user activity: the MRU entry's existence is tool-backed and reflects deliberate user action. It records intent/recency, not execution of any binary.
+
+- `tool_call_id`: `tc-076`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT`
+- confidence: Hypothesis — a single-source triage lead; corroborate before any response action.
+
+### Finding 4 — confidence: HYPOTHESIS, pool: A, MITRE: T1217, replay: exact_match (match)
+
+hypothesis: User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup-0.10.6.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z\). INFERRED user activity: the MRU entry's existence is tool-backed and reflects deliberate user action. It records intent/recency, not execution of any binary.
+
+- `tool_call_id`: `tc-076`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT`
+- confidence: Hypothesis — a single-source triage lead; corroborate before any response action.
+
+### Finding 5 — confidence: HYPOTHESIS, pool: A, MITRE: T1217, replay: exact_match (match)
+
+hypothesis: User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\WinPcap_3_01_a.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z\). INFERRED user activity: the MRU entry's existence is tool-backed and reflects deliberate user action. It records intent/recency, not execution of any binary.
+
+- `tool_call_id`: `tc-076`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT`
+- confidence: Hypothesis — a single-source triage lead; corroborate before any response action.
+
+### Finding 6 — confidence: INFERRED, pool: A, MITRE: T1547.001, replay: exact_match (match)
+
+Registry Run-key persistence mechanism present: Microsoft\\Windows\\CurrentVersion\\Run\\SRFirstRun -&gt; rundll32 srclient.dll \(registry_query, last_write 2004-08-19T22:37:33Z\). The mechanism's existence is tool-backed; execution of the target is NOT claimed \(an execution claim needs &gt;=2 artifact classes\).
+
+- `tool_call_id`: `tc-098`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/WINDOWS/repair/software`
+- confidence: Inferred — derived from corroborated facts; confirm before acting.
+
+### Finding 7 — confidence: INFERRED, pool: A, MITRE: T1547.001, replay: exact_match (match)
+
+Registry Run-key persistence mechanism present: Microsoft\\Windows\\CurrentVersion\\Run\\SchedulingAgent -&gt; mstinit.exe \(registry_query, last_write 2004-08-19T22:37:33Z\). The mechanism's existence is tool-backed; execution of the target is NOT claimed \(an execution claim needs &gt;=2 artifact classes\).
+
+- `tool_call_id`: `tc-098`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/WINDOWS/repair/software`
+- confidence: Inferred — derived from corroborated facts; confirm before acting.
+
+### Finding 8 — confidence: HYPOTHESIS, pool: A, MITRE: T1136.001, replay: exact_match (match)
+
+hypothesis: User account 'Mr. Evil' with suspicious naming was created on this system: it is recorded in the SAM \(Security Account Manager\) hive \(SAM\\Domains\\Account\\Users\\Names\\Mr. Evil; the Names subkey last_write 2004-08-19T23:03:54Z approximates the account-creation time\). INFERRED from two tool-backed facts: the account's existence \(registry_query\) and its name matching the suspicious-naming heuristic. Whether it holds elevated privileges is NOT yet claimed — enumerate group membership \(Administrators\) and logon artifacts to corroborate.
+
+- `tool_call_id`: `tc-103`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/WINDOWS/system32/config/SAM`
+- confidence: Hypothesis — a single-source triage lead; corroborate before any response action.
+
+### Finding 9 — confidence: CONFIRMED, pool: B, MITRE: T1588.002, replay: exact_match (match)
 
 cain.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-010`
-- artifact: `/home/analyst/.findevil/cases/d0d0d732-1bdb-484a-bc3a-57f75302817f/extracted/disk/disk-extract-e67a078f-261a-4abd-b17f-9c86dec04a31/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
-### Finding 2 — confidence: CONFIRMED, pool: B, MITRE: T1588.002, replay: exact_match (match)
+### Finding 10 — confidence: CONFIRMED, pool: B, MITRE: T1588.002, replay: exact_match (match)
 
 cain25b45.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-011`
-- artifact: `/home/analyst/.findevil/cases/d0d0d732-1bdb-484a-bc3a-57f75302817f/extracted/disk/disk-extract-e67a078f-261a-4abd-b17f-9c86dec04a31/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
-### Finding 3 — confidence: CONFIRMED, pool: B, MITRE: T1040, replay: exact_match (match)
+### Finding 11 — confidence: CONFIRMED, pool: B, MITRE: T1040, replay: exact_match (match)
 
 ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-020`
-- artifact: `/home/analyst/.findevil/cases/d0d0d732-1bdb-484a-bc3a-57f75302817f/extracted/disk/disk-extract-e67a078f-261a-4abd-b17f-9c86dec04a31/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
-### Finding 4 — confidence: CONFIRMED, pool: B, MITRE: T1040, replay: exact_match (match)
+### Finding 12 — confidence: CONFIRMED, pool: B, MITRE: T1040, replay: exact_match (match)
 
 ethereal.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-021`
-- artifact: `/home/analyst/.findevil/cases/d0d0d732-1bdb-484a-bc3a-57f75302817f/extracted/disk/disk-extract-e67a078f-261a-4abd-b17f-9c86dec04a31/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
-### Finding 5 — confidence: CONFIRMED, pool: B, MITRE: T1046, replay: exact_match (match)
+### Finding 13 — confidence: CONFIRMED, pool: B, MITRE: T1046, replay: exact_match (match)
 
 lookatlan.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-038`
-- artifact: `/home/analyst/.findevil/cases/d0d0d732-1bdb-484a-bc3a-57f75302817f/extracted/disk/disk-extract-e67a078f-261a-4abd-b17f-9c86dec04a31/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
-### Finding 6 — confidence: CONFIRMED, pool: B, MITRE: T1071.001, replay: exact_match (match)
+### Finding 14 — confidence: CONFIRMED, pool: B, MITRE: T1071.001, replay: exact_match (match)
 
 mirc.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-040`
-- artifact: `/home/analyst/.findevil/cases/d0d0d732-1bdb-484a-bc3a-57f75302817f/extracted/disk/disk-extract-e67a078f-261a-4abd-b17f-9c86dec04a31/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
-### Finding 7 — confidence: CONFIRMED, pool: B, MITRE: T1071.001, replay: exact_match (match)
+### Finding 15 — confidence: CONFIRMED, pool: B, MITRE: T1071.001, replay: exact_match (match)
 
 mirc612.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-041`
-- artifact: `/home/analyst/.findevil/cases/d0d0d732-1bdb-484a-bc3a-57f75302817f/extracted/disk/disk-extract-e67a078f-261a-4abd-b17f-9c86dec04a31/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
-### Finding 8 — confidence: CONFIRMED, pool: B, MITRE: T1046, replay: exact_match (match)
+### Finding 16 — confidence: CONFIRMED, pool: B, MITRE: T1046, replay: exact_match (match)
 
 netstumbler.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.
 
 - `tool_call_id`: `tc-047`
-- artifact: `/home/analyst/.findevil/cases/d0d0d732-1bdb-484a-bc3a-57f75302817f/extracted/disk/disk-extract-e67a078f-261a-4abd-b17f-9c86dec04a31/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf`
 - confidence: Confirmed — the cited tool output is reproducible; this does not imply attribution or complete scope.
 
-### Finding 9 — confidence: HYPOTHESIS, pool: B, MITRE: T1046, replay: exact_match (match)
+### Finding 17 — confidence: HYPOTHESIS, pool: B, MITRE: T1046, replay: exact_match (match)
 
 hypothesis: Windows Prefetch contains NETSTUMBLERINSTALLER_0_4_0.EX with run_count=1; NetStumbler wireless discovery tool is a NIST Hacking Case triage lead. Treat this as a disk-artifact lead that needs corroboration before any standalone activity claim.
 
 - `tool_call_id`: `tc-048`
-- artifact: `/home/analyst/.findevil/cases/d0d0d732-1bdb-484a-bc3a-57f75302817f/extracted/disk/disk-extract-e67a078f-261a-4abd-b17f-9c86dec04a31/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf`
+- confidence: Hypothesis — a single-source triage lead; corroborate before any response action.
+
+### Finding 18 — confidence: HYPOTHESIS, pool: B, MITRE: T1074.001, replay: exact_match (match)
+
+hypothesis: NTUSER.DAT shellbag entries record user folder navigation to staging/tooling locations: \\\\4.12.220.254\\Temp \(registry_query, last_write 2004-08-26T15:06:50Z\). Shellbags persist that a user browsed these folders in Explorer — here including a network staging share and tool directories. Navigation shows interest/access, not that files were staged or exfiltrated; corroborate with file-system and timeline artifacts.
+
+- `tool_call_id`: `tc-078`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT`
+- confidence: Hypothesis — a single-source triage lead; corroborate before any response action.
+
+### Finding 19 — confidence: HYPOTHESIS, pool: B, MITRE: T1074.001, replay: exact_match (match)
+
+hypothesis: NTUSER.DAT shellbag entries record user folder navigation to staging/tooling locations: mIRC, Whois, channels, ftp, mirror.sg.depaul.edu, temp, ethereal, TEMPON~1.254, \\\\4.12.220.254\\Temp \(registry_query, last_write 2004-08-20T15:10:06Z\). Shellbags persist that a user browsed these folders in Explorer — here including a network staging share and tool directories. Navigation shows interest/access, not that files were staged or exfiltrated; corroborate with file-system and timeline artifacts.
+
+- `tool_call_id`: `tc-079`
+- artifact: `/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT`
 - confidence: Hypothesis — a single-source triage lead; corroborate before any response action.
 
 
@@ -341,61 +516,72 @@ hypothesis: Windows Prefetch contains NETSTUMBLERINSTALLER_0_4_0.EX with run_cou
 
 ## Full Event Timeline
 
-Normalized timeline events: 573. First 40 rows shown below (consecutive identical events collapsed with an [Nx] count); full data is in `timeline.json` and analyst-friendly `timeline.csv`.
+Normalized timeline events: 626. First 40 rows shown below (consecutive identical events collapsed with an [Nx] count); full data is in `timeline.json`.
 
 | UTC Time | Artifact | Event | Account | Host | Source IP | Logon | Process/PID | Conf. | Tool Call |
 |---|---|---|---|---|---|---|---|---|---|
-| 1601-01-01T00:00:00Z | mft | mft entry: $Secure | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/BASE4.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/BASE5.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/BASE6.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/CATALOG3.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/CHL99.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DELTEMP.COM | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DOSSETUP.BIN | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER11.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER12.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER13.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER14.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER15.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER16.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER17.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER18.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER19.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER20.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/EXTRACT.EXE | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/FORMAT.COM | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/INTL.TXT | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/MINI.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/NET10.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/NET7.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/NET8.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/NET9.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/OEMSETUP.BIN | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/OEMSETUP.EXE | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/PRECOPY1.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/PRECOPY2.CAB | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SAVE32.COM | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SCANDISK.EXE | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SCANDISK.PIF | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SCANPROG.EXE | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SCANREG.EXE | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SETUP.EXE | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SETUP.TXT | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SETUP0.WAV | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SETUP1.WAV | — | — | — | — | — | — | `tc-004` |
-| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SETUP2.WAV | — | — | — | — | — | — | `tc-004` |
+| 1601-01-01T00:00:00Z | mft | mft entry: $Secure | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/BASE4.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/BASE5.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/BASE6.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/CATALOG3.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/CHL99.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DELTEMP.COM | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DOSSETUP.BIN | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER11.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER12.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER13.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER14.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER15.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER16.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER17.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER18.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER19.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/DRIVER20.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/EXTRACT.EXE | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/FORMAT.COM | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/INTL.TXT | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/MINI.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/NET10.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/NET7.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/NET8.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/NET9.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/OEMSETUP.BIN | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/OEMSETUP.EXE | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/PRECOPY1.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/PRECOPY2.CAB | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SAVE32.COM | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SCANDISK.EXE | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SCANDISK.PIF | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SCANPROG.EXE | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SCANREG.EXE | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SETUP.EXE | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SETUP.TXT | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SETUP0.WAV | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SETUP1.WAV | — | — | — | — | — | HYPOTHESIS | `tc-004` |
+| 1999-04-23T22:22:00Z | mft | mft entry: WIN98/SETUP2.WAV | — | — | — | — | — | HYPOTHESIS | `tc-004` |
 
 
 
 
+
+
+## Indicators of Compromise (IOCs)
+
+Observed artifacts pulled from the timeline and findings; validate or corroborate before detection deployment or blocking.
+
+| Type | Values |
+|---|---|
+| IP addresses | 4.12.220.254 |
+| Domains | mirror.sg.depaul.edu |
+| File paths | C:\\Documents and Settings\\Mr. Evil\\Desktop\\WinPcap_3_01_a.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\, C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup-0.10.6.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\, C:\\Documents and Settings\\Mr. Evil\\Desktop\\lalsetup250.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\, C:\\Documents and Settings\\Mr. Evil\\Desktop\\netstumblerinstaller_0_4_0.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\ |
 
 
 
 
 ## MITRE ATT&CK Coverage
 
-6/12 ATT&CK targets covered by typed-tool output; 1 target(s) produced finding-level evidence; 5 target(s) remain blind spots
+6/12 ATT&CK targets covered by typed-tool output; 2 target(s) produced finding-level evidence; 5 target(s) remain blind spots
 
 | Technique | Tactic | Status | Tools Observed | Gap / Analyst Value |
 |---|---|---|---|---|
@@ -409,7 +595,7 @@ Normalized timeline events: 573. First 40 rows shown below (consecutive identica
 | T1071.001 Web Protocols | Command and Control | finding \(CONFIRMED\) | `none` | finding-level evidence exists; preserve cited tool output |
 | T1071.004 DNS | Command and Control | blind spot | `none` | missing or untouched artifact classes: network |
 | T1041 Exfiltration Over C2 Channel | Exfiltration | blind spot | `none` | missing or untouched artifact classes: network |
-| T1547.001 Registry Run Keys / Startup Folder | Persistence / Privilege Escalation | covered, no finding \(limited\) | `mft_timeline, prefetch_parse, registry_query` | limited coverage — not proof of absence |
+| T1547.001 Registry Run Keys / Startup Folder | Persistence / Privilege Escalation | finding \(INFERRED\) | `mft_timeline, prefetch_parse, registry_query` | finding-level evidence exists; preserve cited tool output |
 | T1053.005 Scheduled Task | Execution / Persistence / Privilege Escalation | covered, no finding \(limited\) | `registry_query` | limited coverage — not proof of absence |
 
 
@@ -458,11 +644,99 @@ This table shows which DFIR analysis domains the typed tools exercised on the su
 
 Visual exhibits are generated from parsed tool outputs. They support cited findings but do not replace `tool_call_id`-backed evidence or upgrade confidence by themselves.
 
-### cain.exe executed on this host
+### hypothesis
 * Card: `evidence-card-001`
+* Linked findings: `f-A-mft-tools`
+* Tool call: `tc-004`
+* Source records: `mft_timeline:1, mft_timeline:2, mft_timeline:3`
+* Confidence: `HYPOTHESIS`
+* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
+* Why suspicious/relevant: This observable is relevant because finding 'f-A-mft-tools' is backed by parsed tool output 'tc-004' and should be interpreted with the cited artifact and source caveats.
+* Snippet: `hypothesis: Hacking-tool artifacts present on disk as downloaded applications, recovered from the MFT: Program Files/Anonymizer \(created 2004-08-20T15:05:06Z\). The filesystem records \(MFT\) show these tool files in Program Files / on the use`
+* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output., HYPOTHESIS confidence requires additional artifact corroboration.
+
+### hypothesis
+* Card: `evidence-card-002`
+* Linked findings: `f-A-mru-lalsetup250-exe`
+* Tool call: `tc-076`
+* Source records: `registry_query:561, registry_query:607, registry_query:608`
+* Confidence: `HYPOTHESIS`
+* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
+* Why suspicious/relevant: This observable is relevant because finding 'f-A-mru-lalsetup250-exe' is backed by parsed tool output 'tc-076' and should be interpreted with the cited artifact and source caveats.
+* Snippet: `hypothesis: User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\lalsetup250.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z\). INF`
+* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output., HYPOTHESIS confidence requires additional artifact corroboration.
+
+### hypothesis
+* Card: `evidence-card-003`
+* Linked findings: `f-A-mru-netstumblerinstaller-0-4-0-exe`
+* Tool call: `tc-076`
+* Source records: `registry_query:561, registry_query:607, registry_query:608`
+* Confidence: `HYPOTHESIS`
+* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
+* Why suspicious/relevant: This observable is relevant because finding 'f-A-mru-netstumblerinstaller-0-4-0-exe' is backed by parsed tool output 'tc-076' and should be interpreted with the cited artifact and source caveats.
+* Snippet: `hypothesis: User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\netstumblerinstaller_0_4_0.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T`
+* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output., HYPOTHESIS confidence requires additional artifact corroboration.
+
+### hypothesis
+* Card: `evidence-card-004`
+* Linked findings: `f-A-mru-ethereal-setup-0-10-6-exe`
+* Tool call: `tc-076`
+* Source records: `registry_query:561, registry_query:607, registry_query:608`
+* Confidence: `HYPOTHESIS`
+* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
+* Why suspicious/relevant: This observable is relevant because finding 'f-A-mru-ethereal-setup-0-10-6-exe' is backed by parsed tool output 'tc-076' and should be interpreted with the cited artifact and source caveats.
+* Snippet: `hypothesis: User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup-0.10.6.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18`
+* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output., HYPOTHESIS confidence requires additional artifact corroboration.
+
+### hypothesis
+* Card: `evidence-card-005`
+* Linked findings: `f-A-mru-winpcap-3-01-a-exe`
+* Tool call: `tc-076`
+* Source records: `registry_query:561, registry_query:607, registry_query:608`
+* Confidence: `HYPOTHESIS`
+* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
+* Why suspicious/relevant: This observable is relevant because finding 'f-A-mru-winpcap-3-01-a-exe' is backed by parsed tool output 'tc-076' and should be interpreted with the cited artifact and source caveats.
+* Snippet: `hypothesis: User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\WinPcap_3_01_a.exe' \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z\). `
+* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output., HYPOTHESIS confidence requires additional artifact corroboration.
+
+### Registry Run-key persistence mechanism present
+* Card: `evidence-card-006`
+* Linked findings: `f-A-reg-persist-srfirstrun`
+* Tool call: `tc-098`
+* Source records: `registry_query:392`
+* Confidence: `INFERRED`
+* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
+* Why suspicious/relevant: This observable is relevant because finding 'f-A-reg-persist-srfirstrun' is backed by parsed tool output 'tc-098' and should be interpreted with the cited artifact and source caveats.
+* Snippet: `Registry Run-key persistence mechanism present: Microsoft\\Windows\\CurrentVersion\\Run\\SRFirstRun -&gt; rundll32 srclient.dll \(registry_query, last_write 2004-08-19T22:37:33Z\). The mechanism's existence is tool-backed; execution of the target is`
+* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output.
+
+### Registry Run-key persistence mechanism present
+* Card: `evidence-card-007`
+* Linked findings: `f-A-reg-persist-schedulingagent`
+* Tool call: `tc-098`
+* Source records: `registry_query:392`
+* Confidence: `INFERRED`
+* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
+* Why suspicious/relevant: This observable is relevant because finding 'f-A-reg-persist-schedulingagent' is backed by parsed tool output 'tc-098' and should be interpreted with the cited artifact and source caveats.
+* Snippet: `Registry Run-key persistence mechanism present: Microsoft\\Windows\\CurrentVersion\\Run\\SchedulingAgent -&gt; mstinit.exe \(registry_query, last_write 2004-08-19T22:37:33Z\). The mechanism's existence is tool-backed; execution of the target is NOT `
+* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output.
+
+### hypothesis
+* Card: `evidence-card-008`
+* Linked findings: `f-A-sam-mr-evil`
+* Tool call: `tc-103`
+* Source records: `registry_query:360, registry_query:361, registry_query:366`
+* Confidence: `HYPOTHESIS`
+* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
+* Why suspicious/relevant: This observable is relevant because finding 'f-A-sam-mr-evil' is backed by parsed tool output 'tc-103' and should be interpreted with the cited artifact and source caveats.
+* Snippet: `hypothesis: User account 'Mr. Evil' with suspicious naming was created on this system: it is recorded in the SAM \(Security Account Manager\) hive \(SAM\\Domains\\Account\\Users\\Names\\Mr. Evil; the Names subkey last_write 2004-08-19T23:03:54Z app`
+* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output., HYPOTHESIS confidence requires additional artifact corroboration.
+
+### cain.exe executed on this host
+* Card: `evidence-card-009`
 * Linked findings: `f-B-prefetch-cain-exe`
 * Tool call: `tc-010`
-* Source records: `prefetch_parse:561`
+* Source records: `prefetch_parse:614`
 * Confidence: `CONFIRMED`
 * Citations: `CITE-MITRE-ATTACK-DATASOURCES`
 * Why suspicious/relevant: This observable is relevant because finding 'f-B-prefetch-cain-exe' is backed by parsed tool output 'tc-010' and should be interpreted with the cited artifact and source caveats.
@@ -470,92 +744,15 @@ Visual exhibits are generated from parsed tool outputs. They support cited findi
 * Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output.
 
 ### cain25b45.exe executed on this host
-* Card: `evidence-card-002`
+* Card: `evidence-card-010`
 * Linked findings: `f-B-prefetch-cain25b45-exe`
 * Tool call: `tc-011`
-* Source records: `prefetch_parse:511`
+* Source records: `prefetch_parse:520`
 * Confidence: `CONFIRMED`
 * Citations: `CITE-MITRE-ATTACK-DATASOURCES`
 * Why suspicious/relevant: This observable is relevant because finding 'f-B-prefetch-cain25b45-exe' is backed by parsed tool output 'tc-011' and should be interpreted with the cited artifact and source caveats.
 * Snippet: `cain25b45.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.`
 * Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output.
-
-### ethereal-setup-0.10.6.exe executed on this host
-* Card: `evidence-card-003`
-* Linked findings: `f-B-prefetch-ethereal-setup-0-10-6-exe`
-* Tool call: `tc-020`
-* Source records: `prefetch_parse:559`
-* Confidence: `CONFIRMED`
-* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
-* Why suspicious/relevant: This observable is relevant because finding 'f-B-prefetch-ethereal-setup-0-10-6-exe' is backed by parsed tool output 'tc-020' and should be interpreted with the cited artifact and source caveats.
-* Snippet: `ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate e`
-* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output.
-
-### ethereal.exe executed on this host
-* Card: `evidence-card-004`
-* Linked findings: `f-B-prefetch-ethereal-exe`
-* Tool call: `tc-021`
-* Source records: `prefetch_parse:562`
-* Confidence: `CONFIRMED`
-* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
-* Why suspicious/relevant: This observable is relevant because finding 'f-B-prefetch-ethereal-exe' is backed by parsed tool output 'tc-021' and should be interpreted with the cited artifact and source caveats.
-* Snippet: `ethereal.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.`
-* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output.
-
-### lookatlan.exe executed on this host
-* Card: `evidence-card-005`
-* Linked findings: `f-B-prefetch-lookatlan-exe`
-* Tool call: `tc-038`
-* Source records: `prefetch_parse:545`
-* Confidence: `CONFIRMED`
-* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
-* Why suspicious/relevant: This observable is relevant because finding 'f-B-prefetch-lookatlan-exe' is backed by parsed tool output 'tc-038' and should be interpreted with the cited artifact and source caveats.
-* Snippet: `lookatlan.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.`
-* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output.
-
-### mirc.exe executed on this host
-* Card: `evidence-card-006`
-* Linked findings: `f-B-prefetch-mirc-exe`
-* Tool call: `tc-040`
-* Source records: `prefetch_parse:542`
-* Confidence: `CONFIRMED`
-* Citations: `CITE-MITRE-ATTACK-DATASOURCES, CITE-ZEEK-LOGS`
-* Why suspicious/relevant: This observable is relevant because finding 'f-B-prefetch-mirc-exe' is backed by parsed tool output 'tc-040' and should be interpreted with the cited artifact and source caveats.
-* Snippet: `mirc.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.`
-* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output.
-
-### mirc612.exe executed on this host
-* Card: `evidence-card-007`
-* Linked findings: `f-B-prefetch-mirc612-exe`
-* Tool call: `tc-041`
-* Source records: `prefetch_parse:517`
-* Confidence: `CONFIRMED`
-* Citations: `CITE-MITRE-ATTACK-DATASOURCES, CITE-ZEEK-LOGS`
-* Why suspicious/relevant: This observable is relevant because finding 'f-B-prefetch-mirc612-exe' is backed by parsed tool output 'tc-041' and should be interpreted with the cited artifact and source caveats.
-* Snippet: `mirc612.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.`
-* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output.
-
-### netstumbler.exe executed on this host
-* Card: `evidence-card-008`
-* Linked findings: `f-B-prefetch-netstumbler-exe`
-* Tool call: `tc-047`
-* Source records: `prefetch_parse:555`
-* Confidence: `CONFIRMED`
-* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
-* Why suspicious/relevant: This observable is relevant because finding 'f-B-prefetch-netstumbler-exe' is backed by parsed tool output 'tc-047' and should be interpreted with the cited artifact and source caveats.
-* Snippet: `netstumbler.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.`
-* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output.
-
-### hypothesis
-* Card: `evidence-card-009`
-* Linked findings: `f-B-prefetch-netstumblerinstaller-0-4-0-ex`
-* Tool call: `tc-048`
-* Source records: `prefetch_parse:553`
-* Confidence: `HYPOTHESIS`
-* Citations: `CITE-MITRE-ATTACK-DATASOURCES`
-* Why suspicious/relevant: This observable is relevant because finding 'f-B-prefetch-netstumblerinstaller-0-4-0-ex' is backed by parsed tool output 'tc-048' and should be interpreted with the cited artifact and source caveats.
-* Snippet: `hypothesis: Windows Prefetch contains NETSTUMBLERINSTALLER_0_4_0.EX with run_count=1; NetStumbler wireless discovery tool is a NIST Hacking Case triage lead. Treat this as a disk-artifact lead that needs corroboration before any standalone `
-* Caveats: Visual exhibit supports the cited finding but does not replace parsed tool output., HYPOTHESIS confidence requires additional artifact corroboration.
 
 
 
@@ -601,6 +798,14 @@ Verifier replay artifacts record whether each cited tool call reproduced the aud
 
 | Finding | Tool | Drift class | Match | Expected SHA | Actual SHA |
 |---|---|---|:---:|---|---|
+| f-A-mft-tools | `mft_timeline` | `exact_match` | yes | `9dbbbd01e495` | `9dbbbd01e495` |
+| f-A-mru-lalsetup250-exe | `registry_query` | `exact_match` | yes | `2c1a21bddeea` | `2c1a21bddeea` |
+| f-A-mru-netstumblerinstaller-0-4-0-exe | `registry_query` | `exact_match` | yes | `2c1a21bddeea` | `2c1a21bddeea` |
+| f-A-mru-ethereal-setup-0-10-6-exe | `registry_query` | `exact_match` | yes | `2c1a21bddeea` | `2c1a21bddeea` |
+| f-A-mru-winpcap-3-01-a-exe | `registry_query` | `exact_match` | yes | `2c1a21bddeea` | `2c1a21bddeea` |
+| f-A-reg-persist-srfirstrun | `registry_query` | `exact_match` | yes | `b87dad9463d3` | `b87dad9463d3` |
+| f-A-reg-persist-schedulingagent | `registry_query` | `exact_match` | yes | `b87dad9463d3` | `b87dad9463d3` |
+| f-A-sam-mr-evil | `registry_query` | `exact_match` | yes | `0bdce70657b4` | `0bdce70657b4` |
 | f-B-prefetch-cain-exe | `prefetch_parse` | `exact_match` | yes | `b2e14c91aaa2` | `b2e14c91aaa2` |
 | f-B-prefetch-cain25b45-exe | `prefetch_parse` | `exact_match` | yes | `76ae3ea8345e` | `76ae3ea8345e` |
 | f-B-prefetch-ethereal-setup-0-10-6-exe | `prefetch_parse` | `exact_match` | yes | `eba2574fcda2` | `eba2574fcda2` |
@@ -610,6 +815,8 @@ Verifier replay artifacts record whether each cited tool call reproduced the aud
 | f-B-prefetch-mirc612-exe | `prefetch_parse` | `exact_match` | yes | `b36f1b611dd3` | `b36f1b611dd3` |
 | f-B-prefetch-netstumbler-exe | `prefetch_parse` | `exact_match` | yes | `c912d93baf9b` | `c912d93baf9b` |
 | f-B-prefetch-netstumblerinstaller-0-4-0-ex | `prefetch_parse` | `exact_match` | yes | `80850ecc397c` | `80850ecc397c` |
+| f-B-shellbag | `registry_query` | `exact_match` | yes | `456cb1bf6660` | `456cb1bf6660` |
+| f-B-shellbag | `registry_query` | `exact_match` | yes | `456cb1bf6660` | `456cb1bf6660` |
 
 
 ---

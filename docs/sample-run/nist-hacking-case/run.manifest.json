@@ -1,8 +1,8 @@
 {
-  "audit_log_final_hash": "66c8e3358b03a0f34a2de1690f7f1faae79cc9268b760deb6d23fe7e93cac583",
-  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/docs/sample-run/nist-hacking-case/audit.jsonl",
-  "audit_log_record_count": 235,
-  "case_id": "d0d0d732-1bdb-484a-bc3a-57f75302817f",
+  "audit_log_final_hash": "64263c769823cbca52ca0d99a7c223951aff59e348feb6f675d08da26c731d98",
+  "audit_log_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/nist-hacking-case/audit.jsonl",
+  "audit_log_record_count": 353,
+  "case_id": "b639fdda-146c-48ec-9080-1e144ec7ceae",
   "extra": {
     "evidence_type": "disk",
     "image_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/SCHARDT.dd",
@@ -10,8 +10,16 @@
     "packet_attestation": {
       "customer_releasable": false,
       "customer_release_candidate": false,
-      "expert_signoff_packet_sha256": "2f869622bcdf110c136c3771a073286988b5c8920226516b4f0494d6afd320b7",
+      "expert_signoff_packet_sha256": "025ed75a229f4cdf4ac722fac2924f0a5291694b7c5f191fcb20bf4500f6bbf9",
       "final_finding_ids": [
+        "f-A-mft-tools",
+        "f-A-mru-lalsetup250-exe",
+        "f-A-mru-netstumblerinstaller-0-4-0-exe",
+        "f-A-mru-ethereal-setup-0-10-6-exe",
+        "f-A-mru-winpcap-3-01-a-exe",
+        "f-A-reg-persist-srfirstrun",
+        "f-A-reg-persist-schedulingagent",
+        "f-A-sam-mr-evil",
         "f-B-prefetch-cain-exe",
         "f-B-prefetch-cain25b45-exe",
         "f-B-prefetch-ethereal-setup-0-10-6-exe",
@@ -20,20 +28,22 @@
         "f-B-prefetch-mirc-exe",
         "f-B-prefetch-mirc612-exe",
         "f-B-prefetch-netstumbler-exe",
-        "f-B-prefetch-netstumblerinstaller-0-4-0-ex"
+        "f-B-prefetch-netstumblerinstaller-0-4-0-ex",
+        "f-B-shellbag",
+        "f-B-shellbag"
       ],
-      "packet_state": "EXPERT_REVIEW_DRAFT",
-      "release_gate_sha256": "ec603472b2851ceec77116bec1cc790df9246710a19f891c6159ce8e829b33c5",
-      "report_qa_sha256": "7b448247f216bb61271169c078167d998ee4c4ce0235b2ed1f8632cfdd695756",
-      "verdict_artifact_bytes": 526652,
-      "verdict_artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/hb-schardt-live/verdict.json",
-      "verdict_artifact_sha256": "b89fc6aae0e1d276cebcd5f7f0b60d152d10601fb008fe94e16f50c3dcdda895",
-      "verdict_packet_sha256": "a5edc8c3e8e65c3a4e940eecfb34ba9b3d157400c4f9f649b201d90eb25101fc"
+      "packet_state": "BLOCKED_MANUAL_INVESTIGATION",
+      "release_gate_sha256": "6ccc18d63657d1703a4527779a3ffe494c86cc4471a570c4ef9d86287997d5f7",
+      "report_qa_sha256": "39a6e2fe24b35efc4439d267e4005fdbd66978b6e0df9d96c00c9bfdd40b1f5d",
+      "verdict_artifact_bytes": 746597,
+      "verdict_artifact_path": "/home/analyst/Desktop/PUG-Projects/sans-hackathon/tmp/auto-runs/nist-hacking-case/verdict.json",
+      "verdict_artifact_sha256": "cf45122d048becc871c5c55cd25f1cd07390b01110a62299d39da57f4eb2dfa6",
+      "verdict_packet_sha256": "0d9065e66699bdec85947a03977e6612ead25c53a291a114424aa1885afdcb7d"
     },
     "signer": "ed25519"
   },
-  "finalized_at": "2026-06-12T14:55:01Z",
-  "leaf_count": 97,
+  "finalized_at": "2026-06-12T18:33:33Z",
+  "leaf_count": 134,
   "leaves": [
     {
       "digest_hex": "65e2002fed0b286f49541c7e97dcec0dda913d51a063ceeed86782bdacda2312",
@@ -42,13 +52,13 @@
       "seq": 2
     },
     {
-      "digest_hex": "f450a6d65c3741ece1fe842339e0bd29f83163f58ddb5eed1780cf8c1335f88f",
+      "digest_hex": "20ac1b7deb2ac32ac6b91919ca2abd80931561e22ef41385065d9922656fb854",
       "kind": "tool_call_output",
       "record_id": "tc-002",
       "seq": 4
     },
     {
-      "digest_hex": "3b2e4e310d4322aeba9413499993091d6f201df5f8b7dda8d4138aff99358cf7",
+      "digest_hex": "72cfa63de2c6371895f8b34aaf1d2cf24918cd8b3bebccb2d6129f5e8a34d25d",
       "kind": "tool_call_output",
       "record_id": "tc-003",
       "seq": 6
@@ -384,7 +394,7 @@
       "seq": 116
     },
     {
-      "digest_hex": "d873d0df6abbef3ca10095b2f82be4c9c409771a5598081be6561da21927dfcc",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-059",
       "seq": 118
@@ -408,13 +418,13 @@
       "seq": 124
     },
     {
-      "digest_hex": "872a33d4259ca7b6961b9e681c043150f3b14bd72c43565ae64cae443144f5e2",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-063",
       "seq": 126
     },
     {
-      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "digest_hex": "d873d0df6abbef3ca10095b2f82be4c9c409771a5598081be6561da21927dfcc",
       "kind": "tool_call_output",
       "record_id": "tc-064",
       "seq": 128
@@ -432,7 +442,7 @@
       "seq": 132
     },
     {
-      "digest_hex": "d795e0b7b845d7bf2163c4892b9c231116096f20e7e4b7c4524b1d635269636b",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-067",
       "seq": 134
@@ -444,7 +454,7 @@
       "seq": 136
     },
     {
-      "digest_hex": "eba052f473398628be7cab71191524e84b3a891b48054145ddef9f6c3dd0cbd3",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-069",
       "seq": 138
@@ -456,73 +466,73 @@
       "seq": 140
     },
     {
-      "digest_hex": "d6ec730f007734651a1edf3e4bef35213be190c6807f306123a4449f20b9808e",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-071",
       "seq": 142
     },
     {
-      "digest_hex": "1587a36c4d5f47b4f7c3c9f220c69b2e9fe5bc3fd0b824c470bec558b0b0e10e",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-072",
       "seq": 144
     },
     {
-      "digest_hex": "b87dad9463d3504a3653f784dc6e00357c983efb5215b9922cb05b40bf256361",
+      "digest_hex": "872a33d4259ca7b6961b9e681c043150f3b14bd72c43565ae64cae443144f5e2",
       "kind": "tool_call_output",
       "record_id": "tc-073",
       "seq": 146
     },
     {
-      "digest_hex": "63e28bf5eb6f0fc8a3317dbf7a3c0c5d671df34cd2ccf2033775431805753d47",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-074",
       "seq": 148
     },
     {
-      "digest_hex": "89a6240bb2f2ffa8846cbfeb3a3f02b081bb8bf72fea17157429c021cb96a1a5",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-075",
       "seq": 150
     },
     {
-      "digest_hex": "7526da199ca8a1b7e75b51b8cedb019dbaf424de5b764fbf68ba1fc039359a74",
+      "digest_hex": "2c1a21bddeeaee55e0ec7eb4d8b9fdf7774416728090cd7258cc30c8ed243ec5",
       "kind": "tool_call_output",
       "record_id": "tc-076",
       "seq": 152
     },
     {
-      "digest_hex": "d6ec730f007734651a1edf3e4bef35213be190c6807f306123a4449f20b9808e",
+      "digest_hex": "c65e2208772c8da965f0525584edd3fc9a92e220c5d10faf1b5f0241142f066a",
       "kind": "tool_call_output",
       "record_id": "tc-077",
       "seq": 154
     },
     {
-      "digest_hex": "cf44fc2aa030c0f3a05444fbc8c6e4ca49167073f16403200cafdd7b52711efb",
+      "digest_hex": "acfb334a39542a48d409133aae088db06beb72716c279fbc64f6a51b05077d02",
       "kind": "tool_call_output",
       "record_id": "tc-078",
       "seq": 156
     },
     {
-      "digest_hex": "bd8c369b019a209885bb3a40a5d290c3dba38a4528fbd5154109d4c561879f60",
+      "digest_hex": "456cb1bf666093fb4eff8f24e236a173ccaa414f6100c2265ff040bee64955c1",
       "kind": "tool_call_output",
       "record_id": "tc-079",
       "seq": 158
     },
     {
-      "digest_hex": "63e28bf5eb6f0fc8a3317dbf7a3c0c5d671df34cd2ccf2033775431805753d47",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-080",
       "seq": 160
     },
     {
-      "digest_hex": "89a6240bb2f2ffa8846cbfeb3a3f02b081bb8bf72fea17157429c021cb96a1a5",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-081",
       "seq": 162
     },
     {
-      "digest_hex": "a97173f066024e9ecc004ffad27f8c2a0f5769e825057ebf68ce7071a0e4b29d",
+      "digest_hex": "d795e0b7b845d7bf2163c4892b9c231116096f20e7e4b7c4524b1d635269636b",
       "kind": "tool_call_output",
       "record_id": "tc-082",
       "seq": 164
@@ -540,7 +550,7 @@
       "seq": 168
     },
     {
-      "digest_hex": "93d0a7858a3ca0b85e93189c91b6d34cc27d9bdde56d87a78d69d7b2bb430aa3",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-085",
       "seq": 170
@@ -558,75 +568,297 @@
       "seq": 174
     },
     {
-      "digest_hex": "08fb1ae58c87097ef76f20a3e6237db2642f653f35e18fe40952b7deee1eb8f9",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
       "kind": "tool_call_output",
       "record_id": "tc-088",
       "seq": 176
     },
     {
-      "digest_hex": "786f6b5587ad63edd397218e22bb7df86c205b2f79dcc13662f25ff902f85c8c",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-cain-exe",
-      "seq": 215
+      "digest_hex": "eba052f473398628be7cab71191524e84b3a891b48054145ddef9f6c3dd0cbd3",
+      "kind": "tool_call_output",
+      "record_id": "tc-089",
+      "seq": 178
     },
     {
-      "digest_hex": "f357b586dd7aab7ccd47f9dc8b33299947655331aabf3c5af6f98792d6b09079",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-cain25b45-exe",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-090",
+      "seq": 180
+    },
+    {
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-091",
+      "seq": 182
+    },
+    {
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-092",
+      "seq": 184
+    },
+    {
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-093",
+      "seq": 186
+    },
+    {
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-094",
+      "seq": 188
+    },
+    {
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-095",
+      "seq": 190
+    },
+    {
+      "digest_hex": "67dc17d6f069e2ba893d87778f9e864a786694974c7a537c76b48362a27e5777",
+      "kind": "tool_call_output",
+      "record_id": "tc-096",
+      "seq": 192
+    },
+    {
+      "digest_hex": "1587a36c4d5f47b4f7c3c9f220c69b2e9fe5bc3fd0b824c470bec558b0b0e10e",
+      "kind": "tool_call_output",
+      "record_id": "tc-097",
+      "seq": 194
+    },
+    {
+      "digest_hex": "b87dad9463d3504a3653f784dc6e00357c983efb5215b9922cb05b40bf256361",
+      "kind": "tool_call_output",
+      "record_id": "tc-098",
+      "seq": 196
+    },
+    {
+      "digest_hex": "63e28bf5eb6f0fc8a3317dbf7a3c0c5d671df34cd2ccf2033775431805753d47",
+      "kind": "tool_call_output",
+      "record_id": "tc-099",
+      "seq": 198
+    },
+    {
+      "digest_hex": "89a6240bb2f2ffa8846cbfeb3a3f02b081bb8bf72fea17157429c021cb96a1a5",
+      "kind": "tool_call_output",
+      "record_id": "tc-100",
+      "seq": 200
+    },
+    {
+      "digest_hex": "7526da199ca8a1b7e75b51b8cedb019dbaf424de5b764fbf68ba1fc039359a74",
+      "kind": "tool_call_output",
+      "record_id": "tc-101",
+      "seq": 202
+    },
+    {
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-102",
+      "seq": 204
+    },
+    {
+      "digest_hex": "0bdce70657b47c43c7d4919476c2ff17082bba4216934dda731dcde5a6a39ab3",
+      "kind": "tool_call_output",
+      "record_id": "tc-103",
+      "seq": 206
+    },
+    {
+      "digest_hex": "cf44fc2aa030c0f3a05444fbc8c6e4ca49167073f16403200cafdd7b52711efb",
+      "kind": "tool_call_output",
+      "record_id": "tc-104",
+      "seq": 208
+    },
+    {
+      "digest_hex": "bd8c369b019a209885bb3a40a5d290c3dba38a4528fbd5154109d4c561879f60",
+      "kind": "tool_call_output",
+      "record_id": "tc-105",
+      "seq": 210
+    },
+    {
+      "digest_hex": "63e28bf5eb6f0fc8a3317dbf7a3c0c5d671df34cd2ccf2033775431805753d47",
+      "kind": "tool_call_output",
+      "record_id": "tc-106",
+      "seq": 212
+    },
+    {
+      "digest_hex": "89a6240bb2f2ffa8846cbfeb3a3f02b081bb8bf72fea17157429c021cb96a1a5",
+      "kind": "tool_call_output",
+      "record_id": "tc-107",
+      "seq": 214
+    },
+    {
+      "digest_hex": "a97173f066024e9ecc004ffad27f8c2a0f5769e825057ebf68ce7071a0e4b29d",
+      "kind": "tool_call_output",
+      "record_id": "tc-108",
       "seq": 216
     },
     {
-      "digest_hex": "65bcb669e8524d9a4ebf2fee837ad53c75af4defeb42c10ec2f2686f82464dcc",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-ethereal-setup-0-10-6-exe",
-      "seq": 217
-    },
-    {
-      "digest_hex": "318f7068d0c7d3942cae4d589e633215495d69ceed0fa7fdf7cfa8f893a7b1a8",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-ethereal-exe",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-109",
       "seq": 218
     },
     {
-      "digest_hex": "507b5bf999a91f22642c3cf8560643ca694b251c457c06f2a900641f132f049f",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-lookatlan-exe",
-      "seq": 219
-    },
-    {
-      "digest_hex": "3d49db5993942d72fde6ad3d648640864c1a10005ba33e00cf152a85cfe99907",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-mirc-exe",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-110",
       "seq": 220
     },
     {
-      "digest_hex": "0fcf6caafd9b01e47e42c71838e9bea5ee65e256b5e1e78c3d41fe413e2cc533",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-mirc612-exe",
-      "seq": 221
-    },
-    {
-      "digest_hex": "a7832e5e639d71440370eb33d68178ac8a458781378e66f8ef753d7c8d547c6b",
-      "kind": "finding",
-      "record_id": "f-B-prefetch-netstumbler-exe",
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-111",
       "seq": 222
     },
     {
-      "digest_hex": "07cc2e8763324b882206466f4faabff0d44775e6ab1b6137128d09887f1b993c",
+      "digest_hex": "93d0a7858a3ca0b85e93189c91b6d34cc27d9bdde56d87a78d69d7b2bb430aa3",
+      "kind": "tool_call_output",
+      "record_id": "tc-112",
+      "seq": 224
+    },
+    {
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-113",
+      "seq": 226
+    },
+    {
+      "digest_hex": "1a63a494b2454eb3c4d43dcb767313d4a58dff3bb109d68974019fa7fd8deab7",
+      "kind": "tool_call_output",
+      "record_id": "tc-114",
+      "seq": 228
+    },
+    {
+      "digest_hex": "6ea65363ab0cfed0e6a39a8d5a28c48a768260448380e0d133fda7b1a04b69a9",
+      "kind": "tool_call_output",
+      "record_id": "tc-115",
+      "seq": 230
+    },
+    {
+      "digest_hex": "20331758fc2f9f00a96af20c033bf96f90b98d0d15dbaeb6e99409ebf40bad4a",
+      "kind": "finding",
+      "record_id": "f-A-mft-tools",
+      "seq": 323
+    },
+    {
+      "digest_hex": "10b271a8b0b969bb1aa568f7cbf790d48c2df43a0371800f68e50cc57765f601",
+      "kind": "finding",
+      "record_id": "f-A-mru-lalsetup250-exe",
+      "seq": 324
+    },
+    {
+      "digest_hex": "eeb039a0814f8ea16cd71209e33f4a0547dda384f0722eb15e78921c06be98b3",
+      "kind": "finding",
+      "record_id": "f-A-mru-netstumblerinstaller-0-4-0-exe",
+      "seq": 325
+    },
+    {
+      "digest_hex": "c1b1c28c1cebbad2b009bd545b76fe1141870e654c423dc0e5e84e58460189b7",
+      "kind": "finding",
+      "record_id": "f-A-mru-ethereal-setup-0-10-6-exe",
+      "seq": 326
+    },
+    {
+      "digest_hex": "20a5a69cc38d5ab4b81486cb011d5bff7cd9a16fda71c0a976a93f78d31478a7",
+      "kind": "finding",
+      "record_id": "f-A-mru-winpcap-3-01-a-exe",
+      "seq": 327
+    },
+    {
+      "digest_hex": "d78895b0164a425a1853493765878e6fb5d8528bd03d43821f605b24baa18cb8",
+      "kind": "finding",
+      "record_id": "f-A-reg-persist-srfirstrun",
+      "seq": 328
+    },
+    {
+      "digest_hex": "6f9306122615a14052d2da105ef7e103fb50b6c2714f4d44de8792e97ca9a38a",
+      "kind": "finding",
+      "record_id": "f-A-reg-persist-schedulingagent",
+      "seq": 329
+    },
+    {
+      "digest_hex": "e76356c6f9ba2cc8545d9613cb8815af2037a685b350c1fde83a11143ee5895c",
+      "kind": "finding",
+      "record_id": "f-A-sam-mr-evil",
+      "seq": 330
+    },
+    {
+      "digest_hex": "6e008b6970ec6b8f324d081af34ca3b3e561f3545cbf06783948e0064219c999",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-cain-exe",
+      "seq": 331
+    },
+    {
+      "digest_hex": "7dab406cb26c5952aba87e8b02e65080b95ae9314ce26dffe2f292e2d84e8714",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-cain25b45-exe",
+      "seq": 332
+    },
+    {
+      "digest_hex": "80ca0184f87259d5c02dc583dca23705e85920f491cda525a4381add08ed6416",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-ethereal-setup-0-10-6-exe",
+      "seq": 333
+    },
+    {
+      "digest_hex": "8aaa5cb0c2b663cf7d6533e0fff91326eff87333bf3bc26249a41d902c3a4b49",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-ethereal-exe",
+      "seq": 334
+    },
+    {
+      "digest_hex": "916d70a0a90adc768ea2b5152bffa6a1e2a4d56451946167ddfb97ef03449586",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-lookatlan-exe",
+      "seq": 335
+    },
+    {
+      "digest_hex": "a07f34f4b09db6ffb84b903ae3990108a35f00e16d554814c7b93fb2ed450983",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-mirc-exe",
+      "seq": 336
+    },
+    {
+      "digest_hex": "d4305ce7609a2d3a3002d28b9bc04ea37830e80a5655c01590584fb5acca9e1b",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-mirc612-exe",
+      "seq": 337
+    },
+    {
+      "digest_hex": "99014487f3a65bc96a98e1bbed652aa97c41a62ea686bb1f975d4bb519460f3b",
+      "kind": "finding",
+      "record_id": "f-B-prefetch-netstumbler-exe",
+      "seq": 338
+    },
+    {
+      "digest_hex": "432b62d4eea9afef9546f6188f837c4342fc43d2feb9bb832590fea0e8680a84",
       "kind": "finding",
       "record_id": "f-B-prefetch-netstumblerinstaller-0-4-0-ex",
-      "seq": 223
+      "seq": 339
+    },
+    {
+      "digest_hex": "39d86901b6057646bed7aa9e2e8000a1ad5603ffb63ad7cdee92db28663b4270",
+      "kind": "finding",
+      "record_id": "f-B-shellbag",
+      "seq": 340
+    },
+    {
+      "digest_hex": "9c2cd52893765ccc23d28981471cd25f8528290dffc1feb5486ba32039b2c388",
+      "kind": "finding",
+      "record_id": "f-B-shellbag",
+      "seq": 341
     }
   ],
-  "merkle_root_hex": "fd9f37382ccfbaff3c19073507fabd08bf6f676cd0931c5200c386d6cd1b9320",
-  "run_id": "auto-1781021943",
+  "merkle_root_hex": "eb6dd243b6ab4129278260ebd97c94e1f5fc24837572e8359980fed5fdce3386",
+  "run_id": "auto-1781289206",
   "signature": {
-    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiYjk4ZGYxYTlkMDlkYTM3NDFlMjk1ZDdkYTIxYjliNjc1Mjg3YWRmYjM2YjEwY2ExN2MyODBlMmExZmVlMGY1NCIsImtpbmQiOiJlZDI1NTE5IiwicGF5bG9hZF9zaGEyNTYiOiIyZWFjZWFlODgzNTU1NmJmOWIzYzIwN2M3NjJlYTJlNTE1NTY4YWUzZTQ3ZDA0ODUwZjk3ZjQ2NjdiOThjMjBiIiwicHVibGljX2tleV9iNjQiOiJUTjl6SldZVFJCTHdDbFNPWG5QalRrM1NieEZUbDhyR0Jlc3hqcjRtaExVPSIsInNpZ25hdHVyZV9iNjQiOiIya3lpRDBmSUVxNE1iTSs0V0pTWldFN3RSMFYxUUJtbS9OcExZdzdlQ1hMVWM1UFB4T1o1emRvMGdrYktMZjk5dUtKOHd0clZCcmdhcDNla3ZpMkFDQT09In0=",
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiYjk4ZGYxYTlkMDlkYTM3NDFlMjk1ZDdkYTIxYjliNjc1Mjg3YWRmYjM2YjEwY2ExN2MyODBlMmExZmVlMGY1NCIsImtpbmQiOiJlZDI1NTE5IiwicGF5bG9hZF9zaGEyNTYiOiI4M2UyZTZiY2E5MjM5NTJkYWIxYjdhYWI5ZjdmMDY5NTllMTFlODQzZDQ3OTI0ZmQyYmQ0NGVhNzQ5NWVhOGQ0IiwicHVibGljX2tleV9iNjQiOiJUTjl6SldZVFJCTHdDbFNPWG5QalRrM1NieEZUbDhyR0Jlc3hqcjRtaExVPSIsInNpZ25hdHVyZV9iNjQiOiJoRENQYmFYR2VoRmpDWkE3S1BBYm1sOUpiYmtMcnFNNWZXdTB2UUpmdUxrb1BMQmJBaHM4MkRoOHBPUllpdUJMLzVRQXFCelFDa0dDMXM4Q29XbVBEdz09In0=",
     "cert_fingerprint": "b98df1a9d09da3741e295d7da21b9b675287adfb36b10ca17c280e2a1fee0f54",
     "kind": "ed25519",
-    "payload_sha256": "2eaceae8835556bf9b3c207c762ea2e515568ae3e47d04850f97f4667b98c20b",
-    "signed_at": "2026-06-12T14:55:01Z"
+    "payload_sha256": "83e2e6bca923952dab1b7aab9f7f06959e11e843d47924fd2bd44ea7495ea8d4",
+    "signed_at": "2026-06-12T18:33:33Z"
   },
-  "started_at": "2026-06-09T16:19:03Z",
+  "started_at": "2026-06-12T18:33:26Z",
   "version": "1"
 }
