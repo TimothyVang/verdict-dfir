@@ -7,8 +7,12 @@
 
 This complements [fleet-analysis.md](./fleet-analysis.md): the fleet pipeline correlates
 *across* hosts but needs the SIFT VM over SSH; this flow runs each host's full Verdict
-pipeline **locally** and rolls the per-host verdicts into one table. Use it when the VM is
-unavailable or you want per-host signed manifests without cross-host correlation.
+pipeline **locally** and rolls the per-host verdicts into one table.
+
+> **Shortcut:** `scripts/verdict <case-root>` now does all of this (plus the cross-host
+> correlation + FLEET_REPORT) in one command — a folder with `hosts/` or `disks/` is
+> auto-detected as a fleet. The script below remains the per-host stage it chains, and is
+> still useful standalone when you want only the per-host verdict table.
 
 Evidence files are **git-ignored** (`*.E01`, `*.img`, `*.raw`, …) — only the tooling below is
 in the repo. The corpus stays on the local host.

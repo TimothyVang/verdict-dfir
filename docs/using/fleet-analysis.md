@@ -9,8 +9,21 @@ then looks for the signals that only appear *across* hosts (the same uncommon pr
 machines, near-simultaneous process creations, MITRE technique spread), and rolls everything up
 into a single `FLEET_REPORT`.
 
-It is three scripts, run in order. Each stage reads the previous stage's output from the same
-`tmp/fleet-runs/<fleet-id>/` directory, so you never have to thread paths by hand.
+**It is one command.** Point `scripts/verdict` at the case root — a folder with the whole-case
+layout (`hosts/`, `disks/`) is auto-detected as a fleet (or force it with `--fleet`):
+
+```bash
+# Local fleet (per-host verdicts -> correlation -> FLEET_REPORT), resumable —
+# re-run the same command and completed hosts are skipped:
+scripts/verdict evidence/cases/srl-2018
+
+# Same, with the per-host DFIR tools running inside the SANS SIFT VM:
+scripts/verdict evidence/cases/srl-2018 --fleet --sift
+```
+
+Under the hood that chains three stages. Each stage reads the previous stage's output from the
+same `tmp/fleet-runs/<fleet-id>/` directory, so you never have to thread paths by hand — and you
+can still run any stage individually:
 
 | Stage | Script | Reads | Writes |
 |---|---|---|---|

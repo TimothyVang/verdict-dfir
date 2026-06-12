@@ -137,8 +137,9 @@ kernel-global read failure (psscan-only OS singletons, duplicate `System` EPROCE
 `KeNumberProcessors`=0) before asserting T1014. Don't fold them.
 
 **Entry points.** `scripts/verdict <evidence>` is THE entry point (preflight → investigate →
-dashboard → signed verdict + report; `--sift` runs DFIR tools in the SIFT VM, `--no-dashboard`
-skips the browser; output in `tmp/auto-runs/<case-id>/`). Interactive: `claude` /
+dashboard → signed verdict + report; `--sift` runs DFIR tools in the SIFT VM, `--fleet` runs a
+whole multi-host case folder end to end — auto-detected on a `hosts/`/`disks/` layout —
+`--no-dashboard` skips the browser; output in `tmp/auto-runs/<case-id>/`). Interactive: `claude` /
 `scripts/find-evil` then `investigate <path>`. Headless engine: `scripts/find_evil_auto.py`.
 Offline manifest verification: the `manifest_verify` MCP tool. SIFT setup and the full
 command catalog are in `docs/live-test-matrix.md` and `docs/repo-guide.md`; operator usage

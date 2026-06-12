@@ -61,6 +61,7 @@ Every flag the launcher actually parses:
 |---|---|
 | `<evidence>` (positional) | Path to the Observable. Omit it to use the newest non-placeholder entry already in `evidence/`. |
 | `--sift` | Run the DFIR tools inside the SANS SIFT VM over SSH (default: tools on the local host) — **the only way to fully extract a disk image** (local mode mounts the EWF container but not the inner volume). The post-verdict n8n automation + grounding **now fire in `--sift` mode too** (host-side, after the case dir syncs back). Requires a one-time `bash scripts/sift-vm-bootstrap.sh`; set `FIND_EVIL_GUEST_IP` if the VM's IP changed. |
+| `--fleet` | Whole multi-host case in ONE command: per-host investigations → cross-host correlation → `FLEET_REPORT`. **Auto-detected** when `<evidence>` is a folder with `hosts/` or `disks/` (the whole-case layout). Resumable: re-run the same command and completed hosts are skipped. Combine with `--sift` to run the per-host stage inside the SIFT VM (`fleet_investigate.py`). See `docs/using/fleet-analysis.md`. |
 | `--watch` | No path? Block until a file **or** a case folder is dropped into `evidence/`, debounced until the copy finishes, then go. |
 | `--no-dashboard` | Do not auto-open the web dashboard. |
 | `--skip-build` | Assume `target/release/findevil-mcp` is already built; skip the `cargo build`. |
