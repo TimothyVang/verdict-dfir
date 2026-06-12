@@ -254,7 +254,9 @@ def main() -> int:
             ),
             (
                 "FINDEVIL_EVIDENCE_ROOT with evidence resolves to it",
-                resolve_evidence_path(None, env={"FINDEVIL_EVIDENCE_ROOT": str(filled_root)}),
+                resolve_evidence_path(
+                    None, env={"FINDEVIL_EVIDENCE_ROOT": str(filled_root)}
+                ),
                 str(filled_root),
             ),
             (
@@ -523,9 +525,13 @@ def main() -> int:
             fea.extract_velociraptor_zip_artifacts = old_zip_extract
         zip_dispatched_tools = [name for name, _ in fake_zip_rust.calls]
         zip_comp = zip_dispatch_inv._case_completeness()  # noqa: SLF001
-        zip_checks = {row.get("artifact_class"): row for row in zip_comp.get("checks", [])}
+        zip_checks = {
+            row.get("artifact_class"): row for row in zip_comp.get("checks", [])
+        }
         dir_comp = dir_inv._case_completeness()  # noqa: SLF001
-        dir_checks = {row.get("artifact_class"): row for row in dir_comp.get("checks", [])}
+        dir_checks = {
+            row.get("artifact_class"): row for row in dir_comp.get("checks", [])
+        }
         inventory_cases = [
             (
                 "directory inventory has stable parent case id",
@@ -534,7 +540,8 @@ def main() -> int:
             ),
             (
                 "directory inventory counts duplicate names",
-                "Security.evtx" in inventory.get("summary", {}).get("duplicate_names", []),
+                "Security.evtx"
+                in inventory.get("summary", {}).get("duplicate_names", []),
                 True,
             ),
             (
@@ -547,7 +554,8 @@ def main() -> int:
             ),
             (
                 "directory inventory records unsupported artifacts",
-                inventory.get("summary", {}).get("class_counts", {}).get("unknown", 0) >= 1,
+                inventory.get("summary", {}).get("class_counts", {}).get("unknown", 0)
+                >= 1,
                 True,
             ),
             (
@@ -623,14 +631,16 @@ def main() -> int:
             ),
             (
                 "Velociraptor zip member classifier accepts contained Prefetch",
-                classify_velociraptor_zip_member("uploads/C/Windows/Prefetch/CMD.EXE-1234.pf").get(
-                    "supported"
-                ),
+                classify_velociraptor_zip_member(
+                    "uploads/C/Windows/Prefetch/CMD.EXE-1234.pf"
+                ).get("supported"),
                 True,
             ),
             (
                 "Velociraptor zip member classifier rejects zip-slip paths",
-                classify_velociraptor_zip_member("../Security.evtx").get("reject_reason"),
+                classify_velociraptor_zip_member("../Security.evtx").get(
+                    "reject_reason"
+                ),
                 "unsafe_zip_member_path",
             ),
             (
@@ -666,7 +676,9 @@ def main() -> int:
     disk_inv.tool_calls = [{"tool": "case_open", "tool_call_id": "tc-disk"}]
     disk_comp = disk_inv._case_completeness()  # noqa: SLF001 - smoke covers policy
     disk_comp_case_open_only = disk_comp
-    disk_checks = {row.get("artifact_class"): row for row in disk_comp.get("checks", [])}
+    disk_checks = {
+        row.get("artifact_class"): row for row in disk_comp.get("checks", [])
+    }
     disk_policy_checks = 0
     disk_cases = [
         (
@@ -692,7 +704,9 @@ def main() -> int:
             "INDETERMINATE",
         )
     )
-    memory_error_inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+    memory_error_inv = fea.Investigation(
+        "memory.img", unattended=True, with_report=False
+    )
     memory_error_inv.tool_calls = [
         {"tool": "vol_pslist", "tool_call_id": "tc-memory", "error": "tool failed"}
     ]
@@ -717,7 +731,9 @@ def main() -> int:
         {"tool": "yara_scan", "tool_call_id": "tc-yara"},
     ]
     disk_comp_yara = disk_inv._case_completeness()  # noqa: SLF001 - smoke covers policy
-    disk_checks = {row.get("artifact_class"): row for row in disk_comp_yara.get("checks", [])}
+    disk_checks = {
+        row.get("artifact_class"): row for row in disk_comp_yara.get("checks", [])
+    }
     disk_policy_checks += 1
     ok = disk_checks["disk/filesystem"].get("touched") is True
     marker = "OK  " if ok else "FAIL"
@@ -824,7 +840,9 @@ def main() -> int:
             },
         },
     ]
-    wmi_findings = evtx_rows_to_findings(wmi_rows, "tc-evtx", "case-evtx", "Security.evtx")
+    wmi_findings = evtx_rows_to_findings(
+        wmi_rows, "tc-evtx", "case-evtx", "Security.evtx"
+    )
     # 7045 service install with a cmd.exe image path.
     service_rows = [
         {
@@ -843,7 +861,9 @@ def main() -> int:
             },
         }
     ]
-    service_findings = evtx_rows_to_findings(service_rows, "tc-evtx", "case-evtx", "Security.evtx")
+    service_findings = evtx_rows_to_findings(
+        service_rows, "tc-evtx", "case-evtx", "Security.evtx"
+    )
     # 4624 Type 10 = Remote Desktop logon.
     rdp_rows = [
         {
@@ -864,7 +884,9 @@ def main() -> int:
             },
         }
     ]
-    rdp_findings = evtx_rows_to_findings(rdp_rows, "tc-evtx", "case-evtx", "Security.evtx")
+    rdp_findings = evtx_rows_to_findings(
+        rdp_rows, "tc-evtx", "case-evtx", "Security.evtx"
+    )
     # Five 4625 failures = brute-force / password-spray lead.
     brute_rows = [
         {
@@ -885,7 +907,9 @@ def main() -> int:
         }
         for i in range(5)
     ]
-    brute_findings = evtx_rows_to_findings(brute_rows, "tc-evtx", "case-evtx", "Security.evtx")
+    brute_findings = evtx_rows_to_findings(
+        brute_rows, "tc-evtx", "case-evtx", "Security.evtx"
+    )
     # A single ordinary Type 3 network logon must NOT create a finding.
     benign_logon_rows = [
         {
@@ -941,12 +965,16 @@ def main() -> int:
         ),
         (
             "scheduled-task finding cites typed EVTX tool call",
-            scheduled_task_findings[0].get("tool_call_id") if scheduled_task_findings else None,
+            scheduled_task_findings[0].get("tool_call_id")
+            if scheduled_task_findings
+            else None,
             "tc-evtx",
         ),
         (
             "scheduled-task finding maps to T1053.005",
-            scheduled_task_findings[0].get("mitre_technique") if scheduled_task_findings else None,
+            scheduled_task_findings[0].get("mitre_technique")
+            if scheduled_task_findings
+            else None,
             "T1053.005",
         ),
         (
@@ -1083,7 +1111,10 @@ def main() -> int:
         action for action in disk_actions if "disk_gap" in action.get("based_on", [])
     ]
     process_checks += 1
-    ok = bool(disk_gap_actions) and "read-only" in disk_gap_actions[0].get("action", "").lower()
+    ok = (
+        bool(disk_gap_actions)
+        and "read-only" in disk_gap_actions[0].get("action", "").lower()
+    )
     marker = "OK  " if ok else "FAIL"
     print(f"  [{marker}] action: disk next action uses read-only SIFT wording")
     if not ok:
@@ -1398,7 +1429,8 @@ def main() -> int:
         ),
         (
             "analysis coverage maps memory process output to ATT&CK DS0009",
-            "DS0009" in practitioner["lanes"]["memory"].get("attck_data_sources_seen", []),
+            "DS0009"
+            in practitioner["lanes"]["memory"].get("attck_data_sources_seen", []),
             True,
         ),
         (
@@ -1589,7 +1621,8 @@ def main() -> int:
         "/ev.evtx",
     )
     narr_blob = " ".join(
-        [story["headline"], story["assessment"], story["certainty"]] + story["what_we_cannot_say"]
+        [story["headline"], story["assessment"], story["certainty"]]
+        + story["what_we_cannot_say"]
     )
     narrative_cases = [
         (
@@ -1622,7 +1655,10 @@ def main() -> int:
         ),
         (
             "what-we-can-say states the cited fact",
-            any("T1070.001" in item and "tc-evtx" in item for item in story["what_we_can_say"]),
+            any(
+                "T1070.001" in item and "tc-evtx" in item
+                for item in story["what_we_can_say"]
+            ),
             True,
         ),
     ]
@@ -1798,7 +1834,9 @@ def main() -> int:
         {"overall": True},
         {"signature": {"payload_sha256": "f" * 64}},
     )
-    stub_inv = fea.Investigation("memory.img", unattended=True, with_report=False, signer="stub")
+    stub_inv = fea.Investigation(
+        "memory.img", unattended=True, with_report=False, signer="stub"
+    )
     stub_release_gate = stub_inv._build_release_gate(approved_qa)  # noqa: SLF001
     # ed25519 is a REAL signature (integrity, offline-verifiable) but proves no
     # identity — the customer-release tier stays sigstore-only by policy.
@@ -1870,7 +1908,8 @@ def main() -> int:
             },
         ]
         miss_ledger.write_text(
-            "\n".join(json.dumps(record, sort_keys=True) for record in miss_records) + "\n",
+            "\n".join(json.dumps(record, sort_keys=True) for record in miss_records)
+            + "\n",
             encoding="utf-8",
         )
         captured_miss_summary = build_expert_miss_summary(miss_inv.case_id, miss_ledger)
@@ -1911,7 +1950,9 @@ def main() -> int:
     verify_inv = fea.Investigation("memory.img", unattended=True, with_report=False)
     verify_client = FakeManifestVerifyClient({"overall": True})
     verify_result = verify_inv.verify_final_manifest(verify_client)
-    verify_error_inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+    verify_error_inv = fea.Investigation(
+        "memory.img", unattended=True, with_report=False
+    )
     verify_error_result = verify_error_inv.verify_final_manifest(
         FakeManifestVerifyClient({"_error": {"message": "manifest broken"}})
     )
@@ -2256,7 +2297,11 @@ def main() -> int:
         ),
         (
             "expert signoff packet references report QA digest",
-            len(expert_signoff_packet.get("referenced_hashes", {}).get("report_qa_sha256", "")),
+            len(
+                expert_signoff_packet.get("referenced_hashes", {}).get(
+                    "report_qa_sha256", ""
+                )
+            ),
             64,
         ),
         (
@@ -2303,7 +2348,9 @@ def main() -> int:
             "attack story summarizes expert miss feedback",
             any(
                 "Expert misses captured" in item
-                for item in miss_metadata.get("attack_story", {}).get("what_we_can_say", [])
+                for item in miss_metadata.get("attack_story", {}).get(
+                    "what_we_can_say", []
+                )
             ),
             True,
         ),
@@ -2329,7 +2376,9 @@ def main() -> int:
         ),
         (
             "final findings become manifest-eligible audit records",
-            finding_approved_payloads[0].get("finding_id") if finding_approved_payloads else None,
+            finding_approved_payloads[0].get("finding_id")
+            if finding_approved_payloads
+            else None,
             "f-dkom",
         ),
         (
@@ -2369,7 +2418,9 @@ def main() -> int:
         ),
         (
             "report QA blocks customer-ready wording before release gates",
-            qa_check_status(customer_ready_language_qa, "no_forbidden_unqualified_language"),
+            qa_check_status(
+                customer_ready_language_qa, "no_forbidden_unqualified_language"
+            ),
             "FAIL",
         ),
         (
@@ -2556,7 +2607,9 @@ def main() -> int:
     process_checks += 1
     ok = "details_json" in text and "tc-003" in text and '""pid"":4' in text
     marker = "OK  " if ok else "FAIL"
-    print("  [{marker}] timeline: CSV export includes details_json".format(marker=marker))
+    print(
+        "  [{marker}] timeline: CSV export includes details_json".format(marker=marker)
+    )
     if not ok:
         print(f"         csv text: {text!r}")
         failures += 1
@@ -2575,13 +2628,17 @@ def main() -> int:
     )
     marker = "OK  " if ok else "FAIL"
     print(
-        "  [{marker}] timeline: normalized CSV export includes analyst fields".format(marker=marker)
+        "  [{marker}] timeline: normalized CSV export includes analyst fields".format(
+            marker=marker
+        )
     )
     if not ok:
         print(f"         csv text: {text!r}")
         failures += 1
 
-    matrix_disk_inv = fea.Investigation("fixture.E01", unattended=True, with_report=False)
+    matrix_disk_inv = fea.Investigation(
+        "fixture.E01", unattended=True, with_report=False
+    )
     matrix_disk_inv.tool_calls = [{"tool": "case_open", "tool_call_id": "tc-disk"}]
     matrix_disk_checks = {
         row.get("artifact_class"): row
@@ -2699,7 +2756,9 @@ def main() -> int:
         and contra_record.get("approved_by") == "auto"
     )
     marker = "OK  " if contra_ok else "FAIL"
-    print(f"  [{marker}] check_contradiction_resolution_record: kind + required fields present")
+    print(
+        f"  [{marker}] check_contradiction_resolution_record: kind + required fields present"
+    )
     if not contra_ok:
         print(f"         actual: {contra_record!r}")
         failures += 1
@@ -2715,7 +2774,9 @@ def main() -> int:
         and extract("no cve here") == []
     )
     marker = "OK  " if cve_ok else "FAIL"
-    print(f"  [{marker}] _extract_cve_ids: dedupes + uppercases literal CVE ids, [] when none")
+    print(
+        f"  [{marker}] _extract_cve_ids: dedupes + uppercases literal CVE ids, [] when none"
+    )
     if not cve_ok:
         failures += 1
     cve_checks = 1
@@ -2807,7 +2868,9 @@ def main() -> int:
         ),
         (
             "unknown technique gets no signature",
-            fea._signature_for_finding({"mitre_technique": "T1234", "description": "x"}),
+            fea._signature_for_finding(
+                {"mitre_technique": "T1234", "description": "x"}
+            ),
             None,
         ),
     ]

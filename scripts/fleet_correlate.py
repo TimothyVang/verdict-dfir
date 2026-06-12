@@ -180,7 +180,9 @@ def latest_fleet_dir() -> Path | None:
     base = REPO_ROOT / "tmp" / "fleet-runs"
     if not base.is_dir():
         return None
-    candidates = sorted(base.glob("fleet-*"), key=lambda p: p.stat().st_mtime, reverse=True)
+    candidates = sorted(
+        base.glob("fleet-*"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
     return candidates[0] if candidates else None
 
 
@@ -317,7 +319,9 @@ def cross_host_processes(verdicts: list[dict[str, Any]]) -> dict[str, list[dict]
                     "epistemic_label": "HYPOTHESIS",
                 }
             )
-    return {n: hits for n, hits in by_name.items() if len({h["host"] for h in hits}) >= 2}
+    return {
+        n: hits for n, hits in by_name.items() if len({h["host"] for h in hits}) >= 2
+    }
 
 
 def temporal_clusters(
@@ -389,7 +393,9 @@ def mitre_density(verdicts: list[dict[str, Any]]) -> Counter:
     for v in verdicts:
         host = v.get("_host") or v.get("host") or "?"
         techniques_on_host = {
-            f.get("mitre_technique") for f in v.get("findings", []) if f.get("mitre_technique")
+            f.get("mitre_technique")
+            for f in v.get("findings", [])
+            if f.get("mitre_technique")
         }
         for mt in techniques_on_host:
             by_technique.setdefault(mt, set()).add(host)

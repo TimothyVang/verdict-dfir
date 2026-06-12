@@ -31,9 +31,11 @@ BEATS_TS = ROOT / "scripts/make-demo-video/src/beats/beats-data.ts"
 AUDIO_OUT = ROOT / "scripts/make-demo-video/public/audio"
 API = "https://api.elevenlabs.io/v1/text-to-speech"
 DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL"  # Sarah — mature, reassuring, confident
-DEFAULT_MODEL = "eleven_v3"  # newest / most expressive; override with ELEVENLABS_MODEL_ID
-FIT_MARGIN_S = 0.4   # leave a little headroom at the end of each beat slot
-MAX_SPEEDUP = 1.6    # never rush a line faster than this (atempo)
+DEFAULT_MODEL = (
+    "eleven_v3"  # newest / most expressive; override with ELEVENLABS_MODEL_ID
+)
+FIT_MARGIN_S = 0.4  # leave a little headroom at the end of each beat slot
+MAX_SPEEDUP = 1.6  # never rush a line faster than this (atempo)
 
 
 def _beats() -> list[tuple[int, int, str]]:
@@ -53,24 +55,35 @@ def _beats() -> list[tuple[int, int, str]]:
 
 def _duration_s(path: Path) -> float:
     out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
-        capture_output=True, text=True,
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
     ).stdout.strip()
     return float(out) if out else 0.0
 
 
 def _synth(text: str, voice: str, model: str, key: str, dst: Path) -> None:
-    body = json.dumps({
-        "text": text,
-        "model_id": model,
-        "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.8,
-            "style": 0.0,
-            "use_speaker_boost": True,
-        },
-    }).encode("utf-8")
+    body = json.dumps(
+        {
+            "text": text,
+            "model_id": model,
+            "voice_settings": {
+                "stability": 0.5,
+                "similarity_boost": 0.8,
+                "style": 0.0,
+                "use_speaker_boost": True,
+            },
+        }
+    ).encode("utf-8")
     req = urllib.request.Request(
         f"{API}/{voice}",
         data=body,
@@ -88,7 +101,9 @@ def _synth(text: str, voice: str, model: str, key: str, dst: Path) -> None:
         detail = exc.read().decode("utf-8", "replace")[:300]
         raise SystemExit(f"ElevenLabs HTTP {exc.code}: {detail}")
     if len(audio) < 2000:
-        raise SystemExit(f"suspiciously small audio ({len(audio)} bytes) for: {text[:60]!r}")
+        raise SystemExit(
+            f"suspiciously small audio ({len(audio)} bytes) for: {text[:60]!r}"
+        )
     dst.write_bytes(audio)
 
 
@@ -101,8 +116,17 @@ def _fit_to_budget(mp3: Path, budget_s: float) -> tuple[float, float | None]:
     tempo = min(dur / target, MAX_SPEEDUP)
     tmp = mp3.with_suffix(".fit.mp3")
     subprocess.run(
-        ["ffmpeg", "-y", "-loglevel", "error", "-i", str(mp3),
-         "-filter:a", f"atempo={tempo:.4f}", str(tmp)],
+        [
+            "ffmpeg",
+            "-y",
+            "-loglevel",
+            "error",
+            "-i",
+            str(mp3),
+            "-filter:a",
+            f"atempo={tempo:.4f}",
+            str(tmp),
+        ],
         check=True,
     )
     tmp.replace(mp3)
@@ -113,7 +137,7 @@ def main() -> int:
     key = os.environ.get("ELEVENLABS_API_KEY")
     if not key:
         raise SystemExit(
-            "ELEVENLABS_API_KEY not set — export ELEVENLABS_API_KEY=\"$(cat ~/.elevenlabs_key)\""
+            'ELEVENLABS_API_KEY not set — export ELEVENLABS_API_KEY="$(cat ~/.elevenlabs_key)"'
         )
     voice = os.environ.get("ELEVENLABS_VOICE_ID", DEFAULT_VOICE)
     model = os.environ.get("ELEVENLABS_MODEL_ID", DEFAULT_MODEL)

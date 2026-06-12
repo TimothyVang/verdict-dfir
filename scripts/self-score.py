@@ -28,7 +28,9 @@ from typing import Any
 # The six criteria. Reused from the agent package when importable so there is a
 # single source of truth; falls back to an inline copy for a zero-dependency run.
 try:  # pragma: no cover - import shim
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "services" / "agent"))
+    sys.path.insert(
+        0, str(Path(__file__).resolve().parent.parent / "services" / "agent")
+    )
     from findevil_agent.playbook import JUDGE_SELFSCORE_CRITERIA as CRITERIA
 except Exception:  # pragma: no cover
     CRITERIA = [
@@ -139,7 +141,11 @@ def score(case_dir: Path) -> dict[str, Any]:
     i = conf.count("INFERRED")
     h = conf.count("HYPOTHESIS")
     classes = sorted(
-        {ARTIFACT_CLASS_FOR_TOOL[t] for t in tools.values() if t in ARTIFACT_CLASS_FOR_TOOL}
+        {
+            ARTIFACT_CLASS_FOR_TOOL[t]
+            for t in tools.values()
+            if t in ARTIFACT_CLASS_FOR_TOOL
+        }
     )
     failures = sum(1 for tcid in tools if tcid not in have_output)
     cited = sum(1 for f in findings if f.get("tool_call_id"))

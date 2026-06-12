@@ -173,9 +173,7 @@ class TestPoolASamEmitter:
 
 
 ACMRU_KEY = "Software\\Microsoft\\Search Assistant\\ACMru\\5603"
-OPENSAVE_KEY = (
-    "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\exe"
-)
+OPENSAVE_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\exe"
 
 
 class TestMruCandidates:
@@ -244,7 +242,9 @@ class TestPoolMruEmitter:
             "hive_key": OPENSAVE_KEY,
             "last_write_time_iso": "2004-08-27T15:00:00Z",
         }
-        inv._emit_registry_activity_findings([cand], "/evidence/NTUSER.DAT", OPENSAVE_KEY, "tc-mru-2")
+        inv._emit_registry_activity_findings(
+            [cand], "/evidence/NTUSER.DAT", OPENSAVE_KEY, "tc-mru-2"
+        )
         assert len(inv.findings_pool_a) == 1
         f = inv.findings_pool_a[0]
         assert f["confidence"] == "INFERRED"
