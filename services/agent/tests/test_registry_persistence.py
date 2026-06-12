@@ -157,9 +157,7 @@ class TestPoolAEmitter:
             "hive_key": SVC_KEY + "\\EvilSvc",
             "last_write_time_iso": "2018-09-06T19:00:00Z",
         }
-        inv._emit_registry_persistence_findings(
-            [cand], "/evidence/SYSTEM", SVC_KEY, "tc-reg-2", {}
-        )
+        inv._emit_registry_persistence_findings([cand], "/evidence/SYSTEM", SVC_KEY, "tc-reg-2", {})
         f = inv.findings_pool_a[0]
         assert f["confidence"] == "HYPOTHESIS"
         assert f["description"].startswith("hypothesis: ")

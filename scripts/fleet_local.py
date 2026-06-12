@@ -52,9 +52,9 @@ def results_to_fleet(fleet_dir: Path) -> Path:
                 "status": "ok" if case_dir else "error",
             }
         )
-    started_at = datetime.fromtimestamp(
-        results_path.stat().st_mtime, tz=timezone.utc
-    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    started_at = datetime.fromtimestamp(results_path.stat().st_mtime, tz=timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
     fleet = {
         "fleet_id": fleet_dir.name,
         "started_at": started_at,
