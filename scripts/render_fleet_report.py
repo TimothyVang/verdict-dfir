@@ -953,9 +953,10 @@ def write_markdown(fleet_dir: Path, corr: dict, has_temporal: bool) -> Path:
     out.append("## Cross-host process correlations")
     out.append("")
     out.append(
-        "*The same uncommon process image name appearing on multiple "
-        "hosts is a much stronger lateral-movement signal than the same "
-        "name on one host alone. Below: image names appearing on ≥2 hosts.*"
+        "*hypothesis: the same uncommon process image name appearing on "
+        "multiple hosts is a much stronger lateral-movement signal than the "
+        "same name on one host alone — a lead for an analyst to confirm. "
+        "Below: image names appearing on ≥2 hosts.*"
     )
     out.append("")
     out.append("![Cross-host process correlation](figures/cross_host_processes.png)")
@@ -978,10 +979,11 @@ def write_markdown(fleet_dir: Path, corr: dict, has_temporal: bool) -> Path:
         out.append("")
     if clusters:
         out.append(
-            f"{len(clusters)} clusters detected. Each cluster is a group "
-            f"of process creations across ≥2 hosts within a 60-second "
+            f"hypothesis: {len(clusters)} clusters detected. Each cluster is "
+            f"a group of process creations across ≥2 hosts within a 60-second "
             f"window — the temporal fingerprint of automated tradecraft "
-            f"(PsExec waves, WMI execution chains, scheduled-task pivots)."
+            f"(PsExec waves, WMI execution chains, scheduled-task pivots) — "
+            f"leads for an analyst to confirm, not conclusions."
         )
         out.append("")
         out.append("**Top clusters (by host count):**")

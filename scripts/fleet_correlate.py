@@ -314,6 +314,9 @@ def cross_host_processes(verdicts: list[dict[str, Any]]) -> dict[str, list[dict]
                     "pid": _proc_pid(p),
                     "ppid": _proc_ppid(p),
                     "create_time": _proc_ctime(p),
+                    # SOUL.md epistemic vocabulary: a cross-host correlation
+                    # is a lead for an analyst to confirm, never a conclusion.
+                    "epistemic_label": "HYPOTHESIS",
                 }
             )
     return {
@@ -361,6 +364,9 @@ def _cluster_to_dict(cluster: list[tuple[datetime, str, dict]]) -> dict[str, Any
         "last_event": cluster[-1][0].isoformat(),
         "duration_seconds": (cluster[-1][0] - cluster[0][0]).total_seconds(),
         "host_count": len({h for _, h, _ in cluster}),
+        # A temporal cluster is a lateral-movement LEAD (SOUL.md: HYPOTHESIS
+        # tier) — the analyst confirms or kills it; the fleet never concludes.
+        "epistemic_label": "HYPOTHESIS",
         "events": [
             {
                 "host": h,
@@ -461,9 +467,10 @@ def write_outputs(
     md.append("## Cross-host process-name correlation")
     md.append("")
     md.append(
-        "*Uncommon process names that appear on ≥2 hosts. "
+        "*hypothesis: uncommon process names that appear on ≥2 hosts. "
         "Same name across multiple hosts is a much stronger lateral-movement "
-        "signal than the same name on one host alone.*"
+        "signal than the same name on one host alone — a lead for an analyst "
+        "to confirm, not a conclusion.*"
     )
     md.append("")
     if cross_procs:
@@ -481,10 +488,11 @@ def write_outputs(
     md.append("## Temporal clusters")
     md.append("")
     md.append(
-        "*Groups of process creations across multiple hosts that fall "
-        "within a 60-second window. Tight time clusters spanning ≥2 hosts "
+        "*hypothesis: groups of process creations across multiple hosts that "
+        "fall within a 60-second window. Tight time clusters spanning ≥2 hosts "
         "are a hallmark of automated lateral movement (PsExec waves, "
-        "WMI execution, scheduled-task chains).*"
+        "WMI execution, scheduled-task chains) — leads for an analyst to "
+        "confirm, not conclusions.*"
     )
     md.append("")
     if clusters:

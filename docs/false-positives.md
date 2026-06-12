@@ -132,6 +132,8 @@ Mitigation: `scripts/fleet_correlate.py` ships a `COMMON_WIN_PROCS` set covering
 
 If your fleet ships a different enterprise stack (e.g. CrowdStrike + Microsoft Defender for Endpoint), expect to see those binaries surface as cross-host correlations until you add them to `COMMON_WIN_PROCS`. Don't dismiss them — confirm they're the products you deployed, *then* add them. Adding a binary to the FP list is itself an investigative claim ("we know what this is"); make the claim deliberately.
 
+Every cross-host correlation and temporal cluster the fleet rollup emits carries `epistemic_label: "HYPOTHESIS"` (and the narrative carries the `hypothesis:` prefix) — the same SOUL.md vocabulary the per-host pipeline uses. A fleet correlation is a lead an analyst confirms or kills, never a conclusion the rollup asserts.
+
 ---
 
 ## What to do when you suspect a false positive

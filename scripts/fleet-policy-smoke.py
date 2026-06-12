@@ -228,6 +228,17 @@ def main() -> int:
             False,
         ),
         ("other.exe excluded (1 host only)", "other.exe" in chp, False),
+        (
+            # SOUL.md epistemic vocabulary: a cross-host name correlation is a
+            # lead, not a conclusion — every hit carries the HYPOTHESIS label.
+            "every cross-host hit carries epistemic_label HYPOTHESIS",
+            all(
+                hit.get("epistemic_label") == "HYPOTHESIS"
+                for hits in chp.values()
+                for hit in hits
+            ),
+            True,
+        ),
     ]
     for label, actual, expected in chp_checks:
         ok = actual == expected
@@ -311,6 +322,13 @@ def main() -> int:
             "h4 isolated event excluded (single host, past window)",
             "h4" in {ev["host"] for ev in (tc[0]["events"] if tc else [])},
             False,
+        ),
+        (
+            # A temporal cluster is a lateral-movement LEAD for an analyst to
+            # confirm — per SOUL.md it must carry the HYPOTHESIS label.
+            "every cluster carries epistemic_label HYPOTHESIS",
+            all(c.get("epistemic_label") == "HYPOTHESIS" for c in tc),
+            True,
         ),
     ]
     for label, actual, expected in tc_checks:
