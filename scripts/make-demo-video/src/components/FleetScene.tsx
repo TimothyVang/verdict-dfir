@@ -281,7 +281,7 @@ export function FleetScene() {
             }}
           >
             manifest_verify ✓<br />
-            Rekor recorded · one signed run
+            one signed run · verifiable offline
           </div>
         </div>
       </div>

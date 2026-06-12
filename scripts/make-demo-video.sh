@@ -58,8 +58,14 @@ fi
 
 if ! $SKIP_TTS; then
   echo ""
-  echo "[make-demo-video] Stage 1: TTS audio generation (Piper)"
-  python3 "${REPO}/scripts/make-demo-video-tts.py"
+  if [[ "${TTS_ENGINE:-piper}" == "elevenlabs" ]]; then
+    # Cloud voices (needs ELEVENLABS_API_KEY in the env; key never committed).
+    echo "[make-demo-video] Stage 1: TTS audio generation (ElevenLabs)"
+    python3 "${REPO}/scripts/make-demo-video-tts-elevenlabs.py"
+  else
+    echo "[make-demo-video] Stage 1: TTS audio generation (Piper)"
+    python3 "${REPO}/scripts/make-demo-video-tts.py"
+  fi
 else
   echo "[make-demo-video] Stage 1: --skip-tts, using existing MP3s"
 fi

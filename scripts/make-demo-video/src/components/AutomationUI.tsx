@@ -1,38 +1,31 @@
 import React from "react";
-import { Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { C, GROTESK, MARGIN, MONO } from "./shared/editorial";
 import { Scene } from "./shared/Scene";
 import { Kicker, KineticHeadline, PullQuote, RuleLine } from "./shared/editorial-ui";
 import { spread } from "./shared/pacing";
 
-// Beat 8 — "Your team takes over." VERDICT's post-verdict automation, shown as the REAL
-// n8n canvas (captured from the running instance: the live
-// `findevil-finding-to-action` workflow) framed in a browser window, with an
-// animated status strip whose rows tick to ✓ across the beat. The automation is
-// framed as optional and outside the evidence chain.
+// Beat 8 — "Your team takes over." The agent/analyst RESPONSIBILITY BOUNDARY:
+// VERDICT runs the mechanical forensic pipeline and stops at a signed case; the
+// human analysts triage and decide. This is the "orchestrator that reduces
+// friction, not an autonomous responder" narrative. (Post-verdict n8n automation
+// is demoted for release, so it is intentionally NOT shown here.)
 
 const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
-// Status strip rows — mirror the real workflow's nodes; tick in sequence.
-const STATUS_ROWS = ["webhook trigger", "route → actions", "slack alert", "write ticket"];
+// What the agent did (all done) vs. what the humans own (their call).
+const AGENT_STEPS = ["opens the case", "runs the typed tools", "verifies every finding", "signs the manifest"];
+const HUMAN_STEPS = ["triage the verdict", "decide the response", "take action"];
 
 export function AutomationUI() {
   const frame = useCurrentFrame();
-  const { durationInFrames, fps } = useVideoConfig();
-
-  // Reveal pacing across the WHOLE beat.
+  const { durationInFrames } = useVideoConfig();
   const sd = (raw: number) => spread(raw, 0, 100, durationInFrames, 24, 200);
-
-  // Browser window reveal.
-  const frameIn = spring({ frame: frame - sd(24), fps, config: { damping: 18, stiffness: 90 } });
-  const winOpacity = interpolate(frame - sd(24), [0, 16], [0, 1], clampOpts);
-  const winScale = 0.97 + frameIn * 0.03;
-
-  // Each status row ticks as the beat progresses (staggered).
-  const rowFrame = (i: number) => sd(50 + i * 11);
+  const fade = (at: number, len = 16) => interpolate(frame - sd(at), [0, len], [0, 1], clampOpts);
+  const rowAt = (i: number) => sd(46 + i * 9);
 
   return (
-    <Scene page={8} caption="Automation" total={10}>
+    <Scene page={8} caption="Handoff" total={10}>
       {/* ── LEFT COLUMN — the story ─────────────────────────────────────── */}
       <div style={{ position: "absolute", left: MARGIN, top: 172, width: 470 }}>
         <Kicker frame={frame} delay={sd(2)} color={C.accent}>
@@ -47,9 +40,8 @@ export function AutomationUI() {
         </div>
 
         <PullQuote frame={frame} delay={sd(28)} size={38} color={C.ink} style={{ maxWidth: 460 }}>
-          The verdict is signed — your workflows{" "}
-          <span style={{ color: C.accent }}>route&nbsp;it.</span> Slack, tickets, your
-          other&nbsp;defenses. Your analysts decide.
+          The machine does the{" "}
+          <span style={{ color: C.accent }}>legwork.</span> People make the calls.
         </PullQuote>
 
         <div
@@ -61,14 +53,14 @@ export function AutomationUI() {
             letterSpacing: 2,
             textTransform: "uppercase",
             color: C.inkFaint,
-            opacity: interpolate(frame - sd(60), [0, 16], [0, 1], clampOpts),
+            opacity: fade(60),
           }}
         >
-          n8n · MIT · optional — never part of the evidence chain
+          an orchestrator that reduces friction — not an autonomous responder
         </div>
       </div>
 
-      {/* ── MAIN — the REAL n8n canvas in a browser frame ───────────────── */}
+      {/* ── MAIN — the agent / analyst responsibility boundary ──────────── */}
       <div style={{ position: "absolute", left: 632, top: 196, width: 1158 }}>
         <div
           style={{
@@ -77,96 +69,119 @@ export function AutomationUI() {
             letterSpacing: 3,
             textTransform: "uppercase",
             color: C.inkMuted,
-            marginBottom: 12,
-            opacity: interpolate(frame - sd(20), [0, 14], [0, 1], clampOpts),
+            marginBottom: 18,
+            opacity: fade(18, 14),
           }}
         >
-          Exhibit H-1 — Post-Verdict Workflow · live in n8n
+          Exhibit H-1 — where the agent stops
         </div>
 
-        <div
-          style={{
-            opacity: winOpacity,
-            transform: `scale(${winScale})`,
-            transformOrigin: "50% 0%",
-            borderRadius: 12,
-            overflow: "hidden",
-            border: `1px solid ${C.hairline}`,
-            background: C.surface,
-            boxShadow: "0 30px 80px rgba(0,0,0,0.45)",
-          }}
-        >
-          {/* title bar */}
+        <div style={{ display: "flex", alignItems: "stretch", gap: 26 }}>
+          {/* Agent column — everything done */}
+          <Column
+            title="VERDICT · the agent"
+            steps={AGENT_STEPS}
+            done
+            frame={frame}
+            rowAt={rowAt}
+            headerOpacity={fade(24, 14)}
+          />
+
+          {/* Handoff arrow */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              padding: "11px 16px",
-              borderBottom: `1px solid ${C.hairline}`,
-              background: C.paperEdge,
+              justifyContent: "center",
+              fontFamily: GROTESK,
+              fontSize: 56,
+              fontWeight: 800,
+              color: C.accent,
+              opacity: fade(70),
             }}
           >
-            <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#e0443e", display: "inline-block" }} />
-            <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#dea123", display: "inline-block" }} />
-            <span style={{ width: 11, height: 11, borderRadius: "50%", background: "#1aab29", display: "inline-block" }} />
-            <span style={{ marginLeft: 14, fontFamily: MONO, fontSize: 14, color: C.inkMuted, letterSpacing: 0.5 }}>
-              n8n · localhost:5678 · findevil-finding-to-action
-            </span>
+            →
           </div>
-          {/* the real captured canvas */}
-          <Img
-            src={staticFile("ui/n8n-canvas.png")}
-            style={{ display: "block", width: "100%", height: "auto" }}
-          />
-        </div>
 
-        {/* ── STATUS STRIP — ticks across the beat ───────────────────────── */}
-        <div
-          style={{
-            display: "flex",
-            gap: 14,
-            marginTop: 20,
-            opacity: interpolate(frame - sd(44), [0, 16], [0, 1], clampOpts),
-          }}
-        >
-          {STATUS_ROWS.map((label, i) => {
-            const done = frame >= rowFrame(i);
-            const tickOp = interpolate(frame - rowFrame(i), [0, 10], [0, 1], clampOpts);
-            const tone = done ? C.confirmed : C.inkMuted;
-            return (
-              <div
-                key={label}
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "12px 16px",
-                  background: C.surface,
-                  border: `1px solid ${done ? `${C.confirmed}66` : C.hairline}`,
-                  borderRadius: 8,
-                }}
-              >
-                <span style={{ fontFamily: MONO, fontSize: 15, letterSpacing: 0.3, color: tone }}>
-                  {label}
-                </span>
-                <span
-                  style={{
-                    fontFamily: MONO,
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color: done ? C.confirmed : C.inkFaint,
-                    opacity: done ? tickOp : 0.5,
-                  }}
-                >
-                  {done ? "✓" : "·"}
-                </span>
-              </div>
-            );
-          })}
+          {/* Analyst column — their call */}
+          <Column
+            title="your analysts · the humans"
+            steps={HUMAN_STEPS}
+            done={false}
+            frame={frame}
+            rowAt={(i: number) => rowAt(i + 5)}
+            headerOpacity={fade(64, 14)}
+          />
         </div>
       </div>
     </Scene>
+  );
+}
+
+function Column({
+  title,
+  steps,
+  done,
+  frame,
+  rowAt,
+  headerOpacity,
+}: {
+  title: string;
+  steps: string[];
+  done: boolean;
+  frame: number;
+  rowAt: (i: number) => number;
+  headerOpacity: number;
+}) {
+  return (
+    <div style={{ flex: 1 }}>
+      <div
+        style={{
+          fontFamily: MONO,
+          fontSize: 15,
+          letterSpacing: 1,
+          textTransform: "uppercase",
+          color: done ? C.confirmed : C.inkMuted,
+          marginBottom: 14,
+          opacity: headerOpacity,
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {steps.map((label, i) => {
+          const on = frame >= rowAt(i);
+          const op = interpolate(frame - rowAt(i), [0, 10], [0, 1], clampOpts);
+          const tone = on ? (done ? C.confirmed : C.ink) : C.inkMuted;
+          return (
+            <div
+              key={label}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 18px",
+                background: C.surface,
+                border: `1px solid ${on ? (done ? `${C.confirmed}66` : `${C.ink}33`) : C.hairline}`,
+                borderRadius: 8,
+              }}
+            >
+              <span style={{ fontFamily: MONO, fontSize: 17, letterSpacing: 0.3, color: tone }}>{label}</span>
+              <span
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 17,
+                  fontWeight: 700,
+                  color: on ? (done ? C.confirmed : C.inkMuted) : C.inkFaint,
+                  opacity: on ? op : 0.4,
+                }}
+              >
+                {done ? "✓" : "·"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

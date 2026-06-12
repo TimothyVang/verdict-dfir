@@ -151,7 +151,7 @@ export function HashChainScene() {
           {[
             { n: "I", name: "audit prev_hash", note: "append-only hash chain" },
             { n: "II", name: "rs_merkle root", note: "f7a3c9e2b1d04… · 6 leaves · SHA-256" },
-            { n: "III", name: "sigstore Rekor", note: "rekor.sigstore.dev / 24922385" },
+            { n: "III", name: "signed manifest", note: "cryptographic signature · verifiable offline" },
           ].map((t, i) => {
             const d = 330 + i * 26;
             const op = interpolate(frame - d, [0, 14], [0, 1], clampOpts);
@@ -196,7 +196,7 @@ export function HashChainScene() {
           <RuleLine frame={frame} delay={520} width={80} color={C.accent} thickness={2} />
           <PullQuote frame={frame} delay={540} size={27} color={C.ink} style={{ marginTop: 16, maxWidth: 520 }}>
             Self-authenticating under <span style={{ fontStyle: "italic" }}>FRE&nbsp;902(14)</span> — a court
-            verifies this manifest from the transparency log, no expert witness required.
+            verifies this manifest from its own hash chain and signature, no expert witness required.
           </PullQuote>
         </div>
       </div>

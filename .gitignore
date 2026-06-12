@@ -171,3 +171,4 @@ coverage/
 
 # Piper TTS model + intermediate wavs (demo video) — regenerated, not committed
 scripts/make-demo-video/.tts-cache/
+.elevenlabs_key

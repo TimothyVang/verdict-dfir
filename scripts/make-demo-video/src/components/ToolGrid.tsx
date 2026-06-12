@@ -143,7 +143,7 @@ export function ToolGrid() {
       {/* Left column — the story */}
       <div style={{ position: "absolute", left: MARGIN, top: 168, width: 560 }}>
         <Kicker frame={frame} delay={sd(2)} color={C.accent}>
-          Exhibit D · The Instrument Tray
+          Exhibit D · Inside the SANS SIFT Workstation
         </Kicker>
         <div style={{ marginTop: 18 }}>
           <KineticHeadline text="Thirty-two" frame={frame} delay={sd(6)} size={92} />
