@@ -196,17 +196,37 @@ class TestMruCandidates:
         assert {c["value"] for c in cands} == {"ethereal", "WinPcap"}
         assert cands[0]["last_write_time_iso"] == "2004-08-27T15:00:00Z"
 
-    def test_opensave_mru_paths_are_candidates(self) -> None:
+    def test_opensave_mru_executable_on_desktop_is_a_candidate(self) -> None:
         rows = [
             _row(
                 OPENSAVE_KEY,
-                [_val("a", "C:\\hacking\\cain.exe"), _val("MRUListEx", "00")],
+                [
+                    _val("a", "C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup.exe"),
+                    _val("MRUListEx", "00"),
+                ],
             )
         ]
         cands = fea.registry_mru_candidates(rows)
         assert len(cands) == 1
         assert cands[0]["kind"] == "opened_file"
-        assert cands[0]["value"].lower().endswith("cain.exe")
+        assert cands[0]["value"].lower().endswith("ethereal-setup.exe")
+
+    def test_benign_document_open_is_not_a_candidate(self) -> None:
+        # A forensics tool must not flag every opened file on every machine —
+        # opening a document from My Documents is not a lead (FP safety).
+        rows = [
+            _row(
+                OPENSAVE_KEY,
+                [_val("a", "C:\\Documents and Settings\\alice\\My Documents\\budget.xlsx")],
+            )
+        ]
+        assert fea.registry_mru_candidates(rows) == []
+
+    def test_unc_network_path_open_is_a_candidate(self) -> None:
+        rows = [_row(OPENSAVE_KEY, [_val("a", "\\\\10.0.0.5\\share\\report.doc")])]
+        cands = fea.registry_mru_candidates(rows)
+        assert len(cands) == 1
+        assert cands[0]["kind"] == "opened_file"
 
     def test_non_mru_rows_yield_nothing(self) -> None:
         assert fea.registry_mru_candidates([_row(USBSTOR_KEY)]) == []

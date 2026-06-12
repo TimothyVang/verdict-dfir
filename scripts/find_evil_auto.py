@@ -1561,6 +1561,44 @@ def _is_string_regtype(value_type: str | None) -> bool:
     return str(value_type or "").upper().replace("_", "") in {"REGSZ", "REGEXPANDSZ"}
 
 
+_SUSPICIOUS_OPEN_EXT = (
+    ".exe",
+    ".scr",
+    ".bat",
+    ".cmd",
+    ".ps1",
+    ".vbs",
+    ".js",
+    ".jar",
+    ".msi",
+    ".com",
+    ".pif",
+)
+
+
+def _is_suspicious_opened_file(path: str) -> bool:
+    """An opened-file MRU entry is a lead only if it carries a tell.
+
+    A forensics tool must not surface every document a user ever opened. We
+    flag: UNC/network paths, known hacking-tool names, and executables opened
+    from outside the system roots (Desktop/Temp/Downloads/removable). Opening a
+    document from My Documents stays quiet so a benign disk produces no lead.
+    """
+    low = path.lower().replace("/", "\\").strip().strip('"')
+    if low.startswith("\\\\"):
+        return True
+    base = low.rsplit("\\", 1)[-1]
+    if suspicious_prefetch_tool_hint(base) or any(
+        tok in low for tok in _HACKING_TOOL_PATH_TOKENS
+    ):
+        return True
+    if base.endswith(_SUSPICIOUS_OPEN_EXT) and not any(
+        r in low for r in _SYSTEM_PATH_ROOTS
+    ):
+        return True
+    return False
+
+
 def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Classify NTUSER MRU rows into recent-activity candidates.
 
@@ -1596,6 +1634,8 @@ def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 continue
             data = str(v.get("data_str") or "").strip()
             if not data:
+                continue
+            if kind == "opened_file" and not _is_suspicious_opened_file(data):
                 continue
             dedup_key = (kind, data)
             if dedup_key in seen:
