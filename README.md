@@ -56,13 +56,11 @@ images).
 <p align="center"><sub>The hardest case — SANS <b>SRL-2018</b>, a 198&nbsp;GB / 22-host compromised enterprise — run host-by-host with the forensic toolchain executing inside the SANS SIFT VM over SSH. <a href="https://youtu.be/4RQnVden6L8">Watch the full walkthrough on YouTube (4:35) →</a> · <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">mp4 mirror</a></sub></p>
 
 <p align="center">
-  <img src="docs/showcase/sift-scenario/srl-fleet-report-hero.png" alt="Fleet rollup — 22 hosts investigated, 74 cross-host process correlations, 53 multi-host temporal clusters" width="250">
+  <img src="docs/showcase/sift-scenario/srl-fleet-report-hero.png" alt="Fleet rollup — 22 hosts investigated, 74 cross-host process correlations, 53 multi-host temporal clusters" width="380">
   &nbsp;
-  <img src="docs/showcase/sift-scenario/srl-basefile-sift-dashboard-hero.png" alt="base-file file server — SUSPICIOUS, confirmed Windows Security-log wipe, signed and verifiable offline" width="250">
-  &nbsp;
-  <img src="docs/showcase/sift-scenario/srl-basefile-sift-dashboard-full.png" alt="Tool-cited findings — audit-log clear (EID 1102), PowerShell LOLBin (EID 4688), service install (EID 7045)" width="250">
+  <img src="docs/showcase/sift-scenario/srl-basefile-sift-dashboard-hero.png" alt="base-file file server — SUSPICIOUS, confirmed Windows Security-log wipe, signed and verifiable offline" width="380">
 </p>
-<p align="center"><sub>22-host fleet rollup · the <b>base-file</b> file server flagged <b>SUSPICIOUS</b> — a <b>confirmed</b> Windows Security-log wipe (EID&nbsp;1102) · every finding cites a <code>tool_call_id</code>, signed and verifiable offline.</sub></p>
+<p align="center"><sub>22-host fleet rollup · the <b>base-file</b> file server flagged <b>SUSPICIOUS</b> — a <b>confirmed</b> Windows Security-log wipe (EID&nbsp;1102), with PowerShell-LOLBin and service-install leads held at HYPOTHESIS · every finding cites a <code>tool_call_id</code>, signed and verifiable offline.</sub></p>
 
 ### A clean single-disk run, end to end
 
