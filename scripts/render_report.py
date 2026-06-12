@@ -1437,6 +1437,11 @@ def write_markdown(
     mr = manifest["merkle_root_hex"]
     sig = manifest["signature"]["payload_sha256"]
     cf = manifest["signature"]["cert_fingerprint"]
+    sig_kind = str(manifest["signature"].get("kind") or "stub")
+    sig_label = {
+        "sigstore": "Sigstore signature",
+        "ed25519": "Ed25519 signature",
+    }.get(sig_kind, f"Signature ({sig_kind})")
 
     # The executive narrative (headline / summary / assessment / certainty / key
     # findings) lives entirely in the Bottom Line Up Front above. This block only
@@ -1897,7 +1902,7 @@ def write_markdown(
 > **Cryptographic attestation:**
 > Merkle root `{mr}`
 > Audit log final hash `{fa}`
-> Sigstore signature SHA-256 `{sig}`
+> {sig_label} SHA-256 `{sig}`
 > Cert fingerprint `{cf}`
 
 ---

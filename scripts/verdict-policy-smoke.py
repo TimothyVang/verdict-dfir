@@ -1834,7 +1834,18 @@ def main() -> int:
         {"overall": True},
         {"signature": {"payload_sha256": "f" * 64}},
     )
-    stub_release_gate = qa_inv._build_release_gate(approved_qa)  # noqa: SLF001
+    stub_inv = fea.Investigation("memory.img", unattended=True, with_report=False, signer="stub")
+    stub_release_gate = stub_inv._build_release_gate(approved_qa)  # noqa: SLF001
+    # ed25519 is a REAL signature (integrity, offline-verifiable) but proves no
+    # identity — the customer-release tier stays sigstore-only by policy.
+    ed25519_inv = fea.Investigation(
+        "memory.img", unattended=True, with_report=False, signer="ed25519"
+    )
+    ed25519_release_gate = ed25519_inv._build_release_gate(  # noqa: SLF001
+        approved_qa,
+        {"overall": True},
+        {"signature": {"payload_sha256": "f" * 64, "kind": "ed25519"}},
+    )
     packet_attestation = qa_inv._build_packet_attestation(  # noqa: SLF001
         [],
         "INDETERMINATE",
@@ -2250,6 +2261,11 @@ def main() -> int:
         (
             "stub signer blocks customer release even with expert approval",
             stub_release_gate.get("customer_releasable"),
+            False,
+        ),
+        (
+            "ed25519 signer (real but identity-less) still blocks customer release",
+            ed25519_release_gate.get("customer_releasable"),
             False,
         ),
         (

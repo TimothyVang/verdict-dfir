@@ -65,6 +65,74 @@ class TestManifestFinalize:
         assert loaded["extra"]["image_hash"] == "deadbeef" * 8
 
 
+class TestEd25519Tier:
+    async def test_ed25519_finalize_then_cryptographic_verify(
+        self, seeded_audit_log: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.setenv("FINDEVIL_SIGNING_KEY", str(tmp_path / "signing.key"))
+        out_path = tmp_path / "run.manifest.json"
+        result = await FINALIZE_SPEC.handler(
+            ManifestFinalizeInput(
+                case_id="case-ed",
+                run_id="run-ed",
+                started_at="2026-04-25T00:00:00Z",
+                audit_log_path=str(seeded_audit_log),
+                output_path=str(out_path),
+                signer="ed25519",
+            )
+        )
+        assert result.signer_effective == "ed25519"
+        assert result.fallback_reason is None
+        verify = await VERIFY_SPEC.handler(ManifestVerifyInput(manifest_path=str(out_path)))
+        assert verify.overall is True
+        assert verify.signature_kind == "ed25519"
+        # The genuine offline cryptographic pass — not a presence check.
+        assert verify.signature_verified is True
+
+    async def test_default_signer_is_ed25519(
+        self, seeded_audit_log: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.setenv("FINDEVIL_SIGNING_KEY", str(tmp_path / "signing.key"))
+        out_path = tmp_path / "run.manifest.json"
+        result = await FINALIZE_SPEC.handler(
+            ManifestFinalizeInput(
+                case_id="case-def",
+                run_id="run-def",
+                started_at="2026-04-25T00:00:00Z",
+                audit_log_path=str(seeded_audit_log),
+                output_path=str(out_path),
+                # no signer given — the default must be the real local tier
+            )
+        )
+        assert result.signer_effective == "ed25519"
+
+    async def test_ed25519_degrades_to_stub_when_key_unwritable(
+        self, seeded_audit_log: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        # Point the key inside a read-only dir: generation fails, the run
+        # honestly degrades to stub and says why — never crashes.
+        ro_dir = tmp_path / "ro"
+        ro_dir.mkdir()
+        monkeypatch.setenv("FINDEVIL_SIGNING_KEY", str(ro_dir / "nested" / "signing.key"))
+        ro_dir.chmod(0o500)
+        try:
+            out_path = tmp_path / "run.manifest.json"
+            result = await FINALIZE_SPEC.handler(
+                ManifestFinalizeInput(
+                    case_id="case-ro",
+                    run_id="run-ro",
+                    started_at="2026-04-25T00:00:00Z",
+                    audit_log_path=str(seeded_audit_log),
+                    output_path=str(out_path),
+                    signer="ed25519",
+                )
+            )
+            assert result.signer_effective == "stub"
+            assert result.fallback_reason
+        finally:
+            ro_dir.chmod(0o700)
+
+
 class TestManifestVerify:
     async def test_clean_manifest_verifies(self, seeded_audit_log: Path, tmp_path: Path) -> None:
         out_path = tmp_path / "run.manifest.json"

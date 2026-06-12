@@ -5539,7 +5539,7 @@ class Investigation:
         *,
         unattended: bool = False,
         with_report: bool = True,
-        signer: str = "stub",
+        signer: str = "ed25519",
         force_fresh_replay: bool = False,
         case_id: str | None = None,
         parallel: bool = True,
@@ -8951,8 +8951,9 @@ class Investigation:
         release_blockers = list(report_qa.get("customer_release_blockers", []))
         if not signer_customer_ok:
             release_blockers.append(
-                "customer release requires an effective manifest_finalize signer=sigstore; "
-                "stub signatures (including a sigstore request that degraded to stub) are dev/offline only"
+                "customer release requires an effective manifest_finalize signer=sigstore "
+                "(identity + transparency log); ed25519 proves integrity offline but not "
+                "identity, and stub signatures are dev/offline only"
             )
         if not expert_approved:
             release_blockers.append(
@@ -10080,9 +10081,11 @@ def main() -> int:
     )
     p.add_argument(
         "--signer",
-        choices=("stub", "sigstore"),
-        default="stub",
-        help="Signer passed to manifest_finalize. Use sigstore for customer-release candidates; stub is dev/offline only.",
+        choices=("stub", "ed25519", "sigstore"),
+        default="ed25519",
+        help="Signer passed to manifest_finalize. ed25519 (default) is a real "
+        "local signature that verifies offline; sigstore for customer-release "
+        "candidates (identity + transparency log); stub is dev/offline only.",
     )
     p.add_argument(
         "--local",

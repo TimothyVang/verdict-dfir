@@ -36,11 +36,13 @@ class ManifestFinalizeInput(BaseModel):
     started_at: str = Field(..., description="UTC ISO-8601Z timestamp of run start.", min_length=1)
     audit_log_path: str = Field(..., description="Absolute path to audit.jsonl.")
     output_path: str = Field(..., description="Where to write run.manifest.json.")
-    signer: Literal["stub", "sigstore"] = Field(
-        default="stub",
+    signer: Literal["stub", "ed25519", "sigstore"] = Field(
+        default="ed25519",
         description=(
-            "stub = deterministic test signer (no network); "
-            "sigstore = keyless Fulcio+Rekor (Spec #2 §7.1 tier 1)."
+            "ed25519 = REAL local-keypair signature, verifies offline (default); "
+            "sigstore = keyless Fulcio+Rekor, identity + transparency log "
+            "(Spec #2 §7.1 tier 1; the customer-release tier); "
+            "stub = deterministic test placeholder (explicit opt-in, never proof)."
         ),
     )
     extra: dict[str, Any] = Field(
@@ -67,14 +69,15 @@ class ManifestFinalizeOutput(BaseModel):
     signer_effective: str = Field(
         default="stub",
         description=(
-            "Signer that ACTUALLY sealed the run ('sigstore' or 'stub'). May differ "
-            "from the requested signer: a sigstore request honestly degrades to stub "
-            "when Fulcio/Rekor or an OIDC token is unavailable."
+            "Signer that ACTUALLY sealed the run ('sigstore', 'ed25519' or 'stub'). "
+            "May differ from the requested signer: a failed request honestly degrades "
+            "(sigstore -> ed25519 -> stub) when Fulcio/Rekor, an OIDC token, or the "
+            "local signing key is unavailable."
         ),
     )
     fallback_reason: str | None = Field(
         default=None,
-        description="Why a sigstore request degraded to stub, when it did; null otherwise.",
+        description="Why the requested signer degraded, when it did; null otherwise.",
     )
 
 
@@ -82,14 +85,18 @@ async def _handle(inp: BaseModel) -> ManifestFinalizeOutput:
     assert isinstance(inp, ManifestFinalizeInput)
     log = AuditLog(Path(inp.audit_log_path))
     # sigstore lazy-imports its identity token from $SIGSTORE_ID_TOKEN inside
-    # the signer; stub is deterministic and offline-friendly for tests. A
-    # sigstore request is wrapped so an unreachable Fulcio/Rekor (or a missing
-    # token) honestly degrades to stub and is recorded — never crashes the run.
-    signer: Signer = (
-        StubSigner(run_id=inp.run_id)
-        if inp.signer == "stub"
-        else FallbackSigner(make_signer(kind="sigstore"), StubSigner(run_id=inp.run_id))
-    )
+    # the signer; ed25519 signs with the local keypair (offline). Requests are
+    # wrapped so a failed signer honestly degrades — sigstore -> ed25519 ->
+    # stub, ed25519 -> stub — with the reason recorded; never crashes the run.
+    if inp.signer == "stub":
+        signer: Signer = StubSigner(run_id=inp.run_id)
+    elif inp.signer == "ed25519":
+        signer = FallbackSigner(make_signer(kind="ed25519"), StubSigner(run_id=inp.run_id))
+    else:  # sigstore
+        signer = FallbackSigner(
+            make_signer(kind="sigstore"),
+            FallbackSigner(make_signer(kind="ed25519"), StubSigner(run_id=inp.run_id)),
+        )
 
     manifest = build_manifest(
         case_id=inp.case_id,
@@ -126,9 +133,10 @@ SPEC = ToolSpec(
         "this run. Builds run.manifest.json by: (1) iterating the audit log, (2) "
         "extracting tool_call_output digests + finding digests as Merkle leaves, (3) "
         "computing the SHA-256 root, (4) signing the canonicalized body. "
-        "signer='stub' for offline/test runs (deterministic, no network); "
-        "signer='sigstore' for production (keyless Fulcio/Rekor — requires "
-        "$SIGSTORE_ID_TOKEN). This is the terminal step — once the manifest is signed "
+        "signer='ed25519' (default) is a REAL local-keypair signature that verifies "
+        "offline; signer='sigstore' for production identity + transparency log "
+        "(keyless Fulcio/Rekor — requires $SIGSTORE_ID_TOKEN); signer='stub' is an "
+        "explicit dev placeholder. This is the terminal step — once the manifest is signed "
         "the run is closed. REFUSES to seal a run containing any finding_approved "
         "record without a tool_call_id recorded earlier in the audit chain — the "
         "'every Finding cites a tool_call_id' invariant is enforced here in code, "

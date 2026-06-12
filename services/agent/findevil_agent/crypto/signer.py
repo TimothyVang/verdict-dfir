@@ -285,9 +285,11 @@ class FallbackSigner:
     def sign(self, payload: bytes) -> SignedBundle:
         try:
             return self._primary.sign(payload)
-        except Exception as exc:  # degrade to stub on ANY signer failure
+        except Exception as exc:  # degrade on ANY primary-signer failure
             bundle = self._fallback.sign(payload)
-            reason = f"sigstore signing failed, degraded to stub: {exc}"
+            reason = f"primary signer failed, degraded to {bundle.kind}: {exc}"
+            if bundle.fallback_reason:  # nested fallback — keep the inner story
+                reason = f"{reason} (after: {bundle.fallback_reason})"
             return replace(bundle, fallback_reason=reason)
 
 
