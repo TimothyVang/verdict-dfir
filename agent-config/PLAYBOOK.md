@@ -150,7 +150,7 @@ Memory tells you what was *running*, not just what was *installed*.
 
 **The `vol_pslist` + `vol_psscan` pair is mandatory, not optional.** pslist walks the kernel's active list; psscan signature-scans EPROCESS pool memory for blocks unlinked from that list. **Divergence between the two outputs IS the forensic finding** — `pslist=0` + `psscan>0` is the textbook MITRE ATT&CK T1014 (Rootkit) DKOM signature. Always emit a `vol_psscan` call after `vol_pslist`, even if pslist returned a healthy count, so the audit chain has both for cross-validation. When the pair diverges, run `vol_psxview` next to identify which process-enumeration views miss each recovered PID.
 
-After memory: if a disk image for the same host is available, **cross-reference** PIDs from `vol_pslist` against `prefetch_parse` run lists. A process running in memory with no Prefetch entry is a strong signal of an unprefetched (likely manual or scripted) execution — surface as a Finding.
+After memory: if a disk image for the same host is available, **cross-reference** PIDs from `vol_pslist` against `prefetch_parse` run lists. A process running in memory with no Prefetch entry is a strong signal of an unprefetched (likely manual or scripted) execution. This is an **analyst-driven cross-artifact check** the interactive agent performs when both classes are present; the headless engine does not yet auto-emit it as a Finding (a documented depth gap, not an implemented automated Finding — do not claim it as one).
 
 ### `.evtx` — single Windows event log
 
