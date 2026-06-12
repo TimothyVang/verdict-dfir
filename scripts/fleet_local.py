@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone  # timezone.utc: scripts/ run on system python3 (3.10)
 from pathlib import Path
 
 _LABEL_PREFIXES = ("mem:", "disk:", "xart:")
@@ -52,9 +52,9 @@ def results_to_fleet(fleet_dir: Path) -> Path:
                 "status": "ok" if case_dir else "error",
             }
         )
-    started_at = datetime.fromtimestamp(results_path.stat().st_mtime, tz=UTC).strftime(
-        "%Y-%m-%dT%H:%M:%SZ"
-    )
+    started_at = datetime.fromtimestamp(
+        results_path.stat().st_mtime, tz=timezone.utc
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
     fleet = {
         "fleet_id": fleet_dir.name,
         "started_at": started_at,
