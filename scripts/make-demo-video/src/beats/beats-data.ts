@@ -102,7 +102,7 @@ export const BEATS: Beat[] = [
     rubric: "Scale",
     accentColor: "#c79a4a",
     narration:
-      "One computer is just the demo. A real breach touches dozens of machines. VERDICT investigated twenty-two hosts, eighty-four gigabytes of evidence, from a single command. Across that fleet it flagged six hosts that ran the same admin tool at the exact same second. That's not natural system behavior, that's an attacker's sweep, and it surfaced it as a hypothesis for the analyst to confirm. And against a published answer key, it found five out of five expected findings. One hundred percent recall.",
+      "One computer is just the demo. A real breach touches dozens of machines. From a single command, VERDICT swept a twenty-two-host enterprise. Across that fleet it flagged six hosts that ran the same admin tool at the exact same second. That's not natural system behavior, that's an attacker's sweep, and it surfaced it as a hypothesis for the analyst to confirm. On a separate case that does have a published answer key, it found five out of five expected findings: a hundred percent recall, fully reproducible.",
   },
   {
     number: 10,

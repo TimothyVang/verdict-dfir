@@ -69,8 +69,9 @@ curl -fsSL https://raw.githubusercontent.com/<OWNER>/<REPO>/master/scripts/insta
 # (findevil-mcp + findevil-agent-mcp) over stdio.
 scripts/verdict fixtures/nist-hacking-case/SCHARDT.001
 
-# Flags: --sift (run DFIR tools in the SANS SIFT VM), --no-dashboard,
-#        --skip-build, --dry-run, --run-summary <path>.
+# Flags: --sift (run DFIR tools in the SANS SIFT VM — auto-resolves the VM's IP
+#        and auto-stages ANY host evidence path into it, so it stays one
+#        command), --no-dashboard, --skip-build, --dry-run, --run-summary <path>.
 
 # Interactive equivalent — open Claude Code from this repo's root:
 claude
