@@ -28,6 +28,17 @@ first-pass run with the supervisor's reasoning in the log:
 | [`memory-dc/`](memory-dc/) | `base-dc-memory.img` (5 GB domain-controller RAM), local Volatility 3 | **INDETERMINATE** | 2 (both `hypothesis:`) | **Live memory lane + the smear-vs-DKOM call, first pass.** All five memory tools ran (`case_open` → `vol_pslist` → `vol_malfind` → `vol_psscan` → `vol_psxview`). `vol_pslist` returned 0 active processes while `vol_psscan` recovered 124 EPROCESS objects — the textbook DKOM/T1014 signature. The engine **refused to claim a rootkit**: core OS singletons (csrss, lsass, services, smss) recovered *only* by `psscan` plus a duplicate `System` (PID 4) point to an **acquisition smear / kernel-global read failure**, which a rootkit cannot produce, so it held the divergence at **HYPOTHESIS** and scoped the verdict to **INDETERMINATE**. The supervisor's reasoning is in the chain as `agent_message` records — *"process views diverge … re-sequencing to cross-validate with vol_psxview before any DKOM claim (divergence can be an acquisition smear, not T1014)."* This is the SRL-2018 caution reproduced as a live, un-reconciled result. |
 | [`natural-self-correction/`](natural-self-correction/) | SANS `base-wkstn-01-c-drive.E01` (competition disk image), local mode | **INDETERMINATE** | 1 (`hypothesis:` EID 7045 `mnemosyne` service install, T1543.003) | **Natural self-correction + HEARTBEAT escalation, nothing injected:** the image's `RegBack` hives are genuinely truncated (`hive truncated (header too small)` — a real condition on real evidence, not a fault hook), so six `registry_query` calls fail and each failure is followed by a logged `course_correction` (`narrow: skip this key; continue remaining hive triage`). The failure streak then trips the documented HEARTBEAT escalation (`HEARTBEAT.md`: "2 consecutive failed self-tests → session terminates with partial report"): five `heartbeat_failure` records, one `heartbeat_terminated`, remaining lanes skipped, and the run seals an honestly-scoped partial **INDETERMINATE** with the one defensible lead held at HYPOTHESIS and the skipped work recorded in `analysis_limitations`. The full arc — error → adjusted plan → repeated failure → policy escalation → honest partial verdict — is in the hash chain, in order. |
 
+## Fleet runs (cross-host correlation)
+
+Two committed fleet rollups back the demo's "host by host across the fleet" beat:
+
+- [`fleet-mini/`](fleet-mini/) — a real **3-host** EVTX fleet, each host ed25519-signed and
+  offline-verifiable, **3/3 unique Merkle roots**, re-correlatable from a fresh clone
+  (`python3 scripts/fleet_correlate.py docs/sample-run/fleet-mini`). The per-host-crypto proof.
+- [`fleet-srl2018-22host/`](fleet-srl2018-22host/) — the real **22-host** SRL-2018 memory-fleet
+  correlation: 74 cross-host process correlations, 53 temporal clusters, including the exact
+  **six-host `Autorunsc.exe` @ `2018-08-15T17:10:32Z`** same-second cluster the video cites.
+
 ## Files in each run (lean set)
 
 - `audit.jsonl` — the hash-chained, append-only execution log (every `tool_call_start` /
