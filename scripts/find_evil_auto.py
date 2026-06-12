@@ -1388,6 +1388,51 @@ def registry_persistence_candidates(
     return out
 
 
+# Triage keys whose payload lives in nested subkeys (everything else is flat).
+_RECURSIVE_TRIAGE_KEYS = frozenset({r"ControlSet001\Enum\USBSTOR"})
+
+_USBSTOR_SERIAL_RE = re.compile(
+    r"\\enum\\usbstor\\disk&ven_(?P<ven>[^&\\]*)&prod_(?P<prod>[^&\\]*)[^\\]*\\(?P<serial>[^\\]+)$",
+    re.IGNORECASE,
+)
+
+
+def registry_usb_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Classify registry_query rows into USB device-history candidates.
+
+    Pure function (unit-testable without an Investigation). Only the
+    serial-level key under Enum\\USBSTOR\\Disk&Ven_X&Prod_Y\\<serial> is a
+    candidate — the root and device-class levels carry no per-device
+    insertion history. The candidate is a HYPOTHESIS lead downstream: USB
+    history is normal on most machines, so it must never flip a verdict.
+    """
+    out: list[dict[str, Any]] = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        row_key = str(row.get("key_path") or "").replace("/", "\\")
+        m = _USBSTOR_SERIAL_RE.search(row_key)
+        if not m:
+            continue
+        friendly = None
+        for v in row.get("values") or []:
+            if isinstance(v, dict) and str(v.get("name") or "").lower() == "friendlyname":
+                friendly = str(v.get("data_str") or "") or None
+                break
+        out.append(
+            {
+                "kind": "usb_device",
+                "vendor": m.group("ven"),
+                "product": m.group("prod"),
+                "serial": m.group("serial"),
+                "friendly_name": friendly,
+                "hive_key": row_key,
+                "last_write_time_iso": row.get("last_write_time_iso"),
+            }
+        )
+    return out
+
+
 CONFIDENCE_RANK = {"HYPOTHESIS": 1, "INFERRED": 2, "CONFIRMED": 3}
 EXPERT_RULES_PATH = Path(__file__).resolve().parent.parent / "agent-config" / "expert-rules.json"
 SUSPICIOUS_EVTX_ACTION_TOKENS = (
@@ -6897,7 +6942,7 @@ class Investigation:
                 r"Microsoft\Windows NT\CurrentVersion\Image File Execution Options",
             ]
         if name == "system":
-            return [r"ControlSet001\Services"]
+            return [r"ControlSet001\Services", r"ControlSet001\Enum\USBSTOR"]
         if name in {"ntuser.dat", "usrclass.dat"}:
             return [
                 r"Software\Microsoft\Windows\CurrentVersion\Run",
@@ -6983,6 +7028,53 @@ class Investigation:
             print(
                 f"  pool-A persistence finding: {finding['finding_id']} ({finding['confidence']})"
             )
+
+    def _emit_registry_activity_findings(
+        self,
+        candidates: list[dict[str, Any]],
+        hive_path: str,
+        key_path: str | None,
+        tcid: str,
+    ) -> None:
+        """Turn registry activity candidates into Pool B Findings.
+
+        USB device history (USBSTOR) is the exfil/staging lead — Pool B's
+        bias. Insertion history is normal on most machines, so the level is
+        HYPOTHESIS, never CONFIRMED: it must not flip a benign disk's verdict.
+        """
+        for cand in candidates:
+            if cand.get("kind") != "usb_device":
+                continue
+            device = str(
+                cand.get("friendly_name")
+                or f"{cand.get('vendor') or 'unknown'} {cand.get('product') or 'device'}"
+            ).strip()
+            safe = (
+                re.sub(r"[^a-z0-9]+", "-", str(cand.get("serial") or device).lower()).strip("-")
+                or "device"
+            )
+            finding = {
+                "case_id": self.handle["id"],
+                "finding_id": self._finding_id_for(f"f-B-usb-{safe}", hive_path),
+                "tool_call_id": tcid,
+                "artifact_path": hive_path,
+                "description": (
+                    f"hypothesis: USB external storage device insertion history present: "
+                    f"{device} (serial {cand.get('serial')}) recorded under "
+                    f"{cand.get('hive_key')} (registry_query, last_write "
+                    f"{cand.get('last_write_time_iso')}). USBSTOR records that an "
+                    "external drive was connected — relevant to staging/exfiltration "
+                    "if corroborated (LNK/shellbag paths on the volume, file activity "
+                    "near the insertion time). Insertion alone proves connection, "
+                    "never data transfer."
+                ),
+                "confidence": "HYPOTHESIS",
+                "pool_origin": "B",
+                "mitre_technique": "T1052.001",
+                "derived_from": [tcid],
+            }
+            self.findings_pool_b.append(finding)
+            print(f"  pool-B activity finding: {finding['finding_id']} (HYPOTHESIS)")
 
     def _corroborate_execution_with_userassist(
         self,
@@ -7448,7 +7540,9 @@ class Investigation:
                     "case_id": self.handle["id"],
                     "hive_path": path,
                     "key_path": key_path,
-                    "recursive": False,
+                    # USBSTOR's per-device insertion history lives two subkey
+                    # levels down (Disk&Ven_…\<serial>); everything else is flat.
+                    "recursive": key_path in _RECURSIVE_TRIAGE_KEYS,
                     "limit": 200,
                 }
                 out = rust.call_tool("registry_query", args)
@@ -7523,6 +7617,11 @@ class Investigation:
                     self._emit_registry_persistence_findings(
                         candidates, path, key_path, tcid, prefetch_tcids
                     )
+                # Pool B activity emitters: USBSTOR insertion history becomes
+                # a HYPOTHESIS exfil/staging lead citing this registry_query.
+                usb_candidates = registry_usb_candidates(rows)
+                if usb_candidates:
+                    self._emit_registry_activity_findings(usb_candidates, path, key_path, tcid)
 
         self._corroborate_execution_with_userassist(rust, py, by_class)
 
