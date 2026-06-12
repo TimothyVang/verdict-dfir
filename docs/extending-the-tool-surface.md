@@ -13,7 +13,7 @@ This is the worked example. Reference implementation to copy:
 
 ### 1. Write the tool module — typed in, typed out, read-only
 
-Create `services/mcp/src/tools/my_tool.rs`. Every tool is a **pure function** over a
+Create a new `my_tool.rs` in `services/mcp/src/tools/`. Every tool is a **pure function** over a
 typed input that returns a typed output or a typed error — never a panic, never a
 shell string.
 
@@ -103,7 +103,7 @@ error).
 
 ### 4. Add a smoke test
 
-Create `services/mcp/tests/my_tool_smoke.rs` following
+Create a `my_tool_smoke.rs` in `services/mcp/tests/` following
 [`prefetch_parse_smoke.rs`](../services/mcp/tests/prefetch_parse_smoke.rs): assert the
 error paths (missing file → typed `NotFound`), the schema roundtrip, and an **opt-in**
 real-fixture parse that is skipped when no fixture is present (so CI stays green
