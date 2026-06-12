@@ -169,7 +169,7 @@ Every committed sample run is offline-verifiable; these are the actual recorded 
 | `memory-dc` (live Volatility 3) | INDETERMINATE | 2 | 0 | 0 | 2 | **2/2 (100%)** | `overall=true` |
 | `attack-samples-evtx` | SUSPICIOUS | 3 | 1 | 0 | 2 | **3/3 (100%)** | `overall=true` |
 | `nist-hacking-case` (local, current engine) | SUSPICIOUS | 19 | 8 | 2 | 9 | **19/19 (100%)** | `overall=true` |
-| `nist-hacking-case-sift` (earlier baseline) | SUSPICIOUS | 9 | 8 | 0 | 1 | **9/9 (100%)** | `overall=true` |
+| `nist-hacking-case-sift` (SANS SIFT VM, current engine) | SUSPICIOUS | 19 | 8 | 2 | 9 | **19/19 (100%)** | `overall=true` |
 | `fault-injection-redispatch` | SUSPICIOUS | 9 | 8 | 0 | 1 | **9/9 (100%)** | `overall=true` |
 
 - **Citation coverage is 100%** — every finding in every committed run cites a `tool_call_id`. This is
@@ -180,11 +180,12 @@ Every committed sample run is offline-verifiable; these are the actual recorded 
   the newer SAM/MRU/shellbag findings are honestly held at HYPOTHESIS/INFERRED. The EVTX-only
   `attack-samples` run confirms only the directly-observed EID 1102 log-clear and holds the weaker
   leads at HYPOTHESIS.
-- **Mode parity (CONFIRMED core)** — the 8-CONFIRMED prefetch+UserAssist escalation is identical in
-  the local and `--sift` runs, proving the load-bearing result doesn't depend on the heavier path.
-  The committed **local** run additionally carries the newest artifact lanes (SAM account / NTUSER
-  MRU / shellbags) and so now reports 19 findings vs the SIFT companion's 9; the `--sift` baseline
-  predates those lanes and a refreshed SIFT parity run is pending the VM.
+- **Mode parity (exact)** — the local and `--sift` runs of `SCHARDT.dd` produce the **identical**
+  19-finding set, the same 8-CONFIRMED / 2-INFERRED / 9-HYPOTHESIS distribution, and the same
+  **5/14 = 36% recall**. The `--sift` run executed inside the SANS SIFT VM over SSH (its
+  `evidence_path` is the VM's `/home/sansforensics/evidence/SCHARDT.dd`), so a judge gets the same
+  result whether they take the easy no-VM path or the full VM — the heavier path buys nothing the
+  host path doesn't already deliver on this image.
 
 ---
 

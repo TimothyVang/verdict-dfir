@@ -295,8 +295,8 @@ of your Project.
 
 *Last verified: 2026-06-12 — execution-log deliverable (#10) now ships seven committed,
 offline-verifiable runs under [`docs/sample-run/`](docs/sample-run/); all return
-`manifest_verify overall: true`. The two NIST SCHARDT runs (Prefetch-only INDETERMINATE vs.
-`--sift` Prefetch+UserAssist CONFIRMED) show the ≥2-artifact-class rule cutting both ways, and
+`manifest_verify overall: true`. The two NIST SCHARDT runs (local vs. inside the SANS SIFT VM)
+are now byte-for-byte the same 19-finding set at 5/14 = 36% recall — exact mode parity, and
 `natural-self-correction/` adds the un-staged failure-recovery arc (six `course_correction`
 records + HEARTBEAT escalation), and `memory-dc/` adds a live Volatility 3 run that holds a
 pslist/psscan divergence at HYPOTHESIS (acquisition smear, not DKOM) on first pass — both
