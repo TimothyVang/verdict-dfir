@@ -1290,6 +1290,135 @@ def _load_common_procs() -> set[str]:
 
 COMMON_WIN_PROCS: set[str] = _load_common_procs()
 
+# Stock Windows / OEM / common-vendor autorun VALUE NAMES (lowercase) that a
+# benign machine routinely carries in Run/RunOnce. Same single-home philosophy
+# as COMMON_WIN_PROCS: seed conservatively — a miss only makes a Pool A
+# persistence Finding that the verifier/judge can weigh, never a crash.
+BENIGN_REGISTRY_RUN_VALUES: set[str] = {
+    "adobe arm",
+    "adobearm",
+    "bginfo",
+    "ctfmon",
+    "hotkeyscmds",
+    "igfxtray",
+    "intellipoint",
+    "itunes helper",
+    "msconfig",
+    "onedrive",
+    "onedrivesetup",
+    "persistence",  # Intel igfxpers — ironic, but stock
+    "securityhealth",
+    "sunjavaupdatesched",
+    "vmware tray",
+    "vmware user process",
+    "vmware-tray",
+    "vmware tools",
+    "windowsdefender",
+}
+
+# Path roots an attacker can write without admin — a Run-key/service target
+# under one of these is the classic persistence tell (T1547.001 / T1543.003).
+USER_WRITABLE_PATH_ROOTS = (
+    "\\users\\",
+    "\\appdata\\",
+    "\\temp\\",
+    "\\tmp\\",
+    "\\programdata\\",
+    "\\downloads\\",
+    "\\public\\",
+)
+_SYSTEM_PATH_ROOTS = ("\\windows\\", "\\program files")
+
+
+def _registry_target_from_data(data_str: str) -> str:
+    """Extract the target binary path from a Run-key/ImagePath value.
+
+    Handles quoted paths with arguments ('"C:\\x\\evil.exe" -silent') and
+    bare 'C:\\x\\evil.exe -flag' forms. Returns '' when no path-like token."""
+    data = (data_str or "").strip()
+    if not data:
+        return ""
+    if data.startswith('"'):
+        end = data.find('"', 1)
+        return data[1:end] if end > 1 else data.strip('"')
+    # Bare form: the target ends at the first " -" style argument break; a
+    # plain split on space would cut 'Program Files'.
+    lower = data.lower()
+    for marker in (".exe", ".dll", ".bat", ".cmd", ".ps1"):
+        idx = lower.find(marker)
+        if idx != -1:
+            return data[: idx + len(marker)]
+    return data.split()[0]
+
+
+def registry_persistence_candidates(
+    rows: list[dict[str, Any]], key_path: str | None
+) -> list[dict[str, Any]]:
+    """Classify registry_query rows into Pool A persistence candidates.
+
+    Pure function (unit-testable without an Investigation). Two shapes:
+    Run/RunOnce values whose target carries a suspicious tell, and Services
+    entries whose ImagePath lives under a user-writable root. The tell gate
+    exists because compute_verdict treats any CONFIRMED finding as
+    SUSPICIOUS — a benign enterprise disk must not flip on stock autoruns.
+    """
+    out: list[dict[str, Any]] = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        row_key = str(row.get("key_path") or key_path or "")
+        rk_lower = row_key.lower()
+        values = [v for v in (row.get("values") or []) if isinstance(v, dict)]
+        lw = row.get("last_write_time_iso")
+        if rk_lower.endswith("\\run") or rk_lower.endswith("\\runonce"):
+            for v in values:
+                name = str(v.get("name") or "")
+                data = str(v.get("data_str") or "")
+                if not data or name.lower() in BENIGN_REGISTRY_RUN_VALUES:
+                    continue
+                target = _registry_target_from_data(data)
+                if not target:
+                    continue
+                t_lower = target.lower().replace("/", "\\")
+                base = t_lower.rsplit("\\", 1)[-1]
+                suspicious = any(r in t_lower for r in USER_WRITABLE_PATH_ROOTS)
+                if not suspicious and suspicious_prefetch_tool_hint(base):
+                    suspicious = True
+                if not suspicious:
+                    in_system = any(r in t_lower for r in _SYSTEM_PATH_ROOTS)
+                    if not in_system and base[:14] not in COMMON_WIN_PROCS:
+                        suspicious = True
+                if suspicious:
+                    out.append(
+                        {
+                            "kind": "run_key",
+                            "value_name": name,
+                            "target": target,
+                            "hive_key": row_key,
+                            "last_write_time_iso": lw,
+                        }
+                    )
+        elif "\\services" in rk_lower:
+            for v in values:
+                if str(v.get("name") or "").lower() != "imagepath":
+                    continue
+                image = _registry_target_from_data(str(v.get("data_str") or ""))
+                if not image:
+                    continue
+                i_lower = image.lower().replace("/", "\\")
+                if any(r in i_lower for r in USER_WRITABLE_PATH_ROOTS):
+                    out.append(
+                        {
+                            "kind": "service",
+                            "service_name": row_key.replace("/", "\\").rsplit("\\", 1)[-1],
+                            "image_path": image,
+                            "hive_key": row_key,
+                            "last_write_time_iso": lw,
+                        }
+                    )
+    return out
+
+
 CONFIDENCE_RANK = {"HYPOTHESIS": 1, "INFERRED": 2, "CONFIRMED": 3}
 EXPERT_RULES_PATH = (
     Path(__file__).resolve().parent.parent / "agent-config" / "expert-rules.json"
@@ -6887,6 +7016,88 @@ class Investigation:
             ]
         return [""]
 
+    def _emit_registry_persistence_findings(
+        self,
+        candidates: list[dict[str, Any]],
+        hive_path: str,
+        key_path: str | None,
+        tcid: str,
+        prefetch_tcids: dict[str, str],
+    ) -> None:
+        """Turn registry persistence candidates into Pool A Findings.
+
+        Pool A (persistence-biased) finally gets disk emitters — previously
+        registry triage fed only the timeline, so detect_contradictions could
+        never fire on a disk-only case. Epistemic discipline per SOUL.md:
+        a Run-key's EXISTENCE is tool-backed (CONFIRMED, existence claim
+        only — never execution, which needs >=2 artifact classes); a service
+        install from a user-writable path stays a HYPOTHESIS lead.
+        """
+        for cand in candidates:
+            if cand.get("kind") == "run_key":
+                target = str(cand.get("target") or "")
+                base = target.lower().replace("/", "\\").rsplit("\\", 1)[-1]
+                safe = (
+                    re.sub(r"[^a-z0-9]+", "-", str(cand.get("value_name") or "").lower()).strip(
+                        "-"
+                    )
+                    or "value"
+                )
+                derived = [tcid]
+                corroboration = ""
+                pf_tcid = prefetch_tcids.get(base)
+                if pf_tcid:
+                    derived.append(pf_tcid)
+                    corroboration = (
+                        f" The same binary appears in Windows Prefetch (tool_call {pf_tcid})"
+                        " — a separate execution lead in another artifact class."
+                    )
+                finding = {
+                    "case_id": self.handle["id"],
+                    "finding_id": self._finding_id_for(f"f-A-reg-persist-{safe}", hive_path),
+                    "tool_call_id": tcid,
+                    "artifact_path": hive_path,
+                    "description": (
+                        "Registry Run-key persistence mechanism present: "
+                        f"{cand.get('hive_key')}\\{cand.get('value_name')} -> {target} "
+                        f"(registry_query, last_write {cand.get('last_write_time_iso')}). "
+                        "The mechanism's existence is tool-backed; execution of the "
+                        "target is NOT claimed (an execution claim needs >=2 artifact "
+                        "classes)." + corroboration
+                    ),
+                    "confidence": "CONFIRMED",
+                    "pool_origin": "A",
+                    "mitre_technique": "T1547.001",
+                    "derived_from": derived,
+                }
+            elif cand.get("kind") == "service":
+                svc = str(cand.get("service_name") or "service")
+                safe = re.sub(r"[^a-z0-9]+", "-", svc.lower()).strip("-") or "service"
+                finding = {
+                    "case_id": self.handle["id"],
+                    "finding_id": self._finding_id_for(f"f-A-reg-persist-svc-{safe}", hive_path),
+                    "tool_call_id": tcid,
+                    "artifact_path": hive_path,
+                    "description": (
+                        f"hypothesis: registry Services entry '{svc}' installs ImagePath "
+                        f"{cand.get('image_path')} from a user-writable path "
+                        f"(registry_query, last_write {cand.get('last_write_time_iso')}). "
+                        "Service persistence is a lead — corroborate the binary's origin "
+                        "and any execution evidence before asserting activity."
+                    ),
+                    "confidence": "HYPOTHESIS",
+                    "pool_origin": "A",
+                    "mitre_technique": "T1543.003",
+                    "derived_from": [tcid],
+                }
+            else:
+                continue
+            self.findings_pool_a.append(finding)
+            print(
+                f"  pool-A persistence finding: {finding['finding_id']} "
+                f"({finding['confidence']})"
+            )
+
     def _corroborate_execution_with_userassist(
         self,
         rust: SshMcpClient,
@@ -7442,6 +7653,19 @@ class Investigation:
                 print(
                     f"  registry_query: {path} {key_path or '<root>'} entries={len(rows)}"
                 )
+                # Pool A disk-persistence emitters: Run/RunOnce values and
+                # user-writable service installs become Findings citing this
+                # registry_query tool call (prefetch corroboration when the
+                # same binary already surfaced there).
+                candidates = registry_persistence_candidates(rows, key_path)
+                if candidates:
+                    prefetch_tcids = {
+                        exe_base: str(f.get("tool_call_id") or "")
+                        for exe_base, f in self._prefetch_exec_findings
+                    }
+                    self._emit_registry_persistence_findings(
+                        candidates, path, key_path, tcid, prefetch_tcids
+                    )
 
         self._corroborate_execution_with_userassist(rust, py, by_class)
 
