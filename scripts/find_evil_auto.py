@@ -1973,6 +1973,9 @@ def build_contradiction_resolution_record(
     contradiction_id: str,
     resolution: str,
     approved_by: str,
+    pool_a_claim: str = "",
+    pool_b_claim: str = "",
+    conflicting_tool_call_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     """Pure factory for a kind='contradiction_resolved' audit record payload."""
     return {
@@ -1980,6 +1983,9 @@ def build_contradiction_resolution_record(
         "contradiction_id": contradiction_id,
         "resolution": resolution,
         "approved_by": approved_by,
+        "pool_a_claim": pool_a_claim,
+        "pool_b_claim": pool_b_claim,
+        "conflicting_tool_call_ids": list(conflicting_tool_call_ids or []),
     }
 
 
@@ -8595,6 +8601,28 @@ class Investigation:
         if remembered:
             print(f"  memory: remembered {remembered} CONFIRMED finding(s) for future cases")
 
+    def _audit_contradiction_resolutions(
+        self, py: SshMcpClient, contras: list[dict[str, Any]]
+    ) -> None:
+        """Audit one contradiction_resolved record per detected contradiction.
+
+        detect_contradictions emits ``contradiction_id`` (not ``id``); carrying
+        the conflicting claims and tool_call_ids makes each record
+        self-describing rather than an id='unknown' stub.
+        """
+        for contra in contras:
+            record = build_contradiction_resolution_record(
+                contradiction_id=str(contra.get("contradiction_id", "unknown")),
+                resolution=str(contra.get("resolution", "auto_higher_credibility")),
+                approved_by="auto" if self.unattended else "analyst",
+                pool_a_claim=str(contra.get("pool_a_claim", "")),
+                pool_b_claim=str(contra.get("pool_b_claim", "")),
+                conflicting_tool_call_ids=[
+                    str(t) for t in contra.get("conflicting_tool_call_ids", [])
+                ],
+            )
+            self._audit(py, record["kind"], {k: v for k, v in record.items() if k != "kind"})
+
     def reason(self, py: SshMcpClient) -> tuple[list[dict[str, Any]], int, int, int]:
         print("\n=== reasoning phase ===")
 
@@ -8615,13 +8643,7 @@ class Investigation:
         )
         contras = cs.get("contradictions", []) if "_error" not in cs else []
         print(f"  contradictions: {len(contras)}")
-        for contra in contras:
-            record = build_contradiction_resolution_record(
-                contradiction_id=str(contra.get("id", "unknown")),
-                resolution=str(contra.get("resolution", "auto_higher_credibility")),
-                approved_by="auto" if self.unattended else "analyst",
-            )
-            self._audit(py, record["kind"], {k: v for k, v in record.items() if k != "kind"})
+        self._audit_contradiction_resolutions(py, contras)
 
         # verify_finding before judge_findings. The verifier re-runs the
         # cited typed tool call and approves, downgrades, or rejects each
