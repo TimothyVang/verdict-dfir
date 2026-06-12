@@ -170,3 +170,82 @@ class TestPoolASamEmitter:
         # (tool-backed) and its name matches the suspicious-naming heuristic.
         assert "user account" in desc and "suspicious naming" in desc
         assert "mr. evil" in desc
+
+
+ACMRU_KEY = "Software\\Microsoft\\Search Assistant\\ACMru\\5603"
+OPENSAVE_KEY = (
+    "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\exe"
+)
+
+
+class TestMruCandidates:
+    def test_acmru_search_terms_are_candidates(self) -> None:
+        rows = [
+            _row(
+                ACMRU_KEY,
+                [_val("000", "ethereal"), _val("001", "WinPcap"), _val("MRUList", "10")],
+                lw="2004-08-27T15:00:00Z",
+            )
+        ]
+        cands = fea.registry_mru_candidates(rows)
+        # MRUList ordering value is not an entry.
+        assert len(cands) == 2
+        assert {c["kind"] for c in cands} == {"search_term"}
+        assert {c["value"] for c in cands} == {"ethereal", "WinPcap"}
+        assert cands[0]["last_write_time_iso"] == "2004-08-27T15:00:00Z"
+
+    def test_opensave_mru_paths_are_candidates(self) -> None:
+        rows = [
+            _row(
+                OPENSAVE_KEY,
+                [_val("a", "C:\\hacking\\cain.exe"), _val("MRUListEx", "00")],
+            )
+        ]
+        cands = fea.registry_mru_candidates(rows)
+        assert len(cands) == 1
+        assert cands[0]["kind"] == "opened_file"
+        assert cands[0]["value"].lower().endswith("cain.exe")
+
+    def test_non_mru_rows_yield_nothing(self) -> None:
+        assert fea.registry_mru_candidates([_row(USBSTOR_KEY)]) == []
+
+    def test_empty_value_is_skipped(self) -> None:
+        rows = [_row(ACMRU_KEY, [_val("000", "")])]
+        assert fea.registry_mru_candidates(rows) == []
+
+
+class TestPoolMruEmitter:
+    def _inv(self):
+        inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+        inv.handle = {"id": "case-mru"}
+        return inv
+
+    def test_search_term_becomes_pool_a_finding(self) -> None:
+        inv = self._inv()
+        cand = {
+            "kind": "search_term",
+            "value": "ethereal",
+            "hive_key": ACMRU_KEY,
+            "last_write_time_iso": "2004-08-27T15:00:00Z",
+        }
+        inv._emit_registry_activity_findings([cand], "/evidence/NTUSER.DAT", ACMRU_KEY, "tc-mru-1")
+        assert len(inv.findings_pool_a) == 1
+        f = inv.findings_pool_a[0]
+        assert f["pool_origin"] == "A"
+        assert f["confidence"] == "INFERRED"
+        assert f["finding_id"].startswith("f-A-mru-")
+        assert "search" in f["description"].lower() and "ethereal" in f["description"].lower()
+
+    def test_opened_file_becomes_pool_a_finding(self) -> None:
+        inv = self._inv()
+        cand = {
+            "kind": "opened_file",
+            "value": "C:\\hacking\\cain.exe",
+            "hive_key": OPENSAVE_KEY,
+            "last_write_time_iso": "2004-08-27T15:00:00Z",
+        }
+        inv._emit_registry_activity_findings([cand], "/evidence/NTUSER.DAT", OPENSAVE_KEY, "tc-mru-2")
+        assert len(inv.findings_pool_a) == 1
+        f = inv.findings_pool_a[0]
+        assert f["confidence"] == "INFERRED"
+        assert "recently" in f["description"].lower() and "cain.exe" in f["description"].lower()

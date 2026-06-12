@@ -1390,7 +1390,13 @@ def registry_persistence_candidates(
 
 # Triage keys whose payload lives in nested subkeys (everything else is flat).
 _RECURSIVE_TRIAGE_KEYS = frozenset(
-    {r"ControlSet001\Enum\USBSTOR", r"SAM\Domains\Account\Users\Names"}
+    {
+        r"ControlSet001\Enum\USBSTOR",
+        r"SAM\Domains\Account\Users\Names",
+        r"Software\Microsoft\Search Assistant\ACMru",
+        r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU",
+        r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\LastVisitedMRU",
+    }
 )
 
 _USBSTOR_SERIAL_RE = re.compile(
@@ -1482,6 +1488,52 @@ def registry_sam_account_candidates(rows: list[dict[str, Any]]) -> list[dict[str
                 "last_write_time_iso": row.get("last_write_time_iso"),
             }
         )
+    return out
+
+
+_ACMRU_KEY_RE = re.compile(r"\\search assistant\\acmru\\", re.IGNORECASE)
+_OPENSAVE_KEY_RE = re.compile(r"\\comdlg32\\(opensave|lastvisited)", re.IGNORECASE)
+# MRU ordering values, not entries.
+_MRU_ORDER_VALUES = frozenset({"mrulist", "mrulistex"})
+
+
+def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Classify NTUSER MRU rows into recent-activity candidates.
+
+    Pure function. Two text-form MRUs the NIST golden cares about: XP Search
+    Assistant ACMru (recent search terms -> nhc-001) and ComDlg32 OpenSave/
+    LastVisited MRU (recently opened file paths -> nhc-011). Binary-PIDL MRUs
+    (RecentDocs) are out of scope. The MRUList/MRUListEx ordering values are
+    not entries.
+    """
+    out: list[dict[str, Any]] = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        row_key = str(row.get("key_path") or "").replace("/", "\\")
+        if _ACMRU_KEY_RE.search(row_key):
+            kind = "search_term"
+        elif _OPENSAVE_KEY_RE.search(row_key):
+            kind = "opened_file"
+        else:
+            continue
+        lw = row.get("last_write_time_iso")
+        for v in row.get("values") or []:
+            if not isinstance(v, dict):
+                continue
+            if str(v.get("name") or "").lower() in _MRU_ORDER_VALUES:
+                continue
+            data = str(v.get("data_str") or "").strip()
+            if not data:
+                continue
+            out.append(
+                {
+                    "kind": kind,
+                    "value": data,
+                    "hive_key": row_key,
+                    "last_write_time_iso": lw,
+                }
+            )
     return out
 
 
@@ -6997,7 +7049,15 @@ class Investigation:
             return [r"ControlSet001\Services", r"ControlSet001\Enum\USBSTOR"]
         if name == "sam":
             return [r"SAM\Domains\Account\Users\Names"]
-        if name in {"ntuser.dat", "usrclass.dat"}:
+        if name == "ntuser.dat":
+            return [
+                r"Software\Microsoft\Windows\CurrentVersion\Run",
+                r"Software\Microsoft\Windows\CurrentVersion\RunOnce",
+                r"Software\Microsoft\Search Assistant\ACMru",
+                r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU",
+                r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\LastVisitedMRU",
+            ]
+        if name == "usrclass.dat":
             return [
                 r"Software\Microsoft\Windows\CurrentVersion\Run",
                 r"Software\Microsoft\Windows\CurrentVersion\RunOnce",
@@ -7101,7 +7161,38 @@ class Investigation:
         INFERRED never flips a verdict.
         """
         for cand in candidates:
-            if cand.get("kind") == "sam_account":
+            kind = cand.get("kind")
+            if kind in {"search_term", "opened_file"}:
+                value = str(cand.get("value") or "")
+                safe = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")[:40] or "mru"
+                if kind == "search_term":
+                    detail = (
+                        f"User search-assistant history records the recent search term "
+                        f"'{value}'"
+                    )
+                else:
+                    detail = f"User recently opened-file MRU records '{value}'"
+                finding = {
+                    "case_id": self.handle["id"],
+                    "finding_id": self._finding_id_for(f"f-A-mru-{safe}", hive_path),
+                    "tool_call_id": tcid,
+                    "artifact_path": hive_path,
+                    "description": (
+                        f"{detail} ({cand.get('hive_key')}, registry_query, last_write "
+                        f"{cand.get('last_write_time_iso')}). INFERRED user activity: the "
+                        "MRU entry's existence is tool-backed and reflects deliberate "
+                        "user action. It records intent/recency, not execution of any "
+                        "binary."
+                    ),
+                    "confidence": "INFERRED",
+                    "pool_origin": "A",
+                    "mitre_technique": "T1217" if kind == "opened_file" else "T1083",
+                    "derived_from": [tcid],
+                }
+                self.findings_pool_a.append(finding)
+                print(f"  pool-A activity finding: {finding['finding_id']} (INFERRED)")
+                continue
+            if kind == "sam_account":
                 name = str(cand.get("account_name") or "account")
                 safe = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "account"
                 finding = {
@@ -7703,9 +7794,11 @@ class Investigation:
                     )
                 # Pool B activity emitters: USBSTOR insertion history becomes
                 # a HYPOTHESIS exfil/staging lead citing this registry_query.
-                activity_candidates = registry_usb_candidates(
-                    rows
-                ) + registry_sam_account_candidates(rows)
+                activity_candidates = (
+                    registry_usb_candidates(rows)
+                    + registry_sam_account_candidates(rows)
+                    + registry_mru_candidates(rows)
+                )
                 if activity_candidates:
                     self._emit_registry_activity_findings(activity_candidates, path, key_path, tcid)
 
