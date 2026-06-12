@@ -1794,7 +1794,8 @@ def mft_hacking_tool_candidates(rows: list[dict[str, Any]]) -> list[dict[str, An
                     {
                         "tool": tok,
                         "path": path,
-                        "created": row.get("fn_created_iso") or row.get("si_created_iso"),
+                        "created": row.get("fn_created_iso")
+                        or row.get("si_created_iso"),
                         "record_number": row.get("record_number"),
                     }
                 )
@@ -7669,10 +7670,16 @@ class Investigation:
                 print(f"  pool-A activity finding: {finding['finding_id']} (INFERRED)")
                 continue
             if kind == "shellbag":
-                folders = [str(c.get("folder") or "") for c in candidates if c.get("kind") == "shellbag"]
+                folders = [
+                    str(c.get("folder") or "")
+                    for c in candidates
+                    if c.get("kind") == "shellbag"
+                ]
                 # Emit once for the whole shellbag set (cand is the first); skip
                 # the rest so we don't duplicate the aggregate finding.
-                if cand is not next(c for c in candidates if c.get("kind") == "shellbag"):
+                if cand is not next(
+                    c for c in candidates if c.get("kind") == "shellbag"
+                ):
                     continue
                 listing = ", ".join(dict.fromkeys(folders))[:300]
                 finding = {
@@ -7695,7 +7702,9 @@ class Investigation:
                     "derived_from": [tcid],
                 }
                 self.findings_pool_b.append(finding)
-                print(f"  pool-B activity finding: {finding['finding_id']} (HYPOTHESIS)")
+                print(
+                    f"  pool-B activity finding: {finding['finding_id']} (HYPOTHESIS)"
+                )
                 continue
             if cand.get("kind") != "usb_device":
                 continue
@@ -7773,7 +7782,9 @@ class Investigation:
             "derived_from": [tcid],
         }
         self.findings_pool_a.append(finding)
-        print(f"  pool-A finding: {finding['finding_id']} (INFERRED, {len(candidates)} tool(s))")
+        print(
+            f"  pool-A finding: {finding['finding_id']} (INFERRED, {len(candidates)} tool(s))"
+        )
 
     def _corroborate_execution_with_userassist(
         self,

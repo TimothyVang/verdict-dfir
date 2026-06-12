@@ -76,10 +76,18 @@ class TestMftToolEmitter:
     def test_candidates_become_one_pool_a_finding(self) -> None:
         inv = self._inv()
         cands = [
-            {"tool": "anonymizer", "path": "Program Files/Anonymizer",
-             "created": "2004-08-20T15:05:06Z", "record_number": 4242},
-            {"tool": "ethereal", "path": "Documents and Settings/Mr. Evil/Desktop/ethereal-setup.exe",
-             "created": "2004-08-27T15:35:04Z", "record_number": 9001},
+            {
+                "tool": "anonymizer",
+                "path": "Program Files/Anonymizer",
+                "created": "2004-08-20T15:05:06Z",
+                "record_number": 4242,
+            },
+            {
+                "tool": "ethereal",
+                "path": "Documents and Settings/Mr. Evil/Desktop/ethereal-setup.exe",
+                "created": "2004-08-27T15:35:04Z",
+                "record_number": 9001,
+            },
         ]
         inv._emit_mft_hacking_tool_finding(cands, "/evidence/$MFT", "tc-mft-1")
         assert len(inv.findings_pool_a) == 1

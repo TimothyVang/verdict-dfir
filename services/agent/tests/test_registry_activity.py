@@ -302,12 +302,22 @@ class TestPoolMruEmitter:
         inv = self._inv()
         base = "C:\\Documents and Settings\\Mr. Evil\\Desktop\\"
         cands = [
-            {"kind": "opened_file", "value": base + "ethereal-setup-0.10.6.exe",
-             "hive_key": OPENSAVE_KEY, "last_write_time_iso": "2004-08-27T15:00:00Z"},
-            {"kind": "opened_file", "value": base + "WinPcap_3_01_a.exe",
-             "hive_key": OPENSAVE_KEY, "last_write_time_iso": "2004-08-27T15:00:00Z"},
+            {
+                "kind": "opened_file",
+                "value": base + "ethereal-setup-0.10.6.exe",
+                "hive_key": OPENSAVE_KEY,
+                "last_write_time_iso": "2004-08-27T15:00:00Z",
+            },
+            {
+                "kind": "opened_file",
+                "value": base + "WinPcap_3_01_a.exe",
+                "hive_key": OPENSAVE_KEY,
+                "last_write_time_iso": "2004-08-27T15:00:00Z",
+            },
         ]
-        inv._emit_registry_activity_findings(cands, "/evidence/NTUSER.DAT", OPENSAVE_KEY, "tc-mru-3")
+        inv._emit_registry_activity_findings(
+            cands, "/evidence/NTUSER.DAT", OPENSAVE_KEY, "tc-mru-3"
+        )
         ids = {f["finding_id"] for f in inv.findings_pool_a}
         assert len(ids) == 2
 
@@ -326,7 +336,9 @@ def _hexbytes(*names: str) -> str:
 class TestShellbagCandidates:
     def test_network_share_navigation_is_a_candidate(self) -> None:
         rows = [
-            _row(BAGMRU_KEY + "\\0\\1", [_val("0", _hexbytes("\\\\4.220.254\\Temp"), "REG_BINARY")]),
+            _row(
+                BAGMRU_KEY + "\\0\\1", [_val("0", _hexbytes("\\\\4.220.254\\Temp"), "REG_BINARY")]
+            ),
         ]
         cands = fea.registry_shellbag_candidates(rows)
         assert any("4.220.254" in c["folder"] for c in cands)
@@ -368,10 +380,18 @@ class TestPoolBShellbagEmitter:
     def test_shellbag_candidates_become_one_pool_b_finding(self) -> None:
         inv = self._inv()
         cands = [
-            {"kind": "shellbag", "folder": "\\\\4.220.254\\Temp", "hive_key": BAGMRU_KEY + "\\0\\1",
-             "last_write_time_iso": "2004-08-27T15:00:00Z"},
-            {"kind": "shellbag", "folder": "mIRC", "hive_key": BAGMRU_KEY + "\\2",
-             "last_write_time_iso": "2004-08-27T15:00:00Z"},
+            {
+                "kind": "shellbag",
+                "folder": "\\\\4.220.254\\Temp",
+                "hive_key": BAGMRU_KEY + "\\0\\1",
+                "last_write_time_iso": "2004-08-27T15:00:00Z",
+            },
+            {
+                "kind": "shellbag",
+                "folder": "mIRC",
+                "hive_key": BAGMRU_KEY + "\\2",
+                "last_write_time_iso": "2004-08-27T15:00:00Z",
+            },
         ]
         inv._emit_registry_activity_findings(cands, "/evidence/NTUSER.DAT", BAGMRU_KEY, "tc-bag-1")
         assert len(inv.findings_pool_b) == 1
