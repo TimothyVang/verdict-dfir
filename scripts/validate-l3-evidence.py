@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Validate local SIFT L3 fallback evidence and emit benchmark verdict JSON.
+"""Validate local L3 fallback evidence and emit benchmark verdict JSON.
 
 The normal L3 path runs SIFT goldens under KVM. GitHub-hosted KVM runners are
 not always available, so release workflows may use this script to validate an
-explicit local SIFT evidence summary instead of silently treating a skipped KVM
-run as green.
+explicit local evidence summary instead of silently treating a skipped KVM run
+as green.
 """
 
 from __future__ import annotations
@@ -48,10 +48,15 @@ def validate_evidence(data: dict[str, Any]) -> list[str]:
 
     if data.get("version") != 1:
         errors.append("version must be 1")
-    if data.get("evidence_kind") != "local-sift-vmware-l3-fallback":
-        errors.append("evidence_kind must be local-sift-vmware-l3-fallback")
+    if data.get("evidence_kind") not in {
+        "local-sift-vmware-l3-fallback",
+        "committed-local-l3-fallback",
+    }:
+        errors.append("evidence_kind must be a supported local L3 fallback kind")
     if data.get("fixture") != "nist-hacking-case":
         errors.append("fixture must be nist-hacking-case")
+    if data.get("findings_expected") != 14:
+        errors.append("findings_expected must be 14 for nist-hacking-case")
     product_commit = str(data.get("product_commit") or "")
     if not HEX40.fullmatch(product_commit):
         errors.append("product_commit must be a 40-character lowercase hex SHA")
@@ -77,6 +82,27 @@ def validate_evidence(data: dict[str, Any]) -> list[str]:
         errors.append("run.ready_for_expert_signoff must be true")
     if nested(data, "run", "customer_releasable") is not False:
         errors.append("run.customer_releasable must be false")
+    if nested(data, "run", "verdict") != "SUSPICIOUS":
+        errors.append("run.verdict must be SUSPICIOUS for the current NIST fallback")
+
+    recall = data.get("recall")
+    if not isinstance(recall, dict):
+        errors.append("recall must be an object")
+        recall = {}
+    expected_n = positive_int(recall.get("expected_n"))
+    recalled_n = positive_int(recall.get("recalled_n"))
+    if expected_n != 14:
+        errors.append("recall.expected_n must be 14")
+    if recalled_n is None:
+        errors.append("recall.recalled_n must be positive")
+    elif expected_n is not None and recalled_n > expected_n:
+        errors.append("recall.recalled_n must not exceed recall.expected_n")
+    if (
+        finding_count is not None
+        and recalled_n is not None
+        and finding_count < recalled_n
+    ):
+        errors.append("run.finding_count must be >= recall.recalled_n")
 
     if nested(data, "readiness", "readiness_state") != "READY_FOR_EXPERT_REVIEW":
         errors.append("readiness.readiness_state must be READY_FOR_EXPERT_REVIEW")
@@ -93,13 +119,16 @@ def validate_evidence(data: dict[str, Any]) -> list[str]:
         "verdict_sha256",
         "run_manifest_sha256",
         "manifest_verify_sha256",
-        "readiness_summary_sha256",
-        "readiness_packet_zip_sha256",
+        "recall_score_sha256",
         "merkle_root_hex",
     ):
         value = str(artifacts.get(key) or "")
         if not HEX64.fullmatch(value):
             errors.append(f"artifacts.{key} must be a lowercase sha256/merkle hex")
+    for key in ("readiness_summary_sha256", "readiness_packet_zip_sha256"):
+        value = artifacts.get(key)
+        if value is not None and not HEX64.fullmatch(str(value)):
+            errors.append(f"artifacts.{key} must be a lowercase sha256 when present")
     if artifacts.get("manifest_verify_overall") is not True:
         errors.append("artifacts.manifest_verify_overall must be true")
     if positive_int(artifacts.get("manifest_leaf_count")) is None:
@@ -114,8 +143,11 @@ def validate_evidence(data: dict[str, Any]) -> list[str]:
 
 def benchmark_verdict(data: dict[str, Any]) -> dict[str, Any]:
     run = data["run"]
+    recall = data["recall"]
     return {
         "fixture": data["fixture"],
+        "findings_matched": recall["recalled_n"],
+        "run_finding_count": run["finding_count"],
         "finding_count": run["finding_count"],
         "findings_expected": data.get("findings_expected", ""),
         "verdict": run.get("verdict", ""),
@@ -159,7 +191,7 @@ def main(argv: list[str]) -> int:
         )
         print(f"[l3-evidence] emitted {args.emit}")
     print(
-        "[l3-evidence] PASS: local SIFT evidence validates "
+        "[l3-evidence] PASS: local L3 evidence validates "
         f"({data['fixture']}, findings={data['run']['finding_count']})"
     )
     return 0

@@ -1,35 +1,30 @@
 {
   "version": 1,
-  "evidence_kind": "local-sift-vmware-l3-fallback",
+  "evidence_kind": "committed-local-l3-fallback",
   "fixture": "nist-hacking-case",
-  "findings_expected": 1,
-  "product_commit": "b5534e4867981eecf844e1734384c1fea164ec65",
-  "generated_at_utc": "2026-05-21T03:00:22Z",
-  "scope_note": "Local VMware SIFT evidence for product commit b5534e4. Added so GitHub L3 can validate explicit local evidence when the KVM runner label has no capacity; this is not a remote KVM run.",
-  "sift_vm": {
-    "hostname": "siftworkstation",
-    "ip_observed": "192.168.197.143"
-  },
+  "findings_expected": 14,
+  "product_commit": "857e1efbf15789fc61a8eb3ef46ecae639cf5c98",
+  "generated_at_utc": "2026-06-13T17:14:22Z",
+  "scope_note": "Committed local NIST fallback evidence for product commit 857e1ef. Added so GitHub L3 can validate explicit evidence when the KVM runner label has no capacity; this is not a remote KVM run and does not claim SIFT parity.",
   "nist_image": {
-    "path_inside_sift": "/home/sansforensics/find-evil/fixtures/nist-hacking-case/SCHARDT.dd",
+    "path": "evidence/SCHARDT.dd",
     "sha256": "65e2002fed0b286f49541c7e97dcec0dda913d51a063ceeed86782bdacda2312",
     "size_bytes": 4871301120
   },
   "run": {
-    "host_run_dir": "tmp/auto-runs/auto-e3e01e00-9c13-4f32-b4ef-43b670b07785",
-    "sift_run_dir": "/home/sansforensics/find-evil/tmp/auto-e3e01e00-9c13-4f32-b4ef-43b670b07785",
-    "case_id": "d5c85735-03bc-409b-abee-67a2d982498e",
-    "run_id": "auto-1779331833",
-    "verdict": "INDETERMINATE",
-    "finding_count": 9,
-    "judge_merged_findings": 9,
+    "host_run_dir": "docs/sample-run/nist-hacking-case",
+    "case_id": "bb2953cd-bdd9-4251-a493-70c97663f892",
+    "run_id": "auto-1781370852",
+    "verdict": "SUSPICIOUS",
+    "finding_count": 27,
+    "judge_merged_findings": 27,
     "verifier": {
-      "approved": 9,
+      "approved": 27,
       "downgraded": 0,
       "rejected": 0
     },
     "correlator": {
-      "kept": 9,
+      "kept": 27,
       "downgraded": 0
     },
     "report_qa_status": "WARN",
@@ -42,37 +37,54 @@
       "attack_coverage_blind_spots"
     ]
   },
+  "recall": {
+    "expected_n": 14,
+    "recalled_n": 7,
+    "recall_percent": 50,
+    "min_recall_percent": 71,
+    "pass": false,
+    "matched_ids": [
+      "nhc-004",
+      "nhc-005",
+      "nhc-007",
+      "nhc-008",
+      "nhc-009",
+      "nhc-010",
+      "nhc-011"
+    ],
+    "unmatched_ids": [
+      "nhc-001",
+      "nhc-002",
+      "nhc-003",
+      "nhc-006",
+      "nhc-012",
+      "nhc-013",
+      "nhc-014"
+    ]
+  },
   "readiness": {
-    "run_id": "nist-sift-full-20260521",
+    "run_id": "nist-local-20260613",
     "readiness_state": "READY_FOR_EXPERT_REVIEW",
     "blockers": [],
     "warnings": [
-      "local build run already exists for nist-sift-full-20260521-build; using fresh build run id nist-sift-full-20260521-build-20260521T025830Z",
+      "NIST recall is 7/14 = 50%, below the 71% golden bar",
       "report QA has warnings: EXPERT_REVIEW_DRAFT"
     ],
-    "signer": "stub",
+    "signer": "ed25519",
     "customer_releasable": false
   },
   "artifacts": {
-    "verdict_sha256": "d143e4c3476e8f58c393315f382d44cc8b8f17a99746f5cfad133722a993d5a9",
-    "run_manifest_sha256": "8972672032b9f1bb523d8544365bb36e325d89d1d32e7eab1eb4b0f771077337",
-    "manifest_verify_sha256": "790f93cbb45b1d9973caa640f3a6c5add319989619d82041a7355d621658d79a",
-    "readiness_summary_sha256": "4737cc5a1246e208b7f239938e9add4c5bf0873b441101b03a1b06c3a0c83e63",
-    "readiness_packet_zip_sha256": "78a14a835a0fdd5cca863c65a3a6328b819aded614d739a96fff8bb2fd3f4f18",
+    "verdict_sha256": "75f36c31cc4124eafda590f753c7d7bd79ae4ceb375d36853921d2e35cb91a8d",
+    "run_manifest_sha256": "0a568b7ae314a629939bcce7ff0caa8ceee47b3f0fede1e61af83f7c3a58c037",
+    "manifest_verify_sha256": "53d3fda4d85ca57c35f65f6fc4d42d78dc629559f0e8a9246eca663de010563a",
+    "recall_score_sha256": "ed70a7ee36aff5cc04da1d7a77ee67e19b3bfeeafdc487cf22575bac3b43d1e4",
     "manifest_verify_overall": true,
-    "manifest_leaf_count": 91,
-    "merkle_root_hex": "1c506035da8301157e92850c03070ed9a2594e29b304e0ddf481fda147280de3"
+    "manifest_leaf_count": 244,
+    "merkle_root_hex": "1a2b2f39dd4d8a03e00aae54cd7ace5441eb510f9219dbed593d9e2ded98072a"
   },
   "verification_commands": [
-    "python -m py_compile scripts/find_evil_auto.py",
-    "ruff check scripts/find_evil_auto.py",
-    "ruff format --check scripts/find_evil_auto.py",
-    "cargo fmt --all --check",
-    "cargo clippy --workspace --all-targets --locked -- -D warnings",
-    "cargo test -p findevil-mcp --lib disk::tests",
-    "python scripts/find_evil_auto.py /home/sansforensics/find-evil/fixtures/nist-hacking-case/SCHARDT.dd --unattended --no-report --run-summary tmp/nist-l3-summary-dd-wording-fixed.json",
-    "python scripts/json-to-benchmark-csv.py logs/l3 > tmp/benchmark-results.csv",
-    "python scripts/validate-submission-assets.py --benchmark tmp/benchmark-results.csv",
-    "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -ExistingRunDir tmp/auto-runs/auto-e3e01e00-9c13-4f32-b4ef-43b670b07785 -RunId nist-sift-full-20260521"
+    "PATH=\"$HOME/.cargo/bin:$PATH\" bash scripts/run-all-smokes.sh",
+    "bash scripts/verdict evidence/SCHARDT.dd --skip-build --no-dashboard --run-summary tmp/schardt-final-summary.json --unattended",
+    "python3 scripts/score-recall.py docs/sample-run/nist-hacking-case --golden goldens/nist-hacking-case"
   ]
 }

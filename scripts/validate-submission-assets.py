@@ -147,13 +147,15 @@ def validate_benchmark(path: Path) -> CheckResult:
             False, "benchmark CSV missing fixture/findings_matched columns"
         )
     for row in rows:
-        if row_is_positive_nist(row):
+        if row_is_coherent_nist_score(row):
             return CheckResult(
                 True,
-                "benchmark CSV contains nist-hacking-case with findings_matched > 0",
+                "benchmark CSV contains coherent nist-hacking-case recall row",
             )
     return CheckResult(
-        False, "benchmark CSV lacks nist-hacking-case row with findings_matched > 0"
+        False,
+        "benchmark CSV lacks coherent nist-hacking-case row "
+        "(findings_matched > 0 and findings_expected >= findings_matched)",
     )
 
 
@@ -264,9 +266,10 @@ def validate_zip(path: Path) -> CheckResult:
             rows = list(csv.DictReader(io.TextIOWrapper(fh, encoding="utf-8-sig")))
         if not rows:
             return CheckResult(False, "zip benchmark-results.csv has no data rows")
-        if not any(row_is_positive_nist(row) for row in rows):
+        if not any(row_is_coherent_nist_score(row) for row in rows):
             return CheckResult(
-                False, "zip benchmark-results.csv lacks positive nist-hacking-case row"
+                False,
+                "zip benchmark-results.csv lacks coherent nist-hacking-case row",
             )
         report = zf.read("report.html").decode("utf-8", errors="replace")
         report_result = validate_report_text(report)
@@ -763,14 +766,16 @@ def validate_readiness_packet(path: Path) -> CheckResult:
         return CheckResult(False, f"readiness packet is not a valid ZIP file: {path}")
 
 
-def row_is_positive_nist(row: dict[str, str]) -> bool:
+def row_is_coherent_nist_score(row: dict[str, str]) -> bool:
     source_name = Path(row.get("source_file") or "").name
     fixture = row.get("fixture") or ""
     is_nist = (
         fixture == "nist-hacking-case"
         or source_name == "nist-hacking-case-verdict.json"
     )
-    return is_nist and bool(parse_positive_int(row.get("findings_matched")))
+    matched = parse_positive_int(row.get("findings_matched"))
+    expected = parse_positive_int(row.get("findings_expected"))
+    return bool(is_nist and matched and expected and expected >= matched)
 
 
 def report_result(name: str, result: CheckResult) -> bool:

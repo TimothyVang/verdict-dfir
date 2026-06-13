@@ -574,7 +574,7 @@ def main() -> int:
             zf.writestr("README-submission.md", "Find Evil submission package\n")
             zf.writestr(
                 "benchmark-results.csv",
-                "fixture,source_file,findings_matched\nnist-hacking-case,,1\n",
+                "fixture,source_file,findings_matched,findings_expected\nnist-hacking-case,,1,14\n",
             )
             zf.writestr("demo-video-link.txt", "https://example.org/findevil-demo\n")
             zf.writestr("LICENSE", "Test license fixture\n")

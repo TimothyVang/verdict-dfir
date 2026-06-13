@@ -1,6 +1,6 @@
 {
   "case_id": "nist-hacking-case",
-  "case_dir": "tmp/auto-runs/schardt-sift-rescore",
+  "case_dir": "docs/sample-run/nist-hacking-case-sift",
   "golden": "goldens/nist-hacking-case/expected-findings.json",
   "expected_n": 14,
   "recalled_n": 5,

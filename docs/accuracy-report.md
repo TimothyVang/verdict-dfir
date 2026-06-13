@@ -52,7 +52,7 @@ as of this report:
 | # | Case | Class | Golden outcome | Recall bar | Result | Status |
 |---|---|---|---|---|---|---|
 | 1 | `nitroba` | network (pcap) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 80% | **5/5 = 100%** · run `INDETERMINATE` | **PASS** (committed: `docs/sample-run/nitroba`) |
-| 2 | `nist-hacking-case` | disk (XP) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 71% | **5/14 = 36%** · run `SUSPICIOUS` | **FAIL** — narrowed gap, up from 7% (committed: `docs/sample-run/nist-hacking-case`) |
+| 2 | `nist-hacking-case` | disk (XP) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 71% | **7/14 = 50%** · run `SUSPICIOUS` | **FAIL** — narrowed gap, up from 7% (committed: `docs/sample-run/nist-hacking-case`) |
 | 3 | `nist-data-leakage` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
 | 4 | `alihadi-09-encrypt` | disk (FP control) | **INDETERMINATE** | 50% | — | staged, scheduled (local TSK / SIFT parity) |
 | 5 | `alihadi-01-webserver` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
@@ -63,13 +63,13 @@ as of this report:
 | 10 | `synthetic-benign` | negative control | **NO_EVIL** (0 findings) | 100% | — | staged, scheduled |
 
 **Honest summary:** 1 of 10 fully scored and passing (`nitroba`, 100%); 1 scored and failing but
-**measurably improving** (`nist-hacking-case`, **36% = 5/14, up from 7% = 1/14**). The committed run
-now recalls five of the golden's fourteen canonical claims — hacking-tool execution (Prefetch,
-8 CONFIRMED), on-disk tool artifacts, **shellbag** navigation to staged files, the **suspiciously-named
-account `Mr. Evil`** (SAM, T1136.001), and the **recently-opened-file MRU** — after the SAM /
-NTUSER-MRU / shellbag artifact lanes landed. It still misses the deleted-email, internet-history,
-LNK, recycle-bin, event-log, thumbcache, USB-history, and named-pipe artifacts the golden also
-expects, so it honestly scopes to `SUSPICIOUS` rather than overstate coverage (verdict polarity maps
+**measurably improving** (`nist-hacking-case`, **50% = 7/14, up from 7% = 1/14**). The committed run
+now recalls seven of the golden's fourteen canonical claims — hacking-tool execution (Prefetch /
+UserAssist, 8 CONFIRMED), on-disk tool artifacts, **shellbag** navigation to staged files,
+removable-media **LNK** traces, **Recycle Bin** staging artifacts, the **suspiciously-named account
+`Mr. Evil`** (SAM, T1136.001), and the **recently-opened-file MRU**. It still misses the ACMru search
+history, USB-history, deleted-email, internet-history, legacy event-log, thumbcache, and named-pipe
+artifacts the golden also expects, so it honestly scopes to `SUSPICIOUS` rather than overstate coverage (verdict polarity maps
 to the legacy golden's `CONFIRMED_EVIL` label). The number is reproducible:
 `scripts/score-recall.py docs/sample-run/nist-hacking-case --golden goldens/nist-hacking-case`. The
 remaining 8 goldens are fixture-staged and pending batch execution — **scheduled, not yet run.** We
@@ -192,12 +192,10 @@ Every committed sample run is offline-verifiable; these are the actual recorded 
   the newer SAM/MRU/shellbag findings are honestly held at HYPOTHESIS/INFERRED. The EVTX-only
   `attack-samples` run confirms only the directly-observed EID 1102 log-clear and holds the weaker
   leads at HYPOTHESIS.
-- **Mode parity (exact)** — the local and `--sift` runs of `SCHARDT.dd` produce the **identical**
-  19-finding set, the same 8-CONFIRMED / 2-INFERRED / 9-HYPOTHESIS distribution, and the same
-  **5/14 = 36% recall**. The `--sift` run executed inside the SANS SIFT VM over SSH (its
-  `evidence_path` is the VM's `/home/sansforensics/evidence/SCHARDT.dd`), so a judge gets the same
-  result whether they take the easy no-VM path or the full VM — the heavier path buys nothing the
-  host path doesn't already deliver on this image.
+- **Mode parity status** — the refreshed committed local run produces 27 findings and **7/14 = 50%**
+  recall. The older committed `--sift` reference still proves SANS SIFT VM execution, but it predates
+  the native LNK / Recycle Bin fallback and remains at 19 findings and **5/14 = 36%**. Do not claim
+  exact local/SIFT parity until the SIFT reference is re-run and re-scored.
 
 ---
 
@@ -246,8 +244,9 @@ modify the evidence"; there is no code path that *can*:
 
 - **Disk classes are parser-bounded, not SIFT-bounded.** Local mode can extract supported disk
   artifacts via Sleuth Kit direct-read when host prerequisites are present, and the committed local
-  NIST SCHARDT result matches the SIFT-mode result exactly (5/14 = 36%). If extraction prerequisites
-  are absent or unsupported artifact classes are needed, those gaps stay as named limitations, not
+  NIST SCHARDT result is **7/14 = 50%** in the refreshed local sample; the older SIFT reference is
+  **5/14 = 36%** and should be refreshed before using it as a parity claim. If extraction
+  prerequisites are absent or unsupported artifact classes are needed, those gaps stay as named limitations, not
   clean findings.
 - **Single-source claims floor at HYPOTHESIS.** The ≥2-artifact-class rule is conservative by design;
   it will hold a real-but-uncorroborated execution claim below CONFIRMED. That trades some recall for
