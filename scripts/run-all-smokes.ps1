@@ -83,7 +83,7 @@ $python = Get-PythonCommand
 "=========================================="
 
 $rustMcpSmoke = @{
-    Label = "rust-mcp-smoke (19-tool dispatch + error paths)"
+    Label = "rust-mcp-smoke (31-tool catalog + core error paths)"
     Command = { & $python scripts/rust-mcp-smoke.py --release }
     Prereq = {
         $releaseDir = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $repo "target" }
@@ -104,7 +104,7 @@ Invoke-Smoke @agentMcpSmoke
 Invoke-Smoke -Label "verdict-policy-smoke (compute_verdict + detect_evidence_type)" -Command { & $python scripts/verdict-policy-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "fleet-policy-smoke (normalize/filter/cluster/density/uniqueness/aggregate)" -Command { & $python scripts/fleet-policy-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "report-policy-smoke (report QA + expert signoff + visual evidence policy)" -Command { & $python scripts/report-policy-smoke.py } -Prereq { $python }
-Invoke-Smoke -Label "readiness-gate-smoke (PacketOnly packaging + fail-closed blockers)" -Command { & $python scripts/readiness-gate-smoke.py } -Prereq { $python -and (Test-CommandAvailable "uv") -and ((Test-CommandAvailable "powershell") -or (Test-CommandAvailable "pwsh")) }
+Invoke-Smoke -Label "readiness-gate-smoke (PacketOnly packaging + fail-closed blockers)" -Command { uv run --directory services/agent python ../../scripts/readiness-gate-smoke.py } -Prereq { (Test-CommandAvailable "uv") -and ((Test-CommandAvailable "powershell") -or (Test-CommandAvailable "pwsh")) }
 Invoke-Smoke -Label "demo-script-smoke (9 contiguous beats summing to 5:00)" -Command { & $python scripts/demo-script-smoke.py } -Prereq { $python -and (Test-Path -LiteralPath "docs/demo-script-a2.md" -PathType Leaf) }
 Invoke-Smoke -Label "launcher-smoke (bash -n + claude binary + no positional .)" -Command {
     if (-not $env:FINDEVIL_LAUNCHER_SMOKE_BASH_TIMEOUT_SECONDS) {

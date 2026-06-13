@@ -323,7 +323,9 @@ mod tests {
         assert_eq!(out.rows_seen, 2);
         assert_eq!(out.rows.len(), 2);
         assert_eq!(
-            out.rows[0].get("MESSAGE").and_then(serde_json::Value::as_str),
+            out.rows[0]
+                .get("MESSAGE")
+                .and_then(serde_json::Value::as_str),
             Some("started")
         );
     }

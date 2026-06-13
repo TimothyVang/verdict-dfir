@@ -299,7 +299,10 @@ mod tests {
         let out = parse_indx_csv(stdout, 100, String::new()).unwrap();
         assert_eq!(out.rows_seen, 2);
         assert_eq!(out.rows.len(), 2);
-        assert_eq!(out.rows[0].get("FILENAME").map(String::as_str), Some("evil.exe"));
+        assert_eq!(
+            out.rows[0].get("FILENAME").map(String::as_str),
+            Some("evil.exe")
+        );
         assert_eq!(
             out.rows[0].get("PHYSICAL SIZE").map(String::as_str),
             Some("1024")

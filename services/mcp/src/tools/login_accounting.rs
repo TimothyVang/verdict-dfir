@@ -140,7 +140,9 @@ pub fn login_accounting(
     input: &LoginAccountingInput,
 ) -> Result<LoginAccountingOutput, LoginAccountingError> {
     if !input.accounting_path.exists() {
-        return Err(LoginAccountingError::NotFound(input.accounting_path.clone()));
+        return Err(LoginAccountingError::NotFound(
+            input.accounting_path.clone(),
+        ));
     }
     if !input.accounting_path.is_file() {
         return Err(LoginAccountingError::NotRegular(
@@ -398,7 +400,11 @@ c pts/2 h Sat Apr 25 09:16:03 2026 - Sat Apr 25 10:00:00 2026 (00:43)
 
     #[test]
     fn parse_table_empty_is_no_rows() {
-        let out = parse_last_table("\n\nwtmp begins Sat Apr 25 07:59:00 2026\n", 100, String::new());
+        let out = parse_last_table(
+            "\n\nwtmp begins Sat Apr 25 07:59:00 2026\n",
+            100,
+            String::new(),
+        );
         assert_eq!(out.rows_seen, 0);
         assert!(out.rows.is_empty());
     }

@@ -125,7 +125,7 @@ A reviewer will check these with a grep, not your word:
 
 ## Why the narrowness is the feature
 
-20 typed Rust tools with no shell verb is not a limitation we apologize for — it is the
+31 typed Rust tools with no shell verb is not a limitation we apologize for — it is the
 reason a judge can run `manifest_verify` and trust the result. Adding a tool that keeps
 this contract grows the surface **without** growing the attack surface, which is exactly
 the kind of contribution Protocol SIFT wants back.

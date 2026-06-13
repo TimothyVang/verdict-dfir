@@ -826,6 +826,45 @@ def build_readiness_section(
     )
 
 
+def build_coverage_manifest_section(coverage_manifest: dict[str, Any] | None) -> str:
+    if not coverage_manifest:
+        return ""
+    summary = coverage_manifest.get("summary") or {}
+    rows = [
+        "| Artifact Class | Status | Available | Attempted | Parsed | Failed | Unsupported | Not Supplied | Parse Errors | Records Seen | Rows Returned | Tools |",
+        "|---|---|:---:|:---:|:---:|:---:|:---:|:---:|---:|---:|---:|---|",
+    ]
+    for row in coverage_manifest.get("artifact_classes", []):
+        rows.append(
+            "| {artifact_class} | `{status}` | {available} | {attempted} | {parsed} | {failed} | {unsupported} | {not_supplied} | {parse_errors} | {records_seen} | {rows_returned} | `{tools}` |".format(
+                artifact_class=md_cell(row.get("artifact_class", "?")),
+                status=md_cell(row.get("status", "")),
+                available="yes" if row.get("available") else "no",
+                attempted="yes" if row.get("attempted") else "no",
+                parsed="yes" if row.get("parsed") else "no",
+                failed="yes" if row.get("failed") else "no",
+                unsupported="yes" if row.get("unsupported") else "no",
+                not_supplied="yes" if row.get("not_supplied") else "no",
+                parse_errors=md_cell(row.get("parse_errors", 0)),
+                records_seen=md_cell(row.get("records_seen", 0)),
+                rows_returned=md_cell(row.get("rows_returned", 0)),
+                tools=md_cell(row.get("tools_attempted", [])),
+            )
+        )
+    status_counts = summary.get("status_counts", {})
+    return (
+        "\n## Coverage Manifest\n\n"
+        f"{md_cell(coverage_manifest.get('truth_boundary', ''))}\n\n"
+        "This table is the explicit anti-overclaim record for the run. "
+        "`not_supplied`, `unsupported`, `failed`, and `partial` rows are scope gaps, not clean findings.\n\n"
+        f"* Artifact classes recorded: `{summary.get('artifact_classes_recorded', 0)}`\n"
+        f"* Attempted: `{summary.get('attempted', 0)}`; parsed: `{summary.get('parsed', 0)}`; failed: `{summary.get('failed', 0)}`\n"
+        f"* Unsupported: `{summary.get('unsupported', 0)}`; not supplied: `{summary.get('not_supplied', 0)}`\n"
+        f"* ATT&CK blind spots: `{summary.get('attack_blind_spot_count', 0)}`\n"
+        f"* Status counts: `{md_cell(status_counts)}`\n\n" + "\n".join(rows) + "\n\n"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Native HTML/CSS figures — authored as bespoke, VERDICT-themed markup and
 # injected into REPORT.html post-pandoc (see _inject_figures). Vector-crisp,
@@ -1408,6 +1447,7 @@ def write_markdown(
     has_psscan: bool,
     audit: list[dict[str, Any]] | None = None,
     completeness: dict[str, Any] | None = None,
+    coverage_manifest: dict[str, Any] | None = None,
     attack_coverage: dict[str, Any] | None = None,
     next_actions: list[dict[str, Any]] | None = None,
     timeline: list[dict[str, Any]] | None = None,
@@ -1821,6 +1861,7 @@ def write_markdown(
     )
     cast_section = build_cast_of_characters_section(entity_index)
     indicators_section = build_indicators_section(indicators)
+    coverage_manifest_section = build_coverage_manifest_section(coverage_manifest)
 
     visual_section = ""
     if evidence_cards:
@@ -1931,6 +1972,8 @@ chain-of-custody appendices.
   - HYPOTHESIS: {sum(1 for m in merged if m.get("confidence") == "HYPOTHESIS")}
 * **Contradictions surfaced (Pool A vs Pool B):** {contras}
 * **SOUL.md correlator:** {kept} kept, {downgraded} downgraded
+
+{coverage_manifest_section}
 
 ## Detailed Findings
 
@@ -2321,6 +2364,17 @@ def render_report(
         except json.JSONDecodeError:
             final_release_gate = {}
 
+    coverage_manifest = verdict_obj.get("coverage_manifest", {})
+    if not coverage_manifest:
+        coverage_manifest_path = case_dir / "coverage_manifest.json"
+        if coverage_manifest_path.exists():
+            try:
+                loaded = json.loads(coverage_manifest_path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    coverage_manifest = loaded
+            except json.JSONDecodeError:
+                coverage_manifest = {}
+
     practitioner_coverage = verdict_obj.get("attck_practitioner_coverage", {})
     has_process_view_fig = fig_process_view_comparison(
         verdict_obj.get("tool_calls", []),
@@ -2390,6 +2444,7 @@ def render_report(
         has_psscan,
         audit=audit,
         completeness=verdict_obj.get("case_completeness", {}),
+        coverage_manifest=coverage_manifest,
         attack_coverage=verdict_obj.get("attack_coverage", {}),
         next_actions=verdict_obj.get("next_actions", []),
         timeline=timeline,

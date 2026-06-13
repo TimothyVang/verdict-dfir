@@ -50,12 +50,12 @@ the matching `investigate_*` method too, or the two paths drift.**
 
 ---
 
-## Tool inventory (32 product tools)
+## Tool inventory (43 product tools)
 
 The complete typed surface both paths can drive. Argument/output shapes live in `TOOLS.md`; this is
 the at-a-glance map of *what exists* and *when it runs*.
 
-### Rust `findevil-mcp` (20) — DFIR primitives, read-only on evidence, SHA-256 every output
+### Rust `findevil-mcp` (31) — DFIR primitives, read-only on evidence, SHA-256 every output
 
 | Tool | What | Runs for |
 |---|---|---|
@@ -247,5 +247,5 @@ Even in unattended mode, halt and surface to the analyst when:
 ## What this playbook is NOT
 
 - **Not a script.** The supervisor is the agent; this file is its prior. If a case looks weird, deviate.
-- **Not exhaustive of DFIR.** It covers what the 20 typed Rust MCP tools can reach. If the case needs Plaso/log2timeline, Sleuthkit's `fls`/`icat`, Bulk Extractor, or broad interactive packet carving, those are out of our automation scope today; surface that as a gap to the analyst. (Browser history IS covered now — see `browser_history`.)
+- **Not exhaustive of DFIR.** It covers what the 31 typed Rust MCP tools can reach, including the allow-listed `plaso_parse`, `vol_run`, `ez_parse`, `mac_triage`, and `cloud_audit` long-tail verbs. If the case needs broad unstructured carving, a parser outside the allow-lists, or interactive packet reconstruction beyond `pcap_triage` / `zeek_summary` / `suricata_eve`, surface that as a gap to the analyst. (Browser history IS covered now — see `browser_history`.)
 - **Not a substitute for SOUL.md or AGENTS.md.** Read those first; this file is the operational layer that sits below the epistemic and role-definition layers.

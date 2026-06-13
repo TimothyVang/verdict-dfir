@@ -5,7 +5,7 @@ import { Scene } from "./shared/Scene";
 import { Kicker, KineticHeadline, PullQuote, RuleLine, Stamp } from "./shared/editorial-ui";
 import { spread } from "./shared/pacing";
 
-// Beat 4 — "The toolbox." VERDICT's 32 forensic tools as a grouped instrument
+// Beat 4 — "The toolbox." VERDICT's 43 forensic tools as a grouped instrument
 // tray: four plain-English questions, each a GROTESK header + a count badge that
 // counts up (mirrors FleetScene's big-numeral reveal) + a wrapped row of MONO
 // tool-name chips. Groups reveal left→right; chips stagger in with spring. The
@@ -20,40 +20,55 @@ interface ToolGroup {
   tools: string[];
 }
 
-// The 32-tool surface, verbatim: 20 Rust DFIR tools + 12 Python crypto/ACH
+// The 43-tool surface, verbatim: 31 Rust DFIR tools + 12 Python crypto/ACH
 // tools, regrouped by the question each answers.
 const GROUPS: ToolGroup[] = [
   {
     question: "What ran on this machine?",
-    count: 12,
+    count: 18,
     tools: [
       "case_open",
       "disk_mount",
       "disk_extract_artifacts",
+      "disk_unmount",
       "prefetch_parse",
       "mft_timeline",
       "usnjrnl_query",
       "registry_query",
       "browser_history",
+      "ez_parse",
+      "plaso_parse",
+      "indx_parse",
       "vol_pslist",
       "vol_psscan",
       "vol_psxview",
       "vol_malfind",
+      "vol_run",
+      "mac_triage",
     ],
   },
   {
     question: "What did the system log?",
-    count: 4,
-    tools: ["evtx_query", "hayabusa_scan", "sysmon_network_query", "vel_collect"],
+    count: 8,
+    tools: [
+      "evtx_query",
+      "hayabusa_scan",
+      "sysmon_network_query",
+      "vel_collect",
+      "journalctl_query",
+      "login_accounting",
+      "ausearch",
+      "cloud_audit",
+    ],
   },
   {
     question: "What left over the network?",
-    count: 3,
-    tools: ["pcap_triage", "zeek_summary", "yara_scan"],
+    count: 5,
+    tools: ["pcap_triage", "zeek_summary", "suricata_eve", "nfdump_query", "yara_scan"],
   },
   {
     question: "Can we prove it?",
-    count: 8,
+    count: 12,
     tools: [
       "audit_append",
       "audit_verify",
@@ -63,6 +78,10 @@ const GROUPS: ToolGroup[] = [
       "detect_contradictions",
       "judge_findings",
       "correlate_findings",
+      "memory_remember",
+      "memory_recall",
+      "pool_handoff",
+      "expert_miss_capture",
     ],
   },
 ];
@@ -146,7 +165,7 @@ export function ToolGrid() {
           Exhibit D · Inside the SANS SIFT Workstation
         </Kicker>
         <div style={{ marginTop: 18 }}>
-          <KineticHeadline text="Thirty-two" frame={frame} delay={sd(6)} size={92} />
+          <KineticHeadline text="Forty-three" frame={frame} delay={sd(6)} size={92} />
           <KineticHeadline text="tools." frame={frame} delay={sd(11)} size={92} />
           <KineticHeadline text="Zero shells." frame={frame} delay={sd(16)} size={92} italic color={C.alert} />
         </div>
@@ -193,7 +212,7 @@ export function ToolGrid() {
           }}
         >
           <span>Exhibit D-1 — Tool Surface</span>
-          <span style={{ color: C.inkFaint }}>20 rust · 12 python · 32 typed</span>
+          <span style={{ color: C.inkFaint }}>31 rust · 12 python · 43 typed</span>
         </div>
         <RuleLine frame={frame} delay={sd(20)} color={C.hairline} />
 
@@ -279,7 +298,7 @@ export function ToolGrid() {
             opacity: interpolate(frame - sd(92), [0, 16], [0, 1], clampOpts),
           }}
         >
-          <span style={{ color: C.inkMuted }}>Four questions · thirty-one answers</span>
+          <span style={{ color: C.inkMuted }}>Four questions · forty-three answers</span>
           <span style={{ color: C.alert }}>Zero shells</span>
         </div>
       </div>

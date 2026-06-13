@@ -96,8 +96,8 @@ of your Project.
 > **Short summary:**
 > Find Evil! is a Claude Code DFIR agent that investigates Windows host evidence (memory
 > images, EVTX logs, disk artifacts) and produces a cryptographically signed verdict any
-> third party can verify offline. It exposes 32 narrow typed MCP tools (20 Rust DFIR +
-> 12 Python crypto/ACH/memory) — no `execute_shell`. Two competing-hypothesis agent pools
+> third party can verify offline. It exposes 43 narrow typed MCP tools (31 Rust DFIR +
+> 12 Python crypto/ACH/memory/ACP/expert support) — no `execute_shell`. Two competing-hypothesis agent pools
 > (persistence-biased Pool A + exfil-biased Pool B) investigate in parallel; disagreements
 > are surfaced as first-class `kind=contradiction` audit records before the judge merges.
 > A standalone maintainer tool (`scripts/self-score.py`) grades a completed run against the

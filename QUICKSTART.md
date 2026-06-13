@@ -8,13 +8,13 @@ For the project pitch + claims, see [README.md](README.md). For the full doc map
 
 ```bash
 git clone --depth 1 https://github.com/TimothyVang/verdict-dfir.git verdict && cd verdict
-bash scripts/setup                    # installs EVERYTHING: toolchain + all DFIR tools + Playwright + both MCP servers, then runs doctor
+bash scripts/setup                    # installs the product toolchain, common DFIR tools, browser helpers, and both MCP servers, then runs doctor
 scripts/verdict <path-to-evidence>    # investigate -> live dashboard -> signed verdict + report
 ```
 
 **Prefer to drive it with Claude Code?** Drop your evidence into **`evidence/`**, open `claude`, and
-type **`investigate evidence/`**. (Or hands-free in a session: `/verdict <path>` does the whole thing
-and also fetches + builds the SANS SIFT VM via the browser.)
+type **`investigate evidence/`**. (Or hands-free in a session: `/verdict <path>` runs the pipeline
+and attempts SIFT VM setup when disk evidence needs it.)
 
 No evidence yet? `bash scripts/fetch-fixtures.sh` stages public datasets (into `fixtures/`).
 Canonical install detail — prerequisites and how to verify — is in [INSTALL.md](INSTALL.md).
@@ -28,8 +28,8 @@ run-mode catalog.
 
 ### Path A — SIFT VM (recommended; matches the SANS judging environment)
 
-**The one-command way** — install everything, fetch the gated OVA headlessly via Playwright, and
-build the VM:
+**The one-command way** — install local prerequisites, attempt the gated OVA fetch via Playwright,
+and build the VM when the download succeeds:
 
 ```bash
 bash scripts/setup --with-sift
@@ -80,11 +80,10 @@ The shortest path. In a Claude Code session (`claude` in the repo), type:
 /verdict <path-to-evidence>
 ```
 
-The skill does **everything** with no flags and no manual installs: it bootstraps the MCP servers
-+ n8n + the SANS SIFT VM, auto-uses `--sift` so disk images fully extract, runs the parallel
-investigation to a signed Verdict, fires the n8n automation + grounding workflows, opens the
-dashboard + report, and prints the Verdict + every workflow that ran. You never run
-`install.sh`/`doctor.sh` or type `--sift`. Full reference:
+The skill is the turnkey path: it checks/builds the MCP servers, attempts SIFT VM setup when disk
+evidence needs it, auto-uses `--sift` when the VM is reachable, runs the parallel investigation to
+a signed Verdict, attempts optional n8n/grounding workflows only when enabled or already available,
+opens the dashboard + report, and prints the Verdict plus the workflow status. Full reference:
 [docs/using/running-verdict.md §0](docs/using/running-verdict.md). (Loaded at session start — if you
 just pulled it, start a fresh `claude` session.)
 
@@ -100,7 +99,7 @@ claude
 bash scripts/find-evil-sift
 ```
 
-`.mcp.json` (or `.mcp.json.sift`, swapped automatically) tells Claude Code to spawn both MCP servers — `findevil-mcp` (Rust, 20 typed DFIR tools) and `findevil-agent-mcp` (Python, 12 typed crypto/ACH/memory/ACP/expert-feedback tools).
+`.mcp.json` (or `.mcp.json.sift`, swapped automatically) tells Claude Code to spawn both MCP servers — `findevil-mcp` (Rust, 31 typed DFIR tools) and `findevil-agent-mcp` (Python, 12 typed crypto/ACH/memory/ACP/expert-feedback tools).
 
 In the session, prompt:
 

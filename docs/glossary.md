@@ -10,7 +10,7 @@ sources: [CLAUDE.md](../CLAUDE.md), [verdict-semantics.md](verdict-semantics.md)
 |---|---|
 | **VERDICT** | The DFIR agent in this repo. Point it at evidence; it returns a signed Verdict ("is there evil here?") plus a report. |
 | **DFIR** | Digital Forensics & Incident Response — investigating compromised systems to determine what happened. |
-| **MCP** | Model Context Protocol — the typed tool interface Claude Code calls. VERDICT exposes 32 product tools across two MCP servers and adds no `execute_shell`. |
+| **MCP** | Model Context Protocol — the typed tool interface Claude Code calls. VERDICT exposes 43 product tools across two MCP servers and adds no `execute_shell`. |
 | **Claude Code is the engine** | Amendment A2: there is no separate app server. When you run `claude`/`scripts/verdict`, that session *is* the forensic analyst. |
 
 ## DFIR vocabulary (used deliberately throughout)

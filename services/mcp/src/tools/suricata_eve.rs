@@ -232,8 +232,8 @@ fn parse_events(
         if trimmed.is_empty() {
             continue;
         }
-        let value: serde_json::Value =
-            serde_json::from_str(trimmed).map_err(|e| SuricataEveError::OutputParse(e.to_string()))?;
+        let value: serde_json::Value = serde_json::from_str(trimmed)
+            .map_err(|e| SuricataEveError::OutputParse(e.to_string()))?;
         events_seen += 1;
         if let serde_json::Value::Object(fields) = value {
             if events.len() < limit {

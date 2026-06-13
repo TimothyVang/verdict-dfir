@@ -51,7 +51,7 @@ export const BEATS: Beat[] = [
     rubric: "The tools",
     accentColor: "#c79a4a",
     narration:
-      "And it's not guessing. It's driving thirty-two typed tools — twenty real forensic tools in Rust, plus twelve in Python for the crypto and the analysis — right inside the SANS SIFT Workstation. And the key design choice: not one of them can run arbitrary commands, so it can't be tricked into going rogue. Each tool answers one plain question. What ran on this machine? What did the system quietly log? What left over the network? And — can we prove it?",
+      "And it's not guessing. It's driving forty-three typed tools — thirty-one real forensic tools in Rust, plus twelve in Python for the crypto and the analysis — right inside the SANS SIFT Workstation. And the key design choice: not one of them can run arbitrary commands, so it can't be tricked into going rogue. Each tool answers one plain question. What ran on this machine? What did the system quietly log? What left over the network? And — can we prove it?",
   },
   {
     number: 5,

@@ -67,6 +67,7 @@ def main() -> int:
     build_local_evidence_inventory = fea.build_local_evidence_inventory
     finalize_evidence_inventory = fea.finalize_evidence_inventory
     build_attack_coverage = fea.build_attack_coverage
+    build_coverage_manifest = fea.build_coverage_manifest
     build_evtx_summary = fea.build_evtx_summary
     build_next_actions = fea.build_next_actions
     build_attck_practitioner_coverage = fea.build_attck_practitioner_coverage
@@ -1101,6 +1102,76 @@ def main() -> int:
         ok = actual == expected
         marker = "OK  " if ok else "FAIL"
         print(f"  [{marker}] coverage: {label}")
+        if not ok:
+            print(f"         expected: {expected!r}")
+            print(f"         actual  : {actual!r}")
+            failures += 1
+
+    coverage_manifest = build_coverage_manifest(
+        case_id="case-coverage-smoke",
+        evidence_path="mixed-case/",
+        case_completeness={
+            "evidence_type": "directory",
+            "checks": [
+                {"artifact_class": "evtx", "available": True, "touched": True},
+                {"artifact_class": "network", "available": False, "touched": False},
+            ],
+        },
+        attack_coverage=coverage,
+        tool_calls=[
+            {
+                "tool": "case_open",
+                "tool_call_id": "tc-open",
+                "output_hash": "a" * 64,
+            },
+            {
+                "tool": "evtx_query",
+                "tool_call_id": "tc-evtx",
+                "error": "EVTX parser failed",
+                "records_seen": 12,
+                "row_count": 0,
+                "parse_errors": 3,
+            },
+        ],
+        evidence_inventory={"summary": {"class_counts": {"unknown": 2}}},
+        analysis_limitations=["evtx_query failed: parser failure"],
+    )
+    manifest_by_class = {
+        row["artifact_class"]: row
+        for row in coverage_manifest.get("artifact_classes", [])
+    }
+    coverage_manifest_cases = [
+        (
+            "coverage manifest states parser boundary",
+            "cannot reason over it" in coverage_manifest.get("truth_boundary", ""),
+            True,
+        ),
+        (
+            "coverage manifest preserves failed parser status",
+            manifest_by_class["evtx"].get("status"),
+            "failed",
+        ),
+        (
+            "coverage manifest records parse errors",
+            manifest_by_class["evtx"].get("parse_errors"),
+            3,
+        ),
+        (
+            "coverage manifest records unsupported artifacts",
+            manifest_by_class["unsupported"].get("records_seen"),
+            2,
+        ),
+        (
+            "coverage manifest records not-supplied classes",
+            manifest_by_class["network"].get("status"),
+            "not_supplied",
+        ),
+    ]
+    for label, actual, expected in coverage_manifest_cases:
+        process_checks += 1
+        ok = actual == expected
+        marker = "OK  " if ok else "FAIL"
+        print(f"  [{marker}] coverage-manifest: {label}")
         if not ok:
             print(f"         expected: {expected!r}")
             print(f"         actual  : {actual!r}")
@@ -2749,6 +2820,78 @@ def main() -> int:
             print(f"         actual  : {actual!r}")
             failures += 1
 
+    red_team_challenge_cases = [
+        (
+            "RT-01 unsupported artifact evil stays explicit scope gap",
+            manifest_by_class["unsupported"].get("status"),
+            "unsupported",
+        ),
+        (
+            "RT-02 benign admin activity produces no finding",
+            (len(benign_logon_findings), compute_verdict(benign_logon_findings)),
+            (0, "NO_EVIL"),
+        ),
+        (
+            "RT-03 single-source execution trap is blocked by QA",
+            qa_check_status(
+                evtx_only_execution_qa,
+                "execution_requires_two_current_artifact_classes",
+            ),
+            "FAIL",
+        ),
+        (
+            "RT-04 log-clear event remains cited finding",
+            (
+                len(suspicious_findings),
+                suspicious_findings[0].get("tool_call_id")
+                if suspicious_findings
+                else None,
+            ),
+            (1, "tc-evtx"),
+        ),
+        (
+            "RT-05 DKOM divergence requests corroboration, not conviction",
+            (
+                process_sets_diverge(
+                    [],
+                    [{"pid": 4, "image_name": "System"}],
+                    0,
+                    1,
+                )[0],
+                compute_verdict(
+                    [{"confidence": "HYPOTHESIS", "mitre_technique": "T1014"}]
+                ),
+            ),
+            (True, "INDETERMINATE"),
+        ),
+        (
+            "RT-06 exfil without staging/movement is blocked by QA",
+            qa_check_status(
+                network_only_exfil_qa,
+                "exfiltration_requires_staging_and_movement",
+            ),
+            "FAIL",
+        ),
+        (
+            "RT-07 parser failure records failed coverage row",
+            (
+                manifest_by_class["evtx"].get("status"),
+                manifest_by_class["evtx"].get("parse_errors"),
+            ),
+            ("failed", 3),
+        ),
+    ]
+    red_team_checks = 0
+    for label, actual, expected in red_team_challenge_cases:
+        red_team_checks += 1
+        ok = actual == expected
+        marker = "OK  " if ok else "FAIL"
+        print(f"  [{marker}] red-team-challenge: {label}")
+        if not ok:
+            print(f"         expected: {expected!r}")
+            print(f"         actual  : {actual!r}")
+            failures += 1
+
     # --- contradiction resolution record check ---
     contra_record = build_contradiction_resolution_record(
         contradiction_id="test-contra-1",
@@ -2900,6 +3043,7 @@ def main() -> int:
         + disk_policy_checks
         + process_checks
         + matrix_checks
+        + red_team_checks
         + contradiction_checks
         + cve_checks
         + host_checks

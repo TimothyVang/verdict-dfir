@@ -21,7 +21,7 @@ via `fnm` (best-effort, since Node is optional).
 
 | Tool | Version | Why | Required? |
 |---|---|---|---|
-| Rust + Cargo | 1.88 (pinned in `rust-toolchain.toml`) | builds `findevil-mcp` (20 DFIR tools) | **yes** |
+| Rust + Cargo | 1.88 (pinned in `rust-toolchain.toml`) | builds `findevil-mcp` (31 DFIR tools) | **yes** |
 | uv | latest | syncs the Python `findevil-agent-mcp` env | **yes** |
 | Python | 3.11–3.12 | runs the Python `findevil-agent-mcp` + smoke/score tooling | **yes** |
 | git | recent | clones the repo; used by the smokes | **yes** |

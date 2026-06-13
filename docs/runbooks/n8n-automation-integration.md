@@ -21,7 +21,7 @@ happens after the verdict is signed.
 |---|---|---|
 | Role | **Operator harness around the product** | n8n orchestrates repeatable runs + finding-to-action; it is **not** wired into Pool A/Pool B and is **not** the A2 orchestrator. Claude Code still starts everything. |
 | Where it sits in the flow | **Downstream of `verdict.json`** | n8n consumes the *output* of a finished, audited investigation (`manifest_finalize` → `verdict.json`). It never feeds the scored path. |
-| Integration surface | **`n8n-mcp` (MIT), user-scope MCP server** | Claude Code uses `n8n-mcp` to build/validate/deploy n8n workflows and trigger runs. The 32-tool product surface is untouched. |
+| Integration surface | **`n8n-mcp` (MIT), user-scope MCP server** | Claude Code uses `n8n-mcp` to build/validate/deploy n8n workflows and trigger runs. The 43-tool product surface is untouched. |
 | Submission posture | **Optional, not bundled** | Treated like the SIFT DFIR binaries: operator wires it in; `n8n-references/` is `.gitignore`'d and never enters the Devpost zip. |
 | Where it runs | **Local host only** | The operator's own n8n instance + `n8n-mcp` run on the host. SIFT-VM mode still reaches DFIR tools over SSH; n8n stays local. |
 | License | **n8n core = fair-code (Sustainable Use), `n8n-mcp`/`n8n-skills` = MIT** | n8n core is **not** OSI MIT/Apache, so it must **never** be bundled or linked into the Apache-2.0 submission. Keeping it optional/operator-run/standalone is what makes this compliant. |
@@ -40,7 +40,7 @@ self-hosted internal use, but **not** an OSI permissive license. Therefore:
 - **`n8n-mcp` and `n8n-skills` are MIT** (`n8n-references/n8n-mcp/LICENSE`,
   `n8n-references/n8n-skills/LICENSE`) — safe to reference, still kept optional/standalone.
 - **Not in the judge-facing required docs.** `docs/architecture.md` (Devpost Required Component
-  #3) intentionally does **not** mention n8n — the submission surface is the 32-tool typed
+  #3) intentionally does **not** mention n8n — the submission surface is the 43-tool typed
   product. This runbook is the canonical home for n8n integration.
 - **Honors the anti-overbuild line.** The project's anti-overbuild guidance is "do not add
   n8n … runtime work" — i.e. do not build n8n into the *product runtime*. This runbook keeps n8n
@@ -333,7 +333,7 @@ trip: ask the agent to build a trivial "read verdict.json → print summary" wor
 ## What this runbook does NOT do
 
 - It does not modify the committed `.mcp.json` / `.mcp.json.sift` (n8n is optional, user-scope).
-- It does not add n8n to the investigation flow, the audit chain, the 32-tool count, or
+- It does not add n8n to the investigation flow, the audit chain, the 43-tool count, or
   `docs/architecture.md`.
 - It does not make n8n the orchestrator — Claude Code remains the A2 orchestrator; n8n is the
   downstream automation envelope.

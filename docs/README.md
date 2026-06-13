@@ -78,7 +78,7 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 
 | File | Status | Purpose |
 |---|---|---|
-| `mcp-and-tools.md` | **ACTIVE** | Single source of truth for MCP servers (6 registered: 2 product + 4 non-product incl. `qmd` dev-memory) + the 32 product tools + the no-`execute_shell` invariant. Resolves the server "undercount." |
+| `mcp-and-tools.md` | **ACTIVE** | Single source of truth for MCP servers (6 registered: 2 product + 4 non-product incl. `qmd` dev-memory) + the 43 product tools + the no-`execute_shell` invariant. Resolves the server "undercount." |
 | `dependencies.md` | **ACTIVE** | Dependency + external-DFIR-tool + version matrix mirroring `scripts/doctor.sh`; licenses + expected-failure-when-missing. |
 | `environment-variables.md` | **ACTIVE** | The ~35 `FIND_EVIL_*`/`FINDEVIL_*`/credential/SIFT/n8n env vars in one table. |
 
@@ -107,7 +107,7 @@ These are read by the agent at investigation start (per CLAUDE.md "Agent investi
 | `agent-config/SOUL.md` | **ACTIVE** | Mission + epistemic hierarchy (CONFIRMED > INFERRED > HYPOTHESIS) + FRE 902(14) stance + cross-artifact rule + no-attribution rule. |
 | `agent-config/AGENTS.md` | **ACTIVE** | Supervisor / Pool A / Pool B / judge / verifier / correlator role descriptions. |
 | `agent-config/PLAYBOOK.md` | **ACTIVE** | Tool sequences per evidence type (`.e01`, `.mem`, `.evtx`, Velociraptor `.zip`, mixed dirs). |
-| `agent-config/TOOLS.md` | **ACTIVE** | Typed tool surface — 20 Rust + 12 Python MCP tools. |
+| `agent-config/TOOLS.md` | **ACTIVE** | Typed tool surface — 31 Rust + 12 Python MCP tools. |
 | `agent-config/MEMORY.md` | **ACTIVE** | Tier-1 DFIR caveats (Amcache LastModified ≠ execution, ShimCache order changed at Win8.1, Logon Type 3 vs 10, etc.). |
 | `agent-config/HEARTBEAT.md` | **ACTIVE** | Per-iteration self-check loop. |
 | `agent-config/JUDGING.md` | **ACTIVE** | Pre-submission self-assessment rubric (6 quality criteria) that `scripts/self-score.py` grades a completed case against. Not part of the investigation pipeline. |
@@ -154,6 +154,12 @@ The original five implementation plans shipped (the build-swarm plan was removed
 | `local-smoke-gate.md` | **ACTIVE** | Prerequisites, per-smoke coverage map, and common failure → fix pairs for `bash scripts/run-all-smokes.sh`. |
 | `n8n-automation-integration.md` | **ACTIVE** | Optional: wire n8n as an operator-local harness *around* the product — repeatable runs + post-verdict finding-to-action (via `n8n-mcp`, user-scope). Not bundled, not the orchestrator, not in the audit chain. |
 | `readiness-packet-windows.md` | **ACTIVE** | Three invocation modes for `scripts/readiness-gate.ps1`, readiness-state meanings, and `READINESS_BLOCKED` unblocking guide. |
+
+## Adversarial Validation
+
+| File | Status | Purpose |
+|---|---|---|
+| `red-team-challenge.md` | **ACTIVE** | "Break VERDICT" challenge matrix for unsupported artifacts, benign-admin false positives, single-source execution traps, DKOM-vs-smear, exfil-without-network, and parser failures. |
 
 ## `docs/release-evidence/`
 

@@ -113,6 +113,11 @@ without changing the top-line verdict policy:
 
 - `case_completeness` records which artifact classes were available
   and touched in the current run.
+- `coverage_manifest` records the explicit parser boundary per artifact
+  class: `available`, `attempted`, `parsed`, `failed`, `unsupported`,
+  `not_supplied`, `parse_errors`, `records_seen`, and `rows_returned`.
+  If a parser/tool did not extract an artifact class, VERDICT cannot
+  reason over it; this object is the first place to check that scope.
 - `attack_coverage` maps typed-tool output to ATT&CK target
   techniques. `covered_no_finding` means limited scoped coverage,
   not clean, cleared, disproven, or absence of evidence.

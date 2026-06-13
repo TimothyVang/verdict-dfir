@@ -339,7 +339,7 @@ ok "services/agent_mcp/.venv ready."
 info "Verifying MCP servers (findevil-mcp + findevil-agent-mcp)..."
 
 if [ -x "target/release/findevil-mcp" ] || [ -x "target/release/findevil-mcp.exe" ]; then
-    ok "findevil-mcp (Rust, 20 DFIR tools) binary present."
+    ok "findevil-mcp (Rust, 31 DFIR tools) binary present."
 else
     fail "findevil-mcp binary missing after build — cannot continue."
     exit 1

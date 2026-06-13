@@ -16,7 +16,7 @@ predictor (below), not the verification standard.
 ```bash
 scripts/verdict evidence/DE_1102_security_log_cleared.evtx   # the staged known-good evtx Case
 scripts/verdict --watch                                       # drop any supported evidence into evidence/, auto-runs
-scripts/verdict <path>                                        # any evidence path
+scripts/verdict <path>                                        # supported evidence path
 ```
 
 Output lands in `tmp/auto-runs/<case-id>/` (`verdict.json`, `manifest_verify.json`,
@@ -43,7 +43,7 @@ as a gap, not a clean bill of health.
 | 1 | `.evtx` (`evidence/DE_1102_security_log_cleared.evtx`) | `scripts/verdict evidence/DE_1102_security_log_cleared.evtx` | `evidence_type:"evtx"`, `verdict:"SUSPICIOUS"`, ≥1 CONFIRMED (event 1102 → T1070.001), Finding cites `tool_call_id`, `manifest_verify.overall=true` | **WORKS** — staged reference Case |
 | 2 | Memory `.mem, .raw, .dmp, .vmem` | `scripts/verdict evidence/base-dc-memory.img` (`--sift` for in-VM tools) | audit ≥4 `tool_call_start`; `vol_pslist` + `vol_psscan` + `vol_psxview` all present; DKOM (T1014) only at `INFERRED`+ when corroborated **and** acquisition-smear ruled out first | **WORKS** for process/injection triage; **GAP** acquisition-smear can mimic DKOM (`KeNumberProcessors=0`, psscan-only OS singletons) → honest `HYPOTHESIS`/`INDETERMINATE` is still a PASS |
 | 3 | Disk `.E01, .dd, .raw, .aff` (`evidence/SCHARDT.dd`) | local: `scripts/verdict evidence/SCHARDT.dd` (custody-only — no host disk tooling); content path: `scripts/verdict --sift <vm-path>` (mount/extract → `disk_mount` + `disk_extract_artifacts`) | **local: `INDETERMINATE`** with a custody-only `analysis_limitations` entry is the CORRECT PASS (never `NO_EVIL`, no disk-content Finding from `case_open` alone). **`--sift`: a real content verdict** | **WORKS under `--sift`** — NIST SCHARDT → `SUSPICIOUS`, 8 CONFIRMED hacking-tool executions (cain/netstumbler/mirc/ethereal) via the in-tree XP-hive registry parser (`regf.rs`) + Prefetch×UserAssist execution corroboration. **GAP** the local host has no disk forensics tooling (custody-only there); `$MFT`-via-TSK raw extraction is still unimplemented but not required for this case |
-| 4 | Velociraptor `.zip` | `scripts/verdict evidence/<coll>.zip` | zip extracted safely (zip-slip / oversize rejected); per-artifact tools ran; Findings cite `tool_call_id`; manifest verifies | **WORKS** to the extent the 20 typed tools reach the carried artifacts; classes they don't cover are a documented gap, not `NO_EVIL` |
+| 4 | Velociraptor `.zip` | `scripts/verdict evidence/<coll>.zip` | zip extracted safely (zip-slip / oversize rejected); per-artifact tools ran; Findings cite `tool_call_id`; manifest verifies | **WORKS** to the extent the 43 typed product tools reach the carried artifacts; classes they don't cover are a documented gap, not `NO_EVIL` |
 | 5 | Mixed case directory | `scripts/verdict evidence/<case-folder>/` | each contained type ran per its playbook under one `case_id`; merged Verdict; `detect_contradictions` surfaced Pool A/B disagreements; manifest verifies | **WORKS** (each sub-type inherits its own row's status — disk items stay custody-only) |
 | 6 | Network `.pcap, .pcapng` | `scripts/verdict evidence/<cap>.pcap` | `pcap_triage` / `zeek_summary` ran; flagged endpoints are leads-until-corroborated; Findings cite `tool_call_id`; manifest verifies | **WORKS** for triage; network leads alone don't satisfy execution/exfil corroboration (need finding-specific staging + a 2nd artifact class) |
 

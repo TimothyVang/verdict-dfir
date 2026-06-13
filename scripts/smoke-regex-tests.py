@@ -85,9 +85,27 @@ DIVERGENCE_CASES = [
         1,
     ),
     (
-        "13 typed Rust is correct",
+        "13 typed Rust active drift",
         2,
         "wraps 13 typed Rust MCP tools",
+        1,
+    ),
+    (
+        "20-tool label active drift",
+        2,
+        "rust-mcp-smoke (20-tool dispatch + error paths)",
+        1,
+    ),
+    (
+        "20/20 shipped active drift",
+        2,
+        "Tool surface (20/20 shipped)",
+        1,
+    ),
+    (
+        "31 typed Rust is correct",
+        2,
+        "wraps 31 typed Rust MCP tools",
         0,
     ),
     (
@@ -368,6 +386,16 @@ def _run_smoke_runner_policy_cases(launch_smoke) -> list[tuple[str, str]]:
                 "expected readiness-gate-smoke prereq to include uv",
             )
         )
+    readiness_uv_command = (
+        "uv run --directory services/agent python ../../scripts/readiness-gate-smoke.py"
+    )
+    if readiness_uv_command not in runner:
+        failures.append(
+            (
+                "run-all-smokes.ps1 readiness smoke uses service uv",
+                "expected readiness smoke to run under services/agent Python 3.11",
+            )
+        )
     if not re.search(
         r"readiness-gate-smoke\.py.*Test-CommandAvailable \"powershell\".*"
         r"Test-CommandAvailable \"pwsh\"",
@@ -388,6 +416,20 @@ def _run_smoke_runner_policy_cases(launch_smoke) -> list[tuple[str, str]]:
             (
                 "run-all-smokes.sh readiness smoke prereq is explicit",
                 "expected POSIX readiness smoke prereq to require uv and PowerShell/pwsh",
+            )
+        )
+    if readiness_uv_command not in posix_runner:
+        failures.append(
+            (
+                "run-all-smokes.sh readiness smoke uses service uv",
+                "expected readiness smoke to run under services/agent Python 3.11",
+            )
+        )
+    if "uv sync --directory services/agent --extra dev" not in posix_runner:
+        failures.append(
+            (
+                "run-all-smokes.sh footer uses agent service uv sync",
+                "expected footer to mention services/agent uv sync command",
             )
         )
     if "uv sync --directory services/agent_mcp --extra dev" not in posix_runner:
@@ -428,7 +470,7 @@ def _run_smoke_label_policy_cases() -> list[tuple[str, str]]:
 def _run_path_existence_cases(pes_smoke) -> list[tuple[str, str]]:
     failures = []
     for label, candidate, expected_allowed in PATH_EXISTENCE_ALLOW_CASES:
-        actual = pes_smoke._is_allowed(candidate)
+        actual = pes_smoke._is_allowed(candidate, "docs/README.md")
         if actual != expected_allowed:
             failures.append(
                 (

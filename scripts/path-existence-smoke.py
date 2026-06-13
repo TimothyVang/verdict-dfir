@@ -277,6 +277,12 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r".*…"),
 )
 
+DOC_SCOPED_ALLOW_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    # Internal competitive research quotes GitHub repo slugs (`owner/repo`).
+    # Those are external identifiers, not repo-local paths.
+    "docs/competitive-analysis.md": (re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"),),
+}
+
 # Compile once.  PATH_RE matches any backtick-quoted token that
 # contains at least one slash.
 PATH_RE = re.compile(r"`([^`\s]+/[^`\s]+)`")
@@ -320,10 +326,12 @@ def _is_path_shape(target: str) -> bool:
     return True
 
 
-def _is_allowed(target: str) -> bool:
+def _is_allowed(target: str, doc: str) -> bool:
     """True if target matches one of the known false-positive
     shapes the audit should skip."""
-    return any(p.match(target) for p in ALLOW_PATTERNS)
+    if any(p.match(target) for p in ALLOW_PATTERNS):
+        return True
+    return any(p.match(target) for p in DOC_SCOPED_ALLOW_PATTERNS.get(doc, ()))
 
 
 def _resolve(doc: str, target: str) -> Path | None:
@@ -383,7 +391,7 @@ def main() -> int:
             target = m.group(1).rstrip(".,;:?")
             if not _is_path_shape(target):
                 continue
-            if _is_allowed(target):
+            if _is_allowed(target, doc):
                 continue
             total_paths += 1
             resolved = _resolve(doc, target)

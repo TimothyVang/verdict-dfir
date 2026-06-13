@@ -1992,12 +1992,22 @@ COMMON_BROWSER_IMAGES = {
 
 TOOL_ARTIFACT_CLASSES = {
     "case_open": "custody",
+    "browser_history": "browser_history",
+    "cloud_audit": "cloud",
     "evtx_query": "evtx",
+    "ez_parse": "disk/filesystem",
     "hayabusa_scan": "evtx",
+    "indx_parse": "disk/filesystem",
+    "journalctl_query": "linux",
+    "login_accounting": "linux",
+    "mac_triage": "macos",
     "mft_timeline": "mft",
+    "nfdump_query": "network",
     "pcap_triage": "network",
+    "plaso_parse": "timeline",
     "prefetch_parse": "prefetch",
     "registry_query": "registry",
+    "suricata_eve": "network",
     "sysmon_network_query": "network",
     "usnjrnl_query": "usnjrnl",
     "vel_collect": "velociraptor",
@@ -2005,6 +2015,7 @@ TOOL_ARTIFACT_CLASSES = {
     "vol_pslist": "memory",
     "vol_psscan": "memory",
     "vol_psxview": "memory",
+    "vol_run": "memory",
     "yara_scan": "yara",
     "zeek_summary": "network",
 }
@@ -2649,6 +2660,191 @@ def build_attack_coverage(
         "blind_spot_count": blind,
         "observed_techniques": sorted(finding_confidence),
         "targets": rows,
+    }
+
+
+def _int_metric(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+_RECORDS_SEEN_FIELDS = (
+    "records_seen",
+    "rows_seen",
+    "events_seen",
+    "processes_seen",
+    "packets_seen",
+    "files_scanned",
+    "artifact_count",
+)
+_ROWS_RETURNED_FIELDS = (
+    "row_count",
+    "rows_returned",
+    "events_returned",
+    "processes_returned",
+    "injections_returned",
+    "matches_returned",
+    "alerts_returned",
+    "conn_count",
+    "dns_count",
+    "http_count",
+)
+_PARSE_ERROR_FIELDS = ("parse_errors", "scan_errors")
+
+
+def _sum_first_metric(tool_call: dict[str, Any], names: tuple[str, ...]) -> int:
+    for name in names:
+        if name in tool_call:
+            return _int_metric(tool_call.get(name))
+    return 0
+
+
+def build_coverage_manifest(
+    *,
+    case_id: str,
+    evidence_path: str,
+    case_completeness: dict[str, Any],
+    attack_coverage: dict[str, Any],
+    tool_calls: list[dict[str, Any]],
+    evidence_inventory: dict[str, Any] | None,
+    analysis_limitations: list[str],
+) -> dict[str, Any]:
+    """Build the explicit "what did we process?" sidecar.
+
+    This is deliberately stricter than the prose coverage table. It records
+    attempted, parsed, failed, unsupported, and not-supplied states so a reader
+    cannot confuse a polished report with complete artifact coverage.
+    """
+
+    checks_by_class = {
+        str(row.get("artifact_class")): dict(row)
+        for row in case_completeness.get("checks", [])
+        if row.get("artifact_class")
+    }
+    calls_by_class: dict[str, list[dict[str, Any]]] = {}
+    for call in tool_calls:
+        tool = str(call.get("tool") or "")
+        artifact_class = TOOL_ARTIFACT_CLASSES.get(tool, "unknown_tool_output")
+        calls_by_class.setdefault(artifact_class, []).append(call)
+
+    inventory_summary = (evidence_inventory or {}).get("summary", {})
+    inventory_class_counts = inventory_summary.get("class_counts", {}) or {}
+    unsupported_count = _int_metric(inventory_class_counts.get("unknown"))
+    evidence_type = str(case_completeness.get("evidence_type") or "")
+    if evidence_type == "unknown" and not evidence_inventory:
+        unsupported_count = max(unsupported_count, 1)
+
+    artifact_classes = sorted(set(checks_by_class) | set(calls_by_class))
+    rows = []
+    for artifact_class in artifact_classes:
+        check = checks_by_class.get(artifact_class, {})
+        calls = calls_by_class.get(artifact_class, [])
+        failed_calls = [call for call in calls if call.get("error")]
+        successful_calls = [call for call in calls if not call.get("error")]
+        attempted = bool(calls) or bool(check.get("touched"))
+        available = bool(check.get("available")) or bool(calls)
+        parsed = bool(successful_calls)
+        failed = bool(failed_calls)
+        not_supplied = not available and not attempted
+        if failed and parsed:
+            status = "partial"
+        elif failed:
+            status = "failed"
+        elif parsed:
+            status = "parsed"
+        elif attempted:
+            status = "attempted_no_rows"
+        elif not_supplied:
+            status = "not_supplied"
+        else:
+            status = "available_not_attempted"
+        records_seen = sum(
+            _sum_first_metric(call, _RECORDS_SEEN_FIELDS) for call in calls
+        )
+        rows_returned = sum(
+            _sum_first_metric(call, _ROWS_RETURNED_FIELDS) for call in calls
+        )
+        parse_errors = sum(
+            sum(_int_metric(call.get(name)) for name in _PARSE_ERROR_FIELDS)
+            for call in calls
+        )
+        rows.append(
+            {
+                "artifact_class": artifact_class,
+                "status": status,
+                "available": available,
+                "attempted": attempted,
+                "parsed": parsed,
+                "failed": failed,
+                "unsupported": False,
+                "not_supplied": not_supplied,
+                "tools_attempted": [str(call.get("tool")) for call in calls],
+                "tool_call_ids": [
+                    str(call.get("tool_call_id"))
+                    for call in calls
+                    if call.get("tool_call_id")
+                ],
+                "tools_failed": [
+                    str(call.get("tool")) for call in failed_calls if call.get("tool")
+                ],
+                "parse_errors": parse_errors,
+                "records_seen": records_seen,
+                "rows_returned": rows_returned,
+                "confidence_impact": check.get("confidence_impact", ""),
+            }
+        )
+
+    if unsupported_count:
+        rows.append(
+            {
+                "artifact_class": "unsupported",
+                "status": "unsupported",
+                "available": True,
+                "attempted": False,
+                "parsed": False,
+                "failed": False,
+                "unsupported": True,
+                "not_supplied": False,
+                "tools_attempted": [],
+                "tool_call_ids": [],
+                "tools_failed": [],
+                "parse_errors": 0,
+                "records_seen": unsupported_count,
+                "rows_returned": 0,
+                "confidence_impact": (
+                    "Unsupported artifact(s) were recorded as custody or scope "
+                    "limitations; VERDICT cannot reason over evidence no typed "
+                    "parser extracted."
+                ),
+            }
+        )
+
+    status_counts = Counter(str(row["status"]) for row in rows)
+    return {
+        "version": 1,
+        "case_id": case_id,
+        "evidence_path": evidence_path,
+        "evidence_type": evidence_type,
+        "truth_boundary": (
+            "If no parser/tool extracts an artifact class, VERDICT cannot "
+            "reason over it. This manifest records that boundary explicitly."
+        ),
+        "summary": {
+            "artifact_classes_recorded": len(rows),
+            "attempted": sum(1 for row in rows if row["attempted"]),
+            "parsed": sum(1 for row in rows if row["parsed"]),
+            "failed": sum(1 for row in rows if row["failed"]),
+            "unsupported": sum(1 for row in rows if row["unsupported"]),
+            "not_supplied": sum(1 for row in rows if row["not_supplied"]),
+            "status_counts": dict(sorted(status_counts.items())),
+            "attack_blind_spot_count": attack_coverage.get("blind_spot_count", 0),
+            "analysis_limitation_count": len(analysis_limitations),
+        },
+        "artifact_classes": rows,
+        "attack_coverage_summary": attack_coverage.get("summary", ""),
+        "analysis_limitations": list(analysis_limitations),
     }
 
 
@@ -6290,6 +6486,7 @@ class Investigation:
         self.disk_artifact_summary: dict[str, Any] | None = None
         self.malware_triage: dict[str, Any] | None = None
         self.normalized_timeline: dict[str, Any] | None = None
+        self.coverage_manifest: dict[str, Any] | None = None
         self.analysis_limitations: list[str] = []
         self.findings_pool_a: list[dict[str, Any]] = []
         self.findings_pool_b: list[dict[str, Any]] = []
@@ -10056,10 +10253,21 @@ class Investigation:
             self.evidence,
         )
         attach_expert_miss_summary(attack_story, expert_miss_summary)
+        coverage_manifest = build_coverage_manifest(
+            case_id=self.handle.get("id", self.case_id),
+            evidence_path=self.evidence,
+            case_completeness=case_completeness,
+            attack_coverage=attack_coverage,
+            tool_calls=self.tool_calls,
+            evidence_inventory=self.evidence_inventory,
+            analysis_limitations=self.analysis_limitations,
+        )
+        self.coverage_manifest = coverage_manifest
         return {
             "timeline": timeline,
             "case_completeness": case_completeness,
             "attack_coverage": attack_coverage,
+            "coverage_manifest": coverage_manifest,
             "attck_practitioner_coverage": attck_practitioner_coverage,
             "next_actions": next_actions,
             "source_bibliography": source_bibliography,
@@ -10262,6 +10470,7 @@ class Investigation:
             "tool_calls": self.tool_calls,
             "case_completeness": report_metadata["case_completeness"],
             "attack_coverage": report_metadata["attack_coverage"],
+            "coverage_manifest": report_metadata.get("coverage_manifest", {}),
             "report_qa": report_metadata["report_qa"],
             "release_gate": release_gate,
             "signer": self.signer,
@@ -10516,6 +10725,7 @@ class Investigation:
         timeline = meta["timeline"]
         case_completeness = meta["case_completeness"]
         attack_coverage = meta["attack_coverage"]
+        coverage_manifest = meta["coverage_manifest"]
         attck_practitioner_coverage = meta["attck_practitioner_coverage"]
         next_actions = meta["next_actions"]
         source_bibliography = meta["source_bibliography"]
@@ -10591,6 +10801,7 @@ class Investigation:
             "disk_artifact_summary": self.disk_artifact_summary,
             "case_completeness": case_completeness,
             "attack_coverage": attack_coverage,
+            "coverage_manifest": coverage_manifest,
             "attck_practitioner_coverage": attck_practitioner_coverage,
             "next_actions": next_actions,
             "expert_doctrine": meta["expert_doctrine"],
@@ -10727,6 +10938,22 @@ class Investigation:
         if self.disk_artifact_summary:
             (local_dir / "disk_artifact_summary.json").write_text(
                 json.dumps(self.disk_artifact_summary, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+        coverage_manifest = self.coverage_manifest
+        if coverage_manifest is None:
+            verdict_file = local_dir / "verdict.json"
+            if verdict_file.is_file():
+                try:
+                    verdict_obj = json.loads(verdict_file.read_text(encoding="utf-8"))
+                    loaded_manifest = verdict_obj.get("coverage_manifest")
+                    if isinstance(loaded_manifest, dict):
+                        coverage_manifest = loaded_manifest
+                except json.JSONDecodeError:
+                    coverage_manifest = None
+        if coverage_manifest:
+            (local_dir / "coverage_manifest.json").write_text(
+                json.dumps(coverage_manifest, indent=2, sort_keys=True),
                 encoding="utf-8",
             )
         if self.evidence_inventory:
@@ -10877,6 +11104,7 @@ class Investigation:
                 "run.manifest.json", self.manifest_path
             ),
             "manifest_verify_path": manifest_verify_path,
+            "coverage_manifest_path": self._summary_path("coverage_manifest.json", ""),
             "report_paths": self._summary_report_paths(),
             "timeline_paths": self._summary_timeline_paths(),
             "inventory_path": self._summary_path("evidence_inventory.json", "")

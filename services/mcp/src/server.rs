@@ -1679,9 +1679,9 @@ fn dispatch_indx_parse(args: Value) -> Result<Value, ToolError> {
         Ok(output) => {
             serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
         }
-        Err(e @ (crate::tools::IndxError::NotFound(_) | crate::tools::IndxError::NotRegular(_))) => {
-            Err(ToolError::InvalidParams(format!("{e}")))
-        }
+        Err(
+            e @ (crate::tools::IndxError::NotFound(_) | crate::tools::IndxError::NotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
         Err(e) => Err(ToolError::Internal(format!("indx_parse: {e}"))),
     }
 }

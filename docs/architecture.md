@@ -12,7 +12,7 @@ Per SANS Find Evil! rules, submissions declare which of four supported patterns 
 
 1. **Direct Agent Extension** (rules §1) — Claude Code IS the agent. The judge runs `scripts/find-evil` (or `claude`) at the repo root; `.mcp.json` auto-spawns both MCP servers; Claude Code drives the investigation as supervisor + Pool A/B subagents (native Task mechanism — not `CLAUDE_CODE_FORK_SUBAGENT`, which is a build-time internal and is not used in this product). The SANS rules call this "the fastest path to a working submission."
 2. **Custom MCP Server** (rules §2) — two purpose-built MCP servers expose the typed tool surface:
-   - `findevil-mcp` (Rust) — 20 DFIR primitives (case_open, disk_mount/extract/unmount, evtx_query, mft_timeline, hayabusa_scan, vol_pslist, vol_psscan, vol_psxview, vol_malfind, yara_scan, usnjrnl_query, registry_query, prefetch_parse, vel_collect, browser_history, sysmon_network_query, zeek_summary, pcap_triage). Read-only on evidence; SHA-256 every output. **NO `execute_shell`.**
+   - `findevil-mcp` (Rust) — 31 DFIR primitives (core Windows memory/disk/log/network verbs plus allow-listed long-tail wrappers such as `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`, and `cloud_audit`). Read-only on evidence; SHA-256 every output. **NO `execute_shell`.**
    - `findevil-agent-mcp` (Python) — 12 crypto + ACH + memory + ACP + expert-feedback tools (audit_append/verify, manifest_finalize/verify, verify_finding, detect_contradictions, judge_findings, correlate_findings, memory_remember/recall, pool_handoff, expert_miss_capture). The pre-A5 `ots_stamp`/`ots_verify` pair was removed.
 
 The combination is the architectural claim: Claude Code's agent loop never touches a raw shell because the only verbs it has are MCP-typed function calls into one of the two servers.
@@ -28,14 +28,14 @@ Find Evil! runs on the same SANS-blessed SIFT VM (`sift-2026.03.24.ova`) that Pr
 | Aspect | Find Evil! | Protocol SIFT gateway |
 |---|---|---|
 | MCP servers | 2 typed servers (findevil-mcp, findevil-agent-mcp) | 1 gateway (200+ shell-backed tools) |
-| Tool count | 32 (20 Rust DFIR + 12 Python crypto/ACH/memory/ACP) | 200+ (dynamic, shell coverage) |
+| Tool count | 43 (31 Rust DFIR + 12 Python crypto/ACH/memory/ACP/expert) | 200+ (dynamic, shell coverage) |
 | Shell surface | None — NO `execute_shell` | Broad — gateway is a shell pass-through |
 | Use case | Repeatable DFIR mechanics for SANS investigation | General-purpose bot connectivity |
 | Installation | No conflicts — separate MCP registrations | `protocol-sift install` installs the gateway independently |
 
 After `protocol-sift install` on a SIFT VM, both Find Evil!'s narrow typed surface and Protocol SIFT's broad shell-backed gateway coexist. Judges or operators choose which agent interface to use per investigation; neither requires nor conflicts with the other.
 
-The narrow surface is intentional: it reduces the attack surface from "full shell access" to "20 named DFIR operations" and "12 cryptographic/ACH/memory operations," enabling an architectural argument that the agent loop never touches shell primitives directly — all actions flow through typed JSON-RPC schema validation.
+The narrow surface is intentional: it reduces the attack surface from "full shell access" to 31 named Rust DFIR operations and 12 Python cryptographic/ACH/memory/ACP/expert operations, enabling an architectural argument that the agent loop never touches shell primitives directly — all actions flow through typed JSON-RPC schema validation.
 
 ---
 
@@ -56,7 +56,7 @@ flowchart TB
     end
 
     subgraph Trust2["**TRUST BOUNDARY 2** — Two MCP Servers (typed tool surface)"]
-        RustMcp["**findevil-mcp** (Rust, hand-rolled MCP 2024-11-05)<br/>20 typed DFIR tools<br/>NO execute_shell<br/>---<br/>case_open, disk_mount/extract/unmount,<br/>mft_timeline, evtx_query, hayabusa_scan,<br/>vol_pslist, vol_psscan, vol_psxview,<br/>vol_malfind, yara_scan, usnjrnl_query,<br/>registry_query, prefetch_parse, vel_collect,<br/>browser_history, sysmon_network_query, zeek_summary, pcap_triage"]
+        RustMcp["**findevil-mcp** (Rust, hand-rolled MCP 2024-11-05)<br/>31 typed DFIR tools<br/>NO execute_shell<br/>---<br/>core Windows memory/disk/log/network verbs<br/>+ allow-listed long-tail wrappers"]
         AgentMcp["**findevil-agent-mcp** (Python, mcp SDK 1.x)<br/>12 typed crypto/ACH/memory/ACP/expert-feedback tools<br/>---<br/>audit_append/verify,<br/>manifest_finalize/verify,<br/>verify_finding,<br/>detect_contradictions,<br/>judge_findings,<br/>correlate_findings,<br/>memory_remember/recall,<br/>pool_handoff,<br/>expert_miss_capture"]
         EvtxCrate["evtx crate<br/>MIT, in-process<br/>1600× python-evtx"]
         Merkle["rs_merkle 1.4.0<br/>append-only tree"]
@@ -127,11 +127,11 @@ flowchart TB
 
 | # | Boundary | Enforcement mechanism | Type |
 |---|---|---|---|
-| 0 | Evidence vault | **Architectural (shipped):** originals opened read-only (libewf for `.e01`); SHA-256 fingerprinted at `case_open` and re-checked at every verifier replay; no write verb exists anywhere in the 32-tool surface. **Hardened-deployment posture (recommended, not code-enforced):** `mount -o ro` + `chmod 444` on the vault, `inotifywait` write-monitoring | Code-enforced today; filesystem hardening is operator posture |
+| 0 | Evidence vault | **Architectural (shipped):** originals opened read-only (libewf for `.e01`); SHA-256 fingerprinted at `case_open` and re-checked at every verifier replay; no write verb exists anywhere in the 43-tool product surface. **Hardened-deployment posture (recommended, not code-enforced):** `mount -o ro` + `chmod 444` on the vault, `inotifywait` write-monitoring | Code-enforced today; filesystem hardening is operator posture |
 | 1 | SIFT tool subprocesses | **Architectural (shipped):** unprivileged user (no root, no CAP_SYS_ADMIN); fixed-argv invocation — `Command::new(bin).args([...])`, never `sh -c`, so a path/arg is never shell-parsed (adversarially pinned by `services/mcp/tests/bypass_paths.rs`). **Roadmap (documented, not yet enforced in code):** per-call wall-clock budget, cpulimit, tmpfs work dir, binary allowlist | Process-enforced today; resource sandboxing is roadmap |
 | 2 | Two typed MCP servers | **Architectural:** Rust `findevil-mcp` type system forbids `execute_shell`; Python `findevil-agent-mcp` Pydantic input models use `extra="forbid"`; tool surfaces fixed at compile/build time. Adding a shell passthrough would require a code change + PR + review | Compiler/schema-enforced |
 | 3 | Claude Code agent loop | **Mixed:** agent system prompts (`agent-config/SOUL.md` — epistemic hierarchy, AGENTS.md — roles) are **prompt-based guardrails**; verifier veto (no Finding without `tool_call_id`) is **architectural** (Pydantic schema-level enforced at the `findevil-agent-mcp` boundary) | Mixed — prompt guards behavior, Pydantic guards data |
-| 4 | Crypto Custody | **Architectural:** sigstore signing and Merkle root computation happen inside `findevil-agent-mcp` before any finding is user-visible; the pre-A5 OpenTimestamps/Bitcoin tier was removed so `manifest_finalize` is the terminal custody step | Cryptographic |
+| 4 | Crypto Custody | **Architectural:** manifest signing and Merkle root computation happen inside `findevil-agent-mcp` before any finding is user-visible. Ed25519 is the offline-verifiable default; Sigstore/Rekor is the identity + transparency-log tier; the pre-A5 OpenTimestamps/Bitcoin tier was removed so `manifest_finalize` is the terminal custody step | Cryptographic |
 | 5 | Presentation | **DEFERRED to bonus (A2 §2.1).** The terminal IS the primary UX. Optional Next.js SSE bus (when shipped) is read-only from the frontend; `--unattended` mode logs `approved_by: "auto"` to the audit chain. | Auth-enforced (when present) |
 
 ### Prompt-based vs architectural guardrails — explicit distinction
@@ -155,9 +155,9 @@ we say so here rather than claim them.
 - Typed Python MCP server (`findevil-agent-mcp`) with Pydantic `extra="forbid"` on every input model (boundary-enforced; unknown fields surface as validation errors)
 - Pydantic schema on `Finding` events requires `tool_call_id` (schema-enforced; unvalidated Findings can't exit the agent_mcp boundary)
 - Hash-chained `audit.jsonl` (`prev_hash` per line; chain replay catches any backdated/mutated entry)
-- sigstore signing of the run manifest at the `findevil-agent-mcp` layer (agent cannot forge signatures)
+- manifest signing at the `findevil-agent-mcp` layer (Ed25519 default; Sigstore/Rekor when configured; explicit stub fallback blocks customer release)
 - Merkle tree append-only at the `findevil-agent-mcp` layer (agent cannot rebuild the tree to favor a different leaf set)
-- Sigstore/Rekor transparency-log inclusion proof (agent cannot forge the signed manifest provenance)
+- Sigstore/Rekor transparency-log inclusion proof when that tier is configured (agent cannot forge the signed manifest provenance)
 
 The no-arbitrary-execution claim is machine-checkable in-repo today: the tool registry is fixed
 at compile time (`services/mcp/src/tools/mod.rs` — adding a verb is a code change + review),
@@ -223,9 +223,9 @@ All three modes are **judge-valid**. Judges pick whichever they already have —
 
 | Dimension | Valhuntir (reference) | Us |
 |---|---|---|
-| MCP server | Python, 8 servers via sift-gateway, 100+ tools | **Two** typed MCP servers — Rust `findevil-mcp` (20 DFIR tools, including the deliberately-redundant `vol_pslist` + `vol_psscan` pair plus `vol_psxview` for DKOM cross-validation, disk mount/extract helpers, and network/log triage) + Python `findevil-agent-mcp` (12 crypto/ACH/memory/ACP/expert-feedback tools); no execute_shell |
+| MCP server | Python, 8 servers via sift-gateway, 100+ tools | **Two** typed MCP servers — Rust `findevil-mcp` (31 DFIR tools, including the deliberately-redundant `vol_pslist` + `vol_psscan` pair plus `vol_psxview` for DKOM cross-validation, disk mount/extract helpers, network/log triage, and allow-listed long-tail wrappers) + Python `findevil-agent-mcp` (12 crypto/ACH/memory/ACP/expert-feedback tools); no execute_shell |
 | Agent runtime | Custom Python harness | **Claude Code** itself (SANS rules §1 "Direct Agent Extension") — no custom orchestrator to maintain |
-| Chain-of-custody | Password-gated HMAC (PBKDF2 2M iter) | sigstore/Rekor + Merkle + audit hash chain (FRE 902(14) self-authenticating, with the A5 timestamp trade-off documented) |
+| Chain-of-custody | Password-gated HMAC (PBKDF2 2M iter) | Ed25519/Sigstore signer tier + Merkle + audit hash chain (FRE 902(14) self-authenticating, with the A5 timestamp trade-off documented) |
 | Agent pattern | Single agent + human approval | ACH dual-agent (persistence vs exfil) via Claude Code forked subagents + judge + contradiction surface |
 | Benchmarks published | **None** (their README: "no performance metrics disclosed") | DFIR-Metric + public leaderboard |
 | UI | Browser Examiner Portal | Claude Code terminal (primary); Next.js SPA + MCP Apps widgets (week-7 polish bonus, deferred) |

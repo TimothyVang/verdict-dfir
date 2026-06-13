@@ -257,7 +257,8 @@ mod tests {
 
     #[test]
     fn parse_rows_handles_json_array() {
-        let stdout = r#"[{"sa":"10.0.0.1","da":"10.0.0.2","ibyt":1200},{"sa":"10.0.0.3","ibyt":4}]"#;
+        let stdout =
+            r#"[{"sa":"10.0.0.1","da":"10.0.0.2","ibyt":1200},{"sa":"10.0.0.3","ibyt":4}]"#;
         let out = parse_rows(stdout, 100, String::new()).unwrap();
         assert_eq!(out.rows_seen, 2);
         assert_eq!(out.rows.len(), 2);

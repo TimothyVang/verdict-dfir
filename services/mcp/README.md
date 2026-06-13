@@ -10,9 +10,9 @@ Typed Rust MCP server for Find Evil! per Spec #2 §3 and §6.
 | Component | Status |
 |---|---|
 | Workspace + crate scaffold | ✅ |
-| All 20 typed DFIR tools | ✅ shipped |
+| All 31 typed DFIR tools | ✅ shipped |
 | Hand-rolled JSON-RPC 2.0 stdio server (MCP 2024-11-05) | ✅ in `src/server.rs` |
-| End-to-end stdio smoke (`scripts/rust-mcp-smoke.py`) | ✅ all 20 tools dispatch over the wire |
+| End-to-end stdio smoke (`scripts/rust-mcp-smoke.py`) | ✅ all 31 tools dispatch over the wire |
 | M2 sigstore + rs_merkle integration | partial (rs_merkle live; sigstore lives in `services/agent_mcp/`) |
 
 ## Quick start
@@ -24,9 +24,9 @@ cargo test --workspace --locked
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-## Tool surface (20/20 shipped)
+## Tool surface (31/31 shipped)
 
-Per Spec #2 §6 (which enumerates 11) plus memory cross-validation, disk mount/extract session-resource tools, and network/log triage additions — see CLAUDE.md "Spec/code divergences" for the rationale. All tools are registered in `src/tools/mod.rs`, advertised in `tools/list`, and dispatchable via `tools/call`. Each successful response carries `_meta.output_sha256`.
+Per Spec #2 §6 (which enumerates 11) plus memory cross-validation, disk mount/extract session-resource tools, browser history, allow-listed long-tail wrappers, and Linux/network/NTFS triage additions — see CLAUDE.md "Spec/code divergences" for the rationale. All tools are registered in `src/tools/mod.rs`, advertised in `tools/list`, and dispatchable via `tools/call`. Each successful response carries `_meta.output_sha256`.
 
 | Tool | Module | Backing | Pool |
 |---|---|---|---|
@@ -46,6 +46,17 @@ Per Spec #2 §6 (which enumerates 11) plus memory cross-validation, disk mount/e
 | `vol_psscan` | `tools/vol_psscan.rs` | subprocess: `volatility3` (BSD-2) | A (EPROCESS pool scan) |
 | `vol_psxview` | `tools/vol_psxview.rs` | subprocess: `volatility3` (BSD-2) | A (process-view cross-check) |
 | `vol_malfind` | `tools/vol_malfind.rs` | subprocess: `volatility3` (BSD-2) | A/B (code injection) |
+| `vol_run` | `tools/vol_run.rs` | allow-listed subprocess: `volatility3` plugin | A/B (memory long tail) |
+| `ez_parse` | `tools/ez_parse.rs` | allow-listed subprocess: Eric Zimmerman tools | A (Windows artifact long tail) |
+| `plaso_parse` | `tools/plaso_parse.rs` | allow-listed subprocess: `log2timeline`/Plaso | A/B (timeline long tail) |
+| `mac_triage` | `tools/mac_triage.rs` | allow-listed subprocess: `mac_apt` modules | A/B (macOS triage) |
+| `cloud_audit` | `tools/cloud_audit.rs` | in-process flat JSON audit parser | B (cloud/identity audit) |
+| `journalctl_query` | `tools/journalctl_query.rs` | fixed subprocess: `journalctl` | A/B (Linux logs) |
+| `login_accounting` | `tools/login_accounting.rs` | fixed subprocess: `last`/accounting parser | A/B (Linux login accounting) |
+| `ausearch` | `tools/ausearch.rs` | fixed subprocess: `ausearch` | A/B (Linux auditd) |
+| `nfdump_query` | `tools/nfdump_query.rs` | fixed subprocess: `nfdump` | B (NetFlow) |
+| `suricata_eve` | `tools/suricata_eve.rs` | in-process JSONL parser | B (IDS alerts) |
+| `indx_parse` | `tools/indx_parse.rs` | fixed parser wrapper for INDX/I30 data | A (NTFS internals) |
 | `vel_collect` | `tools/vel_collect.rs` | subprocess: `velociraptor` (Apache-2.0) | A/B (live response) |
 | `sysmon_network_query` | `tools/sysmon_network_query.rs` | in-process: `evtx = 0.11.2` | B (network) |
 | `zeek_summary` | `tools/zeek_summary.rs` | in-process TSV parser | B (network) |

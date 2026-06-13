@@ -1716,12 +1716,20 @@ mod tests {
     #[test]
     fn unmount_steps_ewf_plus_ntfs_releases_loop_then_container() {
         let mp = Path::new("/m");
-        let steps = unmount_steps(mp, &mp.join("fs"), "umount");
+        let fs_dir = mp.join("fs");
+        let ewf_dir = mp.join("ewf");
+        let steps = unmount_steps(mp, &fs_dir, "umount");
         assert_eq!(
             steps,
             vec![
-                ("umount".to_string(), vec!["/m/fs".to_string()]),
-                ("umount".to_string(), vec!["/m/ewf".to_string()]),
+                (
+                    "umount".to_string(),
+                    vec![fs_dir.to_string_lossy().to_string()]
+                ),
+                (
+                    "umount".to_string(),
+                    vec![ewf_dir.to_string_lossy().to_string()]
+                ),
             ]
         );
     }
@@ -1729,10 +1737,14 @@ mod tests {
     #[test]
     fn unmount_steps_ewf_only_releases_container() {
         let mp = Path::new("/m");
-        let steps = unmount_steps(mp, &mp.join("ewf"), "umount");
+        let ewf_dir = mp.join("ewf");
+        let steps = unmount_steps(mp, &ewf_dir, "umount");
         assert_eq!(
             steps,
-            vec![("umount".to_string(), vec!["/m/ewf".to_string()])]
+            vec![(
+                "umount".to_string(),
+                vec![ewf_dir.to_string_lossy().to_string()]
+            )]
         );
     }
 
@@ -1740,7 +1752,10 @@ mod tests {
     fn unmount_steps_raw_umounts_the_mount_point() {
         let mp = Path::new("/m");
         let steps = unmount_steps(mp, mp, "umount");
-        assert_eq!(steps, vec![("umount".to_string(), vec!["/m".to_string()])]);
+        assert_eq!(
+            steps,
+            vec![("umount".to_string(), vec![mp.to_string_lossy().to_string()])]
+        );
     }
 
     #[test]

@@ -248,7 +248,7 @@ Open `FLEET_REPORT.pdf` (or `.html`) and work top-down:
 
 ## See also
 
-- `docs/reference/mcp-and-tools.md` — the 32 audit-chained product tools (20 Rust + 12 Python) and
+- `docs/reference/mcp-and-tools.md` — the 43 audit-chained product tools (31 Rust + 12 Python) and
   `manifest_verify`. (`.mcp.json` registers 6 servers in total; 4 are non-product.)
 - `docs/reference/dependencies.md` — installing matplotlib and the rest of the toolchain.
 - `docs/reference/environment-variables.md` — `FIND_EVIL_GUEST_IP` / `_GUEST_USER` / `_SSH_KEY`

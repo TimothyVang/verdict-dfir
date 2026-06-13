@@ -11,6 +11,12 @@ scoring harness — nothing is asserted without a path you can re-run.*
 > dishonest verdict is a failure; an honest `INDETERMINATE` on a custody-only run is a pass. The
 > scorer enforces both.
 
+> **Parser boundary.** If no parser/tool extracts an artifact class, VERDICT cannot reason over it.
+> Current runs emit `coverage_manifest.json` and embed the same object in `verdict.json`: each
+> artifact class records `available`, `attempted`, `parsed`, `failed`, `unsupported`,
+> `not_supplied`, `parse_errors`, `records_seen`, and `rows_returned`. The goal is not to claim
+> complete coverage; it is to make incomplete coverage impossible to hide.
+
 ---
 
 ## 1. How accuracy is measured
@@ -65,7 +71,11 @@ expects, so it honestly scopes to `SUSPICIOUS` rather than claim the case (verdi
 the golden's CONFIRMED_EVIL). The number is reproducible:
 `scripts/score-recall.py docs/sample-run/nist-hacking-case --golden goldens/nist-hacking-case`. The
 remaining 8 goldens are fixture-staged and pending a SIFT-VM batch — **scheduled, not yet run.** We
-publish the gap, and the progress, rather than hide either.
+publish the gap, and the progress, rather than hide either. The adversarial posture is tracked in
+[`red-team-challenge.md`](red-team-challenge.md): unsupported artifact evil, benign admin activity,
+single-source execution traps, log clearing, DKOM-vs-smear, exfil-without-network, and parser-failure
+cases are expected to pass by staying scoped, preserving limitations, and producing replayable
+citations — not by always finding evil.
 
 `nitroba` is the strongest single result, and it is reproducible from the committed run
 (`scripts/score-recall.py docs/sample-run/nitroba --golden goldens/nitroba` → 5/5 PASS): against a
@@ -206,7 +216,7 @@ Accuracy claims mean nothing if the agent could have altered what it measured. E
 protection here is **architectural, not prompt-based** — there is no instruction saying "don't
 modify the evidence"; there is no code path that *can*:
 
-- **No write verbs exist.** The entire product surface is 32 typed, read-only MCP tools — no
+- **No write verbs exist.** The entire product surface is 43 typed, read-only MCP tools — no
   `execute_shell`, no file-write tool, no delete, no mount-rw. A model that "ignores the
   restriction" has nothing to ignore: the destructive call it might hallucinate does not exist in
   the tool schema, so it fails at the JSON-RPC validation boundary before touching anything

@@ -154,7 +154,8 @@ pub fn ausearch(input: &AusearchInput) -> Result<AusearchOutput, AusearchError> 
     let exit_code = proc.status.code().unwrap_or(-1);
 
     // A zero-match search exits 1 with "<no matches>" on stderr — benign.
-    let is_no_matches = exit_code == NO_MATCHES_EXIT_CODE && stderr_signals_no_matches(&stderr_tail);
+    let is_no_matches =
+        exit_code == NO_MATCHES_EXIT_CODE && stderr_signals_no_matches(&stderr_tail);
     if !proc.status.success() && !is_no_matches {
         return Err(AusearchError::SubprocessFailed {
             exit_code,
@@ -299,7 +300,10 @@ mod tests {
             Some("2")
         );
         // raw keeps the full original line.
-        assert_eq!(rec.get("raw").and_then(serde_json::Value::as_str), Some(line));
+        assert_eq!(
+            rec.get("raw").and_then(serde_json::Value::as_str),
+            Some(line)
+        );
     }
 
     #[test]
@@ -316,7 +320,9 @@ type=USER_LOGIN msg=audit(1714032900.000:789): acct=\"root\" res=success
         assert_eq!(out.rows_seen, 3, "3 type= lines, separators excluded");
         assert_eq!(out.rows.len(), 3);
         assert_eq!(
-            out.rows[0].get("syscall").and_then(serde_json::Value::as_str),
+            out.rows[0]
+                .get("syscall")
+                .and_then(serde_json::Value::as_str),
             Some("59")
         );
     }
@@ -348,7 +354,9 @@ type=SYSCALL a=3
 
     #[test]
     fn path_looks_like_audit_log_matches_known_names() {
-        assert!(path_looks_like_audit_log(Path::new("/var/log/audit/audit.log")));
+        assert!(path_looks_like_audit_log(Path::new(
+            "/var/log/audit/audit.log"
+        )));
         assert!(path_looks_like_audit_log(Path::new("audit.log.1")));
         assert!(!path_looks_like_audit_log(Path::new("/var/log/syslog")));
     }

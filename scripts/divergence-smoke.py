@@ -25,7 +25,7 @@ The divergences (matching CLAUDE.md "Spec/code divergences"):
   §1  Rust 1.83 -> 1.88                bad: rust:1.83-bookworm
   §2  Cargo.lock committed             declarative; nothing to scan
   §3  findevil_agent.cli dropped (A2)  bad: python -m findevil_agent.cli
-  §4  Rust MCP tool count is 20        bad: "11 typed Rust" / "12 typed Rust"
+  §4  Rust MCP tool count is 31        bad: stale 11/12/20 Rust or 32-tool count
   §5  rmcp not a runtime dep           bad: live `rmcp = "=...` (uncommented)
   §7  A3 MemoryStore phrase-quote      doc-only; no shipped wrong-pattern
   §8  A3 audit push: SSE not WebSocket bad: "ws": "..." dep in apps/web pkg
@@ -66,6 +66,11 @@ EXCLUDED_PATH_PARTS = (
     ".venv",
     "__pycache__",
     ".git",
+    # Claude Code subagent worktrees created under the project-local
+    # .claude directory. These are ignored runtime checkouts, not part
+    # of the active publication tree, and can legitimately contain
+    # stale text from the branch they were created from.
+    "worktrees",
     # Sibling worktrees from `git worktree add .worktrees/<name>` —
     # checked-out copies of feature branches living under the repo
     # root. .gitignore'd at /.worktrees/ but git rglob still finds
@@ -189,17 +194,27 @@ DIVERGENCES = [
     },
     {
         "id": "#4",
-        "label": "Rust MCP tool count is 20 (vol_psscan + vol_psxview added for DKOM)",
+        "label": "Rust MCP tool count is 31 (long-tail typed wrappers included)",
         "regex": re.compile(
             r"(?:1[12]\s+typed\s+Rust|"
             r"1[12]\s+DFIR\s+tools|"
+            r"1[23]\s+typed\s+Rust\s+MCP\s+tools|"
+            r"1[239]-tool\s+(?:dispatch|catalog|surface)|"
+            r"20\s+(?:typed\s+)?(?:Rust|DFIR)(?:\s+(?:DFIR\s+)?tools|\s+primitives)?|"
+            r"20-tool\s+(?:dispatch|catalog|surface)|"
+            r"20/20\s+shipped|"
+            r"twenty\s+real\s+forensic\s+tools\s+in\s+Rust|"
+            r"\b32\s+(?:narrow,\s+schema-validated\s+|typed,\s+read-only\s+|typed\s+read-only\s+)?(?:product\s+)?tools\b|"
+            r"\b32-tool\s+surface\b|"
+            r"\b32-tool\s+(?:typed\s+)?product\b|"
+            r"\b32-tool\s+count\b|"
             r"all\s+1[12]\s+Rust|"
             r"findevil-mcp.*?\(1[12]\s+(?:typed|DFIR|tools))"
         ),
         "allowed_in_path": (),
         "remediation": (
-            "vol_psscan and vol_psxview are shipped for DKOM "
-            "cross-validation against vol_pslist. Tool count is 20. "
+            "The current product surface is 43 tools: 31 Rust DFIR "
+            "tools plus 12 Python crypto/ACH/memory/ACP/expert tools. "
             "See CLAUDE.md 'Spec/code divergences' §4."
         ),
     },

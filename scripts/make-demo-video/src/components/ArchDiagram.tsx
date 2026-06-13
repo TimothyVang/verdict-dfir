@@ -21,7 +21,7 @@ interface Boundary {
 const BOUNDARIES: Boundary[] = [
   { no: "01", label: "Evidence Vault", sub: "read-only · SHA-256 at case_open", note: "nothing is trusted before it is hashed" },
   { no: "02", label: "SIFT Tools, subprocess", sub: "Volatility · Hayabusa · Chainsaw · YARA" },
-  { no: "03", label: "20 Rust DFIR Tools", sub: "findevil-mcp · typed IO · hash every output", note: "no execute_shell — the surface stays narrow" },
+  { no: "03", label: "31 Rust DFIR Tools", sub: "findevil-mcp · typed IO · hash every output", note: "no execute_shell — the surface stays narrow" },
   { no: "04", label: "12 Python Crypto Tools", sub: "findevil-agent-mcp · ACH · sigstore · memory" },
   { no: "05", label: "VERDICT Orchestrator", sub: "Claude Code · Pool A + Pool B · judge · correlate" },
 ];
@@ -70,7 +70,7 @@ export function ArchDiagram() {
             opacity: interpolate(frame - sd(44), [0, 14], [0, 1], clampOpts),
           }}
         >
-          chain verifiable offline · 32 typed tools
+          chain verifiable offline · 43 typed tools
         </div>
       </div>
 
