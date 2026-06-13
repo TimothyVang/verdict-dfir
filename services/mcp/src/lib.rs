@@ -84,6 +84,9 @@ pub use crate::tools::vol_psscan::{
 pub use crate::tools::vol_psxview::{
     vol_psxview, VolPsxviewError, VolPsxviewInput, VolPsxviewOutput, VolPsxviewRow,
 };
+pub use crate::tools::vol_run::{
+    is_allowed_plugin, vol_run, VolRunError, VolRunInput, VolRunOutput,
+};
 pub use crate::tools::yara_scan::{
     path_looks_like_yara_rules, yara_scan, YaraError, YaraInput, YaraMatch, YaraOutput,
     YaraPatternMatch,

@@ -56,12 +56,13 @@ use crate::tools::{
     vol_pslist::vol_pslist,
     vol_psscan::vol_psscan,
     vol_psxview::vol_psxview,
+    vol_run::vol_run,
     yara_scan::yara_scan,
     zeek_summary::zeek_summary,
     BrowserHistoryInput, CaseOpenInput, DiskExtractArtifactsInput, DiskMountInput,
     DiskUnmountInput, EvtxQueryInput, HayabusaInput, MftInput, PcapTriageInput, PrefetchInput,
     RegistryInput, SysmonNetworkInput, UsnJrnlInput, VelCollectInput, VolMalfindInput,
-    VolPslistInput, VolPsscanInput, VolPsxviewInput, YaraInput, ZeekSummaryInput,
+    VolPslistInput, VolPsscanInput, VolPsxviewInput, VolRunInput, YaraInput, ZeekSummaryInput,
 };
 use crate::CRATE_VERSION;
 
@@ -642,6 +643,48 @@ fn build_registry() -> Vec<ToolEntry> {
             handler: |args| dispatch_vol_psxview(args),
         },
         ToolEntry {
+            name: "vol_run",
+            description: "Run ONE allow-listed Volatility 3 plugin against a memory image and \
+                 return its raw rows. This is the generic memory verb: where vol_pslist / \
+                 vol_psscan / vol_psxview / vol_malfind cover the high-value pivots with \
+                 fully typed output, vol_run reaches the long tail of evil-hunting plugins \
+                 through ONE verb instead of 40 bespoke tools. \
+                 plugin MUST be a canonical Vol3 name on the allow-list — any other value \
+                 (including a shell-injection-shaped string) is rejected with PluginNotAllowed \
+                 BEFORE any subprocess runs, which is the no-shell guarantee for a \
+                 parameterized verb. Allow-list (curated, evil-hunting): \
+                 windows.cmdline/dlllist/ldrmodules/handles/getsids/privileges/sessions/envars \
+                 (process+execution context), windows.svcscan/netscan/netstat (services+network), \
+                 windows.consoles/cmdscan (attacker shell history), \
+                 windows.registry.{hashdump,lsadump,cachedump} (credentials), \
+                 windows.hollowprocesses/suspicious_threads/vadinfo (injection depth), \
+                 windows.modules/modscan/driverscan/ssdt/callbacks (kernel rootkit surface), \
+                 windows.filescan/mftscan.MFTScan, windows.registry.hivelist/userassist, \
+                 linux.pslist/psscan/pstree/bash/malfind/lsmod/check_modules/check_syscall/hidden_modules, \
+                 mac.pslist/psaux/lsmod/malfind/check_syscall. \
+                 Use AFTER case_open. memory_path is the image; optional pid scopes per-process \
+                 plugins (a u32, never a shell fragment). Default limit 10000. \
+                 Returns plugin + rows[] (raw per-plugin JSON columns — output shape varies by \
+                 plugin, so the agent gets the plugin's own schema) + rows_seen + stderr_tail. \
+                 Linux/macOS images also need their ISF symbol table on the Vol3 symbol path. \
+                 Same Volatility binary discovery as vol_pslist ($VOLATILITY_BIN first, then \
+                 PATH for vol/vol.py/volatility3/volatility). \
+                 ERRORS: PluginNotAllowed (use a canonical allow-listed name, or the bespoke \
+                 vol_* tools), MemoryNotFound / MemoryNotRegular (verify path), BinaryNotFound \
+                 (install via `pip install volatility3` or use the SIFT VM), SubprocessFailed \
+                 (check stderr_tail — common causes: missing ISF symbols, unsupported profile), \
+                 OutputParse (rare; Vol3 version mismatch).",
+            annotations: ToolAnnotations {
+                title: "Run Allow-listed Memory Plugin (Volatility)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<VolRunInput>(),
+            handler: |args| dispatch_vol_run(args),
+        },
+        ToolEntry {
             name: "vel_collect",
             description: "Run a Velociraptor artifact via `velociraptor artifacts collect` and \
                  stream the resulting rows. Generic trampoline over Velociraptor's 200+ \
@@ -1127,6 +1170,24 @@ fn dispatch_vol_malfind(args: Value) -> Result<Value, ToolError> {
     }
 }
 
+fn dispatch_vol_run(args: Value) -> Result<Value, ToolError> {
+    let input: VolRunInput = parse_args(args)?;
+    // PluginNotAllowed / MemoryNotFound / MemoryNotRegular are user-input
+    // errors; surface as -32602 so the agent fixes the call rather than
+    // treating the tool as crashed.
+    match vol_run(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::VolRunError::PluginNotAllowed(_)
+            | crate::tools::VolRunError::MemoryNotFound(_)
+            | crate::tools::VolRunError::MemoryNotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("vol_run: {e}"))),
+    }
+}
+
 fn dispatch_vel_collect(args: Value) -> Result<Value, ToolError> {
     let input: VelCollectInput = parse_args(args)?;
     // InvalidArtifactName / InvalidArgName are user-input issues; surface as -32602.
@@ -1263,6 +1324,7 @@ mod tests {
             "vol_malfind",
             "vol_psscan",
             "vol_psxview",
+            "vol_run",
             "vel_collect",
             "browser_history",
         ];

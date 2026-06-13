@@ -25,8 +25,8 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use findevil_mcp::{
-    case_open, evtx_query, mft_timeline, prefetch_parse, CaseOpenInput, EvtxError, EvtxQueryInput,
-    MftError, MftInput, PrefetchError, PrefetchInput,
+    case_open, evtx_query, mft_timeline, prefetch_parse, vol_run, CaseOpenInput, EvtxError,
+    EvtxQueryInput, MftError, MftInput, PrefetchError, PrefetchInput, VolRunError, VolRunInput,
 };
 
 // A path string that would be catastrophic if any tool ever shelled out. Used as
@@ -135,6 +135,33 @@ fn prefetch_parse_treats_traversal_path_as_missing_file() {
     .expect_err("traversal to a missing file must be a clean typed error");
 
     assert!(matches!(err, PrefetchError::NotFound(_)));
+}
+
+#[test]
+fn vol_run_rejects_shell_payload_plugin_before_any_subprocess() {
+    // vol_run is the one parameterized verb whose argument (the plugin name)
+    // reaches argv. The allow-list is its injection boundary: a plugin string
+    // shaped like a shell payload is not on the list, so it is rejected with a
+    // typed PluginNotAllowed BEFORE any path check or subprocess spawn — even
+    // pointing at a real file. No `windows.cmdline` plugin ever runs.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let real = tmp.path().join("image.mem");
+    fs::write(&real, b"not really a memory image").expect("write");
+
+    let err = vol_run(&VolRunInput {
+        case_id: "c".to_string(),
+        memory_path: real,
+        plugin: format!("windows.cmdline; {SHELL_PAYLOAD}"),
+        pid: None,
+        limit: None,
+    })
+    .expect_err("a shell-payload plugin string must be rejected, not executed");
+
+    assert!(
+        matches!(err, VolRunError::PluginNotAllowed(_)),
+        "got {err:?}"
+    );
+    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
 }
 
 #[test]
