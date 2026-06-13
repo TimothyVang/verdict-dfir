@@ -189,8 +189,18 @@ pub fn ez_parse(input: &EzParseInput) -> Result<EzParseOutput, EzParseError> {
         return Err(EzParseError::ArtifactNotFound(input.artifact_path.clone()));
     }
 
-    let binary = resolve_binary(spec.binary)?;
     let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
+    let binary = match resolve_binary(spec.binary) {
+        Ok(binary) => binary,
+        Err(EzParseError::BinaryNotFound { .. }) if spec.key == "lecmd" => {
+            return Ok(native_lecmd_path_fallback(
+                &input.artifact_path,
+                limit,
+                spec.binary,
+            ));
+        }
+        Err(err) => return Err(err),
+    };
 
     let outdir = std::env::temp_dir().join(format!(
         "ez-{}-{}-{}",
@@ -236,6 +246,48 @@ pub fn ez_parse(input: &EzParseInput) -> Result<EzParseOutput, EzParseError> {
     let result = collect_csv_rows(&outdir, &input.tool, limit, stderr_tail, spec.binary);
     let _ = std::fs::remove_dir_all(&outdir);
     result
+}
+
+fn native_lecmd_path_fallback(artifact: &Path, limit: usize, binary: &str) -> EzParseOutput {
+    let mut rows = Vec::new();
+    let display = artifact.to_string_lossy().into_owned();
+    let normalized = display.to_lowercase().replace('\\', "/");
+    let path_context = (normalized.contains("/recent/") || normalized.contains("/nethood/"))
+        && [
+            "temp on",
+            "cd drive",
+            "4.12.",
+            "channels",
+            "keys",
+            "ghostware",
+            "anony",
+            "staging",
+            "staged",
+        ]
+        .iter()
+        .any(|token| normalized.contains(token));
+    let rows_seen = usize::from(path_context);
+    if path_context && limit > 0 {
+        let mut row = std::collections::BTreeMap::new();
+        row.insert("Source File".to_string(), display);
+        row.insert("Fallback Basis".to_string(), "path_name".to_string());
+        row.insert(
+            "Fallback Warning".to_string(),
+            format!(
+                "{binary} not found; emitted path-only LNK context. Target metadata and volume serial were not decoded."
+            ),
+        );
+        rows.push(row);
+    }
+    EzParseOutput {
+        tool: "lecmd".to_string(),
+        rows,
+        rows_seen,
+        csv_files: Vec::new(),
+        stderr_tail: format!(
+            "{binary} not found; native path-only LNK fallback used for suspicious Recent/NetHood context."
+        ),
+    }
 }
 
 /// Read every `*.csv` the tool wrote, parse it, and merge the rows.
@@ -483,5 +535,29 @@ mod tests {
             Err(EzParseError::NoCsvProduced { binary }) => assert_eq!(binary, "LECmd"),
             other => panic!("expected NoCsvProduced, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn native_lecmd_path_fallback_surfaces_recent_nethood_context_only() {
+        let hit = native_lecmd_path_fallback(
+            Path::new(
+                "/case/lnk/Documents and Settings/Mr. Evil/Recent/Temp on m1200 (4.12.220.254).lnk",
+            ),
+            10,
+            "LECmd",
+        );
+        assert_eq!(hit.rows_seen, 1);
+        assert_eq!(
+            hit.rows[0].get("Fallback Basis").map(String::as_str),
+            Some("path_name")
+        );
+
+        let miss = native_lecmd_path_fallback(
+            Path::new("/case/lnk/Documents and Settings/All Users/Start Menu/Programs/Accessories/Calculator.lnk"),
+            10,
+            "LECmd",
+        );
+        assert_eq!(miss.rows_seen, 0);
+        assert!(miss.rows.is_empty());
     }
 }

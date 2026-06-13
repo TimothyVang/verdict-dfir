@@ -357,8 +357,8 @@ Release Gates</h1>
 <p><span class="tagline">Expert-signoff packet · not customer
 narrative</span></p>
 <p><strong>Case ID:</strong>
-<code>b639fdda-146c-48ec-9080-1e144ec7ceae</code> <strong>Run
-ID:</strong> <code>auto-1781289206</code> <strong>Verdict:</strong>
+<code>bb2953cd-bdd9-4251-a493-70c97663f892</code> <strong>Run
+ID:</strong> <code>auto-1781370852</code> <strong>Verdict:</strong>
 <strong><span class="verdict-alert">SUSPICIOUS</span></strong></p>
 <blockquote>
 <p>These sections are the automated expert-review packet’s internal
@@ -438,15 +438,14 @@ tool output but never create Findings or raise confidence.</td>
 </table>
 <h2 id="qa-expert-signoff">QA / Expert Signoff</h2>
 <ul>
-<li>Overall QA status: <code>FAIL</code></li>
-<li>Packet state: <code>BLOCKED_MANUAL_INVESTIGATION</code></li>
-<li>Ready for expert signoff: <code>False</code></li>
+<li>Overall QA status: <code>WARN</code></li>
+<li>Packet state: <code>EXPERT_REVIEW_DRAFT</code></li>
+<li>Ready for expert signoff: <code>True</code></li>
 <li>Customer-release candidate from automated QA:
 <code>False</code></li>
 <li>Customer releasable after expert approval: <code>False</code></li>
 <li>Expert decision: <code>pending</code></li>
-<li>Expert review estimate:
-<code>manual investigation required</code></li>
+<li>Expert review estimate: <code>30-60 minutes</code></li>
 <li>Signoff question:
 <code>Would I send this report to a company without rewriting it?</code></li>
 </ul>
@@ -467,19 +466,18 @@ tool output but never create Findings or raise confidence.</td>
 <tr class="odd">
 <td><code>finding_tool_call_required</code></td>
 <td>PASS</td>
-<td>All 19 Finding(s) cite current-case tool calls.</td>
+<td>All 27 Finding(s) cite current-case tool calls.</td>
 </tr>
 <tr class="even">
 <td><code>execution_requires_two_current_artifact_classes</code></td>
-<td>FAIL</td>
-<td>Execution wording appears without per-Finding current-case
-corroboration from two acceptable artifact classes.</td>
+<td>PASS</td>
+<td>No unsupported execution wording detected, or current-case
+corroboration is broad enough for expert review.</td>
 </tr>
 <tr class="odd">
 <td><code>exfiltration_requires_staging_and_movement</code></td>
-<td>FAIL</td>
-<td>Exfiltration wording appears without both staging/collection and
-network/tool/data-movement coverage.</td>
+<td>PASS</td>
+<td>No unsupported exfiltration claim detected.</td>
 </tr>
 <tr class="even">
 <td><code>disk_auto_mode_custody_only</code></td>
@@ -494,7 +492,7 @@ network/tool/data-movement coverage.</td>
 <tr class="even">
 <td><code>timeline_source_refs_present</code></td>
 <td>PASS</td>
-<td>Timeline includes 626 normalized event(s) with source
+<td>Timeline includes 627 normalized event(s) with source
 references.</td>
 </tr>
 <tr class="odd">
@@ -535,56 +533,49 @@ awareness.</td>
 not a replacement for the audited <code>verdict.json</code> hash
 committed before manifest finalization.</p>
 <ul>
-<li>QA status: <code>FAIL</code></li>
-<li>Packet state: <code>BLOCKED_MANUAL_INVESTIGATION</code></li>
-<li>Manifest verified: <code>False</code></li>
-<li>Manifest signature present: <code>False</code></li>
+<li>QA status: <code>WARN</code></li>
+<li>Packet state: <code>EXPERT_REVIEW_DRAFT</code></li>
+<li>Manifest verified: <code>True</code></li>
+<li>Manifest signature present: <code>True</code></li>
 <li>Signer: <code>ed25519</code></li>
 <li>Expert approved: <code>False</code></li>
 <li>Customer releasable: <code>False</code></li>
 </ul>
 <h3 id="release-blockers">Release Blockers</h3>
 <ul>
-<li>Execution wording appears without per-Finding current-case
-corroboration from two acceptable artifact classes.</li>
-<li>Exfiltration wording appears without both staging/collection and
-network/tool/data-movement coverage.</li>
+<li>ATT&amp;CK coverage includes blind spots that require expert
+awareness.</li>
+<li>Analysis limitations must remain visible before customer
+release.</li>
 <li>customer release requires an effective manifest_finalize
 signer=sigstore (identity + transparency log); ed25519 proves integrity
 offline but not identity, and stub signatures are dev/offline only</li>
 <li>explicit human expert approval is required before customer
 release</li>
-<li>finalized manifest signature metadata must be present before
-customer release</li>
-<li>manifest_verify must pass before customer release</li>
 </ul>
 <h2 id="readiness-state">Readiness State</h2>
 <ul>
-<li>Packet state: <code>BLOCKED_MANUAL_INVESTIGATION</code></li>
-<li>Ready for expert review/signoff: <code>False</code></li>
+<li>Packet state: <code>EXPERT_REVIEW_DRAFT</code></li>
+<li>Ready for expert review/signoff: <code>True</code></li>
 <li>Expert-review status: <code>pending</code></li>
 <li>Ready for customer PDF: <code>False</code></li>
 <li>Customer releasable: <code>False</code></li>
 </ul>
 <h3 id="blockers">Blockers</h3>
 <ul>
-<li>Execution wording appears without per-Finding current-case
-corroboration from two acceptable artifact classes.</li>
-<li>Exfiltration wording appears without both staging/collection and
-network/tool/data-movement coverage.</li>
+<li>ATT&amp;CK coverage includes blind spots that require expert
+awareness.</li>
+<li>Analysis limitations must remain visible before customer
+release.</li>
 <li>customer release requires an effective manifest_finalize
 signer=sigstore (identity + transparency log); ed25519 proves integrity
 offline but not identity, and stub signatures are dev/offline only</li>
 <li>explicit human expert approval is required before customer
 release</li>
-<li>finalized manifest signature metadata must be present before
-customer release</li>
-<li>manifest_verify must pass before customer release</li>
 </ul>
 <h3 id="failed-checks">Failed Checks</h3>
 <ul>
-<li>execution_requires_two_current_artifact_classes</li>
-<li>exfiltration_requires_staging_and_movement</li>
+<li>No failed checks were recorded by the QA gate.</li>
 </ul>
 <h3 id="warnings">Warnings</h3>
 <ul>

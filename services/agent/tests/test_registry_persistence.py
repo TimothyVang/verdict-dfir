@@ -64,6 +64,18 @@ class TestRunKeyCandidates:
         rows = [_row(RUN_KEY, [_val("Host", "C:\\Windows\\System32\\svchost.exe")])]
         assert fea.registry_persistence_candidates(rows, RUN_KEY) == []
 
+    def test_unqualified_stock_autostart_commands_are_filtered(self) -> None:
+        rows = [
+            _row(
+                RUN_KEY,
+                [
+                    _val("SRFirstRun", "rundll32 srclient.dll"),
+                    _val("SchedulingAgent", "mstinit.exe"),
+                ],
+            )
+        ]
+        assert fea.registry_persistence_candidates(rows, RUN_KEY) == []
+
     def test_known_attack_tool_is_a_candidate_even_outside_user_dirs(self) -> None:
         # suspicious_prefetch_tool_hint knows CAIN — the tell fires on the
         # basename even when the path is not user-writable.
@@ -126,10 +138,10 @@ class TestPoolAEmitter:
         assert f["confidence"] == "CONFIRMED"
         assert f["mitre_technique"] == "T1547.001"
         assert f["finding_id"].startswith("f-A-reg-persist-")
-        # CONFIRMED claims only the persistence mechanism's EXISTENCE — never
-        # execution (which needs >=2 artifact classes).
-        assert "execution" in f["description"].lower()
-        assert "not" in f["description"].lower()
+        # CONFIRMED claims only the persistence mechanism's existence. Runtime
+        # activity needs an additional artifact class.
+        assert "mechanism's existence" in f["description"].lower()
+        assert "runtime" not in f["description"].lower()
 
     def test_prefetch_corroboration_lands_in_derived_from(self) -> None:
         inv = self._inv()

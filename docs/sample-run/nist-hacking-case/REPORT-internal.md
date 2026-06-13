@@ -4,8 +4,8 @@
 
 [Expert-signoff packet · not customer narrative]{.tagline}
 
-**Case ID:** `b639fdda-146c-48ec-9080-1e144ec7ceae`
-**Run ID:** `auto-1781289206`
+**Case ID:** `bb2953cd-bdd9-4251-a493-70c97663f892`
+**Run ID:** `auto-1781370852`
 **Verdict:** **SUSPICIOUS**
 
 > These sections are the automated expert-review packet's internal gates. They are
@@ -34,23 +34,23 @@ The agent prepares an evidence-bound signoff packet; the human expert remains fi
 
 ## QA / Expert Signoff
 
-* Overall QA status: `FAIL`
-* Packet state: `BLOCKED_MANUAL_INVESTIGATION`
-* Ready for expert signoff: `False`
+* Overall QA status: `WARN`
+* Packet state: `EXPERT_REVIEW_DRAFT`
+* Ready for expert signoff: `True`
 * Customer-release candidate from automated QA: `False`
 * Customer releasable after expert approval: `False`
 * Expert decision: `pending`
-* Expert review estimate: `manual investigation required`
+* Expert review estimate: `30-60 minutes`
 * Signoff question: `Would I send this report to a company without rewriting it?`
 
 | Check | Status | Summary |
 |---|---|---|
-| `finding_tool_call_required` | PASS | All 19 Finding\(s\) cite current-case tool calls. |
-| `execution_requires_two_current_artifact_classes` | FAIL | Execution wording appears without per-Finding current-case corroboration from two acceptable artifact classes. |
-| `exfiltration_requires_staging_and_movement` | FAIL | Exfiltration wording appears without both staging/collection and network/tool/data-movement coverage. |
+| `finding_tool_call_required` | PASS | All 27 Finding\(s\) cite current-case tool calls. |
+| `execution_requires_two_current_artifact_classes` | PASS | No unsupported execution wording detected, or current-case corroboration is broad enough for expert review. |
+| `exfiltration_requires_staging_and_movement` | PASS | No unsupported exfiltration claim detected. |
 | `disk_auto_mode_custody_only` | PASS | No custody-only disk overclaim detected. |
 | `no_evil_is_scoped` | PASS | Verdict wording remains scoped to supplied evidence. |
-| `timeline_source_refs_present` | PASS | Timeline includes 626 normalized event\(s\) with source references. |
+| `timeline_source_refs_present` | PASS | Timeline includes 627 normalized event\(s\) with source references. |
 | `verify_finding_replay_failures` | PASS | No verifier replay failures were recorded as analysis limitations. |
 | `verify_finding_replay_embedded` | PASS | Every Finding carries embedded verifier replay evidence, or there are no Findings to replay. |
 | `limitations_visible` | WARN | Analysis limitations must remain visible before customer release. |
@@ -63,46 +63,41 @@ The agent prepares an evidence-bound signoff packet; the human expert remains fi
 
 This gate is written after `manifest_finalize` and `manifest_verify`; it is a post-finalize linkage artifact, not a replacement for the audited `verdict.json` hash committed before manifest finalization.
 
-* QA status: `FAIL`
-* Packet state: `BLOCKED_MANUAL_INVESTIGATION`
-* Manifest verified: `False`
-* Manifest signature present: `False`
+* QA status: `WARN`
+* Packet state: `EXPERT_REVIEW_DRAFT`
+* Manifest verified: `True`
+* Manifest signature present: `True`
 * Signer: `ed25519`
 * Expert approved: `False`
 * Customer releasable: `False`
 
 ### Release Blockers
 
-* Execution wording appears without per-Finding current-case corroboration from two acceptable artifact classes.
-* Exfiltration wording appears without both staging/collection and network/tool/data-movement coverage.
+* ATT&amp;CK coverage includes blind spots that require expert awareness.
+* Analysis limitations must remain visible before customer release.
 * customer release requires an effective manifest_finalize signer=sigstore \(identity + transparency log\); ed25519 proves integrity offline but not identity, and stub signatures are dev/offline only
 * explicit human expert approval is required before customer release
-* finalized manifest signature metadata must be present before customer release
-* manifest_verify must pass before customer release
 
 
 
 ## Readiness State
 
-* Packet state: `BLOCKED_MANUAL_INVESTIGATION`
-* Ready for expert review/signoff: `False`
+* Packet state: `EXPERT_REVIEW_DRAFT`
+* Ready for expert review/signoff: `True`
 * Expert-review status: `pending`
 * Ready for customer PDF: `False`
 * Customer releasable: `False`
 
 ### Blockers
 
-* Execution wording appears without per-Finding current-case corroboration from two acceptable artifact classes.
-* Exfiltration wording appears without both staging/collection and network/tool/data-movement coverage.
+* ATT&amp;CK coverage includes blind spots that require expert awareness.
+* Analysis limitations must remain visible before customer release.
 * customer release requires an effective manifest_finalize signer=sigstore \(identity + transparency log\); ed25519 proves integrity offline but not identity, and stub signatures are dev/offline only
 * explicit human expert approval is required before customer release
-* finalized manifest signature metadata must be present before customer release
-* manifest_verify must pass before customer release
 
 ### Failed Checks
 
-* execution_requires_two_current_artifact_classes
-* exfiltration_requires_staging_and_movement
+* No failed checks were recorded by the QA gate.
 
 ### Warnings
 
