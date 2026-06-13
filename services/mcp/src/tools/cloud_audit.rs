@@ -21,6 +21,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
+use crate::tools::ez_parse::parse_csv_records;
+
 const DEFAULT_LIMIT: usize = 10_000;
 
 /// Allow-listed cloud/identity providers.
@@ -138,6 +140,11 @@ pub(crate) fn parse_provider(
 ) -> Result<CloudAuditOutput, CloudAuditError> {
     let records: Vec<serde_json::Map<String, Value>> = if provider == "vpc_flow" {
         parse_vpc_flow(content)
+    } else if provider == "m365_ual" {
+        load_m365_records(content).map_err(|detail| CloudAuditError::ParseFailed {
+            provider: provider.to_string(),
+            detail,
+        })?
     } else {
         load_json_records(content).map_err(|detail| CloudAuditError::ParseFailed {
             provider: provider.to_string(),
@@ -183,6 +190,55 @@ fn load_json_records(content: &str) -> Result<Vec<serde_json::Map<String, Value>
             Ok(_) => {}
             Err(e) => return Err(format!("JSONL line parse: {e}")),
         }
+    }
+    Ok(out)
+}
+
+/// M365 UAL exports commonly arrive as CSV where the `AuditData` column is a
+/// JSON object. Accept plain JSON/JSONL first, then lift each CSV `AuditData`
+/// object into the same record shape as the other providers.
+fn load_m365_records(content: &str) -> Result<Vec<serde_json::Map<String, Value>>, String> {
+    if let Ok(records) = load_json_records(content) {
+        return Ok(records);
+    }
+
+    let records = parse_csv_records(content);
+    let mut iter = records.into_iter();
+    let Some(header) = iter.next() else {
+        return Ok(Vec::new());
+    };
+    let Some(audit_data_idx) = header
+        .iter()
+        .position(|name| name.eq_ignore_ascii_case("AuditData"))
+    else {
+        return Err("JSON/JSONL parse failed and CSV has no AuditData column".to_string());
+    };
+
+    let mut out = Vec::new();
+    for (row_idx, row) in iter.enumerate() {
+        let Some(raw_audit_data) = row.get(audit_data_idx).map(String::as_str) else {
+            continue;
+        };
+        if raw_audit_data.trim().is_empty() {
+            continue;
+        }
+        let value = serde_json::from_str::<Value>(raw_audit_data)
+            .map_err(|e| format!("AuditData row {} parse: {e}", row_idx + 2))?;
+        let Some(mut map) = as_object(value) else {
+            continue;
+        };
+
+        // Preserve non-AuditData CSV columns as provenance when the JSON body
+        // does not already carry an equivalent key.
+        for (col_idx, name) in header.iter().enumerate() {
+            if col_idx == audit_data_idx || name.is_empty() || map.contains_key(name) {
+                continue;
+            }
+            if let Some(value) = row.get(col_idx) {
+                map.insert(name.clone(), Value::String(value.clone()));
+            }
+        }
+        out.push(map);
     }
     Ok(out)
 }
@@ -256,7 +312,11 @@ fn get_path<'a>(record: &'a serde_json::Map<String, Value>, path: &str) -> Optio
     let first = parts.next()?;
     let mut cur = record.get(first)?;
     for p in parts {
-        cur = cur.as_object()?.get(p)?;
+        cur = if let Ok(idx) = p.parse::<usize>() {
+            cur.as_array()?.get(idx)?
+        } else {
+            cur.as_object()?.get(p)?
+        };
     }
     Some(cur)
 }
@@ -468,6 +528,40 @@ mod tests {
             Some("50126"),
             "numeric code stringified"
         );
+    }
+
+    #[test]
+    fn entra_audit_maps_first_target_resource_from_array_path() {
+        let body = r#"{"value":[
+          {"activityDateTime":"2026-06-13T02:05:00Z",
+           "initiatedBy":{"user":{"userPrincipalName":"admin@contoso.com","ipAddress":"5.6.7.8"}},
+           "activityDisplayName":"Add member to role",
+           "targetResources":[{"displayName":"Global Administrator"}],
+           "result":"success"}
+        ]}"#;
+        let out = parse_provider("entra_audit", body, 100).unwrap();
+        let e = first(&out);
+        assert_eq!(e.actor.as_deref(), Some("admin@contoso.com"));
+        assert_eq!(e.source_ip.as_deref(), Some("5.6.7.8"));
+        assert_eq!(e.action.as_deref(), Some("Add member to role"));
+        assert_eq!(e.resource.as_deref(), Some("Global Administrator"));
+        assert_eq!(e.outcome.as_deref(), Some("success"));
+    }
+
+    #[test]
+    fn m365_ual_csv_lifts_auditdata_json_column() {
+        let body = "RecordType,CreationDate,AuditData\n\
+                    1,2026-06-13T03:00:00Z,\"{\"\"CreationTime\"\":\"\"2026-06-13T03:00:00Z\"\",\"\"UserId\"\":\"\"analyst@contoso.com\"\",\"\"ClientIP\"\":\"\"203.0.113.9\"\",\"\"Operation\"\":\"\"Set-Mailbox\"\",\"\"Workload\"\":\"\"Exchange\"\",\"\"ResultStatus\"\":\"\"Succeeded\"\"}\"\n";
+        let out = parse_provider("m365_ual", body, 100).unwrap();
+        assert_eq!(out.events_seen, 1);
+        let e = first(&out);
+        assert_eq!(e.timestamp.as_deref(), Some("2026-06-13T03:00:00Z"));
+        assert_eq!(e.actor.as_deref(), Some("analyst@contoso.com"));
+        assert_eq!(e.source_ip.as_deref(), Some("203.0.113.9"));
+        assert_eq!(e.action.as_deref(), Some("Set-Mailbox"));
+        assert_eq!(e.resource.as_deref(), Some("Exchange"));
+        assert_eq!(e.outcome.as_deref(), Some("Succeeded"));
+        assert_eq!(e.raw.get("RecordType").and_then(Value::as_str), Some("1"));
     }
 
     #[test]

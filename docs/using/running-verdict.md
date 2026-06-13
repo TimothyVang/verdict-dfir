@@ -35,7 +35,8 @@ the supported pipeline with no flags:
    finding-to-action + grounding workflows (host-side, post-verdict — never in the audit chain), and
    opens the dashboard + report.
 4. **Reports** the Verdict + confidence, the finding / tool-call counts, `manifest_verify.overall`,
-   and every workflow that fired.
+   and the status of every optional host-side workflow (`reachable`, `recorded`, `skipped`, or
+   `unreachable`) without treating sidecar reachability as audit-chain evidence.
 
 It is a turnkey wrapper around `scripts/verdict` (documented below); anything it does you can also
 do by hand with the flags in §1. The SIFT VM provides the broad forensic workstation baseline when

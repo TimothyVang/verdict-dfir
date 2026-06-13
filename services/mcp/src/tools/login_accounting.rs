@@ -10,11 +10,17 @@
 //! binary entirely.
 //!
 //! `last` invocation (deliberately minimal, FIXED argv):
-//!   `last -f <wtmp_path> -F -w -R`
+//!   `last -f <wtmp_path> -F -w`
 //!     -f  read this accounting file instead of /var/log/wtmp
 //!     -F  full login/logout times (so we get a parseable absolute date)
 //!     -w  wide — never truncate the user / host columns
-//!     -R  suppress the DNS hostname column (keeps the table positional)
+//!
+//! We deliberately do NOT pass `-R` (`--nohostname`): that flag suppresses the
+//! host field entirely, which would discard the remote SSH/RDP source host that
+//! is the whole point of this tool (an interactive login from an unexpected
+//! host is the lateral-movement signal). `last` displays the host string AS
+//! RECORDED in `wtmp` and does no live DNS lookup by default (that is opt-in via
+//! `-d`), so keeping the host column is both useful and network-safe.
 //!
 //! Pool A / B triage: an interactive login from an unexpected host, an
 //! off-hours `root` session, or a burst of `btmp` failures are all
@@ -122,8 +128,6 @@ fn build_last_args(accounting_path: &Path) -> Vec<OsString> {
         "-F".into(),
         // Wide: never truncate the user / host columns.
         "-w".into(),
-        // No DNS column — keeps the table positional / deterministic.
-        "-R".into(),
     ]
 }
 
@@ -323,15 +327,19 @@ mod tests {
     }
 
     #[test]
-    fn build_args_uses_full_wide_nodns_flags() {
+    fn build_args_keeps_host_column_without_dns_lookup() {
         let args = build_last_args(Path::new("/var/log/wtmp"));
         let s = as_strings(&args);
-        for expected in ["-f", "/var/log/wtmp", "-F", "-w", "-R"] {
+        for expected in ["-f", "/var/log/wtmp", "-F", "-w"] {
             assert!(
                 s.contains(&expected.to_string()),
                 "missing {expected} in {s:?}"
             );
         }
+        assert!(
+            !s.contains(&"-R".to_string()),
+            "`last -R` suppresses the remote host column"
+        );
         // `-f` must be immediately followed by the path.
         let f = s.iter().position(|a| a == "-f").unwrap();
         assert_eq!(s[f + 1], "/var/log/wtmp");

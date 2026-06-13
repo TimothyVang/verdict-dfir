@@ -17,6 +17,13 @@ Per SANS Find Evil! rules, submissions declare which of four supported patterns 
 
 The combination is the architectural claim: Claude Code's agent loop never touches a raw shell because the only verbs it has are MCP-typed function calls into one of the two servers.
 
+**Maturity note.** The 31 Rust verbs are implemented as a typed, allow-listed surface. The
+long-tail verbs `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`, `cloud_audit`,
+`journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`, `suricata_eve`, and
+`indx_parse` are fixture-tested but not yet exercised on real evidence in a committed run; the
+committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/YARA/USN/Hayabusa/Sysmon/
+Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
+
 ---
 
 ## Relationship to Protocol SIFT

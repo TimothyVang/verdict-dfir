@@ -67,7 +67,7 @@ contradictions; it is not proof. Disputed or unsupported leads stay visible as c
 <p align="center">
   <img src="docs/showcase/sift-scenario/srl-basefile-sift.gif" alt="VERDICT investigating the SRL-2018 base-file host with the forensic tools running inside the SANS SIFT VM" width="760">
 </p>
-<p align="center"><sub>The hardest case — SANS <b>SRL-2018</b>, a 198&nbsp;GB / 22-host compromised enterprise — run host-by-host with the forensic toolchain executing inside the SANS SIFT VM over SSH. <a href="https://youtu.be/4RQnVden6L8">Watch the full walkthrough on YouTube (4:35) →</a> · <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">mp4 mirror</a></sub></p>
+<p align="center"><sub>The hardest case — SANS <b>SRL-2018</b>, a 198&nbsp;GB / 22-host compromised enterprise — run host-by-host with the forensic toolchain executing inside the SANS SIFT VM over SSH. <a href="https://youtu.be/4RQnVden6L8">Watch the full walkthrough on YouTube (4:35) →</a> · <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">historical v-submit mp4 mirror</a></sub></p>
 
 <p align="center">
   <img src="docs/showcase/sift-scenario/srl-fleet-report-hero.png" alt="Fleet rollup — 22 hosts investigated, 74 cross-host process correlations, 53 multi-host temporal clusters" width="380">
@@ -97,7 +97,7 @@ Every run writes a self-contained case directory:
 | `verdict.json` | The evidence-bound verdict + findings, each citing a `tool_call_id` and a confidence tier |
 | `coverage_manifest.json` | Explicit anti-overclaim sidecar: available / attempted / parsed / failed / unsupported / not supplied per artifact class |
 | `run.manifest.json` | Merkle root over canonical tool outputs + signature metadata — verifiable offline |
-| `report.html` | Analyst report: findings, ATT&CK coverage, normalized timeline, next analyst actions |
+| `REPORT.md` / `REPORT.html` / `REPORT.pdf` | Analyst report: findings, ATT&CK coverage, normalized timeline, next analyst actions |
 
 <p align="center">
   <img src="assets/screenshots/chain-of-custody.png" alt="Cryptographic chain of custody: hash-chained audit log to Merkle root to signed manifest" width="760">
@@ -143,7 +143,8 @@ live on the dashboard as it completes:
 </p>
 <p align="center"><sub>The dashboard's Audit view streams every tool call as it lands; the whole chain verifies offline with <code>manifest_verify</code>.</sub></p>
 
-Underneath, three ideas covered by the smoke/CI gates and exercised by live runs:
+Underneath, three ideas covered by the smoke/CI gates, with the core DFIR path exercised by
+committed live runs:
 
 1. **A typed MCP tool surface — no `execute_shell`.** 43 narrow, schema-validated product tools:
    31 Rust DFIR tools (`case_open`, `vol_pslist`/`psscan`/`psxview`, `vol_run`, `ez_parse`,
@@ -152,6 +153,13 @@ Underneath, three ideas covered by the smoke/CI gates and exercised by live runs
    tools. Copyleft / source-available engines (Hayabusa, pandoc, tshark) and the
    permissively licensed Volatility 3 and Velociraptor are invoked as subprocesses only, so the
    Apache-2.0 tree stays license-clean.
+
+   **Maturity note.** The long-tail verbs `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`,
+   `cloud_audit`, `journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`,
+   `suricata_eve`, and `indx_parse` are implemented as typed, allow-listed, shell-free tools and
+   unit-tested against synthetic fixtures, but they have not yet been exercised on real evidence in
+   a committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/
+   YARA/USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
 
 2. **A cryptographic chain of custody.** Hash-chained audit log → `rs_merkle` Merkle root over
    canonical-JSON tool outputs → a manifest signature. The default signer is a real local Ed25519
@@ -353,4 +361,4 @@ research-only and gitignored — they do not ship.
 
 <sub>VERDICT began as an entry in the SANS <i>Find Evil!</i> 2026 hackathon; internal identifiers
 (<code>findevil-mcp</code>, <code>@findevil/web</code>, <code>scripts/find-evil</code>) retain that
-name.</sub>
+name, while the canonical one-shot operator command is <code>scripts/verdict</code>.</sub>

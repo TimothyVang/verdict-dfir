@@ -21,6 +21,13 @@ Every successful tool call carries `_meta.output_sha256` (hex SHA-256 of the can
 
 ## Rust DFIR tools (`findevil-mcp`)
 
+**Maturity note.** The long-tail verbs `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`,
+`cloud_audit`, `journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`,
+`suricata_eve`, and `indx_parse` are implemented as typed, allow-listed, shell-free tools and
+unit-tested against synthetic fixtures, but they have not yet been exercised on real evidence in a
+committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/YARA/
+USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
+
 ### case_open
 Args: `{image_path: str, expected_sha256?: str, label?: str}`
 Returns: `{id, image_path, image_hash, size_bytes, opened_at}`
@@ -124,12 +131,12 @@ Use when: a cross-OS log plaso normalizes (`syslog`, `bash_history`, `zsh_extend
 ### mac_triage
 Args: `{case_id, module: str, image_path, limit?}`
 Returns: `{module, rows[]: per-module CSV columns, rows_seen, csv_files[], stderr_tail}`
-Use when: triaging a mounted macOS image. `module` ∈ allow-listed `mac_apt` modules (`UNIFIEDLOGS`, `FSEVENTS`, `AUTOSTART`, `KNOWLEDGEC`, `QUARANTINE`, `TCC`, `SAFARI`, `SPOTLIGHT`, `INSTALLHISTORY`, `BASHSESSIONS`, …); off-list/injection rejects with `ModuleNotAllowed` before subprocess. The macOS analogue of `disk_extract_artifacts` — one `mac_apt` binary covers most macOS classes. `$MAC_APT` then PATH; graceful `BinaryNotFound`.
+Use when: triaging a mounted macOS image. `module` ∈ allow-listed `mac_apt` modules (`UNIFIEDLOGS`, `FSEVENTS`, `AUTOSTART`, `KNOWLEDGEC`, `QUARANTINE`, `TCC`, `SAFARI`, `SPOTLIGHT`, `INSTALLHISTORY`, `BASHSESSIONS`, …); off-list/injection rejects with `ModuleNotAllowed` before subprocess. Intended as the macOS analogue of `disk_extract_artifacts`; once `mac_apt` is provisioned it covers most macOS classes, but this verb is not yet exercised on a real macOS image in a committed run. `$MAC_APT` then PATH; graceful `BinaryNotFound`.
 
 ### cloud_audit
 Args: `{case_id, provider: str, log_path, limit?}`
 Returns: `{provider, events[]: {timestamp, actor, source_ip, action, resource, outcome, raw}, events_seen}`
-Use when: a cloud/identity audit log is in scope (the modern attacker center of gravity). `provider` ∈ `{cloudtrail, entra_signin, entra_audit, m365_ual, gcp_audit, workspace, k8s_audit, vpc_flow}`; off-list rejects with `ProviderNotAllowed`. **Pure Rust — no subprocess, no external binary.** Accepts JSON arrays, `{Records}`/`{value}` containers, JSONL, and space-delimited VPC flow; normalizes every provider into one envelope so the agent reasons across clouds.
+Use when: a cloud/identity audit log is in scope (the modern attacker center of gravity). `provider` ∈ `{cloudtrail, entra_signin, entra_audit, m365_ual, gcp_audit, workspace, k8s_audit, vpc_flow}`; off-list rejects with `ProviderNotAllowed`. **Pure Rust — no subprocess, no external binary.** Accepts JSON arrays, `{Records}`/`{value}` containers, JSONL, M365 UAL CSV `AuditData`, and space-delimited VPC flow; normalizes every provider into one envelope so the agent reasons across clouds.
 
 ### journalctl_query
 Args: `{case_id, journal_path: str, since?: str, until?: str, limit?}`
@@ -139,7 +146,7 @@ Use when: a binary systemd journal (`*.journal`) is carved. Fixed `journalctl --
 ### login_accounting
 Args: `{case_id, accounting_path: str, limit?}`
 Returns: `{rows[]: {user, line, host, login_iso?, logout_iso?, raw}, rows_seen, stderr_tail}`
-Use when: a Linux wtmp/btmp login-accounting DB is carved (lateral-movement / brute-force triage). Fixed `last -f <path> -F -w -R` subprocess. `$LAST_BIN` then PATH.
+Use when: a Linux wtmp/btmp login-accounting DB is carved (lateral-movement / brute-force triage). Fixed `last -f <path> -F -w` subprocess, deliberately keeping the recorded remote host column. `$LAST_BIN` then PATH.
 
 ### ausearch
 Args: `{case_id, audit_log_path: str, limit?}`

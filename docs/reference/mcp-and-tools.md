@@ -69,6 +69,13 @@ wraps (`journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`, `suri
 `indx_parse`) take a typed path and a fixed argv — a hostile path is one inert argv element,
 never a flag or a shell fragment.
 
+**Maturity note.** The long-tail verbs `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`,
+`cloud_audit`, `journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`,
+`suricata_eve`, and `indx_parse` are implemented as typed, allow-listed, shell-free tools and
+unit-tested against synthetic fixtures, but they have not yet been exercised on real evidence in a
+committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/YARA/
+USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
+
 ### `findevil-mcp` — 31 Rust DFIR tools (`services/mcp/src/tools/`)
 
 | Tool | Purpose | Source |
@@ -99,7 +106,7 @@ never a flag or a shell fragment.
 | `mac_triage` | Allow-listed mac_apt module verb (macOS Unified Logs/FSEvents/launchd/KnowledgeC/TCC/…) | `mac_triage.rs` |
 | `cloud_audit` | Cloud/identity audit-log verb (CloudTrail/Entra/M365/GCP/k8s/VPC) — pure-Rust, normalized envelope | `cloud_audit.rs` |
 | `journalctl_query` | Binary systemd journal via `journalctl --file -o json` (Linux host) | `journalctl_query.rs` |
-| `login_accounting` | wtmp/btmp login records via `last -F -w -R` (Linux host) | `login_accounting.rs` |
+| `login_accounting` | wtmp/btmp login records via `last -F -w` (Linux host; recorded remote host retained) | `login_accounting.rs` |
 | `ausearch` | Linux auditd `audit.log` via `ausearch -i -if` (install-first) | `ausearch.rs` |
 | `nfdump_query` | NetFlow/IPFIX via `nfdump -r -o json` (no free-text filter; install-first) | `nfdump_query.rs` |
 | `suricata_eve` | PCAP → Suricata `eve.json` (install-first) | `suricata_eve.rs` |
