@@ -48,14 +48,17 @@ use crate::tools::{
     evtx_query::evtx_query,
     ez_parse::ez_parse,
     hayabusa_scan::hayabusa_scan,
+    indx_parse::indx_parse,
     journalctl_query::journalctl_query,
     login_accounting::login_accounting,
     mac_triage::mac_triage,
     mft_timeline::mft_timeline,
+    nfdump_query::nfdump_query,
     pcap_triage::pcap_triage,
     plaso_parse::plaso_parse,
     prefetch_parse::prefetch_parse,
     registry_query::registry_query,
+    suricata_eve::suricata_eve,
     sysmon_network_query::sysmon_network_query,
     usnjrnl_query::usnjrnl_query,
     vel_collect::vel_collect,
@@ -67,11 +70,11 @@ use crate::tools::{
     yara_scan::yara_scan,
     zeek_summary::zeek_summary,
     AusearchInput, BrowserHistoryInput, CaseOpenInput, CloudAuditInput, DiskExtractArtifactsInput,
-    DiskMountInput, DiskUnmountInput, EvtxQueryInput, EzParseInput, HayabusaInput,
-    JournalctlQueryInput, LoginAccountingInput, MacTriageInput, MftInput, PcapTriageInput,
-    PlasoParseInput, PrefetchInput, RegistryInput, SysmonNetworkInput, UsnJrnlInput,
-    VelCollectInput, VolMalfindInput, VolPslistInput, VolPsscanInput, VolPsxviewInput, VolRunInput,
-    YaraInput, ZeekSummaryInput,
+    DiskMountInput, DiskUnmountInput, EvtxQueryInput, EzParseInput, HayabusaInput, IndxParseInput,
+    JournalctlQueryInput, LoginAccountingInput, MacTriageInput, MftInput, NfdumpQueryInput,
+    PcapTriageInput, PlasoParseInput, PrefetchInput, RegistryInput, SuricataEveInput,
+    SysmonNetworkInput, UsnJrnlInput, VelCollectInput, VolMalfindInput, VolPslistInput,
+    VolPsscanInput, VolPsxviewInput, VolRunInput, YaraInput, ZeekSummaryInput,
 };
 use crate::CRATE_VERSION;
 
@@ -927,6 +930,103 @@ fn build_registry() -> Vec<ToolEntry> {
             handler: |args| dispatch_ausearch(args),
         },
         ToolEntry {
+            name: "nfdump_query",
+            description: "Read NetFlow / IPFIX / sFlow records from a captured flow file via a \
+                 FIXED `nfdump -r <flow_path> -o json` subprocess (BSD-3; subprocess-only). \
+                 INSTALL-FIRST: `nfdump` is absent on the stock SIFT VM, so an un-installed \
+                 host returns BinaryNotFound and the lane degrades honestly. POOL B exfil \
+                 triage: large outbound byte counts, beaconing to a single destination, or \
+                 connections to a known-bad IP show up in flow data without the full PCAP. \
+                 Use AFTER case_open. flow_path is the captured flow dump (nfcapd-style). \
+                 There is deliberately NO free-text filter field — nfdump's filter language \
+                 would be an injection sink — so narrow with the typed limit and filter rows \
+                 agent-side. Default limit 10000. \
+                 Returns rows[] (generic flow-record column maps, exactly as nfdump emitted \
+                 them — the column set varies with flow version), rows_seen (pre-limit), and \
+                 stderr_tail. \
+                 ERRORS: FlowNotFound / FlowNotRegular (verify the path points at a flow \
+                 file), BinaryNotFound (install via `sudo apt-get install -y nfdump` or set \
+                 $NFDUMP_BIN), SubprocessFailed (nfdump returned non-zero — check \
+                 stderr_tail; common cause: not a valid flow file), OutputParse (stdout was \
+                 not the expected JSON; rare, indicates an nfdump version mismatch).",
+            annotations: ToolAnnotations {
+                title: "Query NetFlow/IPFIX (nfdump)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<NfdumpQueryInput>(),
+            handler: |args| dispatch_nfdump_query(args),
+        },
+        ToolEntry {
+            name: "suricata_eve",
+            description: "Replay a PCAP through the Suricata network IDS via a FIXED \
+                 `suricata -r <pcap_path> -l <outdir>` subprocess (GPL-2.0; subprocess-only \
+                 per Spec #2 invariant), then read+parse the resulting eve.json. \
+                 INSTALL-FIRST: `suricata` is absent on the stock SIFT VM, so an un-installed \
+                 host returns BinaryNotFound and the lane degrades honestly. POOL B exfil + \
+                 intrusion triage: alert, flow, dns, http, tls, and fileinfo events all land \
+                 in eve.json keyed by event_type. Suricata writes into a per-call temp output \
+                 directory that is cleaned up after the events are read. \
+                 Use AFTER case_open. pcap_path is the capture to replay. Default limit \
+                 10000 events. \
+                 Returns events[] (generic eve.json event maps, exactly as Suricata emitted \
+                 them — the field set varies with event_type), events_seen (pre-limit), and \
+                 stderr_tail. \
+                 ERRORS: PcapNotFound / PcapNotRegular (verify the path points at a capture), \
+                 BinaryNotFound (install via `sudo apt-get install -y suricata` or set \
+                 $SURICATA_BIN), SubprocessFailed (Suricata returned non-zero — check \
+                 stderr_tail), NoOutput (Suricata wrote no eve.json — empty or unreadable \
+                 capture), OutputParse (an eve.json line was not valid JSON; rare, indicates \
+                 a Suricata version mismatch).",
+            annotations: ToolAnnotations {
+                title: "Run Suricata IDS (eve.json)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<SuricataEveInput>(),
+            handler: |args| dispatch_suricata_eve(args),
+        },
+        ToolEntry {
+            name: "indx_parse",
+            description: "Parse an NTFS directory-index ($I30 / INDX) stream with Willi \
+                 Ballenthin's INDXParse.py, including entries recovered from index slack \
+                 space. The $I30 stream is the canonical 'this file used to live in this \
+                 directory' artifact: even after a file is deleted and its $MFT record \
+                 reused, its INDX entry can survive in slack carrying the $FN MAC times — \
+                 an anti-forensic-deletion corroboration surface. \
+                 INSTALL-FIRST: INDXParse.py is NOT on stock SIFT; install with \
+                 `pip install INDXParse` (or `pipx install INDXParse`), which exposes the \
+                 INDXParse.py console script. When absent this tool returns BinaryNotFound \
+                 and every other tool keeps working. \
+                 Use AFTER case_open with indx_path pointing at a carved $I30 / INDX file \
+                 extracted from the image. Default limit 10000 rows. \
+                 Invocation is fixed argv `INDXParse.py <indx_path>`; with no mode flag \
+                 INDXParse.py defaults to CSV output of the dir index type. We parse its \
+                 own `,\\t`-delimited table (header + rows) into generic rows[] mapping each \
+                 column (FILENAME, PHYSICAL SIZE, LOGICAL SIZE, MODIFIED/ACCESSED/CHANGED/\
+                 CREATED TIME) to its value, plus rows_seen and stderr_tail. \
+                 Binary discovery: $INDXPARSE_BIN env var first, then PATH lookup for \
+                 INDXParse.py. \
+                 ERRORS: NotFound / NotRegular (verify the path is a carved INDX file, not \
+                 a directory), BinaryNotFound (install INDXParse or set $INDXPARSE_BIN), \
+                 SubprocessFailed (INDXParse.py returned non-zero — check stderr_tail; \
+                 the file may not be a valid INDX stream), OutputParse (no header line in \
+                 stdout; rare).",
+            annotations: ToolAnnotations {
+                title: "Parse NTFS Directory Index (INDXParse)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<IndxParseInput>(),
+            handler: |args| dispatch_indx_parse(args),
+        },
+        ToolEntry {
             name: "vel_collect",
             description: "Run a Velociraptor artifact via `velociraptor artifacts collect` and \
                  stream the resulting rows. Generic trampoline over Velociraptor's 200+ \
@@ -1538,6 +1638,54 @@ fn dispatch_ausearch(args: Value) -> Result<Value, ToolError> {
     }
 }
 
+fn dispatch_nfdump_query(args: Value) -> Result<Value, ToolError> {
+    let input: NfdumpQueryInput = parse_args(args)?;
+    // FlowNotFound / FlowNotRegular are user-input errors; surface as -32602
+    // so the agent corrects the path rather than treating the tool as crashed.
+    match nfdump_query(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::NfdumpQueryError::FlowNotFound(_)
+            | crate::tools::NfdumpQueryError::FlowNotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("nfdump_query: {e}"))),
+    }
+}
+
+fn dispatch_suricata_eve(args: Value) -> Result<Value, ToolError> {
+    let input: SuricataEveInput = parse_args(args)?;
+    // PcapNotFound / PcapNotRegular are user-input errors; surface as -32602.
+    match suricata_eve(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::SuricataEveError::PcapNotFound(_)
+            | crate::tools::SuricataEveError::PcapNotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("suricata_eve: {e}"))),
+    }
+}
+
+fn dispatch_indx_parse(args: Value) -> Result<Value, ToolError> {
+    let input: IndxParseInput = parse_args(args)?;
+    // NotFound / NotRegular are user-input territory (wrong path, or a
+    // directory passed in); surface as -32602 so the agent corrects the
+    // path. BinaryNotFound / SubprocessFailed / OutputParse are
+    // system-state issues → -32603.
+    match indx_parse(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(e @ (crate::tools::IndxError::NotFound(_) | crate::tools::IndxError::NotRegular(_))) => {
+            Err(ToolError::InvalidParams(format!("{e}")))
+        }
+        Err(e) => Err(ToolError::Internal(format!("indx_parse: {e}"))),
+    }
+}
+
 fn dispatch_vel_collect(args: Value) -> Result<Value, ToolError> {
     let input: VelCollectInput = parse_args(args)?;
     // InvalidArtifactName / InvalidArgName are user-input issues; surface as -32602.
@@ -1682,6 +1830,9 @@ mod tests {
             "journalctl_query",
             "login_accounting",
             "ausearch",
+            "nfdump_query",
+            "suricata_eve",
+            "indx_parse",
             "vel_collect",
             "browser_history",
         ];

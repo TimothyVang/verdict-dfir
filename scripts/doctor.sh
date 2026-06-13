@@ -262,6 +262,12 @@ dfir "last (wtmp)"  LAST_BIN        "install util-linux or set \$LAST_BIN   (log
      -- last
 dfir "ausearch"     AUSEARCH_BIN    "sudo apt-get install -y auditd   (ausearch: Linux audit.log; INSTALL-FIRST, absent on stock SIFT)" \
      -- ausearch
+dfir "nfdump"       NFDUMP_BIN      "sudo apt-get install -y nfdump   (nfdump_query: NetFlow/IPFIX; INSTALL-FIRST)" \
+     -- nfdump
+dfir "suricata"     SURICATA_BIN    "sudo apt-get install -y suricata   (suricata_eve: IDS on PCAP; INSTALL-FIRST)" \
+     -- suricata
+dfir "INDXParse"    INDXPARSE_BIN   "pip install INDXParse   (or: pipx install INDXParse) for indx_parse (\$I30/INDX slack; INSTALL-FIRST)" \
+     -- INDXParse.py
 
 # ---------------------------------------------------------------------------
 # Reporting + demo-recording helpers (warn-only).

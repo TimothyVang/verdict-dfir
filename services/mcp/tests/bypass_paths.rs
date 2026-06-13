@@ -25,12 +25,13 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use findevil_mcp::{
-    ausearch, case_open, evtx_query, ez_parse, journalctl_query, login_accounting, mac_triage,
-    mft_timeline, plaso_parse, prefetch_parse, vol_run, AusearchError, AusearchInput, CaseOpenInput,
-    EvtxError, EvtxQueryInput, EzParseError, EzParseInput, JournalctlQueryError,
-    JournalctlQueryInput, LoginAccountingError, LoginAccountingInput, MacTriageError, MacTriageInput,
-    MftError, MftInput, PlasoParseError, PlasoParseInput, PrefetchError, PrefetchInput, VolRunError,
-    VolRunInput,
+    ausearch, case_open, evtx_query, ez_parse, indx_parse, journalctl_query, login_accounting,
+    mac_triage, mft_timeline, nfdump_query, plaso_parse, prefetch_parse, suricata_eve, vol_run,
+    AusearchError, AusearchInput, CaseOpenInput, EvtxError, EvtxQueryInput, EzParseError,
+    EzParseInput, IndxError, IndxParseInput, JournalctlQueryError, JournalctlQueryInput,
+    LoginAccountingError, LoginAccountingInput, MacTriageError, MacTriageInput, MftError, MftInput,
+    NfdumpQueryError, NfdumpQueryInput, PlasoParseError, PlasoParseInput, PrefetchError,
+    PrefetchInput, SuricataEveError, SuricataEveInput, VolRunError, VolRunInput,
 };
 
 // A path string that would be catastrophic if any tool ever shelled out. Used as
@@ -319,4 +320,60 @@ fn ausearch_treats_traversal_path_as_missing_file() {
     .expect_err("traversal to a missing file must be a clean typed error");
 
     assert!(matches!(err, AusearchError::NotFound(_)));
+}
+
+#[test]
+fn nfdump_query_treats_shell_payload_path_as_missing_file() {
+    // FIXED `-r <flow_path> -o json` argv, no free-text filter field — a hostile
+    // flow_path is one inert argv element; a missing one is a typed FlowNotFound
+    // (the existence check runs before any spawn, so this holds with or without
+    // nfdump installed).
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD}.nfcapd"));
+
+    let err = nfdump_query(&NfdumpQueryInput {
+        case_id: "c".to_string(),
+        flow_path: missing,
+        limit: None,
+    })
+    .expect_err("a non-existent hostile path must error, not execute");
+
+    assert!(matches!(err, NfdumpQueryError::FlowNotFound(_)));
+    assert!(!tmp.path().join("HACKED").exists());
+}
+
+#[test]
+fn suricata_eve_treats_shell_payload_path_as_missing_file() {
+    // FIXED `-r <pcap_path> -l <outdir>` argv — a hostile pcap_path is one inert
+    // argv element; a missing one is a typed PcapNotFound before any spawn.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD}.pcap"));
+
+    let err = suricata_eve(&SuricataEveInput {
+        case_id: "c".to_string(),
+        pcap_path: missing,
+        limit: None,
+    })
+    .expect_err("a non-existent hostile path must error, not execute");
+
+    assert!(matches!(err, SuricataEveError::PcapNotFound(_)));
+    assert!(!tmp.path().join("HACKED").exists());
+}
+
+#[test]
+fn indx_parse_treats_shell_payload_path_as_missing_file() {
+    // FIXED `INDXParse.py <indx_path>` argv — a hostile indx_path is one inert
+    // argv element; a missing one is a typed NotFound before any spawn.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD}.indx"));
+
+    let err = indx_parse(&IndxParseInput {
+        case_id: "c".to_string(),
+        indx_path: missing,
+        limit: None,
+    })
+    .expect_err("a non-existent hostile path must error, not execute");
+
+    assert!(matches!(err, IndxError::NotFound(_)));
+    assert!(!tmp.path().join("HACKED").exists());
 }

@@ -24,15 +24,18 @@ pub mod disk;
 pub mod evtx_query;
 pub mod ez_parse;
 pub mod hayabusa_scan;
+pub mod indx_parse;
 pub mod journalctl_query;
 pub mod login_accounting;
 pub mod mac_triage;
 pub mod mft_timeline;
+pub mod nfdump_query;
 pub mod pcap_triage;
 pub mod plaso_parse;
 pub mod prefetch_parse;
 pub mod regf;
 pub mod registry_query;
+pub mod suricata_eve;
 pub mod sysmon_network_query;
 pub mod usnjrnl_query;
 pub mod vel_collect;
@@ -69,6 +72,7 @@ pub use ez_parse::{ez_parse, is_allowed_ez_tool, EzParseError, EzParseInput, EzP
 pub use hayabusa_scan::{
     hayabusa_scan, HayabusaAlert, HayabusaError, HayabusaInput, HayabusaOutput,
 };
+pub use indx_parse::{indx_parse, IndxError, IndxParseInput, IndxParseOutput};
 pub use journalctl_query::{
     journalctl_query, path_looks_like_journal, JournalRow, JournalctlQueryError,
     JournalctlQueryInput, JournalctlQueryOutput,
@@ -83,6 +87,7 @@ pub use mac_triage::{
 pub use mft_timeline::{
     mft_timeline, path_looks_like_mft, MftEntryRow, MftError, MftInput, MftOutput,
 };
+pub use nfdump_query::{nfdump_query, NfdumpQueryError, NfdumpQueryInput, NfdumpQueryOutput};
 pub use pcap_triage::{
     path_looks_like_pcap, pcap_triage, PcapTriageError, PcapTriageInput, PcapTriageOutput,
 };
@@ -96,6 +101,7 @@ pub use registry_query::{
     path_looks_like_hive, registry_query, RegistryEntry, RegistryError, RegistryInput,
     RegistryOutput, RegistryValue,
 };
+pub use suricata_eve::{suricata_eve, SuricataEveError, SuricataEveInput, SuricataEveOutput};
 pub use sysmon_network_query::{
     path_looks_like_sysmon_evtx, sysmon_network_query, SysmonNetworkError, SysmonNetworkInput,
     SysmonNetworkOutput, SysmonNetworkRow,

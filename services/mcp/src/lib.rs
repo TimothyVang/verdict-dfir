@@ -59,6 +59,7 @@ pub use crate::tools::ez_parse::{
 pub use crate::tools::hayabusa_scan::{
     hayabusa_scan, HayabusaAlert, HayabusaError, HayabusaInput, HayabusaOutput,
 };
+pub use crate::tools::indx_parse::{indx_parse, IndxError, IndxParseInput, IndxParseOutput};
 pub use crate::tools::journalctl_query::{
     journalctl_query, path_looks_like_journal, JournalRow, JournalctlQueryError,
     JournalctlQueryInput, JournalctlQueryOutput,
@@ -73,6 +74,9 @@ pub use crate::tools::mac_triage::{
 pub use crate::tools::mft_timeline::{
     mft_timeline, path_looks_like_mft, MftEntryRow, MftError, MftInput, MftOutput,
 };
+pub use crate::tools::nfdump_query::{
+    nfdump_query, NfdumpQueryError, NfdumpQueryInput, NfdumpQueryOutput,
+};
 pub use crate::tools::pcap_triage::{
     path_looks_like_pcap, pcap_triage, PcapTriageError, PcapTriageInput, PcapTriageOutput,
 };
@@ -85,6 +89,9 @@ pub use crate::tools::prefetch_parse::{
 pub use crate::tools::registry_query::{
     path_looks_like_hive, registry_query, RegistryEntry, RegistryError, RegistryInput,
     RegistryOutput, RegistryValue,
+};
+pub use crate::tools::suricata_eve::{
+    suricata_eve, SuricataEveError, SuricataEveInput, SuricataEveOutput,
 };
 pub use crate::tools::sysmon_network_query::{
     path_looks_like_sysmon_evtx, sysmon_network_query, SysmonNetworkError, SysmonNetworkInput,
