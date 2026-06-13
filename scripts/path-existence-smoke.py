@@ -208,6 +208,11 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # quoted in README.md + docs/demo-script-a2.md as conventional
     # locations.  tmp/ is gitignored.
     re.compile(r"^tmp/"),
+    # Optional release asset downloaded by devpost-submit.yml.
+    # readiness-packet.zip is produced by scripts/readiness-gate.ps1 when an
+    # operator attaches the expert-review packet; it is deliberately not
+    # committed.
+    re.compile(r"^release-assets/readiness-packet\.zip$"),
     # Runtime output dir (`./out/`, `./out`): gitignored and created at run time,
     # so it exists only after a run, never in the CI checkout.
     re.compile(r"^\./out(/|$)"),

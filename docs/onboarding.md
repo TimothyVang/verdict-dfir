@@ -1,6 +1,6 @@
 # Session-Start Onboarding (VERDICT)
 
-This doc holds the verbatim onboarding behavior referenced by `CLAUDE.md` §0. Read it when
+This doc holds the onboarding behavior referenced by `CLAUDE.md` "Required Setup". Read it when
 a session triggers onboarding: the user's first message is `help`, `hello`, `hi`, or they
 ask "what can you do" / "how do I use this" / "what is this", **or** a preflight check fails.
 
@@ -175,7 +175,7 @@ investigate <path>          Run a full DFIR investigation against evidence
 scripts/verdict <path>           Live-test the app end-to-end on your evidence (the real check)
 scripts/verdict --watch          Drop a file into evidence/ and auto-run when the copy finishes
 bash scripts/run-all-smokes.sh   (optional) Local CI predictor — what L1 runs; NOT a live test
-bash scripts/find-evil-auto <evidence>   Headless end-to-end run
+scripts/verdict <path> --no-dashboard --unattended  Non-interactive no-dashboard run
 bash scripts/make-demo-video.sh  Generate the demo video (needs edge-tts + pnpm)
 pnpm --filter @findevil/web dev  Start the live audit dashboard at localhost:3000
 

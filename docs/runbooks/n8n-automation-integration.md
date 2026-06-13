@@ -30,7 +30,7 @@ happens after the verdict is signed.
 
 ## License & submission compliance
 
-The submission must ship as MIT/Apache-2.0 (CLAUDE.md §3). n8n core ships under the **fair-code
+The submission must ship under the repo license boundary (`LICENSE`). n8n core ships under the **fair-code
 Sustainable Use License** (`n8n-references/n8n/LICENSE.md` + `LICENSE_EE.md`) — permissive for
 self-hosted internal use, but **not** an OSI permissive license. Therefore:
 
@@ -131,8 +131,8 @@ claude mcp add -s user n8n-mcp \
 claude mcp list   # expect: n8n-mcp  ...  ✓ Connected
 ```
 
-**Why user scope, not the repo `.mcp.json`:** `scripts/find-evil-sift` swaps the repo `.mcp.json`
-for `.mcp.json.sift` on entry and restores it on exit. A user-scope server lives in
+**Why user scope, not the repo `.mcp.json`:** SIFT mode uses `.mcp.json.sift` for the two
+product servers' SSH transport. A user-scope server lives in
 `~/.claude.json`, so it is **unaffected by the swap** and stays available in both local and
 SIFT-VM mode. User scope also keeps n8n out of the committed repo, matching the "not bundled"
 posture. **Do not** add n8n-mcp to the tracked `.mcp.json` / `.mcp.json.sift` — that would put a
@@ -322,9 +322,10 @@ trip: ask the agent to build a trivial "read verdict.json → print summary" wor
 
 ## How an operator uses it
 
-- **Repeatable runs.** Wrap `scripts/find-evil-auto <evidence>` in an n8n workflow so a dropped
-  image kicks off the headless single-shot run, then routes the resulting `verdict.json` to the
-  fan-out above — all started from Claude Code.
+- **Repeatable runs.** Wrap
+  `scripts/verdict <evidence> --no-dashboard --unattended --run-summary tmp/run-summary.json`
+  in an n8n workflow so a dropped image kicks off the non-interactive single-shot run, then routes
+  the resulting `verdict.json` to the fan-out above — all started from Claude Code.
 - **Finding-to-action fan-out.** On `SUSPICIOUS` verdicts, auto-notify, open the ticket, and
   enrich IOCs; on `INDETERMINATE`, route to an analyst queue; on `NO_EVIL`, file the scope note.
 

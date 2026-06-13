@@ -6,7 +6,7 @@
 Run this as a **CI predictor**: it mirrors the L1 Docker gate (`docker/l1-compose.yml`) but runs
 locally without containers for a faster iteration loop, so a green local run predicts a green L1.
 It is **not** a live test — the dev "done" gate is a passing live test (`scripts/verdict` against
-real evidence; see `CLAUDE.md` §5). Run the smoke runners to predict CI; run a live test to prove
+real evidence; see `CLAUDE.md` "Running A Case"). Run the smoke runners to predict CI; run a live test to prove
 the app actually works.
 
 ---

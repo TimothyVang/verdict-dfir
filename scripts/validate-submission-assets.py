@@ -55,7 +55,12 @@ READINESS_REQUIRED_AUDIT_KINDS = {
     "expert_signoff_packet",
 }
 
-READINESS_REPORT_ARTIFACTS = {"report.html", "report.pdf", "report.md"}
+READINESS_REPORT_ARTIFACTS = {
+    "report.html",
+    "report.pdf",
+    "report.new.pdf",
+    "report.md",
+}
 READINESS_ALLOWED_STATES = {"PACKET_READY_FOR_EXPERT_REVIEW", "READY_FOR_EXPERT_REVIEW"}
 CUSTOMER_READY_STATES = {
     "CUSTOMER_READY",
@@ -269,7 +274,19 @@ def validate_zip(path: Path) -> CheckResult:
             return CheckResult(
                 False, f"zip report.html invalid: {report_result.message}"
             )
-    return CheckResult(True, "submission zip contains required non-placeholder assets")
+        if "readiness-packet.zip" in names:
+            readiness_result = validate_readiness_packet_bytes(
+                zf.read("readiness-packet.zip"), "readiness-packet.zip"
+            )
+            if not readiness_result.ok:
+                return CheckResult(
+                    False,
+                    f"zip readiness-packet.zip invalid: {readiness_result.message}",
+                )
+    return CheckResult(
+        True,
+        "submission zip contains required assets; readiness packet validated when present",
+    )
 
 
 def resolve_summary_path(summary_path: Path, value: object) -> Path | None:
@@ -292,6 +309,18 @@ def read_json_file(path: Path, label: str, blockers: list[str]) -> dict | None:
         return None
     if not isinstance(obj, dict):
         blockers.append(f"{label} must be a JSON object: {path}")
+        return None
+    return obj
+
+
+def read_json_text(text: str, label: str, blockers: list[str]) -> dict | None:
+    try:
+        obj = json.loads(text)
+    except json.JSONDecodeError as exc:
+        blockers.append(f"{label} is not valid JSON: {exc}")
+        return None
+    if not isinstance(obj, dict):
+        blockers.append(f"{label} must be a JSON object")
         return None
     return obj
 
@@ -375,31 +404,20 @@ def add_customer_ready_blockers(obj: object, label: str, blockers: list[str]) ->
             add_customer_ready_blockers(nested, f"{label}.{nested_key}", blockers)
 
 
-def validate_readiness_audit(packet_dir: Path, blockers: list[str]) -> None:
-    path = artifact_path(packet_dir, "audit.jsonl")
-    if not path.is_file():
-        blockers.append(f"audit.jsonl missing from packet dir: {path}")
-        return
+def validate_readiness_audit_text(text: str, blockers: list[str]) -> None:
     kinds: set[str] = set()
     line_count = 0
-    try:
-        with path.open(encoding="utf-8") as fh:
-            for line_number, line in enumerate(fh, start=1):
-                if not line.strip():
-                    continue
-                line_count += 1
-                try:
-                    record = json.loads(line)
-                except json.JSONDecodeError as exc:
-                    blockers.append(
-                        f"audit.jsonl line {line_number} is not valid JSON: {exc}"
-                    )
-                    continue
-                if isinstance(record, dict) and isinstance(record.get("kind"), str):
-                    kinds.add(record["kind"])
-    except OSError as exc:
-        blockers.append(f"audit.jsonl could not be read: {exc}")
-        return
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        line_count += 1
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError as exc:
+            blockers.append(f"audit.jsonl line {line_number} is not valid JSON: {exc}")
+            continue
+        if isinstance(record, dict) and isinstance(record.get("kind"), str):
+            kinds.add(record["kind"])
     if line_count == 0:
         blockers.append("audit.jsonl has no audit records")
     missing = sorted(READINESS_REQUIRED_AUDIT_KINDS - kinds)
@@ -407,6 +425,27 @@ def validate_readiness_audit(packet_dir: Path, blockers: list[str]) -> None:
         blockers.append(
             "audit.jsonl lacks required record kind(s): " + ", ".join(missing)
         )
+
+
+def validate_readiness_audit(packet_dir: Path, blockers: list[str]) -> None:
+    path = artifact_path(packet_dir, "audit.jsonl")
+    if not path.is_file():
+        blockers.append(f"audit.jsonl missing from packet dir: {path}")
+        return
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        blockers.append(f"audit.jsonl could not be read: {exc}")
+        return
+    validate_readiness_audit_text(text, blockers)
+
+
+def readiness_report_paths(entries: dict[str, dict]) -> list[str]:
+    return sorted(
+        artifact
+        for artifact in entries
+        if Path(artifact).name.lower() in READINESS_REPORT_ARTIFACTS
+    )
 
 
 def validate_readiness_summary(path: Path) -> CheckResult:
@@ -457,11 +496,7 @@ def validate_readiness_summary(path: Path) -> CheckResult:
             "packet_manifest missing required artifact(s): "
             + ", ".join(missing_artifacts)
         )
-    report_paths = sorted(
-        artifact
-        for artifact in entries
-        if Path(artifact).name.lower() in READINESS_REPORT_ARTIFACTS
-    )
+    report_paths = readiness_report_paths(entries)
     if not report_paths:
         blockers.append(
             "packet_manifest lacks report artifact; expected REPORT.html, REPORT.pdf, or REPORT.md"
@@ -564,6 +599,170 @@ def validate_readiness_summary(path: Path) -> CheckResult:
     )
 
 
+def read_zip_text(
+    zf: zipfile.ZipFile, relative_path: str, blockers: list[str]
+) -> str | None:
+    try:
+        return zf.read(relative_path).decode("utf-8", errors="replace")
+    except KeyError:
+        blockers.append(f"readiness packet missing {relative_path}")
+    except OSError as exc:
+        blockers.append(f"readiness packet could not read {relative_path}: {exc}")
+    return None
+
+
+def read_zip_json(
+    zf: zipfile.ZipFile, relative_path: str, label: str, blockers: list[str]
+) -> dict | None:
+    text = read_zip_text(zf, relative_path, blockers)
+    if text is None:
+        return None
+    return read_json_text(text, label, blockers)
+
+
+def validate_readiness_packet_archive(
+    zf: zipfile.ZipFile, label: str = "readiness packet"
+) -> CheckResult:
+    blockers: list[str] = []
+    names = {name.rstrip("/") for name in zf.namelist()}
+    for required in {"readiness-summary.json", "readiness-packet-manifest.json"}:
+        if required not in names:
+            blockers.append(f"{label} missing {required}")
+
+    summary = read_zip_json(zf, "readiness-summary.json", "readiness-summary", blockers)
+    manifest = read_zip_json(
+        zf,
+        "readiness-packet-manifest.json",
+        "readiness-packet-manifest",
+        blockers,
+    )
+    if summary is None or manifest is None:
+        return CheckResult(False, "; ".join(blockers))
+
+    summary_blockers = summary.get("blockers")
+    if isinstance(summary_blockers, list) and summary_blockers:
+        blockers.append(
+            "readiness-summary.json already contains blocker(s): "
+            + "; ".join(str(blocker) for blocker in summary_blockers)
+        )
+    readiness_state = summary.get("readiness_state")
+    if readiness_state not in READINESS_ALLOWED_STATES:
+        blockers.append(
+            f"readiness_state is not expert-review ready: {readiness_state!r}"
+        )
+    if manifest.get("readiness_state") != readiness_state:
+        blockers.append(
+            "readiness-packet-manifest readiness_state does not match summary: "
+            f"{manifest.get('readiness_state')!r} != {readiness_state!r}"
+        )
+    add_customer_ready_blockers(summary, "readiness-summary.json", blockers)
+
+    entries = artifact_entries(manifest, blockers)
+    missing_artifacts = sorted(READINESS_REQUIRED_ARTIFACTS - set(entries))
+    if missing_artifacts:
+        blockers.append(
+            "readiness-packet-manifest missing required artifact(s): "
+            + ", ".join(missing_artifacts)
+        )
+    report_paths = readiness_report_paths(entries)
+    if not report_paths:
+        blockers.append(
+            "readiness-packet-manifest lacks report artifact; expected REPORT.html, REPORT.pdf, REPORT.new.pdf, or REPORT.md"
+        )
+
+    required_zip_names = (
+        set(READINESS_REQUIRED_ARTIFACTS)
+        | set(report_paths)
+        | {"readiness-summary.json", "readiness-packet-manifest.json"}
+    )
+    missing_zip = sorted(required_zip_names - names)
+    if missing_zip:
+        blockers.append(
+            "readiness packet ZIP missing required file(s): " + ", ".join(missing_zip)
+        )
+
+    for relative_path, artifact in entries.items():
+        if relative_path not in names:
+            blockers.append(f"readiness packet missing manifest-listed {relative_path}")
+            continue
+        expected_sha = artifact.get("sha256")
+        if isinstance(expected_sha, str) and expected_sha:
+            actual_sha = hashlib.sha256(zf.read(relative_path)).hexdigest()
+            if actual_sha.lower() != expected_sha.lower():
+                blockers.append(f"readiness packet hash mismatch: {relative_path}")
+
+    audit_text = read_zip_text(zf, "audit.jsonl", blockers)
+    if audit_text is not None:
+        validate_readiness_audit_text(audit_text, blockers)
+
+    manifest_verify = read_zip_json(
+        zf, "manifest_verify.json", "manifest_verify.json", blockers
+    )
+    if manifest_verify is not None and manifest_verify.get("overall") is not True:
+        blockers.append("manifest_verify.json overall is not true")
+
+    verdict = read_zip_json(zf, "verdict.json", "verdict.json", blockers)
+    if verdict is not None:
+        add_customer_ready_blockers(verdict, "verdict.json", blockers)
+        report_qa = verdict.get("report_qa")
+        if not isinstance(report_qa, dict):
+            blockers.append("verdict.json lacks report_qa object")
+        else:
+            if report_qa.get("status") not in {"PASS", "WARN"}:
+                blockers.append(
+                    f"verdict.json report_qa status is not PASS/WARN: {report_qa.get('status')!r}"
+                )
+            if report_qa.get("ready_for_expert_signoff") is not True:
+                blockers.append(
+                    "verdict.json report_qa does not mark ready_for_expert_signoff=true"
+                )
+
+    for relative_path in ("expert_signoff.json", "customer_release_gate.final.json"):
+        artifact_json = read_zip_json(zf, relative_path, relative_path, blockers)
+        if artifact_json is not None:
+            add_customer_ready_blockers(artifact_json, relative_path, blockers)
+
+    for report_path in report_paths:
+        if Path(report_path).suffix.lower() not in {".html", ".md", ".txt"}:
+            continue
+        text = read_zip_text(zf, report_path, blockers)
+        if text is None:
+            continue
+        hits = placeholder_hits(text)
+        if "stub" in hits and has_disclosed_stub_signer(text):
+            hits = [hit for hit in hits if hit != "stub"]
+        if hits:
+            blockers.append(
+                f"{report_path} contains placeholder text: " + ", ".join(sorted(hits))
+            )
+        if has_customer_ready_overclaim(text):
+            blockers.append(
+                f"{report_path} contains customer-ready/releasable overclaim"
+            )
+
+    if blockers:
+        return CheckResult(False, "; ".join(blockers))
+    return CheckResult(True, f"{label} is complete and expert-review gated")
+
+
+def validate_readiness_packet_bytes(data: bytes, label: str) -> CheckResult:
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            return validate_readiness_packet_archive(zf, label)
+    except zipfile.BadZipFile:
+        return CheckResult(False, f"{label} is not a valid ZIP file")
+
+
+def validate_readiness_packet(path: Path) -> CheckResult:
+    if not path.is_file():
+        return CheckResult(False, f"readiness packet missing: {path}")
+    try:
+        with zipfile.ZipFile(path) as zf:
+            return validate_readiness_packet_archive(zf, str(path))
+    except zipfile.BadZipFile:
+        return CheckResult(False, f"readiness packet is not a valid ZIP file: {path}")
+
+
 def row_is_positive_nist(row: dict[str, str]) -> bool:
     source_name = Path(row.get("source_file") or "").name
     fixture = row.get("fixture") or ""
@@ -592,6 +791,9 @@ def main() -> int:
     parser.add_argument(
         "--readiness-summary", type=Path, help="readiness-summary.json path"
     )
+    parser.add_argument(
+        "--readiness-packet", type=Path, help="readiness-packet.zip path"
+    )
     args = parser.parse_args()
 
     checks: list[tuple[str, CheckResult]] = []
@@ -608,6 +810,10 @@ def main() -> int:
     if args.readiness_summary is not None:
         checks.append(
             ("readiness-summary", validate_readiness_summary(args.readiness_summary))
+        )
+    if args.readiness_packet is not None:
+        checks.append(
+            ("readiness-packet", validate_readiness_packet(args.readiness_packet))
         )
     if not checks:
         parser.error("provide at least one artifact to validate")

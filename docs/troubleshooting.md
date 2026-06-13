@@ -80,7 +80,7 @@ re-dispatched.
 | Symptom | Detector | Fix |
 |---|---|---|
 | `ERROR: SSH key not found at <path>` | `find_evil_auto.py` SIFT preflight | First time: `bash scripts/sift-vm-bootstrap.sh`; or `export FIND_EVIL_SSH_KEY=/path/to/key` |
-| `ERROR: cannot reach SIFT VM at <user>@<ip> or MCP server prerequisite missing` (lists the 3 prerequisites) | same preflight (10 s SSH probe) | Boot the VM (`bash scripts/find-evil-sift` auto-boots), check `ping $FIND_EVIL_GUEST_IP`, and verify all three listed paths exist on the guest |
+| `ERROR: cannot reach SIFT VM at <user>@<ip> or MCP server prerequisite missing` (lists the 3 prerequisites) | same preflight (10 s SSH probe) | Run `bash scripts/sift-vm-bootstrap.sh` once, then rerun `scripts/verdict <path> --sift`; check `ping $FIND_EVIL_GUEST_IP`, and verify all three listed paths exist on the guest |
 | SSH probe times out with the default IP | default `FIND_EVIL_GUEST_IP` may not match your VM's network | `export FIND_EVIL_GUEST_IP=<your VM's IP>` (NAT setups commonly land on `192.168.137.x`); also `FIND_EVIL_GUEST_USER` / `FIND_EVIL_GUEST_REPO` if non-default |
 
 **You do not need SIFT mode for full results.** Local mode parses disk artifacts

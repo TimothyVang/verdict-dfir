@@ -1,17 +1,25 @@
 # Changelog
 
-All notable changes to the Find Evil! submission. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
-project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
-once the first `v0.x` is cut on the `v-submit` tag.
+All notable changes to the VERDICT DFIR / Find Evil! submission. The format
+follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The public
+submission release tag is `v-submit`; later entries in `[Unreleased]` document
+work that has landed after that release and should be merged through the
+canonical GitHub repo before any refreshed release.
 
-> **Pre-submission:** all changes below are on `master`. The first
-> tagged release will be `v-submit` cut on or before the SANS Find
-> Evil! deadline (2026-06-15 11:45 PM EDT = 22:45 CDT).
+> **Release repo:** use `TimothyVang/verdict-dfir` / the local `release` remote
+> for GitHub release, Devpost, and public-doc work. The older
+> `TimothyVang/sans-hackathon` remote is superseded for release operations.
 
 ## [Unreleased]
 
 ### Changed — release polish: brand mark, dashboard focus, showcase media
+
+- **Post-`v-submit` developer/release docs refresh.** Current active docs now
+  distinguish the historical `v-submit` submission snapshot from the post-tag
+  working tree, route release work to the `release` remote /
+  `TimothyVang/verdict-dfir`, and keep the shipped product-surface count at
+  **43 audit-chained product tools** (**31 Rust DFIR + 12 Python
+  crypto/ACH/memory/ACP/expert-feedback**).
 
 - **New brand mark: check-as-V.** Replaced the three-object circle (gavel +
   scale-rings + check, unreadable at small sizes) with a single bold checkmark
@@ -29,16 +37,12 @@ once the first `v0.x` is cut on the `v-submit` tag.
   SUSPICIOUS run (NIST SCHARDT.dd, 8 confirmed findings) on the current UI.
   README hero + gallery rewired to these; stale `assets/screenshots/demo.gif`
   and `dashboard.png` removed.
-- **Doc tool-count reconciled to the shipped 32-tool surface (20 Rust + 12
-  Python).** `browser_history` (the 20th Rust tool, an offline
-  Chrome/Edge/Firefox history reader) was already shipped and smoke-covered, but
-  ~20 reference/runbook/script files still cited the pre-`browser_history`
-  "31 / 19 Rust" counts. Swept them all to 32 / 20 and added the missing
-  `browser_history` rows to `PLAYBOOK.md` and `services/mcp/README.md`. The
-  dated `[v-submit]` snapshot below preserves the historical 31-tool count and is
-  intentionally left as-is. (`CHANGELOG`, `docs/architecture.md`, `docs/glossary.md`,
-  `docs/repo-guide.md`, `agent-config/TOOLS.md`/`PLAYBOOK.md`, `services/mcp/README.md`,
-  `scripts/doctor.sh`/`install.sh`, the `docs/using/*` and `docs/runbooks/*` set.)
+- **Doc tool-count reconciled to the shipped 43-tool surface (31 Rust + 12
+  Python).** The post-`v-submit` Rust tool surface includes long-tail
+  allow-listed wrappers (`vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`,
+  `cloud_audit`, Linux/network/NTFS helpers) plus browser-history coverage.
+  Active docs should cite **43 product tools** and reserve older counts for
+  dated historical snapshots only.
 
 ### Added — production readiness: easy install, docs, cross-platform distribution
 
@@ -104,7 +108,11 @@ once the first `v0.x` is cut on the `v-submit` tag.
   with a "superseded by A6" banner; the Product, its MCP tool surface,
   and the investigation pipeline are untouched.
 
-> **Note:** The entries below describe the Amendment A5 removal work (OpenTimestamps/Bitcoin tier) and document the tool-count evolution during that period. The current shipped state (post-A5) is **32 tools: 20 Rust DFIR + 12 Python crypto/ACH/memory/ACP/expert-feedback.** See `[v-submit]` section below for the current release.
+> **Note:** The entries below describe the Amendment A5 removal work
+> (OpenTimestamps/Bitcoin tier) and document the tool-count evolution during
+> that period. The current post-`v-submit` working-tree state is **43 tools: 31
+> Rust DFIR + 12 Python crypto/ACH/memory/ACP/expert-feedback.** Older counts
+> in dated sections are historical snapshots.
 
 ### Changed — one `verdict` command + self-score moved out of the pipeline
 
@@ -1090,7 +1098,12 @@ The current `master` HEAD (commit 8fc18a2 onwards) ships a **31-tool MCP surface
 
 ### Note on Tool-Count Documentation
 
-The [Unreleased] section above preserves the historical A5 removal narrative, which documents the pre/post OTS-removal evolution (25→23 count). That entry reflects the tool-count understanding at the time of A5 (April 30, 2026). The current shipped count (31) reflects the additional Rust tools discovered during pre-submission documentation audit (June 6, 2026). This v-submit snapshot confirms the 31-tool reality; no code change occurred between the A5 counts and now — the discovery was documentation-only.
+The [Unreleased] section above preserves the historical A5 removal narrative,
+which documents the pre/post OTS-removal evolution (25->23 count). That entry
+reflects the tool-count understanding at the time of A5 (April 30, 2026). The
+`v-submit` snapshot later confirmed the 31-tool reality then known; the current
+post-`v-submit` working tree has since expanded and documented the product
+surface as 43 audit-chained tools: 31 Rust DFIR + 12 Python.
 
 ---
 

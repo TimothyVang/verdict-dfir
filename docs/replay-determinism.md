@@ -37,12 +37,12 @@ No Track 3b severity bump is applied here.
 
 The library exposes `ReplayPool` for callers that want cached and concurrent
 replays. Cache keys are deterministic over `(tool_name, arguments)`. Callers can
-set `force_fresh_replay` on `verify_finding` or pass `--force-fresh-replay` to
-`find-evil-auto` to bypass cache hints and force re-execution.
+set `force_fresh_replay` on `verify_finding` or pass the internal engine's
+`--force-fresh-replay` flag when debugging replay behavior to bypass cache hints and force re-execution.
 
 ## Audit and report surface
 
-`find-evil-auto` appends a dedicated `kind="replay"` audit event for each
+The internal automation engine appends a dedicated `kind="replay"` audit event for each
 verifier replay alongside the existing `verifier_action` event. Reports show a
 per-finding replay chip and a replay determinism appendix when replay artifacts
 are present.

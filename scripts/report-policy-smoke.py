@@ -9,6 +9,8 @@ story, QA / expert signoff, evidence-bound tool calls, and overclaim caveats.
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import io
 import json
 import sys
 import tempfile
@@ -41,6 +43,67 @@ def load_submission_validator():
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+def build_readiness_packet_zip(report_html: str) -> bytes:
+    packet_files: dict[str, bytes] = {
+        "audit.jsonl": (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+        ).encode(),
+        "run.manifest.json": b'{"case_id":"case-ready"}\n',
+        "manifest_verify.json": b'{"overall":true}\n',
+        "verdict.json": json.dumps(
+            {
+                "verdict": "INDETERMINATE",
+                "report_qa": {
+                    "status": "PASS",
+                    "ready_for_expert_signoff": True,
+                    "customer_releasable": False,
+                },
+                "release_gate": {"customer_releasable": False},
+                "expert_signoff": {"customer_releasable": False},
+            },
+            sort_keys=True,
+        ).encode(),
+        "expert_signoff.json": b'{"decision":"pending","customer_releasable":false}\n',
+        "customer_release_gate.final.json": (
+            b'{"customer_releasable":false,"expert_decision":"pending"}\n'
+        ),
+        "REPORT.html": report_html.encode(),
+        "readiness-summary.json": json.dumps(
+            {
+                "readiness_state": "READY_FOR_EXPERT_REVIEW",
+                "customer_releasable": False,
+                "blockers": [],
+            },
+            sort_keys=True,
+        ).encode(),
+    }
+    manifest = {
+        "readiness_state": "READY_FOR_EXPERT_REVIEW",
+        "artifacts": [
+            {
+                "path": name,
+                "bytes": len(data),
+                "sha256": hashlib.sha256(data).hexdigest(),
+            }
+            for name, data in sorted(packet_files.items())
+        ],
+    }
+    packet_files["readiness-packet-manifest.json"] = json.dumps(
+        manifest, sort_keys=True
+    ).encode()
+
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, data in sorted(packet_files.items()):
+            zf.writestr(name, data)
+    return out.getvalue()
 
 
 def load_find_evil_auto():
@@ -516,6 +579,9 @@ def main() -> int:
             zf.writestr("demo-video-link.txt", "https://example.org/findevil-demo\n")
             zf.writestr("LICENSE", "Test license fixture\n")
             zf.writestr("report.html", valid_html_text)
+            zf.writestr(
+                "readiness-packet.zip", build_readiness_packet_zip(valid_html_text)
+            )
         valid_zip_result = validator.validate_zip(valid_zip)
 
     checks = [

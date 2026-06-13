@@ -2,20 +2,20 @@
 
 Status: ACTIVE
 
-This document explains how to use Codex as a developer/operator interface for Find Evil without changing the product architecture. The official SANS judge/demo path remains Claude Code via `scripts/find-evil`, `scripts/find-evil-sift`, or `scripts/find-evil-auto`.
+This document explains how to use Codex as a developer/operator interface for Find Evil without changing the product architecture. The official SANS judge/demo path is the one-shot `scripts/verdict <evidence>` launcher or an interactive Claude Code session (`claude` / `scripts/find-evil`) for manual exploration.
 
-Codex compatibility means: Codex can read the same repo instructions and, if its MCP client supports stdio servers, launch the same two narrow MCP servers. It does not mean adding broad external MCPs.
+Codex compatibility means: Codex can read the same repo instructions and, if its MCP client supports stdio servers, launch the same two narrow product MCP servers. It does not mean adding broad external MCPs.
 
 ## Canonical MCP Servers
 
-Find Evil ships two MCP servers in `.mcp.json`:
+`.mcp.json` registers six servers total. The two audit-chained product servers are:
 
 | Server | Purpose | Expected tools |
 |---|---|---:|
 | `findevil-mcp` | Rust DFIR tool surface over evidence and forensic artifacts | 31 |
 | `findevil-agent-mcp` | Python audit, manifest, verifier, ACH, memory, ACP, and expert-feedback support tools | 12 |
 
-Expected total: 43 product tools.
+Expected total: 43 product tools. The other four registered servers are non-product operator conveniences.
 
 These are the only product-default MCP servers — the only two in the audit chain. `.mcp.json` *also* registers four **non-product** servers (`n8n-mcp`, `playwright`, `puppeteer`, and `qmd` dev-memory recall) for post-verdict automation, browser tasks, and memory; they touch no evidence and emit no Findings, so seeing six entries in `.mcp.json` is expected, not a misconfiguration (full inventory: [`reference/mcp-and-tools.md`](reference/mcp-and-tools.md)). Do not add generic filesystem, Docker, Kubernetes, GitHub, fetch, or shell MCPs as defaults.
 
@@ -46,7 +46,7 @@ args = [
 cwd = "."
 ```
 
-This mirrors `.mcp.json` and does not require tokens.
+This mirrors the product-server subset of `.mcp.json` and does not require tokens.
 
 For non-interactive `codex exec` on Windows, prefer launching the compiled Rust binary after it exists. This avoids `cargo run --release` trying to build or touch `target/` inside Codex's sandbox.
 
@@ -70,13 +70,13 @@ cargo build --release -p findevil-mcp --locked
 
 SIFT mode is encoded in `.mcp.json.sift`. It uses SSH stdio to start both MCP servers inside the SIFT VM, where Volatility, Hayabusa, Velociraptor, and YARA dependencies are available.
 
-Use the documented launcher when possible:
+Use the canonical launcher when possible:
 
 ```bash
-bash scripts/find-evil-sift
+scripts/verdict <path-to-evidence> --sift
 ```
 
-For Codex, treat `.mcp.json.sift` as the source of truth for the SSH command shape. Do not automatically copy it over `.mcp.json` or edit user-level Codex config unless the operator explicitly asks.
+For Codex, treat `.mcp.json.sift` as the source of truth for the SSH command shape. `scripts/find-evil-sift` is helper plumbing for SIFT transport, not a separate product workflow. Do not automatically copy `.mcp.json.sift` over `.mcp.json` or edit user-level Codex config unless the operator explicitly asks.
 
 Operator-owned values in `.mcp.json.sift` include:
 
@@ -254,7 +254,7 @@ Use the Codex TUI's built-in dashboard for normal interactive operation. The web
 
 ## Investigation Prompt
 
-Once Codex has the two MCP servers available, use the same operator prompt as Claude Code:
+Once Codex has the two product MCP servers available, use the same operator prompt as Claude Code:
 
 ```text
 investigate <case path>

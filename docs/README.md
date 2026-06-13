@@ -65,11 +65,11 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 
 ### Current automation outputs
 
-- `scripts/verdict <evidence>` is THE ONE COMMAND: preflight → investigate → open the live dashboard → signed verdict + report. Flags: `--sift` (run DFIR tools in the SANS SIFT VM), `--no-dashboard`, `--skip-build`, `--dry-run`, `--run-summary`. `find-evil-run` and `find-evil-live` are deprecated shims that forward to `verdict`; `find-evil-auto` is the internal headless engine wrapper `verdict` calls; `find-evil-sift` is the SIFT-VM helper.
-- `scripts/verdict --run-summary <path>` (delegating to the internal `scripts/find-evil-auto` engine) writes a machine-readable run summary outside the normal case artifact set. It points to the local run directory and records artifact paths, report QA, release-gate/expert-signoff state, signer, readiness state, blockers, warnings, and final result/error.
+- `scripts/verdict <evidence>` is THE ONE COMMAND: preflight → investigate → open the live dashboard → signed verdict + report. Flags: `--sift` (run DFIR tools in the SANS SIFT VM), `--no-dashboard`, `--skip-build`, `--dry-run`, `--run-summary`. `find-evil-run` and `find-evil-live` are deprecated shims that forward to `verdict`; the headless automation engine is internal; `find-evil-sift` is the SIFT-VM helper.
+- `scripts/verdict --run-summary <path>` writes a machine-readable run summary outside the normal case artifact set while delegating to the internal automation engine. It points to the local run directory and records artifact paths, report QA, release-gate/expert-signoff state, signer, readiness state, blockers, warnings, and final result/error.
 - `scripts/readiness-gate.ps1` is the packet-producing readiness flow. Full mode writes `readiness-summary.json` and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`, with packet/readiness-packet-manifest.json listing copied artifacts; fixed `-RunId` reruns refresh generated packet contents and may use a timestamped local-build child run; passing states mean ready for human expert review, not customer release.
 - `scripts/readiness-gate.sh` is POSIX strict/check-only. It can print `SUBMISSION_READY` for its legacy checks, but it does not create the readiness packet ZIP.
-- The dev "done" gate is a passing **live test**: run `scripts/verdict <evidence>` against real evidence and confirm a real verdict in `verdict.json` (each Finding citing a `tool_call_id`) plus `manifest_verify.json` `overall=true`. Per-evidence-type expectations and current gaps live in the live-test matrix in `CLAUDE.md` §5.
+- The dev "done" gate is a passing **live test**: run `scripts/verdict <evidence>` against real evidence and confirm a real verdict in `verdict.json` (each Finding citing a `tool_call_id`) plus `manifest_verify.json` `overall=true`. Per-evidence-type expectations and current gaps live in [`live-test-matrix.md`](live-test-matrix.md) and `CLAUDE.md` "Running A Case".
 - Local smoke runners (`bash scripts/run-all-smokes.sh` for POSIX/Git Bash, `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-all-smokes.ps1` for native Windows) are a **CI predictor** — they mirror what L1 runs, not a live test. Do not copy old hard-coded smoke counts; the scripts print the current tally.
 - `bash scripts/make-demo-video.sh` generates `docs/find-evil-demo.mp4` from `docs/demo-script-a2.md` using Remotion (React animated video, headless Chrome) + edge-tts TTS audio. Prerequisites: `pip install edge-tts` + `pnpm install --dir scripts/make-demo-video --ignore-workspace`. If `claude` is on PATH, narration is auto-enriched via `claude -p` before TTS.
 - `python3 scripts/make-demo-video-prep.py --dry-run` verifies beat parsing (9 beats, 300s) without invoking TTS or Remotion.
@@ -100,7 +100,7 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 
 ## `agent-config/` (runtime DFIR agent identity)
 
-These are read by the agent at investigation start (per CLAUDE.md "Agent investigation prompt").
+These are read by the agent at investigation start (per `CLAUDE.md` "Investigation Read Order").
 
 | File | Status | Purpose |
 |---|---|---|
@@ -114,7 +114,7 @@ These are read by the agent at investigation start (per CLAUDE.md "Agent investi
 
 ## `docs/specs/` (architecture specs)
 
-Status-banner-prefixed within each file. Read in CLAUDE.md "Document hierarchy" precedence order.
+Status-banner-prefixed within each file. Read in `repo-guide.md` "Document hierarchy" precedence order.
 
 | File | Status | Purpose |
 |---|---|---|
@@ -149,8 +149,8 @@ The original five implementation plans shipped (the build-swarm plan was removed
 |---|---|---|
 | `ci-smoke-checklist.md` | **ACTIVE** | End-to-end pipeline verification before submission. |
 | `dockerfile-a2-decision.md` | **RESEARCH** (decision archive) | Cut the in-container `find-evil` wrapper + `.deb` packaging (PR #4, 2026-04-27, "Option B"). Body retained as decision record. |
-| `obsidian-mind-memory.md` | **ACTIVE** | The dev/operator **memory layer**: the obsidian-mind vault (QMD semantic recall + `brain/` notes) as VERDICT's project memory. Optional, gitignored, **never evidence, never in the audit chain**. Pairs with CLAUDE.md §8.5. |
-| `github-remote-bootstrap.md` | **ACTIVE** | Pre-submission ops doc for setting up the public GitHub repo URL Devpost requires. |
+| `obsidian-mind-memory.md` | **ACTIVE** | The dev/operator **memory layer**: the obsidian-mind vault (QMD semantic recall + `brain/` notes) as VERDICT's project memory. Optional, gitignored, **never evidence, never in the audit chain**. Pairs with `CLAUDE.md` "Non-Negotiable Guardrails". |
+| `github-remote-bootstrap.md` | **HISTORICAL / ACTIVE RELEASE-REMOTE REFERENCE** | Historical bootstrap plus current `release` remote checks for `TimothyVang/verdict-dfir`; `v-submit` is already published. |
 | `local-smoke-gate.md` | **ACTIVE** | Prerequisites, per-smoke coverage map, and common failure → fix pairs for `bash scripts/run-all-smokes.sh`. |
 | `n8n-automation-integration.md` | **ACTIVE** | Optional: wire n8n as an operator-local harness *around* the product — repeatable runs + post-verdict finding-to-action (via `n8n-mcp`, user-scope). Not bundled, not the orchestrator, not in the audit chain. |
 | `readiness-packet-windows.md` | **ACTIVE** | Three invocation modes for `scripts/readiness-gate.ps1`, readiness-state meanings, and `READINESS_BLOCKED` unblocking guide. |
@@ -190,6 +190,6 @@ Investigation reports + their figures. Currently:
 
 ## What this index does NOT cover
 
-- Memory: the **obsidian-mind vault** (`obsidian-mind/`, gitignored) is now the dev/operator memory layer — see [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md) + CLAUDE.md §8.5. The user-level `~/.claude/.../memory/MEMORY.md` is a thin index pointing into it.
+- Memory: the **obsidian-mind vault** (`obsidian-mind/`, gitignored) is now the dev/operator memory layer — see [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md) + `CLAUDE.md` "Non-Negotiable Guardrails". The user-level `~/.claude/.../memory/MEMORY.md` is a thin index pointing into it.
 - Source code (`services/`, `apps/`, `scripts/`) — see `repo-guide.md` "Repository layout" + per-service `README.md`.
 - External clones (`obsidian-mind/`, `n8n-references/`) — gitignored; see `repo-guide.md` "External clones (gitignored…)".

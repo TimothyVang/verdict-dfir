@@ -52,7 +52,7 @@ runtime from `SIFT_SSH_KEY` / `SIFT_VM_IP` / `GUEST_USER` / `GUEST_REPO_PATH`; d
 
 Per the host `~/.claude/settings.json`, a `chrome-devtools` MCP server (`cloakbrowser`) is
 registered globally and auto-spawns via `npx -y chrome-devtools-mcp`. It is used for the
-session-start "offer to open the dashboard / GitHub / report" behavior (CLAUDE.md §0). Like the
+session-start "offer to open the dashboard / GitHub / report" behavior. Like the
 operator-runtime servers, it is **not** part of the investigation surface.
 
 ---

@@ -74,9 +74,10 @@ gh variable set DEMO_VIDEO_URL --body "https://youtu.be/<id>"
 - [ ] `package` job:
       - Verifies `DEMO_VIDEO_URL` non-empty, fails fast otherwise.
       - Downloads release artifacts + latest weekly L3 verdicts.
+      - Includes `release-assets/readiness-packet.zip` when present; this optional expert-review packet comes from `scripts/readiness-gate.ps1`.
       - Runs `scripts/json-to-benchmark-csv.py` → `benchmark-results.csv`.
       - Runs `scripts/package-devpost.sh` → `find-evil-submission.zip`.
-      - Integrity-checks the zip contents: `README-submission.md`, `benchmark-results.csv`, `demo-video-link.txt`, `LICENSE`, and `report.html`. (Pre-A2 also `.deb`; pre-Phase-3d also `SUBMISSION_NOTES.md`; both were removed.)
+      - Integrity-checks the zip contents: `README-submission.md`, `benchmark-results.csv`, `demo-video-link.txt`, `LICENSE`, `report.html`, and optional `readiness-packet.zip` when bundled. (Pre-A2 also `.deb`; pre-Phase-3d also `SUBMISSION_NOTES.md`; both were removed.)
       - Uploads the zip to the GH Release under the `v-submit` tag.
 - [ ] Slack `#releases` posts the "Devpost package ready" message.
 

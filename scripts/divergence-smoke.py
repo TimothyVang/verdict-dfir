@@ -353,6 +353,22 @@ _MCP_DOC_FORBIDDEN_PHRASES = (
         ".mcp.json` is the canonical local MCP config: `findevil-mcp` via `cargo run",
     ),
 )
+_MCP_DOC_FORBIDDEN_REGEXES = (
+    re.compile(r"Find Evil ships two MCP servers in `\.mcp\.json`", re.IGNORECASE),
+    re.compile(
+        r"`?\.mcp\.json`?[^.\n]{0,90}\b(?:registers|ships|contains|has)\b"
+        r"[^.\n]{0,90}\btwo\s+(?:typed\s+)?MCP servers\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"This mirrors `\.mcp\.json` and does not require tokens\.",
+        re.IGNORECASE,
+    ),
+)
+_MCP_DOC_SCAN_EXCLUDED_PREFIXES = (
+    "docs/plans/",
+    "docs/specs/",
+)
 
 
 def _check_mcp_json_surface() -> list[str]:
@@ -406,7 +422,7 @@ def _check_mcp_json_surface() -> list[str]:
     return issues
 
 
-def _check_mcp_json_doc_wording() -> list[str]:
+def _check_mcp_json_doc_wording(files: list[Path]) -> list[str]:
     issues = []
     for rel_path, phrase in _MCP_DOC_FORBIDDEN_PHRASES:
         path = REPO / rel_path
@@ -417,6 +433,27 @@ def _check_mcp_json_doc_wording() -> list[str]:
             issues.append(
                 f"{rel_path.as_posix()} still uses stale .mcp.json wording: {phrase!r}"
             )
+    for path in files:
+        rel = path.relative_to(REPO).as_posix()
+        if rel in ALLOWED_FILES:
+            continue
+        if _path_is_allowed(rel, ()):
+            continue
+        if any(rel.startswith(prefix) for prefix in _MCP_DOC_SCAN_EXCLUDED_PREFIXES):
+            continue
+        if path.suffix.lower() not in {".md", ".txt", ".py", ".yml", ".yaml"}:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for regex in _MCP_DOC_FORBIDDEN_REGEXES:
+            for match in regex.finditer(text):
+                line_no = text[: match.start()].count("\n") + 1
+                line = text.splitlines()[line_no - 1].strip()
+                issues.append(
+                    f"{rel}:{line_no} implies .mcp.json has only two servers: {line!r}"
+                )
     return issues
 
 
@@ -491,7 +528,7 @@ def main() -> int:
     # the two product servers. That stale wording obscures the product vs.
     # non-product boundary and causes avoidable judge-review confusion.
     total_checks += 1
-    mcp_doc_issues = _check_mcp_json_doc_wording()
+    mcp_doc_issues = _check_mcp_json_doc_wording(files)
     if mcp_doc_issues:
         print(
             "[FAIL] #11  active docs distinguish registered servers from product tools"

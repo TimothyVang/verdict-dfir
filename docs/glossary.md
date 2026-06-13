@@ -73,12 +73,12 @@ Only for disk-image inner-volume extraction (`.E01`/`.dd`). Memory, EVTX, PCAP, 
 evidence run fully in local-host mode. Without SIFT, disk evidence is custody-only.
 
 **Is a Claude credential required?**
-Yes for the investigating agent (one of three modes — see [CLAUDE.md §8](../CLAUDE.md)).
+Yes for the investigating agent (one of three modes — see [CLAUDE.md "Required Setup"](../CLAUDE.md)).
 
 **Is VERDICT's memory part of the evidence?**
 No — never. Both memory systems (the obsidian-mind dev/operator vault and the in-flow Hermes recall)
 are outside the audit chain: never evidence, never a Finding, never a Merkle leaf. See
-[CLAUDE.md §8.5](../CLAUDE.md).
+[CLAUDE.md "Non-Negotiable Guardrails"](../CLAUDE.md) and [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md).
 
 **Where does output go?**
 `tmp/auto-runs/<case-id>/` — `verdict.json`, `audit.jsonl`, `run.manifest.json`, `manifest_verify.json`,

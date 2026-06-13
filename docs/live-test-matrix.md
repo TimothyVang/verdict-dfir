@@ -1,6 +1,6 @@
 # Live-Test Gate & Command Reference
 
-The "done" gate for dev work, plus the full command catalog. Extracted from `CLAUDE.md` §5.
+The "done" gate for dev work, plus the full command catalog. Pairs with `CLAUDE.md` "Running A Case".
 `QUICKSTART.md` is the 3-step quick start; this doc is the exhaustive reference. Quote these
 commands verbatim so generated code and human work use the same paths. Don't hard-code smoke
 counts — the runners print the current pass/skip/fail tally.
@@ -83,7 +83,7 @@ since it's the only live workspace member.
 - Regenerate audit-event TS types from Pydantic: `pnpm --filter @findevil/web codegen:events` (writes `apps/web/lib/events.ts`)
 
 ## Readiness packet gates
-- **Native Windows (packet-producing):** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -EvidencePath <path-inside-sift-vm> -RunL1Docker`. Full mode runs `scripts/build-checker.py run`, runs `find-evil-auto` unless `-ExistingRunDir` is supplied, verifies `run.manifest.json` against `audit.jsonl`, checks report QA / expert-signoff / customer-release blockers, copies required artifacts into `tmp/readiness-gates/<run-id>/packet/`, writes `readiness-summary.json` and packet/readiness-packet-manifest.json, then creates `readiness-packet.zip`.
+- **Native Windows (packet-producing):** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -EvidencePath <path-inside-sift-vm> -RunL1Docker`. Full mode runs `scripts/build-checker.py run`, invokes the same internal automation engine used by `scripts/verdict` unless `-ExistingRunDir` is supplied, verifies `run.manifest.json` against `audit.jsonl`, checks report QA / expert-signoff / customer-release blockers, copies required artifacts into `tmp/readiness-gates/<run-id>/packet/`, writes `readiness-summary.json` and packet/readiness-packet-manifest.json`, then creates `readiness-packet.zip`.
 - **Fixed `-RunId` reruns** are supported: gate refreshes packet contents; if `<run-id>-build` exists, uses a fresh `<run-id>-build-<timestamp>` local-build child run instead of failing.
 - **Fast packet validation:** `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode PacketOnly -ExistingRunDir tmp/auto-runs/<case-id>`. Packages/checks but doesn't claim full submission readiness.
 - **POSIX strict check-only:** `EVIDENCE_RUN_DIR=<run-dir> L1_DOCKER_STATUS=passed L1_DOCKER_LOG=<log-with-READINESS_L1_PASS> bash scripts/readiness-gate.sh`. Prints `SUBMISSION_READY` or `READINESS_BLOCKED`; doesn't assemble `readiness-packet.zip`.

@@ -13,7 +13,7 @@ for future re-evaluations if A2 is ever revisited.
 ---
 
 **Original status (open hard blocker as of 2026-04-26):** Documented in
-`CLAUDE.md` "Spec/code divergences" §3 and `CHANGELOG.md`
+`docs/divergences-resolved.md` and `CHANGELOG.md`
 "Hard blockers discovered" (commit `47f67b0`).  This file lays
 out the two paths so the decision-maker has both options side
 by side without having to reverse-engineer them from the
@@ -168,7 +168,7 @@ The decision is the user's.  Concrete next step either way:
 * **If B:** the wrapper (3 places) + scripts/build-deb.sh
   (whole file) + release.yml.build-deb job all need
   removal.  Estimated ~150 lines of deletion across 3 files.
-  Then update CLAUDE.md "Spec/code divergences" §3 to drop
+  Then update `docs/divergences-resolved.md` to drop
   the hard-blocker note.
 
 After the decision lands, the `divergence-smoke` allow-list

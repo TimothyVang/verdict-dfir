@@ -91,7 +91,7 @@ manifest_ok:    28 / 28     (every run hash-chained + offline-verifiable)
 
 - **NO_EVIL** (scoped-clean disks): `base-dc`, `base-wkstn-05`, `dmz-ftp`.
 - **INDETERMINATE** (leads found, single-artifact-class → stay `HYPOTHESIS` per the ≥2-class
-  rule in `CLAUDE.md` §3): the 22 memory hosts, 3 disks, and the base-file cross-artifact case.
+  rule in `CLAUDE.md` "Non-Negotiable Guardrails"): the 22 memory hosts, 3 disks, and the base-file cross-artifact case.
   Example lead: `base-file` memory flagged uncommon processes incl. `Rar.exe` and
   `subject_srv.ex` (staging/exfil signals) — honest leads to corroborate, not confirmed evil.
 

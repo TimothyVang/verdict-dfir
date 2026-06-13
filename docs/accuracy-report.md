@@ -37,7 +37,9 @@ scoring harness — nothing is asserted without a path you can re-run.*
   `<case-dir>/recall-score.json`.
 
 The corpus, fetch mechanism, and per-case tiers are in [`DATASET.md`](DATASET.md); the
-false-positive architecture is in [`false-positives.md`](false-positives.md).
+false-positive architecture is in [`false-positives.md`](false-positives.md). Some golden files
+still use the legacy scoring label `CONFIRMED_EVIL`; map that to VERDICT's current top-line
+`SUSPICIOUS` when comparing polarity.
 
 ---
 
@@ -47,17 +49,17 @@ The golden corpus is **10 scoreable cases** (real published ground truth) + 2 li
 controls. Fixtures are not committed (license/size); `scripts/fetch-fixtures.sh` pulls them. Status
 as of this report:
 
-| # | Case | Class | Golden verdict | Recall bar | Result | Status |
+| # | Case | Class | Golden outcome | Recall bar | Result | Status |
 |---|---|---|---|---|---|---|
-| 1 | `nitroba` | network (pcap) | CONFIRMED_EVIL | 80% | **5/5 = 100%** · run `INDETERMINATE` | **PASS** (committed: `docs/sample-run/nitroba`) |
-| 2 | `nist-hacking-case` | disk (XP) | CONFIRMED_EVIL | 71% | **5/14 = 36%** · run `SUSPICIOUS` | **FAIL** — narrowed gap, up from 7% (committed: `docs/sample-run/nist-hacking-case`) |
-| 3 | `nist-data-leakage` | disk | CONFIRMED_EVIL | 60% | — | staged, scheduled (SIFT) |
+| 1 | `nitroba` | network (pcap) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 80% | **5/5 = 100%** · run `INDETERMINATE` | **PASS** (committed: `docs/sample-run/nitroba`) |
+| 2 | `nist-hacking-case` | disk (XP) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 71% | **5/14 = 36%** · run `SUSPICIOUS` | **FAIL** — narrowed gap, up from 7% (committed: `docs/sample-run/nist-hacking-case`) |
+| 3 | `nist-data-leakage` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (SIFT) |
 | 4 | `alihadi-09-encrypt` | disk (FP control) | **INDETERMINATE** | 50% | — | staged, scheduled (SIFT) |
-| 5 | `alihadi-01-webserver` | disk | CONFIRMED_EVIL | 60% | — | staged, scheduled (SIFT) |
-| 6 | `dfrws-2008-linux` | memory | CONFIRMED_EVIL | 50% | — | staged, scheduled |
-| 7 | `m57-jean` | disk | CONFIRMED_EVIL | 60% | — | staged, scheduled (SIFT) |
-| 8 | `alihadi-07-sysinternals` | disk | CONFIRMED_EVIL | 50% | — | staged, scheduled (SIFT) |
-| 9 | `volatility-cridex` | memory | CONFIRMED_EVIL | 50% | — | staged, scheduled |
+| 5 | `alihadi-01-webserver` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (SIFT) |
+| 6 | `dfrws-2008-linux` | memory | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled |
+| 7 | `m57-jean` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (SIFT) |
+| 8 | `alihadi-07-sysinternals` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled (SIFT) |
+| 9 | `volatility-cridex` | memory | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled |
 | 10 | `synthetic-benign` | negative control | **NO_EVIL** (0 findings) | 100% | — | staged, scheduled |
 
 **Honest summary:** 1 of 10 fully scored and passing (`nitroba`, 100%); 1 scored and failing but
@@ -67,8 +69,8 @@ now recalls five of the golden's fourteen canonical claims — hacking-tool exec
 account `Mr. Evil`** (SAM, T1136.001), and the **recently-opened-file MRU** — after the SAM /
 NTUSER-MRU / shellbag artifact lanes landed. It still misses the deleted-email, internet-history,
 LNK, recycle-bin, event-log, thumbcache, USB-history, and named-pipe artifacts the golden also
-expects, so it honestly scopes to `SUSPICIOUS` rather than claim the case (verdict polarity matches
-the golden's CONFIRMED_EVIL). The number is reproducible:
+expects, so it honestly scopes to `SUSPICIOUS` rather than overstate coverage (verdict polarity maps
+to the legacy golden's `CONFIRMED_EVIL` label). The number is reproducible:
 `scripts/score-recall.py docs/sample-run/nist-hacking-case --golden goldens/nist-hacking-case`. The
 remaining 8 goldens are fixture-staged and pending a SIFT-VM batch — **scheduled, not yet run.** We
 publish the gap, and the progress, rather than hide either. The adversarial posture is tracked in
@@ -104,7 +106,7 @@ Three architectural layers plus the scorer's asymmetric gate enforce it (full de
 
 **The false-positive control** (`alihadi-09-encrypt`) is designed to catch over-escalation: its golden
 verdict is `INDETERMINATE` (encryption tooling is present but doesn't prove evil), so the scorer's
-asymmetric gate **fails the run if it escalates** to `SUSPICIOUS`/`CONFIRMED_EVIL`. The
+asymmetric gate **fails the run if it escalates** to `SUSPICIOUS` (or the legacy scoring label `CONFIRMED_EVIL`). The
 `synthetic-benign` negative control (0 expected findings, `NO_EVIL`) establishes the environment's FP
 floor. Both are staged and scheduled.
 

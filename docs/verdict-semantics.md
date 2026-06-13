@@ -75,7 +75,7 @@ type detected as `unknown`), upgrade the manual triage —
 `NO_EVIL` from a one-tool run is meaningless. The `findings_summary`
 field in `verdict.json` includes the by_confidence breakdown
 ({CONFIRMED: 0, INFERRED: 0, HYPOTHESIS: 0, total: 0} for a scoped
-NO_EVIL); a `total: 0` with `agent: "find-evil-auto"` and a
+NO_EVIL); a `total: 0` produced by `scripts/verdict` with a
 healthy audit chain (≥6 records) is stronger scoped coverage, not
 proof that unexamined evidence is benign.
 

@@ -2,7 +2,7 @@
 
 Internal reference extracted from `CLAUDE.md`. For the judge-facing trust-boundary diagram
 see `docs/architecture.md`; for commands and the live-test gate see
-`docs/live-test-matrix.md` and `CLAUDE.md` §5.
+`docs/live-test-matrix.md` and `CLAUDE.md` "Running A Case".
 
 ---
 
@@ -46,7 +46,7 @@ see `docs/architecture.md`; for commands and the live-test gate see
 
 > **External clones (`obsidian-mind/`, `n8n-references/`) are gitignored** — they
 > do not ship in the Devpost zip. `obsidian-mind/` is the dev/operator **memory layer** (see
-> CLAUDE.md §8.5 and `docs/runbooks/obsidian-mind-memory.md`); it is held strictly outside the
+> `docs/runbooks/obsidian-mind-memory.md` and `CLAUDE.md` "Non-Negotiable Guardrails"); it is held strictly outside the
 > investigation and the audit chain.
 
 The pre-A2 `python -m findevil_agent.cli` entry point was dropped by A2; the Dockerfile
@@ -68,7 +68,7 @@ wrapper + `scripts/build-deb.sh` were cut 2026-04-27 (PR #4) per
 > removed 2026-06-07 (A6). The numbering (#2/#3/#4) is kept for continuity with the specs.
 
 - **#3 Sandbox** — blocks everything else. L0 lint, L1 unit/build (Docker Ubuntu 22.04), L2 SIFT-lite (Sysbox runtime, advisory), L3 full SIFT VM parity (QEMU microvm + qcow2 snapshot-restore, Packer-built from `sift-2026.03.24.ova`, on GHA KVM larger runners).
-- **#2 Product** — the submission. Under A2 the layers collapse to: evidence vault → SIFT tool subprocesses → two MCP servers → Claude Code (supervisor + ACH pool subagents + audit-log driver). Primary entry point: `scripts/find-evil` (or `claude`).
+- **#2 Product** — the submission. Under A2 the layers collapse to: evidence vault → SIFT tool subprocesses → two MCP servers → Claude Code (supervisor + ACH pool subagents + audit-log driver). Primary live-test/judging entry point: `scripts/verdict <evidence>`; interactive exploration uses `claude` or `scripts/find-evil`.
 - **#4 Orchestration Glue** — thin CI: GHA workflows, branch protection, release pipeline, Devpost submission zip on `v-submit` tag.
 
 ### Sandbox layer cheat sheet (Spec #3)
@@ -99,7 +99,7 @@ Read in precedence order. Later documents override earlier ones only where expli
 
 ### Active amendments (live)
 1. **`docs/specs/2026-04-23-find-evil-automation-master-design.md`** — master design. Originally a 4-subsystem decomposition + 4 differentiators (M1 leaderboard, M2 crypto chain-of-custody, M3 MCP App widgets, M4 ACH competing-hypothesis agents); the build-swarm subsystem was removed 2026-06-07 (see A6), leaving 3 subsystems.
-2. **A1** — `docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md`. Was the build-swarm credential mode (replaced LiteLLM proxy + USD caps with the user's Claude Code subscription). The swarm was removed under A6, so A1's swarm specifics are historical; the Product still accepts three credential modes (see CLAUDE.md §8).
+2. **A1** — `docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md`. Was the build-swarm credential mode (replaced LiteLLM proxy + USD caps with the user's Claude Code subscription). The swarm was removed under A6, so A1's swarm specifics are historical; the Product still accepts three credential modes (see `CLAUDE.md` "Required Setup").
 3. **A2** — `docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md`. Drops the custom Python orchestrator (`graph.py`/`api.py`/`cli.py`/`supervisor.py`/specialists). Claude Code IS the orchestrator. Adds `services/agent_mcp/` and `.mcp.json` registering both servers. `apps/web/` + `apps/mcp-widgets/` deferred (A3 un-defers `apps/web/`).
 4. **A3** — `docs/specs/2026-04-26-amendment-a3-agent-army-and-dashboard.md`. Un-defers `apps/web/` (NES.css live dashboard tailing the audit JSONL hash chain; 5 sprites mapping to AGENTS.md roles). Adds 3 tools to `findevil-agent-mcp`: `memory_remember`/`memory_recall` (Hermes FTS5 cross-case memory), `pool_handoff` (IBM ACP envelope). `apps/mcp-widgets/` remains deferred.
 5. **A5** (2026-04-30, active — no spec doc yet, encoded in commits + CHANGELOG). Removes the OpenTimestamps/Bitcoin tier. Cuts `services/agent/findevil_agent/crypto/ots.py` + tests, `ots_stamp`/`ots_verify` MCP tools, and the `opentimestamps-client` dep. Chain collapses from 4 tiers to 3 (audit prev_hash → rs_merkle → manifest signature: Ed25519 default, Sigstore identity tier when configured). Commits `743404d`, `a75ea44`, `e265600`, `6da4d95`, `2b59572`. Post-A5 `findevil-agent-mcp` registry was 11 tools; Track 4 adds `expert_miss_capture` as the 12th. `services/agent_mcp/tests/test_stdio_smoke.py` enforces the current count.
@@ -138,7 +138,7 @@ the shipped code + its pin files are authoritative. **Eight settled divergences 
 All subsystems exist. L1 CI runs the smoke runners; the dev "done" gate is a passing **live
 test** (`scripts/verdict`, see `docs/live-test-matrix.md`), not a smoke run. The Product
 layer is feature-complete through A3 Phase 4 plus the post-A5 `vol_psxview` addition, the
-Track 1 disk mount/extract slice, expert miss feedback, `find-evil-auto --run-summary`, and
+Track 1 disk mount/extract slice, expert miss feedback, `scripts/verdict --run-summary`, and
 the PowerShell readiness packet gate. Shipped MCP surface: 31 Rust DFIR tools + 12 Python
 crypto/ACH/memory/ACP/expert-feedback tools. The audit-log SSE tail powers a Next.js +
 Tailwind v4 + NES.css dashboard at `apps/web/` with role-state sprite containers and

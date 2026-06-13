@@ -54,7 +54,7 @@ bash scripts/sift-vm-bootstrap.sh
 
 This converts the OVA, boots the VM headless, installs Rust + DFIR tools inside, sets up the SSH transport, and rewrites `.mcp.json.sift` to point at the running VM. Runs ~15 min on first invocation; subsequent runs detect existing state and skip.
 
-> **Hypervisor note:** `scripts/find-evil-sift` is VMware-only today (uses `vmrun.exe`); a VirtualBox path is stubbed but not implemented (see `scripts/find-evil-sift` lines 10–12). If you only have VirtualBox, use Path B.
+> **Hypervisor note:** `scripts/verdict <path> --sift` invokes the SIFT helper under the hood. The helper is VMware-only today (uses `vmrun.exe`); a VirtualBox path is stubbed but not implemented (see `scripts/find-evil-sift` lines 10–12). If you only have VirtualBox, use Path B.
 
 ### Path B — Local Windows host (faster iteration)
 
@@ -95,8 +95,8 @@ scripts/find-evil
 # or:
 claude
 
-# SIFT-VM mode:
-bash scripts/find-evil-sift
+# SIFT-VM evidence run:
+scripts/verdict <path-to-evidence> --sift
 ```
 
 `.mcp.json` (or `.mcp.json.sift`, swapped automatically) tells Claude Code to spawn both MCP servers — `findevil-mcp` (Rust, 31 typed DFIR tools) and `findevil-agent-mcp` (Python, 12 typed crypto/ACH/memory/ACP/expert-feedback tools).
@@ -163,7 +163,7 @@ tmp/auto-runs/auto-<uuid>/
 └── figures/
 ```
 
-`run-summary.json` is written wherever you pass `--run-summary`; it is not copied into the case directory unless you choose a path there.
+`run-summary.json` is written wherever you pass `--run-summary`; it is not copied into the case directory unless you choose a path there. `scripts/verdict` delegates to the internal engine for this run; call the engine directly only when debugging engine-only flags.
 
 Run with `--no-report` to skip PDF rendering (saves ~5 seconds).
 

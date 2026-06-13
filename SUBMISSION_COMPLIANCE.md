@@ -113,7 +113,7 @@ of your Project.
 **STATUS: SATISFIED — rendered, hosted on YouTube, published (2026-06-12)**
 
 > **The hosted cut.** The full 4:35 film (10 beats, voiceover, real-footage exhibits) is
-> public on YouTube, with the mp4 mirrored as a release asset:
+> public on YouTube, with the mp4 mirrored as the historical `v-submit` release asset:
 >
 > **Hosted URL (YouTube):** <https://youtu.be/4RQnVden6L8>
 >
@@ -286,7 +286,7 @@ of your Project.
 | 3 | README with setup instructions | [`README.md`](README.md) · [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 4 | Deployment / step-by-step instructions | [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 5 | Feature / functionality description | [`README.md`](README.md) | SATISFIED |
-| 6 | Demonstration video | [YouTube (4:35)](https://youtu.be/4RQnVden6L8) · [mp4 mirror](https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
+| 6 | Demonstration video | [YouTube (4:35)](https://youtu.be/4RQnVden6L8) · [historical `v-submit` mp4 mirror](https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
 | 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) (incl. §6 evidence integrity + named caught hallucinations) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED (best: nitroba 100% recall, reproducible; NIST 36% (up from 7%) — honest coverage gap) |
