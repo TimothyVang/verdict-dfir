@@ -165,7 +165,7 @@ LAUNCHER_TIMEOUT_CASES = [
     ("zero env clamps to one", "0", 1),
 ]
 
-SMOKE_RUNNER_POLICY_CASE_COUNT = 9
+SMOKE_RUNNER_POLICY_CASE_COUNT = 14
 
 STALE_SMOKE_LABEL_PATTERNS = [
     # Known stale fixed-count phrases removed from active smoke/docs
@@ -250,6 +250,29 @@ PATH_EXISTENCE_ALLOW_CASES = [
         "./output/foo",
         False,
     ),
+]
+
+READINESS_PACKET_REQUIRED_DOC_STRINGS = [
+    "manifest_verify.json",
+    "verdict.json",
+    "expert_signoff.json",
+    "customer_release_gate.final.json",
+    "REPORT.html",
+    "REPORT.pdf",
+    "readiness-summary.json",
+    "packet/readiness-packet-manifest.json",
+]
+
+READINESS_PACKET_FORBIDDEN_DOC_STRINGS = [
+    "findings.json           ",
+    "report.md               ",
+    "└── readiness-packet-manifest.json",
+]
+
+SAMPLE_RUN_DOC_FORBIDDEN_STRINGS = [
+    "All six runs return `overall: true`",
+    "The heavy render artifacts (`REPORT.pdf`, `REPORT.html`, `figures/`, `timeline.*`) are omitted",
+    "their\n> `audit.jsonl`, `run.manifest.json`, `verdict.json`, `manifest_verify.json`, and `REPORT.md`",
 ]
 
 
@@ -425,6 +448,37 @@ def _run_smoke_runner_policy_cases(launch_smoke) -> list[tuple[str, str]]:
                 "expected readiness smoke to run under services/agent Python 3.11",
             )
         )
+    if "scripts/find-evil-run-smoke.py" in runner:
+        failures.append(
+            (
+                "run-all-smokes.ps1 does not call retired smoke",
+                "expected Windows runner to use verdict-smoke.py, not find-evil-run-smoke.py",
+            )
+        )
+    windows_expected_smokes = [
+        "scripts/verdict-smoke.py",
+        "scripts/install-bootstrap-smoke.py",
+        "scripts/grounding-smoke.py",
+    ]
+    for smoke_path in windows_expected_smokes:
+        if smoke_path not in runner:
+            failures.append(
+                (
+                    f"run-all-smokes.ps1 includes {smoke_path}",
+                    "expected Windows runner to mirror the POSIX CI-predictor smoke surface",
+                )
+            )
+    referenced_scripts = set(re.findall(r"scripts/[A-Za-z0-9_-]+\.py", runner))
+    missing_scripts = sorted(
+        rel for rel in referenced_scripts if not (REPO / rel).is_file()
+    )
+    if missing_scripts:
+        failures.append(
+            (
+                "run-all-smokes.ps1 references existing smoke scripts",
+                f"missing script reference(s): {', '.join(missing_scripts)}",
+            )
+        )
     if "uv sync --directory services/agent --extra dev" not in posix_runner:
         failures.append(
             (
@@ -478,6 +532,63 @@ def _run_path_existence_cases(pes_smoke) -> list[tuple[str, str]]:
                     f"_is_allowed({candidate!r}): expected {expected_allowed}, got {actual}",
                 )
             )
+    return failures
+
+
+def _run_readiness_packet_doc_cases() -> list[tuple[str, str]]:
+    failures = []
+    runbook = (REPO / "docs/runbooks/readiness-packet-windows.md").read_text(
+        encoding="utf-8"
+    )
+    for needle in READINESS_PACKET_REQUIRED_DOC_STRINGS:
+        if needle not in runbook:
+            failures.append(
+                (
+                    f"readiness packet docs include {needle}",
+                    "expected Windows runbook to mirror readiness-gate.ps1 packet schema",
+                )
+            )
+    for needle in READINESS_PACKET_FORBIDDEN_DOC_STRINGS:
+        if needle in runbook:
+            failures.append(
+                (
+                    f"readiness packet docs omit stale {needle.strip()}",
+                    "expected Windows runbook not to list stale packet paths",
+                )
+            )
+    return failures
+
+
+def _run_sample_run_doc_cases() -> list[tuple[str, str]]:
+    failures = []
+    sample_readme = (REPO / "docs/sample-run/README.md").read_text(encoding="utf-8")
+    compliance = (REPO / "SUBMISSION_COMPLIANCE.md").read_text(encoding="utf-8")
+    combined = f"{sample_readme}\n{compliance}"
+    for needle in SAMPLE_RUN_DOC_FORBIDDEN_STRINGS:
+        if needle in combined:
+            failures.append(
+                (
+                    f"sample-run docs omit stale phrase {needle[:48]!r}",
+                    "expected sample-run inventory and report-presence wording to match committed artifacts",
+                )
+            )
+    if "All seven runs return `overall: true`" not in sample_readme:
+        failures.append(
+            (
+                "sample-run README uses seven-run verification count",
+                "expected all-seven wording for committed individual runs",
+            )
+        )
+    if (
+        "`REPORT.md`" not in compliance
+        or "partial runs can omit it by policy" not in compliance
+    ):
+        failures.append(
+            (
+                "submission compliance qualifies REPORT.md presence",
+                "expected committed layout to avoid claiming every run has REPORT.md",
+            )
+        )
     return failures
 
 
@@ -538,6 +649,26 @@ def main() -> int:
     for label, err in pes_failures:
         all_failures.append(("path-existence-smoke", label, err))
 
+    readiness_doc_failures = _run_readiness_packet_doc_cases()
+    readiness_total = len(READINESS_PACKET_REQUIRED_DOC_STRINGS) + len(
+        READINESS_PACKET_FORBIDDEN_DOC_STRINGS
+    )
+    print(
+        f"readiness-packet docs:       "
+        f"{readiness_total - len(readiness_doc_failures)} / {readiness_total} passed"
+    )
+    for label, err in readiness_doc_failures:
+        all_failures.append(("readiness-packet docs", label, err))
+
+    sample_doc_failures = _run_sample_run_doc_cases()
+    sample_total = len(SAMPLE_RUN_DOC_FORBIDDEN_STRINGS) + 2
+    print(
+        f"sample-run doc policies:     "
+        f"{sample_total - len(sample_doc_failures)} / {sample_total} passed"
+    )
+    for label, err in sample_doc_failures:
+        all_failures.append(("sample-run doc policies", label, err))
+
     print()
     if all_failures:
         print(f"FAIL - {len(all_failures)} regex test case(s) failed:")
@@ -555,6 +686,8 @@ def main() -> int:
         + n_launcher
         + len(STALE_SMOKE_LABEL_PATTERNS)
         + len(PATH_EXISTENCE_ALLOW_CASES)
+        + readiness_total
+        + sample_total
     )
     print("=" * 60)
     print(f"OK - all {total} regex test cases pass.")

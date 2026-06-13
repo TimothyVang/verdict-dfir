@@ -18,6 +18,8 @@ so this smoke asserts:
      (FINDEVIL_MCP_FROM_SOURCE / CI) and `cargo build` preserved as the fallback.
   6. The C-toolchain bootstrap (build-essential) is gated by the toggle —
      rustup installs Rust but not the cc/linker that crates need to build.
+  7. install.sh honors the canonical doctor.sh readiness result instead of
+     ignoring it and printing READY after a failed preflight.
 
 Static assertions (not execution) because install.sh builds the Rust binary;
 running it is the job of the live test, not a unit smoke.
@@ -126,6 +128,18 @@ def main() -> None:
                 f"build-essential install at line {i + 1} is not gated by "
                 f"bootstrap_enabled"
             )
+
+    # 7. The installer may complete builds while the environment remains NOT
+    #    READY. It must not ignore doctor.sh failures and then print a green
+    #    ready banner.
+    if 'bash "${REPO}/scripts/doctor.sh" || true' in text:
+        fail("install.sh still ignores doctor.sh failure with '|| true'")
+    if "DOCTOR_STATUS" not in text:
+        fail("install.sh does not capture doctor.sh status")
+    if "build complete, but environment is NOT READY" not in text:
+        fail("install.sh does not print a clear build-complete-but-not-ready banner")
+    if 'exit "${DOCTOR_STATUS}"' not in text:
+        fail("install.sh does not exit with the doctor.sh readiness status")
 
     print(
         "OK - install.sh contract holds (bootstrap gated, prebuilt verified, fail-closed)."

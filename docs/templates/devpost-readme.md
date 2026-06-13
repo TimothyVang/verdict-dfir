@@ -86,7 +86,7 @@ claude
 
 `scripts/verdict` calls the internal headless engine (`scripts/find-evil-auto`) under the hood; `find-evil-run` and `find-evil-live` are deprecated shims that forward to `verdict`, and `find-evil-sift` is the SIFT-VM helper. Add `--run-summary <path>` to write a machine-readable JSON pointer to the run directory, artifact paths, report QA, release-gate/expert-signoff state, readiness state, blockers, and warnings. Multi-host fleet: `python scripts/fleet_investigate.py && python scripts/fleet_correlate.py && python scripts/render_fleet_report.py`.
 
-For expert-review packaging on native Windows, run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -EvidencePath <path-inside-sift-vm> -RunL1Docker`. It writes `readiness-summary.json`, `readiness-packet-manifest.json`, and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`. Fixed `-RunId` reruns refresh generated packet contents and may use a timestamped local-build child run. `READY_FOR_EXPERT_REVIEW` means human expert review can begin; automation does not mark customer release ready.
+For expert-review packaging on native Windows, run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -EvidencePath <path-inside-sift-vm> -RunL1Docker`. It writes `readiness-summary.json` and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`, with `packet/readiness-packet-manifest.json` listing copied artifacts. Fixed `-RunId` reruns refresh generated packet contents and may use a timestamped local-build child run. `READY_FOR_EXPERT_REVIEW` means human expert review can begin; automation does not mark customer release ready.
 
 ## Accuracy report
 

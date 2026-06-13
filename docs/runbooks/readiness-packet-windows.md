@@ -38,8 +38,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 `
     -RunL1Docker
 ```
 
-Artifacts land in `tmp/readiness-gates/<run-id>/packet/`. Summary JSON at
-`tmp/readiness-gates/<run-id>/readiness-summary.json`.
+Artifacts land in `tmp/readiness-gates/<run-id>/packet/`. Summary JSON is written
+at `tmp/readiness-gates/<run-id>/readiness-summary.json` and copied into the
+packet. The packet manifest is `tmp/readiness-gates/<run-id>/packet/readiness-packet-manifest.json`.
 
 **Fixed `-RunId` rerun** (refreshes packet, reuses existing run artifacts):
 
@@ -110,14 +111,25 @@ After a successful Full-mode run:
 
 ```
 tmp/readiness-gates/<run-id>/
+├── logs/
 ├── packet/
-│   ├── run.manifest.json       ← manifest to upload with submission
-│   ├── audit.jsonl             ← append-only hash chain
-│   ├── findings.json           ← verified findings with tool_call_ids
-│   └── report.md               ← human-readable investigation report
-├── readiness-summary.json      ← machine-readable gate outcome
-└── readiness-packet-manifest.json  ← list of packet files + checksums
-readiness-packet.zip            ← ZIP of packet/ contents
+│   ├── audit.jsonl                         ← append-only hash chain
+│   ├── run.manifest.json                   ← manifest to upload with submission
+│   ├── manifest_verify.json                ← recomputed offline verification
+│   ├── verdict.json                        ← Verdict + traced Findings
+│   ├── expert_signoff.json                 ← expert-review state
+│   ├── customer_release_gate.final.json    ← customer-release gate state
+│   ├── REPORT.html                         ← rendered report artifact
+│   ├── REPORT.pdf                          ← included when PDF rendering succeeds
+│   ├── REPORT.md                           ← included when the run emitted it
+│   ├── evidence_inventory.json             ← included when emitted
+│   ├── timeline.json / timeline.csv        ← included when emitted
+│   ├── figures/                            ← included when emitted
+│   ├── readiness-summary.json              ← machine-readable gate outcome
+│   ├── readiness-packet-manifest.json      ← packet files + checksums
+│   └── logs/                               ← validator logs copied when present
+├── readiness-summary.json                  ← same summary, outside the ZIP source
+└── readiness-packet.zip                    ← ZIP of packet/ contents
 ```
 
 ---

@@ -4,8 +4,9 @@ Compact OpenCode guidance for this repo. `CLAUDE.md` is still authoritative; use
 
 ## Start Here
 
-- Product path for SANS judging is Claude Code from repo root: `scripts/find-evil` or `claude`; do not revive a separate Product CLI.
-- Before investigating evidence or changing investigation behavior, read in order: `CLAUDE.md`, `agent-config/SOUL.md`, `agent-config/AGENTS.md`, `agent-config/PLAYBOOK.md`, `agent-config/TOOLS.md`, `agent-config/MEMORY.md`, `agent-config/EXPERT.md`, `agent-config/HEARTBEAT.md`, `agent-config/JUDGING.md`.
+- Product live-test and judging path is the one-shot launcher from repo root: `scripts/verdict <evidence>`. Use `scripts/find-evil` or `claude` for interactive investigations; do not revive a separate Product CLI.
+- Before investigating evidence or changing investigation behavior, read in order: `CLAUDE.md`, `agent-config/SOUL.md`, `agent-config/AGENTS.md`, `agent-config/PLAYBOOK.md`, `agent-config/TOOLS.md`, `agent-config/MEMORY.md`, `agent-config/EXPERT.md`, `agent-config/HEARTBEAT.md`.
+- Read `agent-config/JUDGING.md` only for after-the-fact pre-submission self-assessment against a completed Case directory.
 - Trust executable config over old plans/spec prose. `CLAUDE.md` records known spec/code divergences; append a new one there if you confirm intentional drift.
 - Evidence and local corpora are read-only and ignored: `*.E01`, `*.evtx`, `*.mem`, `tmp/`, `test-forensics/`, VM images, and SQLite state must not be committed.
 
@@ -60,11 +61,11 @@ When the user requests a continuous timed run, such as 8 hours:
 - Initial Product preflight: `bash scripts/install.sh` builds `target/release/findevil-mcp`, syncs `services/agent_mcp`, and checks Claude credential mode.
 - Interactive investigation: `scripts/find-evil` or `claude` from repo root. The Claude CLI binary is `claude`, not `claude-code`, and it uses cwd rather than a positional project path.
 - SIFT VM investigation: `bash scripts/sift-vm-bootstrap.sh` once, then `bash scripts/find-evil-sift`; VMware Workstation is the implemented launcher path.
-- Headless single-shot: `bash scripts/find-evil-auto <evidence-path-inside-VM> --unattended`; outputs mirror to `tmp/auto-runs/auto-<uuid>/`.
+- Headless single-shot: `bash scripts/verdict <evidence>`; use `--sift` when the evidence path should run through the SIFT VM. Outputs land in `tmp/auto-runs/<case-id>/`.
 - Headless automation summary: add `--run-summary <path>` to `find-evil-auto` to write a machine-readable pointer/QA JSON with run IDs, artifact paths, report QA, release-gate/expert-signoff state, readiness state, blockers, and warnings.
 - Live test (the dev "done" gate): `scripts/verdict evidence/<file>` (or `scripts/verdict --watch` + drop a file into `evidence/`). Done = a real `verdict.json` with `tool_call_id`-cited Findings and `manifest_verify` `overall=true` — not smokes passing. An honest `INDETERMINATE` / scoped `NO_EVIL` per `docs/verdict-semantics.md` is a passing outcome. See Live Tests above.
 - Local smoke runners (CI predictor, optional): build/sync first with `cargo build --release -p findevil-mcp --locked` and `uv sync --directory services/agent_mcp --extra dev`, then run `bash scripts/run-all-smokes.sh` on POSIX/Git Bash or `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-all-smokes.ps1` on native Windows. L1 CI runs these; locally they only predict CI; they are not live tests.
-- Readiness packet: use `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -EvidencePath <path-inside-sift-vm> -RunL1Docker` on native Windows. It writes `readiness-summary.json`, `readiness-packet-manifest.json`, and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`; fixed `-RunId` reruns refresh generated packet contents and can use a timestamped local-build child run; passing state is ready for expert review, not customer release. `scripts/readiness-gate.sh` is POSIX strict/check-only and does not create the packet ZIP.
+- Readiness packet: use `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -EvidencePath <path-inside-sift-vm> -RunL1Docker` on native Windows. It writes `readiness-summary.json` and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`, with `packet/readiness-packet-manifest.json` listing copied artifacts; fixed `-RunId` reruns refresh generated packet contents and can use a timestamped local-build child run; passing state is ready for expert review, not customer release. `scripts/readiness-gate.sh` is POSIX strict/check-only and does not create the packet ZIP.
 - L1 CI-equivalent container: `docker compose -f docker/l1-compose.yml up --build --exit-code-from l1`.
 
 ## Focused Checks

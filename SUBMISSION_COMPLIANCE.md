@@ -228,8 +228,9 @@ of your Project.
 **STATUS: SATISFIED**
 
 > **Committed sample runs (self-contained on a fresh clone):**
-> [`docs/sample-run/`](docs/sample-run/) ships seven real, completed investigations — their
-> `audit.jsonl`, `run.manifest.json`, `verdict.json`, `manifest_verify.json`, and `REPORT.md`.
+> [`docs/sample-run/`](docs/sample-run/) ships seven real, completed investigations — each has
+> `audit.jsonl`, `run.manifest.json`, `verdict.json`, and `manifest_verify.json`; most include
+> `REPORT.md`, while partial runs can omit it by policy.
 > All verify **offline** (`manifest_verify` returns `overall: true`), and
 > [`docs/sample-run/README.md`](docs/sample-run/README.md) walks a single finding all the way
 > back to the tool execution and Merkle leaf that produced it. Every live investigation also
@@ -271,7 +272,7 @@ of your Project.
 > ├── verdict.json         # final verdict with confidence and MITRE mappings
 > ├── run.manifest.json    # Merkle root + signature metadata
 > ├── manifest_verify.json # offline verification result (overall: true)
-> └── REPORT.md            # human-readable investigation report
+> └── REPORT.md            # human-readable investigation report, when present
 > ```
 
 ---

@@ -40,7 +40,7 @@ Two committed fleet rollups back the demo's "host by host across the fleet" beat
   correlation: 74 cross-host process correlations, 53 temporal clusters, including the exact
   **six-host `Autorunsc.exe` @ `2018-08-15T17:10:32Z`** same-second cluster the video cites.
 
-## Files in each run (lean set)
+## Common files in each run
 
 - `audit.jsonl` — the hash-chained, append-only execution log (every `tool_call_start` /
   `tool_call_output` / `finding_approved` / verifier action; each line carries `prev_hash` + `line_hash`
@@ -56,7 +56,7 @@ Two committed fleet rollups back the demo's "host by host across the fleet" beat
 - `run.manifest.json` — Merkle root over the audit leaves + signature bundle.
 - `manifest_verify.json` — the offline-verification result recorded at run time.
 - `verdict.json` — the final verdict and every Finding (each citing a `tool_call_id`).
-- `REPORT.md` — the human-readable investigative narrative.
+- `REPORT.md` when present — the human-readable investigative narrative. Partial runs can omit it by policy.
 - `evidence_inventory.json` (attack-samples only) — artifact classes touched.
 - `recall-score.json` (`nitroba`, `nist-hacking-case`) — the committed grading receipt against the
   published golden: nitroba **5/5 = 100% PASS**, nist-hacking-case **5/14 = 36% FAIL (up from 7%)**. The FAIL is
@@ -64,8 +64,10 @@ Two committed fleet rollups back the demo's "host by host across the fleet" beat
   either file regenerates with
   `python3 scripts/score-recall.py docs/sample-run/<case> --golden goldens/<case>`.
 
-The heavy render artifacts (`REPORT.pdf`, `REPORT.html`, `figures/`, `timeline.*`) are omitted
-to keep the tree light; they regenerate from a live run.
+Rendered artifacts are committed only where they are part of the exhibit. For example,
+`nist-hacking-case/` includes `REPORT.html`, `REPORT.pdf`, and `figures/`, while leaner
+sample directories keep just the sealed run artifacts. A fresh live run may also emit
+`REPORT.html`, `REPORT.pdf`, `figures/`, and `timeline.*` in its Case directory.
 
 ## Verify it yourself, offline
 
@@ -79,7 +81,7 @@ manifest_verify(
 )
 ```
 
-All six runs return `overall: true` — `audit_chain_ok`, `merkle_root_ok`, `leaf_count_ok`, and
+All seven runs return `overall: true` — `audit_chain_ok`, `merkle_root_ok`, `leaf_count_ok`, and
 `signature_verified` (real ed25519 check) all pass. No network, no trusted third party
 (FRE 902(14) self-authentication).
 

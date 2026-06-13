@@ -114,11 +114,14 @@ Invoke-Smoke -Label "launcher-smoke (bash -n + claude binary + no positional .)"
 } -Prereq { $python -and (Test-CommandAvailable "bash") }
 Invoke-Smoke -Label "divergence-smoke (active divergences downstream-clean)" -Command { & $python scripts/divergence-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "path-existence-smoke (backtick-quoted paths resolve)" -Command { & $python scripts/path-existence-smoke.py } -Prereq { $python }
+Invoke-Smoke -Label "trace-finding-smoke (reject post-finalize verdict tampering)" -Command { & $python scripts/trace-finding-smoke.py } -Prereq { $python }
+Invoke-Smoke -Label "install-bootstrap-smoke (--bootstrap gated; default stays fail-closed)" -Command { & $python scripts/install-bootstrap-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "smoke-regex-tests (audit-smoke regex/helper policies)" -Command { & $python scripts/smoke-regex-tests.py } -Prereq { $python }
 Invoke-Smoke -Label "render-binary-smoke (pandoc/chrome resolve via PATH, graceful degrade)" -Command { & $python scripts/render-binary-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "starter-data-smoke (SANS_STARTER_URL contract + goldens stub)" -Command { & $python scripts/starter-data-smoke.py } -Prereq { $python }
-Invoke-Smoke -Label "find-evil-run-smoke (one-command operator entry, --dry-run)" -Command { & $python scripts/find-evil-run-smoke.py } -Prereq { $python }
+Invoke-Smoke -Label "verdict-smoke (the one command, --dry-run)" -Command { & $python scripts/verdict-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "make-demo-video-smoke (TTS+ffmpeg video builder, --dry-run)" -Command { & $python scripts/make-demo-video-smoke.py } -Prereq { $python }
+Invoke-Smoke -Label "grounding-smoke (claim extraction + boundary + anti-hallucination contract)" -Command { & $python scripts/grounding-smoke.py } -Prereq { $python -and (Test-Path -LiteralPath "scripts/ground_verdict.py" -PathType Leaf) }
 
 Invoke-Smoke -Label "ruff check . (lint clean across all Python services)" -Command { ruff check . } -Prereq { Test-CommandAvailable "ruff" }
 Invoke-Smoke -Label "ruff format --check . (formatter clean)" -Command { ruff format --check . } -Prereq { Test-CommandAvailable "ruff" }

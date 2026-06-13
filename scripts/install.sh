@@ -75,7 +75,7 @@ if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && command -v claude &> /dev/null; then
 elif command -v claude &> /dev/null && [ -d "${HOME}/.claude" ]; then
     ok "claude CLI on PATH + ~/.claude/ populated (mode 2: interactive session)."
 elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    ok "ANTHROPIC_API_KEY present (mode 3: direct API)."
+    ok "ANTHROPIC_API_KEY present (mode 3: direct API credential)."
 else
     fail "Find Evil! requires one of (any works — pick whichever you have):"
     echo ""
@@ -690,7 +690,12 @@ export PATH="${HOME}/.local/bin:${PATH}"
 
 echo ""
 info "Verifying DFIR tools + environment (scripts/doctor.sh)..."
-bash "${REPO}/scripts/doctor.sh" || true
+if bash "${REPO}/scripts/doctor.sh"; then
+    DOCTOR_STATUS=0
+else
+    DOCTOR_STATUS=$?
+    warn "scripts/doctor.sh reported NOT READY; build artifacts may be present, but the environment still needs the remedies above."
+fi
 
 # ---------------------------------------------------------------------------
 # 10. Next steps.
@@ -698,7 +703,12 @@ bash "${REPO}/scripts/doctor.sh" || true
 
 echo ""
 echo "=========================================="
-echo "${c_grn}VERDICT / Find Evil! is ready.${c_off}"
+if [ "${DOCTOR_STATUS}" -eq 0 ]; then
+    echo "${c_grn}VERDICT / Find Evil! is ready.${c_off}"
+else
+    echo "${c_yel}VERDICT / Find Evil! build complete, but environment is NOT READY.${c_off}"
+    echo "Run ${c_blu}bash scripts/doctor.sh${c_off} after applying the remedies above."
+fi
 echo "=========================================="
 echo ""
 echo "${c_blu}HOW TO USE THIS TOOL${c_off}"
@@ -741,3 +751,4 @@ echo "  To verify a signed manifest offline:"
 echo "    uv run --directory services/agent_mcp python -m findevil_agent_mcp.server"
 echo "    # then call the manifest_verify MCP tool"
 echo ""
+exit "${DOCTOR_STATUS}"

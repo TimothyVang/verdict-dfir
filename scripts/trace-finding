@@ -141,10 +141,34 @@ def _index_tool_calls(records: list[dict[str, Any]]) -> dict[str, dict[str, dict
     return index
 
 
+def _index_approved_findings(records: list[dict[str, Any]]) -> set[str]:
+    """Return Finding ids that were sealed as approved in the audit chain."""
+    approved: set[str] = set()
+    for record in records:
+        if record.get("kind") != "finding_approved":
+            continue
+        payload = record.get("payload", {})
+        finding = payload.get("finding", {})
+        fid = finding.get("finding_id") or payload.get("finding_id")
+        if fid:
+            approved.add(str(fid))
+    return approved
+
+
+def _latest_verdict_artifact_sha(records: list[dict[str, Any]]) -> str | None:
+    """Return the latest audited verdict.json SHA-256, if the run recorded one."""
+    for record in reversed(records):
+        if record.get("kind") == "verdict_artifact":
+            sha = record.get("payload", {}).get("sha256")
+            return str(sha) if sha else None
+    return None
+
+
 def _trace_one(
     finding: dict[str, Any],
     tool_calls: dict[str, dict[str, dict[str, Any]]],
     leaf_ids: set[str],
+    approved_finding_ids: set[str],
 ) -> bool:
     """Print the finding -> tool_call -> audit -> Merkle-leaf chain. Return True if intact."""
     fid = str(finding.get("finding_id") or finding.get("id") or "?")
@@ -182,9 +206,14 @@ def _trace_one(
 
     tc_leaf = tcid in leaf_ids
     f_leaf = fid in leaf_ids
+    approved = fid in approved_finding_ids
     print(f"       └─ Merkle leaf: tool_call_id {'present' if tc_leaf else 'MISSING'}"
           f" | finding_id {'present' if f_leaf else 'MISSING'}")
-    return ok and tc_leaf
+    if approved:
+        print("          finding_approved: present")
+    else:
+        print("          finding_approved: MISSING")
+    return ok and tc_leaf and f_leaf and approved
 
 
 def main(argv: list[str]) -> int:
@@ -222,6 +251,17 @@ def main(argv: list[str]) -> int:
     if not verdict_path.is_file():
         print("verdict:     (no verdict.json -- nothing to trace)")
         return 1
+    verdict_artifact_sha = _latest_verdict_artifact_sha(records)
+    if verdict_artifact_sha:
+        actual_verdict_sha = _sha256(verdict_path.read_bytes())
+        if actual_verdict_sha != verdict_artifact_sha:
+            print(
+                "verdict:     BROKEN -- verdict.json sha256 does not match "
+                f"audited verdict_artifact (actual={actual_verdict_sha}, "
+                f"expected={verdict_artifact_sha})"
+            )
+            return 1
+        print("verdict:     artifact hash OK")
     verdict = json.loads(verdict_path.read_text())
     findings = verdict.get("findings") or []
     if only_finding:
@@ -232,11 +272,15 @@ def main(argv: list[str]) -> int:
     print(f"verdict:     {verdict.get('verdict', '?')}  ({len(findings)} finding(s) traced)")
 
     tool_calls = _index_tool_calls(records)
-    traced_ok = sum(1 for f in findings if _trace_one(f, tool_calls, leaf_ids))
+    approved_finding_ids = _index_approved_findings(records)
+    traced_ok = sum(
+        1 for f in findings if _trace_one(f, tool_calls, leaf_ids, approved_finding_ids)
+    )
 
     print(
         f"\nTRACE {'OK' if traced_ok == len(findings) and findings else 'INCOMPLETE'}: "
-        f"{traced_ok}/{len(findings)} findings resolve to a tool execution and a Merkle leaf."
+        f"{traced_ok}/{len(findings)} findings resolve to an approved finding, "
+        "tool execution, and Merkle leaves."
     )
     return 0 if (traced_ok == len(findings) and findings) else 1
 

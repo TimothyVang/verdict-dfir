@@ -376,7 +376,24 @@ fi
 if [[ -n "${CASE_DIR:-}" && -f scripts/n8n_post.py ]]; then
   log "automation (n8n finding-to-action; post-verdict, not in the audit chain)"
   if python3 scripts/n8n_post.py "${CASE_DIR}" >/tmp/verdict-n8n.log 2>&1; then
-    ok "n8n posted — ${CASE_DIR}/automation.json"
+    automation_state="$(python3 - "${CASE_DIR}/automation.json" <<'PY' 2>/dev/null || true
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    print("unknown")
+else:
+    if data.get("n8n_reachable"):
+        print("fired")
+    else:
+        print("skipped")
+PY
+)"
+    if [[ "${automation_state}" == "fired" ]]; then
+      ok "n8n fired — ${CASE_DIR}/automation.json"
+    else
+      warn "n8n automation skipped or unreachable — ${CASE_DIR}/automation.json"
+    fi
   else
     warn "n8n automation skipped (down or unreachable); details: /tmp/verdict-n8n.log"
   fi

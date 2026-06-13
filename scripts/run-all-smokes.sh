@@ -136,6 +136,10 @@ run_smoke \
 # 8b. install.sh --bootstrap contract — opt-in prereq install stays gated and the
 #     default path stays fail-closed on a missing toolchain.
 run_smoke \
+    "trace-finding-smoke (reject post-finalize verdict tampering)" \
+    "python3 scripts/trace-finding-smoke.py"
+
+run_smoke \
     "install-bootstrap-smoke (--bootstrap gated; default stays fail-closed)" \
     "python3 scripts/install-bootstrap-smoke.py"
 
