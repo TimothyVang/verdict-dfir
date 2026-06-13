@@ -25,7 +25,9 @@ class DocRule(NamedTuple):
 DOC_RULES = (
     DocRule("CLAUDE.md", requires_total=True, requires_rust=True, requires_python=True),
     DocRule("README.md", requires_total=True, requires_rust=True, requires_python=True),
-    DocRule("INSTALL.md", requires_total=True, requires_rust=True, requires_python=True),
+    DocRule(
+        "INSTALL.md", requires_total=True, requires_rust=True, requires_python=True
+    ),
     DocRule(
         "SUBMISSION_COMPLIANCE.md",
         requires_total=True,
@@ -134,7 +136,9 @@ COUNT_CLAIM_PATTERNS = {
     ),
     "Python count": (
         re.compile(r"\b(\d+)\s+Python[^\n|]*\btools\b"),
-        re.compile(r"findevil-agent-mcp[^\n|]*\b(\d+)\s+crypto/ACH/memory[^\n|]*tools\b"),
+        re.compile(
+            r"findevil-agent-mcp[^\n|]*\b(\d+)\s+crypto/ACH/memory[^\n|]*tools\b"
+        ),
     ),
 }
 

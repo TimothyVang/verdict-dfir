@@ -6,7 +6,9 @@ pitch see [README.md](README.md); for run modes and every flag see
 
 VERDICT runs as a [Claude Code](https://claude.com/claude-code) agent. Installation builds the two
 product MCP servers and the host DFIR toolchain; Claude Code auto-spawns the servers from
-`.mcp.json` on session start.
+`.mcp.json` on session start. The product surface is 43 tools total: 31 Rust DFIR tools in
+`findevil-mcp` plus 12 Python crypto/ACH/memory/ACP/expert-feedback tools in
+`findevil-agent-mcp`.
 
 ---
 
@@ -22,7 +24,7 @@ via `fnm` (best-effort, since Node is optional).
 | Tool | Version | Why | Required? |
 |---|---|---|---|
 | Rust + Cargo | 1.88 (pinned in `rust-toolchain.toml`) | builds `findevil-mcp` (31 DFIR tools) | **yes** |
-| uv | latest | syncs the Python `findevil-agent-mcp` env | **yes** |
+| uv | latest | syncs the Python `findevil-agent-mcp` env (12 tools) | **yes** |
 | Python | 3.11–3.12 | runs the Python `findevil-agent-mcp` + smoke/score tooling | **yes** |
 | git | recent | clones the repo; used by the smokes | **yes** |
 | unzip | any | extracts Velociraptor `.zip` collections + fixtures | **yes** |

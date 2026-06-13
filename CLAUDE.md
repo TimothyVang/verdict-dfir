@@ -96,7 +96,7 @@ These rules are part of the product safety boundary.
 - Product/audit-chain servers: `findevil-mcp` and `findevil-agent-mcp`.
 - Operator convenience servers: `n8n-mcp`, `playwright`, `puppeteer`, and `qmd`.
 
-Only the two product servers can emit audit-chain tool calls for Findings. The operator convenience servers must never emit Findings, satisfy Finding citations, or mutate evidence.
+Only the two product servers can emit audit-chain tool calls for Findings. The product surface is 43 audit-chained product tools: 31 Rust DFIR tools in `findevil-mcp` plus 12 Python crypto/ACH/memory/ACP/expert-feedback tools in `findevil-agent-mcp`. The operator convenience servers must never emit Findings, satisfy Finding citations, or mutate evidence.
 
 Do not add a broad filesystem, shell, Docker, Kubernetes, browser, GitHub, fetch, or raw-command MCP to the product surface. Do not add an `execute_shell` tool. Long-tail DFIR execution belongs behind allow-listed typed tools such as `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`, and `cloud_audit`.
 

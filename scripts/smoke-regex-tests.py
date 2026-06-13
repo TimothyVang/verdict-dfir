@@ -628,10 +628,12 @@ def _run_tool_count_guard_cases(tool_count_guard) -> list[tuple[str, str]]:
             encoding="utf-8",
         )
         good_docs = {
-            "CLAUDE.md": "MCP servers are narrow and typed.\n",
+            "CLAUDE.md": "3 product tools: 2 Rust tools + 1 Python tool.\n",
             "README.md": "3 product tools: 2 Rust DFIR + 1 Python.\n",
-            "INSTALL.md": "Builds findevil-mcp with 2 DFIR tools.\n",
+            "INSTALL.md": "3 product tools: findevil-mcp has 2 DFIR tools; findevil-agent-mcp has 1 Python tool.\n",
+            "SUBMISSION_COMPLIANCE.md": "3 audit-chained product tools: 2 Rust DFIR tools + 1 Python tool.\n",
             "docs/architecture.md": "Tool count: 3 (2 Rust DFIR + 1 Python).\n",
+            "docs/templates/devpost-readme.md": "3 product tools: 2 Rust tools + 1 Python tool.\n",
             "scripts/make-demo-video/src/components/ArchPoster.tsx": "const total = 3; const rust = 2; const python = 1;\n",
         }
         for rel, text in good_docs.items():
@@ -666,6 +668,22 @@ def _run_tool_count_guard_cases(tool_count_guard) -> list[tuple[str, str]]:
                 (
                     "tool-count guard rejects stale README count",
                     f"expected README.md mismatch, got {errors!r}",
+                )
+            )
+        (root / "README.md").write_text(
+            "3 product tools: 2 Rust tools + 1 Python tool. Stale: 4 product tools.\n",
+            encoding="utf-8",
+        )
+        errors = tool_count_guard.validate_counts(
+            root,
+            expected_rust=2,
+            expected_python=1,
+        )
+        if not any("product total claim 4" in error for error in errors):
+            failures.append(
+                (
+                    "tool-count guard rejects conflicting README count",
+                    f"expected conflicting README.md count, got {errors!r}",
                 )
             )
     return failures
@@ -750,7 +768,7 @@ def main() -> int:
         all_failures.append(("sample-run doc policies", label, err))
 
     tool_count_failures = _run_tool_count_guard_cases(tool_count_guard)
-    tool_count_total = 2
+    tool_count_total = 3
     print(
         f"tool-count guard policies:   "
         f"{tool_count_total - len(tool_count_failures)} / {tool_count_total} passed"
