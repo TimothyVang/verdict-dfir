@@ -18,22 +18,10 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { isAllowedCasePath } from "@/lib/audit-tail";
+import { REPORT_ARTIFACT_NAMES, REPORT_ARTIFACTS } from "@/lib/report-artifacts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-// Exact artifact basenames the engine writes into a case dir.
-const ALLOWED_FILES = new Set([
-  "REPORT.pdf",
-  "REPORT.html",
-  "REPORT.md",
-  "verdict.json",
-  "run.manifest.json",
-  "manifest_verify.json",
-  "timeline.json",
-  "timeline.csv",
-  "grounding.json", // post-verdict grounding sidecar (operator aid; not evidence)
-]);
 
 const CONTENT_TYPES: Record<string, string> = {
   ".pdf": "application/pdf",
@@ -48,7 +36,7 @@ const CONTENT_TYPES: Record<string, string> = {
 function safeFile(file: string | null): string | null {
   if (!file) return null;
   if (file.includes("..") || file.includes("\\")) return null;
-  if (ALLOWED_FILES.has(file)) return file;
+  if (REPORT_ARTIFACT_NAMES.has(file)) return file;
   // figures/<name>.png — a single subdir, png only, no nested traversal.
   const figMatch = /^figures\/[A-Za-z0-9_-]+\.png$/.exec(file);
   if (figMatch) return file;
@@ -86,7 +74,7 @@ export async function GET(request: Request): Promise<Response> {
   // ?list=1 — report which artifacts are present (drives the report panel).
   if (url.searchParams.get("list") === "1") {
     const files = await Promise.all(
-      [...ALLOWED_FILES].map(async (name) => {
+      REPORT_ARTIFACTS.map(async ({ name }) => {
         try {
           const stat = await fs.stat(path.join(caseDir, name));
           return { name, available: true, bytes: stat.size };

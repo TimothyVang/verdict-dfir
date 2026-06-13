@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { REPORT_ARTIFACT_LABELS } from "@/lib/report-artifacts";
 import { MONO, RADIUS, SectionHeading, VERDICT } from "@/lib/verdict-ui";
 
 interface ReportFile {
@@ -21,17 +22,6 @@ interface ReportPanelProps {
   manifestDone: boolean;
   onReadyChange?: (ready: boolean) => void;
 }
-
-const FILE_LABELS: Record<string, string> = {
-  "REPORT.pdf": "PDF report",
-  "REPORT.html": "HTML report",
-  "REPORT.md": "Markdown report",
-  "verdict.json": "verdict.json",
-  "run.manifest.json": "manifest (signed)",
-  "manifest_verify.json": "manifest verify",
-  "timeline.json": "timeline.json",
-  "timeline.csv": "timeline.csv",
-};
 
 function reportHref(caseDir: string, file: string, dl = false): string {
   return `/api/report?case=${encodeURIComponent(caseDir)}&file=${encodeURIComponent(file)}${dl ? "&dl=1" : ""}`;
@@ -174,7 +164,7 @@ export function ReportPanel({ caseDir, manifestDone, onReadyChange }: ReportPane
                     textDecoration: "none",
                   }}
                 >
-                  {FILE_LABELS[f.name] ?? f.name} ↓
+                  {REPORT_ARTIFACT_LABELS[f.name] ?? f.name} ↓
                 </a>
               ))}
           </div>
