@@ -8,6 +8,7 @@ exercised without running any investigation.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -50,6 +51,41 @@ def test_has_sift_and_dashboard_flags() -> None:
     assert "--no-dashboard" in text, "verdict missing --no-dashboard flag"
 
 
+def test_sift_staging_rejects_unsafe_remote_names() -> None:
+    test_sift_staging_sanitizer_selftest()
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "safe_guest_basename" in text, "verdict lacks SIFT basename sanitizer"
+    assert (
+        "unsafe evidence filename for --sift staging" in text
+    ), "verdict does not reject shell-unsafe SIFT evidence filenames"
+    assert (
+        "unsafe SIFT guest evidence dir" in text
+    ), "verdict does not reject shell-unsafe SIFT guest evidence directories"
+
+
+def test_n8n_status_wording_does_not_overclaim_actions() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert (
+        "n8n fired" not in text
+    ), "verdict overclaims n8n reachability as fired action"
+    assert (
+        "n8n reachable; automation sidecar recorded" in text
+    ), "verdict should distinguish n8n reachability from action creation"
+
+
+def test_sift_staging_sanitizer_selftest() -> None:
+    env = {**os.environ, "FINDEVIL_VERDICT_SELFTEST": "sift-sanitizers"}
+    result = subprocess.run(
+        ["bash", str(SCRIPT)], capture_output=True, text=True, timeout=10, env=env
+    )
+    assert (
+        result.returncode == 0
+    ), f"SIFT sanitizer selftest failed: stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert (
+        "sift sanitizer selftest OK" in result.stdout
+    ), f"SIFT sanitizer selftest did not confirm success: {result.stdout!r}"
+
+
 def test_dry_run_produces_no_investigation() -> None:
     result = subprocess.run(
         ["bash", str(SCRIPT), "--dry-run"], capture_output=True, text=True, timeout=10
@@ -82,6 +118,14 @@ def main() -> int:
         ("chains_build", test_chains_build),
         ("chains_engine", test_chains_engine),
         ("has_sift_and_dashboard_flags", test_has_sift_and_dashboard_flags),
+        (
+            "sift_staging_rejects_unsafe_remote_names",
+            test_sift_staging_rejects_unsafe_remote_names,
+        ),
+        (
+            "n8n_status_wording_does_not_overclaim_actions",
+            test_n8n_status_wording_does_not_overclaim_actions,
+        ),
         ("dry_run_produces_no_investigation", test_dry_run_produces_no_investigation),
         ("dry_run_with_skip_build", test_dry_run_with_skip_build),
     ]

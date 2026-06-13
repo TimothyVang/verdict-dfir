@@ -133,12 +133,14 @@ run_smoke \
     "path-existence-smoke (every backtick-quoted path resolves to a real file/dir)" \
     "python3 scripts/path-existence-smoke.py"
 
-# 8b. install.sh --bootstrap contract — opt-in prereq install stays gated and the
-#     default path stays fail-closed on a missing toolchain.
+# 8b. Trace-finding tamper detection — verdict and manifest edits after finalize
+#     must break offline tracing.
 run_smoke \
-    "trace-finding-smoke (reject post-finalize verdict tampering)" \
+    "trace-finding-smoke (reject post-finalize verdict/manifest tampering)" \
     "python3 scripts/trace-finding-smoke.py"
 
+# 8c. install.sh --bootstrap contract — opt-in prereq install stays gated and the
+#     default path stays fail-closed on a missing toolchain.
 run_smoke \
     "install-bootstrap-smoke (--bootstrap gated; default stays fail-closed)" \
     "python3 scripts/install-bootstrap-smoke.py"

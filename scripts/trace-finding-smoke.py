@@ -42,6 +42,20 @@ def _tamper_verdict(run_dir: Path) -> None:
     )
 
 
+def _tamper_manifest_final_hash(run_dir: Path) -> None:
+    manifest_path = run_dir / "run.manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["audit_log_final_hash"] = "f" * 64
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_malformed_manifest(run_dir: Path) -> None:
+    (run_dir / "run.manifest.json").write_text("{\n", encoding="utf-8")
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="trace-finding-smoke-") as tmp:
         run_dir = Path(tmp) / "run"
@@ -54,6 +68,41 @@ def main() -> int:
             print(baseline.stderr, file=sys.stderr)
             return 1
 
+        manifest_run = Path(tmp) / "manifest-run"
+        shutil.copytree(SAMPLE, manifest_run)
+        _tamper_manifest_final_hash(manifest_run)
+        manifest_tampered = _run_trace(manifest_run)
+        if manifest_tampered.returncode == 0:
+            print("tampered manifest unexpectedly traced successfully", file=sys.stderr)
+            print(manifest_tampered.stdout, file=sys.stderr)
+            print(manifest_tampered.stderr, file=sys.stderr)
+            return 1
+        if "manifest:    BROKEN" not in manifest_tampered.stdout:
+            print("tampered manifest failed without BROKEN diagnostic", file=sys.stderr)
+            print(manifest_tampered.stdout, file=sys.stderr)
+            print(manifest_tampered.stderr, file=sys.stderr)
+            return 1
+
+        malformed_manifest_run = Path(tmp) / "malformed-manifest-run"
+        shutil.copytree(SAMPLE, malformed_manifest_run)
+        _write_malformed_manifest(malformed_manifest_run)
+        malformed_manifest = _run_trace(malformed_manifest_run)
+        if malformed_manifest.returncode == 0:
+            print(
+                "malformed manifest unexpectedly traced successfully", file=sys.stderr
+            )
+            print(malformed_manifest.stdout, file=sys.stderr)
+            print(malformed_manifest.stderr, file=sys.stderr)
+            return 1
+        if "manifest:    BROKEN -- invalid JSON" not in malformed_manifest.stdout:
+            print(
+                "malformed manifest failed without invalid JSON diagnostic",
+                file=sys.stderr,
+            )
+            print(malformed_manifest.stdout, file=sys.stderr)
+            print(malformed_manifest.stderr, file=sys.stderr)
+            return 1
+
         _tamper_verdict(run_dir)
         tampered = _run_trace(run_dir)
         if tampered.returncode == 0:
@@ -62,7 +111,7 @@ def main() -> int:
             print(tampered.stderr, file=sys.stderr)
             return 1
 
-    print("trace-finding-smoke: tampered verdict rejected")
+    print("trace-finding-smoke: tampered verdict and manifest rejected")
     return 0
 
 

@@ -114,7 +114,7 @@ Invoke-Smoke -Label "launcher-smoke (bash -n + claude binary + no positional .)"
 } -Prereq { $python -and (Test-CommandAvailable "bash") }
 Invoke-Smoke -Label "divergence-smoke (active divergences downstream-clean)" -Command { & $python scripts/divergence-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "path-existence-smoke (backtick-quoted paths resolve)" -Command { & $python scripts/path-existence-smoke.py } -Prereq { $python }
-Invoke-Smoke -Label "trace-finding-smoke (reject post-finalize verdict tampering)" -Command { & $python scripts/trace-finding-smoke.py } -Prereq { $python }
+Invoke-Smoke -Label "trace-finding-smoke (reject post-finalize verdict/manifest tampering)" -Command { & $python scripts/trace-finding-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "install-bootstrap-smoke (--bootstrap gated; default stays fail-closed)" -Command { & $python scripts/install-bootstrap-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "smoke-regex-tests (audit-smoke regex/helper policies)" -Command { & $python scripts/smoke-regex-tests.py } -Prereq { $python }
 Invoke-Smoke -Label "render-binary-smoke (pandoc/chrome resolve via PATH, graceful degrade)" -Command { & $python scripts/render-binary-smoke.py } -Prereq { $python }

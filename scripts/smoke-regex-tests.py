@@ -165,7 +165,7 @@ LAUNCHER_TIMEOUT_CASES = [
     ("zero env clamps to one", "0", 1),
 ]
 
-SMOKE_RUNNER_POLICY_CASE_COUNT = 14
+SMOKE_RUNNER_POLICY_CASE_COUNT = 15
 
 STALE_SMOKE_LABEL_PATTERNS = [
     # Known stale fixed-count phrases removed from active smoke/docs
@@ -457,6 +457,7 @@ def _run_smoke_runner_policy_cases(launch_smoke) -> list[tuple[str, str]]:
         )
     windows_expected_smokes = [
         "scripts/verdict-smoke.py",
+        "scripts/trace-finding-smoke.py",
         "scripts/install-bootstrap-smoke.py",
         "scripts/grounding-smoke.py",
     ]

@@ -679,8 +679,10 @@ connect_sift_vm || true
 # plus pandoc for report rendering — user-space into ~/.local/bin (no sudo),
 # pinned to known-good versions, idempotent and best-effort. Then
 # scripts/doctor.sh (the canonical checker, resolving binaries the SAME way the
-# server does) re-verifies them and prints a remedy for any still absent. Never
-# fatal: a missing DFIR binary degrades to a clean BinaryNotFound at run time.
+# server does) re-verifies them and prints a remedy for any still absent. The
+# installer exits with doctor.sh readiness status; individual missing DFIR
+# binaries still degrade to clean BinaryNotFound at run time if an operator runs
+# with reduced coverage.
 
 echo ""
 info "Installing host DFIR tools (user-space, ~/.local/bin)..."
@@ -720,9 +722,9 @@ echo ""
 echo "  2. Type 'help' to see all commands."
 echo ""
 echo "  3. To run an investigation:"
-echo "       investigate /path/to/evidence.E01"
-echo "     The agent will open the case, fork Pool A + Pool B, emit signed Findings,"
-echo "     and produce REPORT.html + an offline-verifiable signed manifest."
+echo "       scripts/verdict /path/to/evidence.E01"
+echo "     Add --sift when disk evidence should run through the SANS SIFT VM."
+echo "     Interactive path: open claude or scripts/find-evil, then prompt investigate <path>."
 echo ""
 echo "  4. To watch the live dashboard while an investigation runs:"
 echo "       pnpm --filter @findevil/web dev"
@@ -732,10 +734,13 @@ echo "     Playwright or Puppeteer (host Chrome) — just ask: 'screenshot the d
 echo ""
 echo "${c_blu}QUICK COMMAND REFERENCE${c_off}"
 echo ""
+echo "  bash scripts/verdict <evidence>           # canonical one-shot local mode"
+echo "  bash scripts/verdict <evidence> --sift    # one-shot SIFT-VM mode"
+echo "  bash scripts/verdict <evidence> --run-summary tmp/run.json"
 echo "  bash scripts/find-evil                    # interactive local mode"
 echo "  bash scripts/sift-vm-bootstrap.sh         # build the SIFT VM (VMware or KVM/libvirt)"
 echo "  bash scripts/find-evil-sift               # SIFT-VM mode (after bootstrap)"
-echo "  bash scripts/find-evil-auto <evidence>    # headless single-shot"
+echo "  bash scripts/find-evil-auto <evidence>    # internal engine wrapper used by scripts/verdict"
 echo "  bash scripts/run-all-smokes.sh            # full smoke gate (pre-commit)"
 echo "  bash scripts/make-demo-video.sh           # generate demo video"
 echo "  pnpm --filter @findevil/web dev           # start live dashboard"
