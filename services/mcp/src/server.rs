@@ -44,6 +44,7 @@ use crate::tools::{
     case_open,
     disk::{disk_extract_artifacts, disk_mount, disk_unmount},
     evtx_query::evtx_query,
+    ez_parse::ez_parse,
     hayabusa_scan::hayabusa_scan,
     mft_timeline::mft_timeline,
     pcap_triage::pcap_triage,
@@ -60,9 +61,10 @@ use crate::tools::{
     yara_scan::yara_scan,
     zeek_summary::zeek_summary,
     BrowserHistoryInput, CaseOpenInput, DiskExtractArtifactsInput, DiskMountInput,
-    DiskUnmountInput, EvtxQueryInput, HayabusaInput, MftInput, PcapTriageInput, PrefetchInput,
-    RegistryInput, SysmonNetworkInput, UsnJrnlInput, VelCollectInput, VolMalfindInput,
-    VolPslistInput, VolPsscanInput, VolPsxviewInput, VolRunInput, YaraInput, ZeekSummaryInput,
+    DiskUnmountInput, EvtxQueryInput, EzParseInput, HayabusaInput, MftInput, PcapTriageInput,
+    PrefetchInput, RegistryInput, SysmonNetworkInput, UsnJrnlInput, VelCollectInput,
+    VolMalfindInput, VolPslistInput, VolPsscanInput, VolPsxviewInput, VolRunInput, YaraInput,
+    ZeekSummaryInput,
 };
 use crate::CRATE_VERSION;
 
@@ -685,6 +687,42 @@ fn build_registry() -> Vec<ToolEntry> {
             handler: |args| dispatch_vol_run(args),
         },
         ToolEntry {
+            name: "ez_parse",
+            description: "Run ONE allow-listed Eric Zimmerman tool against a carved Windows \
+                 artifact and return the decoded rows. This is the decoded-execution / \
+                 persistence / anti-forensic verb: where registry_query and the raw parsers \
+                 hand back bytes, ez_parse decodes them. ONE verb instead of seven bespoke \
+                 wrappers. \
+                 tool MUST be one of: lecmd (LNK target+MAC+volserial+args), jlecmd (JumpList \
+                 recent-file MRU), amcacheparser (Amcache.hve program presence+SHA1 — \
+                 NOTE Amcache LastModified != execution, it is catalog-registration time, so \
+                 it is a >=2-artifact corroborator for Prefetch, never proof alone), \
+                 appcompatcacheparser (ShimCache path+$SI; pre-Win8 exec flag), rbcmd \
+                 (Recycle Bin $I: original path, deletion UTC, deleting SID), sbecmd \
+                 (shellbags: folders browsed incl. deleted/external/UNC), wxtcmd (Win10 \
+                 Timeline). Any other value is rejected with ToolNotAllowed BEFORE a \
+                 subprocess runs — the no-shell guarantee for a parameterized verb. \
+                 Use AFTER disk_extract_artifacts has carved the artifact. artifact_path is \
+                 the carved file (for sbecmd, the directory of hives). Default limit 10000. \
+                 Returns tool + rows[] (raw per-tool CSV columns — schema varies by tool) + \
+                 rows_seen + csv_files[] (provenance) + stderr_tail. \
+                 Binary discovery: $EZTOOLS_DIR first, then PATH (the tools ship on the SIFT \
+                 VM and run native on Linux since the .NET port). \
+                 ERRORS: ToolNotAllowed (use an allow-listed key), ArtifactNotFound (verify \
+                 the carved path), BinaryNotFound (install the EZ tools or use the SIFT VM), \
+                 SubprocessFailed (check stderr_tail), NoCsvProduced (tool ran but wrote no \
+                 CSV — usually an unsupported/empty artifact), OutputRead (rare IO error).",
+            annotations: ToolAnnotations {
+                title: "Decode Windows Artifact (Eric Zimmerman Tools)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<EzParseInput>(),
+            handler: |args| dispatch_ez_parse(args),
+        },
+        ToolEntry {
             name: "vel_collect",
             description: "Run a Velociraptor artifact via `velociraptor artifacts collect` and \
                  stream the resulting rows. Generic trampoline over Velociraptor's 200+ \
@@ -1188,6 +1226,22 @@ fn dispatch_vol_run(args: Value) -> Result<Value, ToolError> {
     }
 }
 
+fn dispatch_ez_parse(args: Value) -> Result<Value, ToolError> {
+    let input: EzParseInput = parse_args(args)?;
+    // ToolNotAllowed / ArtifactNotFound are user-input errors; surface as
+    // -32602 so the agent fixes the call rather than treating it as crashed.
+    match ez_parse(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::EzParseError::ToolNotAllowed(_)
+            | crate::tools::EzParseError::ArtifactNotFound(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("ez_parse: {e}"))),
+    }
+}
+
 fn dispatch_vel_collect(args: Value) -> Result<Value, ToolError> {
     let input: VelCollectInput = parse_args(args)?;
     // InvalidArtifactName / InvalidArgName are user-input issues; surface as -32602.
@@ -1325,6 +1379,7 @@ mod tests {
             "vol_psscan",
             "vol_psxview",
             "vol_run",
+            "ez_parse",
             "vel_collect",
             "browser_history",
         ];

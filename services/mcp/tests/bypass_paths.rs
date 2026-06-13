@@ -25,8 +25,9 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use findevil_mcp::{
-    case_open, evtx_query, mft_timeline, prefetch_parse, vol_run, CaseOpenInput, EvtxError,
-    EvtxQueryInput, MftError, MftInput, PrefetchError, PrefetchInput, VolRunError, VolRunInput,
+    case_open, evtx_query, ez_parse, mft_timeline, prefetch_parse, vol_run, CaseOpenInput,
+    EvtxError, EvtxQueryInput, EzParseError, EzParseInput, MftError, MftInput, PrefetchError,
+    PrefetchInput, VolRunError, VolRunInput,
 };
 
 // A path string that would be catastrophic if any tool ever shelled out. Used as
@@ -159,6 +160,31 @@ fn vol_run_rejects_shell_payload_plugin_before_any_subprocess() {
 
     assert!(
         matches!(err, VolRunError::PluginNotAllowed(_)),
+        "got {err:?}"
+    );
+    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+}
+
+#[test]
+fn ez_parse_rejects_shell_payload_tool_before_any_subprocess() {
+    // ez_parse's `tool` parameter selects the binary. The allow-list is the
+    // injection boundary: a tool string shaped like a shell payload is not on
+    // the list, so it is rejected with ToolNotAllowed BEFORE any path check or
+    // subprocess — even pointing at a real file. No EZ binary ever runs.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let real = tmp.path().join("evil.lnk");
+    fs::write(&real, b"not really a lnk").expect("write");
+
+    let err = ez_parse(&EzParseInput {
+        case_id: "c".to_string(),
+        tool: format!("lecmd; {SHELL_PAYLOAD}"),
+        artifact_path: real,
+        limit: None,
+    })
+    .expect_err("a shell-payload tool string must be rejected, not executed");
+
+    assert!(
+        matches!(err, EzParseError::ToolNotAllowed(_)),
         "got {err:?}"
     );
     assert!(!tmp.path().join("HACKED").exists(), "no shell executed");

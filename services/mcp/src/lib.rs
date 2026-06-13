@@ -46,6 +46,9 @@ pub use crate::tools::disk::{
 pub use crate::tools::evtx_query::{
     evtx_query, path_looks_like_evtx, EvtxError, EvtxQueryInput, EvtxQueryOutput, EvtxRow,
 };
+pub use crate::tools::ez_parse::{
+    ez_parse, is_allowed_ez_tool, EzParseError, EzParseInput, EzParseOutput,
+};
 pub use crate::tools::hayabusa_scan::{
     hayabusa_scan, HayabusaAlert, HayabusaError, HayabusaInput, HayabusaOutput,
 };

@@ -20,6 +20,7 @@ pub mod browser_history;
 pub mod case_open;
 pub mod disk;
 pub mod evtx_query;
+pub mod ez_parse;
 pub mod hayabusa_scan;
 pub mod mft_timeline;
 pub mod pcap_triage;
@@ -51,6 +52,7 @@ pub use disk::{
 pub use evtx_query::{
     evtx_query, path_looks_like_evtx, EvtxError, EvtxQueryInput, EvtxQueryOutput, EvtxRow,
 };
+pub use ez_parse::{ez_parse, is_allowed_ez_tool, EzParseError, EzParseInput, EzParseOutput};
 pub use hayabusa_scan::{
     hayabusa_scan, HayabusaAlert, HayabusaError, HayabusaInput, HayabusaOutput,
 };
