@@ -37,12 +37,12 @@ def load_records(path: Path) -> list[dict]:
     """Yield one row dict per verdict JSON found at ``path``.
 
     ``path`` can be a file or a directory; directories are scanned
-    for ``*-verdict.json`` (the L3 driver's naming convention).
+    recursively for ``*-verdict.json`` (the L3 driver's naming convention).
     """
     if path.is_file():
         return [_record_from_file(path)]
     if path.is_dir():
-        return [_record_from_file(p) for p in sorted(path.glob("*-verdict.json"))]
+        return [_record_from_file(p) for p in sorted(path.glob("**/*-verdict.json"))]
     raise SystemExit(f"input path not found: {path}")
 
 
