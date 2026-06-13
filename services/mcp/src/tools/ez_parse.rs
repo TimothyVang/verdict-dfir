@@ -301,8 +301,8 @@ fn collect_csv_rows(
 /// Minimal RFC-4180 CSV reader: splits `content` into records of fields,
 /// honoring double-quoted fields (embedded commas, newlines, and `""` escapes).
 /// Dependency-free on purpose — keeps the tool surface's dependency footprint
-/// unchanged.
-fn parse_csv_records(content: &str) -> Vec<Vec<String>> {
+/// unchanged. Shared with `mac_triage`, which reads `mac_apt` CSV the same way.
+pub(crate) fn parse_csv_records(content: &str) -> Vec<Vec<String>> {
     let mut records: Vec<Vec<String>> = Vec::new();
     let mut record: Vec<String> = Vec::new();
     let mut field = String::new();

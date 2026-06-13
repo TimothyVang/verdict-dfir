@@ -46,6 +46,7 @@ use crate::tools::{
     evtx_query::evtx_query,
     ez_parse::ez_parse,
     hayabusa_scan::hayabusa_scan,
+    mac_triage::mac_triage,
     mft_timeline::mft_timeline,
     pcap_triage::pcap_triage,
     plaso_parse::plaso_parse,
@@ -62,10 +63,10 @@ use crate::tools::{
     yara_scan::yara_scan,
     zeek_summary::zeek_summary,
     BrowserHistoryInput, CaseOpenInput, DiskExtractArtifactsInput, DiskMountInput,
-    DiskUnmountInput, EvtxQueryInput, EzParseInput, HayabusaInput, MftInput, PcapTriageInput,
-    PlasoParseInput, PrefetchInput, RegistryInput, SysmonNetworkInput, UsnJrnlInput,
-    VelCollectInput, VolMalfindInput, VolPslistInput, VolPsscanInput, VolPsxviewInput, VolRunInput,
-    YaraInput, ZeekSummaryInput,
+    DiskUnmountInput, EvtxQueryInput, EzParseInput, HayabusaInput, MacTriageInput, MftInput,
+    PcapTriageInput, PlasoParseInput, PrefetchInput, RegistryInput, SysmonNetworkInput,
+    UsnJrnlInput, VelCollectInput, VolMalfindInput, VolPslistInput, VolPsscanInput,
+    VolPsxviewInput, VolRunInput, YaraInput, ZeekSummaryInput,
 };
 use crate::CRATE_VERSION;
 
@@ -759,6 +760,43 @@ fn build_registry() -> Vec<ToolEntry> {
             handler: |args| dispatch_plaso_parse(args),
         },
         ToolEntry {
+            name: "mac_triage",
+            description: "Run ONE allow-listed mac_apt module against a mounted macOS image and \
+                 return the decoded rows. mac_apt is the macOS supertool — its modules parse \
+                 Unified Logs, FSEvents, launchd autostart, KnowledgeC, Quarantine, TCC, Safari, \
+                 Spotlight, install history, and shell sessions internally — so this ONE verb is \
+                 the macOS analogue of disk_extract_artifacts and covers most of the macOS \
+                 roadmap. \
+                 module MUST be an allow-listed mac_apt module name (see below); any other value \
+                 is rejected with ModuleNotAllowed BEFORE a subprocess runs — the no-shell \
+                 guarantee for a parameterized verb. Allow-list: UNIFIEDLOGS (the macOS \
+                 EVTX+Sysmon equivalent — process launches, network, auth, USB), FSEVENTS \
+                 (filesystem change history), AUTOSTART (launchd persistence), KNOWLEDGEC \
+                 (app-usage/activity timeline), QUARANTINE (download provenance), TCC (privacy \
+                 grants abused by spyware), SAFARI (browsing/downloads), SPOTLIGHT (file metadata \
+                 incl. where-from), INSTALLHISTORY, BASHSESSIONS (hands-on-keyboard), \
+                 NOTIFICATIONS, USERS, NETWORKING, RECENTITEMS, SUDOLASTRUN. \
+                 Use AFTER disk_mount has mounted the macOS image. image_path is the mounted \
+                 volume root (a MOUNTED input for mac_apt). Default limit 10000. \
+                 Returns module + rows[] (raw per-module CSV columns — schema varies by module) \
+                 + rows_seen + csv_files[] (provenance) + stderr_tail. \
+                 Binary discovery: $MAC_APT (path to mac_apt.py) first, then PATH (mac_apt ships \
+                 on the SIFT VM). \
+                 ERRORS: ModuleNotAllowed (use an allow-listed name), ImageNotFound (verify the \
+                 mount path), BinaryNotFound (install mac_apt or use the SIFT VM), \
+                 SubprocessFailed (check stderr_tail), NoCsvProduced (module ran but wrote no \
+                 CSV — usually the artifact class is absent on this image), OutputRead (rare IO).",
+            annotations: ToolAnnotations {
+                title: "Triage macOS Image (mac_apt)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<MacTriageInput>(),
+            handler: |args| dispatch_mac_triage(args),
+        },
+        ToolEntry {
             name: "vel_collect",
             description: "Run a Velociraptor artifact via `velociraptor artifacts collect` and \
                  stream the resulting rows. Generic trampoline over Velociraptor's 200+ \
@@ -1293,6 +1331,21 @@ fn dispatch_plaso_parse(args: Value) -> Result<Value, ToolError> {
     }
 }
 
+fn dispatch_mac_triage(args: Value) -> Result<Value, ToolError> {
+    let input: MacTriageInput = parse_args(args)?;
+    // ModuleNotAllowed / ImageNotFound are user-input errors; surface as -32602.
+    match mac_triage(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::MacTriageError::ModuleNotAllowed(_)
+            | crate::tools::MacTriageError::ImageNotFound(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("mac_triage: {e}"))),
+    }
+}
+
 fn dispatch_vel_collect(args: Value) -> Result<Value, ToolError> {
     let input: VelCollectInput = parse_args(args)?;
     // InvalidArtifactName / InvalidArgName are user-input issues; surface as -32602.
@@ -1432,6 +1485,7 @@ mod tests {
             "vol_run",
             "ez_parse",
             "plaso_parse",
+            "mac_triage",
             "vel_collect",
             "browser_history",
         ];

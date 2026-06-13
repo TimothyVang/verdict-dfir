@@ -52,6 +52,9 @@ pub use crate::tools::ez_parse::{
 pub use crate::tools::hayabusa_scan::{
     hayabusa_scan, HayabusaAlert, HayabusaError, HayabusaInput, HayabusaOutput,
 };
+pub use crate::tools::mac_triage::{
+    is_allowed_module, mac_triage, MacTriageError, MacTriageInput, MacTriageOutput,
+};
 pub use crate::tools::mft_timeline::{
     mft_timeline, path_looks_like_mft, MftEntryRow, MftError, MftInput, MftOutput,
 };

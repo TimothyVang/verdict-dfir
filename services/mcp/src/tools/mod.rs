@@ -22,6 +22,7 @@ pub mod disk;
 pub mod evtx_query;
 pub mod ez_parse;
 pub mod hayabusa_scan;
+pub mod mac_triage;
 pub mod mft_timeline;
 pub mod pcap_triage;
 pub mod plaso_parse;
@@ -56,6 +57,9 @@ pub use evtx_query::{
 pub use ez_parse::{ez_parse, is_allowed_ez_tool, EzParseError, EzParseInput, EzParseOutput};
 pub use hayabusa_scan::{
     hayabusa_scan, HayabusaAlert, HayabusaError, HayabusaInput, HayabusaOutput,
+};
+pub use mac_triage::{
+    is_allowed_module, mac_triage, MacTriageError, MacTriageInput, MacTriageOutput,
 };
 pub use mft_timeline::{
     mft_timeline, path_looks_like_mft, MftEntryRow, MftError, MftInput, MftOutput,

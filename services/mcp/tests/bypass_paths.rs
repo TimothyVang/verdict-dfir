@@ -25,9 +25,10 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use findevil_mcp::{
-    case_open, evtx_query, ez_parse, mft_timeline, plaso_parse, prefetch_parse, vol_run,
-    CaseOpenInput, EvtxError, EvtxQueryInput, EzParseError, EzParseInput, MftError, MftInput,
-    PlasoParseError, PlasoParseInput, PrefetchError, PrefetchInput, VolRunError, VolRunInput,
+    case_open, evtx_query, ez_parse, mac_triage, mft_timeline, plaso_parse, prefetch_parse,
+    vol_run, CaseOpenInput, EvtxError, EvtxQueryInput, EzParseError, EzParseInput, MacTriageError,
+    MacTriageInput, MftError, MftInput, PlasoParseError, PlasoParseInput, PrefetchError,
+    PrefetchInput, VolRunError, VolRunInput,
 };
 
 // A path string that would be catastrophic if any tool ever shelled out. Used as
@@ -210,6 +211,29 @@ fn plaso_parse_rejects_shell_payload_parser_before_any_subprocess() {
 
     assert!(
         matches!(err, PlasoParseError::ParserNotAllowed(_)),
+        "got {err:?}"
+    );
+    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+}
+
+#[test]
+fn mac_triage_rejects_shell_payload_module_before_any_subprocess() {
+    // mac_triage's `module` parameter reaches argv. The allow-list is the
+    // injection boundary: a module string shaped like a shell payload is not on
+    // the list, so it is rejected with ModuleNotAllowed BEFORE any path check or
+    // subprocess — even pointing at a real directory. No mac_apt ever runs.
+    let tmp = tempfile::tempdir().expect("tempdir");
+
+    let err = mac_triage(&MacTriageInput {
+        case_id: "c".to_string(),
+        module: format!("UNIFIEDLOGS; {SHELL_PAYLOAD}"),
+        image_path: tmp.path().to_path_buf(),
+        limit: None,
+    })
+    .expect_err("a shell-payload module string must be rejected, not executed");
+
+    assert!(
+        matches!(err, MacTriageError::ModuleNotAllowed(_)),
         "got {err:?}"
     );
     assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
