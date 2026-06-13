@@ -12,6 +12,7 @@ describe("report artifact registry", () => {
   it("exposes the reviewer sidecars needed to audit scope and release gates", () => {
     expect(REPORT_ARTIFACT_NAMES.has("coverage_manifest.json")).toBe(true);
     expect(REPORT_ARTIFACT_NAMES.has("evidence_inventory.json")).toBe(true);
+    expect(REPORT_ARTIFACT_NAMES.has("audit.jsonl")).toBe(true);
     expect(REPORT_ARTIFACT_NAMES.has("REPORT-internal.md")).toBe(true);
     expect(REPORT_ARTIFACT_NAMES.has("expert_signoff.json")).toBe(true);
     expect(REPORT_ARTIFACT_NAMES.has("expert_signoff_manifest_link.json")).toBe(
@@ -20,6 +21,15 @@ describe("report artifact registry", () => {
     expect(REPORT_ARTIFACT_NAMES.has("customer_release_gate.final.json")).toBe(
       true,
     );
+  });
+
+  it("exposes common parser-summary sidecars produced by finished runs", () => {
+    expect(REPORT_ARTIFACT_NAMES.has("disk_artifact_summary.json")).toBe(true);
+    expect(REPORT_ARTIFACT_NAMES.has("psscan.json")).toBe(true);
+    expect(REPORT_ARTIFACT_NAMES.has("psxview.json")).toBe(true);
+    expect(REPORT_ARTIFACT_NAMES.has("malfind.json")).toBe(true);
+    expect(REPORT_ARTIFACT_NAMES.has("malware_triage.json")).toBe(true);
+    expect(REPORT_ARTIFACT_NAMES.has("automation.json")).toBe(true);
   });
 
   it("keeps artifact names as case-dir basenames", () => {
@@ -37,6 +47,7 @@ describe("report artifact registry", () => {
     expect(REPORT_ARTIFACT_LABELS["evidence_inventory.json"]).toBe(
       "evidence inventory",
     );
+    expect(REPORT_ARTIFACT_LABELS["audit.jsonl"]).toBe("audit chain");
     expect(REPORT_ARTIFACT_LABELS["REPORT-internal.md"]).toBe(
       "internal QA packet",
     );

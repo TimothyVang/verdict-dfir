@@ -28,6 +28,7 @@ const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".md": "text/markdown; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".jsonl": "application/x-ndjson; charset=utf-8",
   ".csv": "text/csv; charset=utf-8",
   ".png": "image/png",
 };
