@@ -221,6 +221,17 @@ def main() -> int:
                 "vol_malfind",
                 "vol_psscan",
                 "vol_psxview",
+                "vol_run",
+                "ez_parse",
+                "plaso_parse",
+                "mac_triage",
+                "cloud_audit",
+                "journalctl_query",
+                "login_accounting",
+                "ausearch",
+                "nfdump_query",
+                "suricata_eve",
+                "indx_parse",
                 "vel_collect",
                 "browser_history",
             ]
@@ -245,7 +256,7 @@ def main() -> int:
             ):
                 if not isinstance(ann.get(hint), bool):
                     fatal(f"{tool['name']} annotations.{hint} missing or non-bool")
-        log(f"  -> {len(names)} tools registered with JSON Schema + annotations")
+        log(f"  -> {len(names)} tools advertised with JSON Schema + annotations")
 
         # ---- 3. case_open -----------------------------------------------
         log("case_open: register synthetic evidence...")
@@ -657,7 +668,7 @@ def main() -> int:
         print()
         print("=" * 60)
         print("OK — Rust MCP server speaks 2024-11-05 over stdio.")
-        print(f"  All {len(expected)} tools dispatchable, error paths well-formed.")
+        print(f"  All {len(expected)} tools advertised; core error paths well-formed.")
         print("=" * 60)
         return 0
     finally:

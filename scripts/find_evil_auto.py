@@ -14,7 +14,7 @@ What it does:
        (Pool A = persistence-biased framing; Pool B = exfil/general-malware framing)
     6. detect_contradictions surfaces disagreements
     7. judge_findings + correlate_findings (SOUL.md ≥2 rule)
-    8. manifest_finalize: Merkle tree + sigstore signature
+    8. manifest_finalize: Merkle tree + signed manifest
     9. Writes verdict.json + (optional) PDF report (the report
        surfaces the findings, ATT&CK coverage, and audit chain).
 
@@ -578,7 +578,24 @@ RAW_DISK_EXTS = (
     if _PLAYBOOK_AVAILABLE
     else (".e01", ".dd", ".aff", ".aff4", ".001")
 )
-EXTRACTED_DISK_CLASSES = {"mft", "prefetch", "registry", "usnjrnl", "browser_history"}
+EXTRACTED_DISK_CLASSES = {
+    "mft",
+    "prefetch",
+    "registry",
+    "usnjrnl",
+    "browser_history",
+    "browser_db",
+    "amcache",
+    "srum",
+    "lnk",
+    "jumplist",
+    "scheduled_task",
+    "recyclebin",
+    "reg_txlog",
+    "legacy_evt",
+    "ie_history",
+    "thumbnail",
+}
 YARA_TARGET_EXTS = (
     ".bat",
     ".cmd",
@@ -743,11 +760,23 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "prefetch_parse",
         }
+    if lower_name == "amcache.hve":
+        return {
+            "artifact_class": "amcache",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
     if lower_name in REGISTRY_HIVE_NAMES:
         return {
             "artifact_class": "registry",
             "evidence_type": "extracted_disk",
             "parser_tool": "registry_query",
+        }
+    if lower_name == "srudb.dat":
+        return {
+            "artifact_class": "srum",
+            "evidence_type": "extracted_disk",
+            "parser_tool": None,
         }
     if (
         lower_name in {"$j", "$usnjrnl", "usnjrnl", "usnjrnl.j"}
@@ -760,9 +789,57 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "usnjrnl_query",
         }
-    if lower_name in {"history", "places.sqlite"} or lower_name.endswith(".sqlite"):
+    if lower_name.endswith(".evt"):
         return {
-            "artifact_class": "browser_history",
+            "artifact_class": "legacy_evt",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "plaso_parse",
+        }
+    if lower_name.endswith(".lnk"):
+        return {
+            "artifact_class": "lnk",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
+    if lower_name.endswith((".automaticdestinations-ms", ".customdestinations-ms")):
+        return {
+            "artifact_class": "jumplist",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
+    if lower_name == "info2":
+        return {
+            "artifact_class": "recyclebin",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "plaso_parse",
+        }
+    if lower_name.startswith("$i") and "$recycle.bin" in lower_path:
+        return {
+            "artifact_class": "recyclebin",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
+    if lower_name == "index.dat" and "history.ie5" in lower_path:
+        return {
+            "artifact_class": "ie_history",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "plaso_parse",
+        }
+    if lower_name == "thumbs.db" or lower_name.endswith(".thumbcache"):
+        return {
+            "artifact_class": "thumbnail",
+            "evidence_type": "extracted_disk",
+            "parser_tool": None,
+        }
+    if lower_name in {
+        "history",
+        "places.sqlite",
+        "web data",
+        "cookies",
+        "login data",
+    } or lower_name.endswith(".sqlite"):
+        return {
+            "artifact_class": "browser_db",
             "evidence_type": "extracted_disk",
             "parser_tool": "browser_history",
         }
@@ -840,7 +917,11 @@ max_member_bytes = int(sys.argv[4])
 
 MEMORY_EXTS = (".mem", ".raw", ".vmem", ".dmp", ".img", ".lime")
 RAW_DISK_EXTS = (".e01", ".dd", ".aff", ".aff4", ".001")
-EXTRACTED_DISK_CLASSES = {"mft", "prefetch", "registry", "usnjrnl"}
+EXTRACTED_DISK_CLASSES = {
+    "mft", "prefetch", "registry", "usnjrnl", "browser_history",
+    "browser_db", "amcache", "srum", "lnk", "jumplist", "scheduled_task",
+    "recyclebin", "reg_txlog", "legacy_evt", "ie_history", "thumbnail",
+}
 NETWORK_CLASSES = {"pcap", "zeek", "sysmon_network"}
 YARA_TARGET_EXTS = (
     ".bat", ".cmd", ".dll", ".doc", ".docm", ".docx", ".exe",
@@ -883,10 +964,30 @@ def classify_artifact_path(path):
         return {"artifact_class": "mft", "evidence_type": "extracted_disk", "parser_tool": "mft_timeline"}
     if lower_name.endswith(".pf"):
         return {"artifact_class": "prefetch", "evidence_type": "extracted_disk", "parser_tool": "prefetch_parse"}
+    if lower_name == "amcache.hve":
+        return {"artifact_class": "amcache", "evidence_type": "extracted_disk", "parser_tool": "ez_parse"}
     if lower_name in REGISTRY_HIVE_NAMES:
         return {"artifact_class": "registry", "evidence_type": "extracted_disk", "parser_tool": "registry_query"}
+    if lower_name == "srudb.dat":
+        return {"artifact_class": "srum", "evidence_type": "extracted_disk", "parser_tool": None}
     if lower_name in {"$j", "$usnjrnl", "usnjrnl", "usnjrnl.j"} or lower_name.endswith(".usnjrnl") or lower_name.endswith(".j") or "$extend/$usnjrnl" in lower_path:
         return {"artifact_class": "usnjrnl", "evidence_type": "extracted_disk", "parser_tool": "usnjrnl_query"}
+    if lower_name.endswith(".evt"):
+        return {"artifact_class": "legacy_evt", "evidence_type": "extracted_disk", "parser_tool": "plaso_parse"}
+    if lower_name.endswith(".lnk"):
+        return {"artifact_class": "lnk", "evidence_type": "extracted_disk", "parser_tool": "ez_parse"}
+    if lower_name.endswith(".automaticdestinations-ms") or lower_name.endswith(".customdestinations-ms"):
+        return {"artifact_class": "jumplist", "evidence_type": "extracted_disk", "parser_tool": "ez_parse"}
+    if lower_name == "info2":
+        return {"artifact_class": "recyclebin", "evidence_type": "extracted_disk", "parser_tool": "plaso_parse"}
+    if lower_name.startswith("$i") and "$recycle.bin" in lower_path:
+        return {"artifact_class": "recyclebin", "evidence_type": "extracted_disk", "parser_tool": "ez_parse"}
+    if lower_name == "index.dat" and "history.ie5" in lower_path:
+        return {"artifact_class": "ie_history", "evidence_type": "extracted_disk", "parser_tool": "plaso_parse"}
+    if lower_name == "thumbs.db" or lower_name.endswith(".thumbcache"):
+        return {"artifact_class": "thumbnail", "evidence_type": "extracted_disk", "parser_tool": None}
+    if lower_name in {"history", "places.sqlite", "web data", "cookies", "login data"} or lower_name.endswith(".sqlite"):
+        return {"artifact_class": "browser_db", "evidence_type": "extracted_disk", "parser_tool": "browser_history"}
     if lower_name.endswith(YARA_TARGET_EXTS):
         return {"artifact_class": "yara_target", "evidence_type": "extracted_disk", "parser_tool": "yara_scan"}
     return {"artifact_class": "unknown", "evidence_type": "unknown", "parser_tool": None}
@@ -1007,12 +1108,20 @@ def _inventory_summary(entries: list[dict[str, Any]]) -> dict[str, Any]:
         for entry in entries
         if str(entry.get("custody_status", "")).startswith("rejected")
     )
+    unsupported_samples = [
+        str(entry.get("path"))
+        for entry in entries
+        if str(entry.get("artifact_class") or "unknown") == "unknown"
+        and not str(entry.get("custody_status", "")).startswith("rejected")
+        and entry.get("path")
+    ][:20]
     return {
         "entry_count": len(entries),
         "class_counts": dict(sorted(class_counts.items())),
         "evidence_type_counts": dict(sorted(type_counts.items())),
         "duplicate_names": duplicate_names,
         "rejected_count": rejected,
+        "unsupported_samples": unsupported_samples,
         "raw_disk_count": class_counts.get("raw_disk", 0),
         "extracted_disk_count": sum(
             class_counts.get(name, 0) for name in EXTRACTED_DISK_CLASSES
@@ -1490,6 +1599,78 @@ def registry_usb_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+_MOUNTEDDEVICES_KEY_RE = re.compile(r"(^|\\)mounteddevices$", re.IGNORECASE)
+# DosDevices\X: => the drive letter; \??\Volume{GUID} => a mounted volume.
+_DOSDEVICE_RE = re.compile(r"\\dosdevices\\(?P<letter>[a-z]):", re.IGNORECASE)
+# Tells in the decoded device blob that mark a removable/USB-backed mount —
+# fixed-disk volume mappings exist on every machine and must not flood.
+_REMOVABLE_DEVICE_TELLS = ("usbstor", "ven_", "prod_", "\\??\\usb")
+
+
+def _mounteddevice_blob_text(hex_data: str) -> str:
+    """Recover the printable ASCII run from a MountedDevices binary value.
+
+    USB-backed mappings store an ASCII device path (``\\??\\USBSTOR#Disk&Ven_...``)
+    as the value data; fixed disks store an 8-byte MBR signature + offset with no
+    such run. Returns the lowercased ASCII (every other byte for the UTF-16-ish
+    device path, plus the raw ASCII run) so the removable-tell check can fire;
+    empty string when the blob is unparseable.
+    """
+    try:
+        raw = bytes.fromhex(hex_data)
+    except ValueError:
+        return ""
+    ascii_run = "".join(chr(b) if 32 <= b < 127 else " " for b in raw)
+    # Device paths are stored UTF-16LE; collapsing the NUL bytes recovers them.
+    utf16 = raw.decode("utf-16-le", errors="ignore")
+    return (ascii_run + " " + utf16).lower()
+
+
+def registry_mounteddevices_candidates(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Classify SYSTEM MountedDevices rows into drive-letter<->device mappings.
+
+    Pure function. MountedDevices maps a drive letter (``\\DosDevices\\X:``) or a
+    volume GUID to the underlying device. Only removable/USB-backed mappings are
+    candidates — they corroborate USBSTOR insertion history (which drive letter
+    the staged volume was mounted as, nhc-002). Fixed-disk mappings are on every
+    machine and are filtered so a benign disk produces no lead. The mapping is a
+    HYPOTHESIS corroborator downstream, never a verdict-flipping fact.
+    """
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        row_key = str(row.get("key_path") or "").replace("/", "\\")
+        if not _MOUNTEDDEVICES_KEY_RE.search(row_key):
+            continue
+        lw = row.get("last_write_time_iso")
+        for v in row.get("values") or []:
+            if not isinstance(v, dict):
+                continue
+            name = str(v.get("name") or "")
+            blob = _mounteddevice_blob_text(str(v.get("data_str") or ""))
+            if not any(tok in blob for tok in _REMOVABLE_DEVICE_TELLS):
+                continue
+            m = _DOSDEVICE_RE.search(name)
+            mount_point = f"{m.group('letter').upper()}:" if m else name
+            if mount_point in seen:
+                continue
+            seen.add(mount_point)
+            out.append(
+                {
+                    "kind": "mounted_device",
+                    "mount_point": mount_point,
+                    "value_name": name,
+                    "hive_key": row_key,
+                    "last_write_time_iso": lw,
+                }
+            )
+    return out
+
+
 _SAM_BUILTIN_ACCOUNTS: frozenset[str] = frozenset(
     {
         "administrator",
@@ -1552,8 +1733,26 @@ def registry_sam_account_candidates(rows: list[dict[str, Any]]) -> list[dict[str
 
 _ACMRU_KEY_RE = re.compile(r"\\search assistant\\acmru", re.IGNORECASE)
 _OPENSAVE_KEY_RE = re.compile(r"\\comdlg32\\(opensave|lastvisited)", re.IGNORECASE)
+# Vista+ Explorer search-box history (the modern successor to XP's ACMru).
+_WORDWHEEL_KEY_RE = re.compile(r"\\explorer\\wordwheelquery", re.IGNORECASE)
 # MRU ordering values, not entries.
 _MRU_ORDER_VALUES = frozenset({"mrulist", "mrulistex"})
+
+
+def _utf16le_term(hex_data: str) -> str | None:
+    """Decode a WordWheelQuery binary value (UTF-16LE search term) to text.
+
+    WordWheelQuery stores each typed search term as a NUL-terminated UTF-16LE
+    string the registry tool renders as hex (REG_BINARY). We decode and trim the
+    trailing NUL run; non-decodable or empty blobs return None so they are
+    skipped. Best-effort, like the shellbag PIDL recovery above.
+    """
+    try:
+        raw = bytes.fromhex(hex_data)
+    except ValueError:
+        return None
+    term = raw.decode("utf-16-le", errors="ignore").split("\x00", 1)[0].strip()
+    return term or None
 
 
 def _is_string_regtype(value_type: str | None) -> bool:
@@ -1602,15 +1801,17 @@ def _is_suspicious_opened_file(path: str) -> bool:
 def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Classify NTUSER MRU rows into recent-activity candidates.
 
-    Pure function. Two text-form MRUs the NIST golden cares about: XP Search
-    Assistant ACMru (recent search terms -> nhc-001) and ComDlg32 OpenSave/
-    LastVisited MRU (recently opened file paths -> nhc-011).
+    Pure function. Three text-form search/open MRUs the NIST golden cares about:
+    XP Search Assistant ACMru and the Vista+ Explorer WordWheelQuery (recent
+    search terms -> nhc-001), plus ComDlg32 OpenSave/LastVisited MRU (recently
+    opened file paths -> nhc-011).
 
-    Only REG_SZ/REG_EXPAND_SZ values count: LastVisitedMRU and RecentDocs store
-    binary blobs the registry tool renders as hex, and those must NOT be taken
-    for text entries. Values are deduped (OpenSaveMRU\\* and \\exe carry the same
-    paths within one recursive query). MRUList/MRUListEx ordering values are not
-    entries.
+    ACMru/ComDlg32 entries are REG_SZ/REG_EXPAND_SZ text; LastVisitedMRU and
+    RecentDocs store binary blobs the registry tool renders as hex, and those
+    must NOT be taken for text entries. WordWheelQuery is the one exception: its
+    search terms are UTF-16LE *binary* values we decode explicitly. Values are
+    deduped (OpenSaveMRU\\* and \\exe carry the same paths within one recursive
+    query). MRUList/MRUListEx ordering values are not entries.
     """
     out: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
@@ -1618,10 +1819,12 @@ def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not isinstance(row, dict):
             continue
         row_key = str(row.get("key_path") or "").replace("/", "\\")
-        if _ACMRU_KEY_RE.search(row_key):
+        if _ACMRU_KEY_RE.search(row_key) or _WORDWHEEL_KEY_RE.search(row_key):
             kind = "search_term"
+            wordwheel = bool(_WORDWHEEL_KEY_RE.search(row_key))
         elif _OPENSAVE_KEY_RE.search(row_key):
             kind = "opened_file"
+            wordwheel = False
         else:
             continue
         lw = row.get("last_write_time_iso")
@@ -1630,9 +1833,14 @@ def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 continue
             if str(v.get("name") or "").lower() in _MRU_ORDER_VALUES:
                 continue
-            if not _is_string_regtype(v.get("value_type")):
-                continue
-            data = str(v.get("data_str") or "").strip()
+            if wordwheel:
+                # WordWheelQuery search terms are UTF-16LE binary, not REG_SZ.
+                data = _utf16le_term(str(v.get("data_str") or "")) or ""
+                data = data.strip()
+            else:
+                if not _is_string_regtype(v.get("value_type")):
+                    continue
+                data = str(v.get("data_str") or "").strip()
             if not data:
                 continue
             if kind == "opened_file" and not _is_suspicious_opened_file(data):
@@ -1803,6 +2011,163 @@ def mft_hacking_tool_candidates(rows: list[dict[str, Any]]) -> list[dict[str, An
     return out
 
 
+def _ci_get(row: dict[str, Any], *names: str) -> str:
+    """Case-insensitive lookup for third-party parser column drift."""
+    lowered = {str(k).lower(): v for k, v in row.items()}
+    for name in names:
+        value = lowered.get(name.lower())
+        if value not in (None, ""):
+            return str(value)
+    return ""
+
+
+def lnk_removable_media_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return LNK rows that point at removable or non-system media.
+
+    LECmd's CSV columns vary across versions. Keep this a conservative lead:
+    require either an explicit removable/USB drive type, or a volume serial plus
+    a target path outside the local C: system drive. The downstream finding stays
+    HYPOTHESIS and never claims execution.
+    """
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        source = _ci_get(row, "Source File", "SourceFile", "Source", "Path")
+        target = _ci_get(
+            row,
+            "Target Path",
+            "TargetPath",
+            "Local Path",
+            "LocalPath",
+            "Relative Path",
+        )
+        volume_serial = _ci_get(
+            row,
+            "Volume Serial Number",
+            "VolumeSerialNumber",
+            "Volume Serial",
+            "VolumeSerial",
+        )
+        drive_type = _ci_get(row, "Drive Type", "DriveType")
+        target_lower = target.lower().replace("/", "\\")
+        removable_type = any(
+            token in drive_type.lower() for token in ("removable", "usb", "network")
+        )
+        non_system_target = bool(
+            re.match(r"^[a-z]:\\", target_lower) and not target_lower.startswith("c:\\")
+        ) or target_lower.startswith("\\\\")
+        if not (removable_type or (volume_serial and non_system_target)):
+            continue
+        key = (source, target, volume_serial)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {
+                "source": source,
+                "target": target,
+                "volume_serial": volume_serial,
+                "drive_type": drive_type,
+            }
+        )
+    return out
+
+
+def recyclebin_staging_candidates(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return Recycle Bin deleted-item rows carrying staging/tooling tells."""
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for event in events or []:
+        if not isinstance(event, dict):
+            continue
+        parser = _ci_get(event, "parser") or "recycle_bin"
+        path = _ci_get(
+            event,
+            "filename",
+            "file_name",
+            "original_filename",
+            "original file name",
+            "original path",
+            "path",
+            "display_name",
+        )
+        if not path:
+            continue
+        low = path.lower().replace("/", "\\")
+        base = low.rsplit("\\", 1)[-1]
+        has_tool_tell = any(token in low for token in _HACKING_TOOL_PATH_TOKENS)
+        has_staging_tell = any(
+            token in low
+            for token in (
+                "\\desktop\\",
+                "\\downloads\\",
+                "\\temp\\",
+                "\\tmp\\",
+                "staging",
+                "staged",
+            )
+        ) and base.endswith(_SUSPICIOUS_OPEN_EXT)
+        if not (has_tool_tell or has_staging_tell):
+            continue
+        if path in seen:
+            continue
+        seen.add(path)
+        out.append(
+            {
+                "path": path,
+                "parser": parser,
+                "timestamp": _ci_get(
+                    event,
+                    "timestamp",
+                    "date_time",
+                    "deletion_time",
+                    "deleted time",
+                    "deletion date",
+                ),
+            }
+        )
+    return out
+
+
+def _decoded_row_timestamp(row: dict[str, Any]) -> str:
+    """Best-effort timestamp extraction across third-party parser schemas."""
+    return _ci_get(
+        row,
+        "timestamp",
+        "date_time",
+        "datetime",
+        "time created",
+        "created",
+        "source created",
+        "target created",
+        "last modified",
+        "lastmodified",
+        "target modified",
+        "last access time",
+        "last accessed",
+    )
+
+
+def _decoded_row_label(row: dict[str, Any]) -> str:
+    """Best-effort human label for decoded artifact timeline context."""
+    return _ci_get(
+        row,
+        "target path",
+        "targetpath",
+        "local path",
+        "path",
+        "filename",
+        "file_name",
+        "original filename",
+        "original path",
+        "message",
+        "description",
+        "source",
+    )
+
+
 CONFIDENCE_RANK = {"HYPOTHESIS": 1, "INFERRED": 2, "CONFIRMED": 3}
 EXPERT_RULES_PATH = (
     Path(__file__).resolve().parent.parent / "agent-config" / "expert-rules.json"
@@ -1893,12 +2258,22 @@ COMMON_BROWSER_IMAGES = {
 
 TOOL_ARTIFACT_CLASSES = {
     "case_open": "custody",
+    "browser_history": "browser_history",
+    "cloud_audit": "cloud",
     "evtx_query": "evtx",
+    "ez_parse": "disk/filesystem",
     "hayabusa_scan": "evtx",
+    "indx_parse": "disk/filesystem",
+    "journalctl_query": "linux",
+    "login_accounting": "linux",
+    "mac_triage": "macos",
     "mft_timeline": "mft",
+    "nfdump_query": "network",
     "pcap_triage": "network",
+    "plaso_parse": "timeline",
     "prefetch_parse": "prefetch",
     "registry_query": "registry",
+    "suricata_eve": "network",
     "sysmon_network_query": "network",
     "usnjrnl_query": "usnjrnl",
     "vel_collect": "velociraptor",
@@ -1906,6 +2281,7 @@ TOOL_ARTIFACT_CLASSES = {
     "vol_pslist": "memory",
     "vol_psscan": "memory",
     "vol_psxview": "memory",
+    "vol_run": "memory",
     "yara_scan": "yara",
     "zeek_summary": "network",
 }
@@ -2550,6 +2926,211 @@ def build_attack_coverage(
         "blind_spot_count": blind,
         "observed_techniques": sorted(finding_confidence),
         "targets": rows,
+    }
+
+
+def _int_metric(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+_RECORDS_SEEN_FIELDS = (
+    "records_seen",
+    "rows_seen",
+    "events_seen",
+    "processes_seen",
+    "packets_seen",
+    "files_scanned",
+    "artifact_count",
+)
+_ROWS_RETURNED_FIELDS = (
+    "row_count",
+    "rows_returned",
+    "events_returned",
+    "processes_returned",
+    "injections_returned",
+    "matches_returned",
+    "alerts_returned",
+    "conn_count",
+    "dns_count",
+    "http_count",
+)
+_PARSE_ERROR_FIELDS = ("parse_errors", "scan_errors")
+
+
+def _sum_first_metric(tool_call: dict[str, Any], names: tuple[str, ...]) -> int:
+    for name in names:
+        if name in tool_call:
+            return _int_metric(tool_call.get(name))
+    return 0
+
+
+def build_coverage_manifest(
+    *,
+    case_id: str,
+    evidence_path: str,
+    case_completeness: dict[str, Any],
+    attack_coverage: dict[str, Any],
+    tool_calls: list[dict[str, Any]],
+    evidence_inventory: dict[str, Any] | None,
+    analysis_limitations: list[str],
+    velociraptor_zip_extractions: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Build the explicit "what did we process?" sidecar.
+
+    This is deliberately stricter than the prose coverage table. It records
+    attempted, parsed, failed, unsupported, and not-supplied states so a reader
+    cannot confuse a polished report with complete artifact coverage.
+    """
+
+    checks_by_class = {
+        str(row.get("artifact_class")): dict(row)
+        for row in case_completeness.get("checks", [])
+        if row.get("artifact_class")
+    }
+    calls_by_class: dict[str, list[dict[str, Any]]] = {}
+    for call in tool_calls:
+        tool = str(call.get("tool") or "")
+        artifact_class = TOOL_ARTIFACT_CLASSES.get(tool, "unknown_tool_output")
+        calls_by_class.setdefault(artifact_class, []).append(call)
+
+    inventory_summary = (evidence_inventory or {}).get("summary", {})
+    inventory_class_counts = inventory_summary.get("class_counts", {}) or {}
+    unsupported_count = _int_metric(inventory_class_counts.get("unknown"))
+    unsupported_samples = [
+        str(sample)
+        for sample in (inventory_summary.get("unsupported_samples") or [])
+        if sample
+    ][:20]
+    for extraction in velociraptor_zip_extractions or []:
+        if not isinstance(extraction, dict):
+            continue
+        unsupported_count += _int_metric(extraction.get("unsupported_count"))
+        zip_path = str(extraction.get("zip_path") or "velociraptor_zip")
+        for sample in extraction.get("unsupported_samples") or []:
+            if len(unsupported_samples) >= 20:
+                break
+            if sample:
+                unsupported_samples.append(f"{zip_path}::{sample}")
+    evidence_type = str(case_completeness.get("evidence_type") or "")
+    if evidence_type == "unknown" and not evidence_inventory:
+        unsupported_count = max(unsupported_count, 1)
+        if not unsupported_samples and evidence_path:
+            unsupported_samples.append(str(evidence_path))
+
+    artifact_classes = sorted(set(checks_by_class) | set(calls_by_class))
+    rows = []
+    for artifact_class in artifact_classes:
+        check = checks_by_class.get(artifact_class, {})
+        calls = calls_by_class.get(artifact_class, [])
+        failed_calls = [call for call in calls if call.get("error")]
+        successful_calls = [call for call in calls if not call.get("error")]
+        attempted = bool(calls) or bool(check.get("touched"))
+        available = bool(check.get("available")) or bool(calls)
+        parsed = bool(successful_calls)
+        failed = bool(failed_calls)
+        not_supplied = not available and not attempted
+        if failed and parsed:
+            status = "partial"
+        elif failed:
+            status = "failed"
+        elif parsed:
+            status = "parsed"
+        elif attempted:
+            status = "attempted_no_rows"
+        elif not_supplied:
+            status = "not_supplied"
+        else:
+            status = "available_not_attempted"
+        records_seen = sum(
+            _sum_first_metric(call, _RECORDS_SEEN_FIELDS) for call in calls
+        )
+        rows_returned = sum(
+            _sum_first_metric(call, _ROWS_RETURNED_FIELDS) for call in calls
+        )
+        parse_errors = sum(
+            sum(_int_metric(call.get(name)) for name in _PARSE_ERROR_FIELDS)
+            for call in calls
+        )
+        rows.append(
+            {
+                "artifact_class": artifact_class,
+                "status": status,
+                "available": available,
+                "attempted": attempted,
+                "parsed": parsed,
+                "failed": failed,
+                "unsupported": False,
+                "not_supplied": not_supplied,
+                "tools_attempted": [str(call.get("tool")) for call in calls],
+                "tool_call_ids": [
+                    str(call.get("tool_call_id"))
+                    for call in calls
+                    if call.get("tool_call_id")
+                ],
+                "tools_failed": [
+                    str(call.get("tool")) for call in failed_calls if call.get("tool")
+                ],
+                "parse_errors": parse_errors,
+                "records_seen": records_seen,
+                "rows_returned": rows_returned,
+                "confidence_impact": check.get("confidence_impact", ""),
+            }
+        )
+
+    if unsupported_count:
+        rows.append(
+            {
+                "artifact_class": "unsupported",
+                "status": "unsupported",
+                "available": True,
+                "attempted": False,
+                "parsed": False,
+                "failed": False,
+                "unsupported": True,
+                "not_supplied": False,
+                "tools_attempted": [],
+                "tool_call_ids": [],
+                "tools_failed": [],
+                "parse_errors": 0,
+                "records_seen": unsupported_count,
+                "rows_returned": 0,
+                "sample_paths": unsupported_samples,
+                "confidence_impact": (
+                    "Unsupported artifact(s) were recorded as custody or scope "
+                    "limitations; VERDICT cannot reason over evidence no typed "
+                    "parser extracted."
+                ),
+            }
+        )
+
+    status_counts = Counter(str(row["status"]) for row in rows)
+    return {
+        "version": 1,
+        "case_id": case_id,
+        "evidence_path": evidence_path,
+        "evidence_type": evidence_type,
+        "truth_boundary": (
+            "If no parser/tool extracts an artifact class, VERDICT cannot "
+            "reason over it. This manifest records that boundary explicitly."
+        ),
+        "summary": {
+            "artifact_classes_recorded": len(rows),
+            "attempted": sum(1 for row in rows if row["attempted"]),
+            "parsed": sum(1 for row in rows if row["parsed"]),
+            "failed": sum(1 for row in rows if row["failed"]),
+            "unsupported": sum(1 for row in rows if row["unsupported"]),
+            "not_supplied": sum(1 for row in rows if row["not_supplied"]),
+            "unsupported_sample_count": len(unsupported_samples),
+            "status_counts": dict(sorted(status_counts.items())),
+            "attack_blind_spot_count": attack_coverage.get("blind_spot_count", 0),
+            "analysis_limitation_count": len(analysis_limitations),
+        },
+        "artifact_classes": rows,
+        "attack_coverage_summary": attack_coverage.get("summary", ""),
+        "analysis_limitations": list(analysis_limitations),
     }
 
 
@@ -5219,13 +5800,7 @@ def _disk_summary_template() -> dict[str, Any]:
         "version": 1,
         "scope": "extracted_disk_artifacts_only",
         "artifact_counts": {
-            "mft": 0,
-            "usnjrnl": 0,
-            "prefetch": 0,
-            "registry": 0,
-            "browser_history": 0,
-            "evtx": 0,
-            "yara_target": 0,
+            name: 0 for name in sorted(EXTRACTED_DISK_CLASSES | {"evtx", "yara_target"})
         },
         "tool_summaries": {},
         "timeline_event_count": 0,
@@ -6191,6 +6766,7 @@ class Investigation:
         self.disk_artifact_summary: dict[str, Any] | None = None
         self.malware_triage: dict[str, Any] | None = None
         self.normalized_timeline: dict[str, Any] | None = None
+        self.coverage_manifest: dict[str, Any] | None = None
         self.analysis_limitations: list[str] = []
         self.findings_pool_a: list[dict[str, Any]] = []
         self.findings_pool_b: list[dict[str, Any]] = []
@@ -6201,6 +6777,10 @@ class Investigation:
         # (HEARTBEAT.md: reason about the failure and try again). Keyed by
         # finding_id; mirrored into verdict.json findings_summary.
         self.verifier_redispatches: dict[str, dict[str, Any]] = {}
+        # Rejected findings are excluded from evidence-backed Findings, but
+        # retained as non-evidentiary leads so an analyst can inspect potential
+        # false negatives without weakening the verifier gate.
+        self.verifier_rejected_leads: list[dict[str, Any]] = []
         # FIND_EVIL_FAULT_INJECT bookkeeping: the hook fires at most once per
         # run, so a faulted showcase corrupts exactly one verify attempt.
         self._faults_consumed: set[str] = set()
@@ -7483,7 +8063,11 @@ class Investigation:
                 r"Microsoft\Windows NT\CurrentVersion\Image File Execution Options",
             ]
         if name == "system":
-            return [r"ControlSet001\Services", r"ControlSet001\Enum\USBSTOR"]
+            return [
+                r"ControlSet001\Services",
+                r"ControlSet001\Enum\USBSTOR",
+                r"MountedDevices",
+            ]
         if name == "sam":
             return [r"SAM\Domains\Account\Users\Names"]
         if name == "ntuser.dat":
@@ -7491,6 +8075,7 @@ class Investigation:
                 r"Software\Microsoft\Windows\CurrentVersion\Run",
                 r"Software\Microsoft\Windows\CurrentVersion\RunOnce",
                 r"Software\Microsoft\Search Assistant\ACMru",
+                r"Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery",
                 r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU",
                 r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\LastVisitedMRU",
                 r"Software\Microsoft\Windows\Shell\BagMRU",
@@ -7706,6 +8291,36 @@ class Investigation:
                     f"  pool-B activity finding: {finding['finding_id']} (HYPOTHESIS)"
                 )
                 continue
+            if kind == "mounted_device":
+                mount = str(cand.get("mount_point") or "device")
+                safe = re.sub(r"[^a-z0-9]+", "-", mount.lower()).strip("-") or "device"
+                finding = {
+                    "case_id": self.handle["id"],
+                    "finding_id": self._finding_id_for(
+                        f"f-B-mounted-{safe}", hive_path
+                    ),
+                    "tool_call_id": tcid,
+                    "artifact_path": hive_path,
+                    "description": (
+                        "hypothesis: SYSTEM MountedDevices maps drive letter "
+                        f"{mount} to a removable/USB-backed device "
+                        f"({cand.get('hive_key')}\\{cand.get('value_name')}, "
+                        f"registry_query, last_write {cand.get('last_write_time_iso')}). "
+                        "The drive-letter<->device mapping corroborates external USB "
+                        "storage insertion history — it shows which letter a staged "
+                        "removable volume was mounted as. The mapping records a mount, "
+                        "never that data was transferred."
+                    ),
+                    "confidence": "HYPOTHESIS",
+                    "pool_origin": "B",
+                    "mitre_technique": "T1052.001",
+                    "derived_from": [tcid],
+                }
+                self.findings_pool_b.append(finding)
+                print(
+                    f"  pool-B activity finding: {finding['finding_id']} (HYPOTHESIS)"
+                )
+                continue
             if cand.get("kind") != "usb_device":
                 continue
             device = str(
@@ -7785,6 +8400,81 @@ class Investigation:
         print(
             f"  pool-A finding: {finding['finding_id']} (INFERRED, {len(candidates)} tool(s))"
         )
+
+    def _emit_lnk_removable_media_finding(
+        self,
+        candidates: list[dict[str, Any]],
+        lnk_path: str,
+        tcid: str,
+    ) -> None:
+        """Emit one Pool B lead for Recent/LNK removable-media references."""
+        if not candidates:
+            return
+        examples = "; ".join(
+            f"{c.get('source') or lnk_path} -> {c.get('target') or '<unknown target>'}"
+            + (
+                f" (volume serial {c.get('volume_serial')})"
+                if c.get("volume_serial")
+                else ""
+            )
+            for c in candidates[:5]
+        )
+        finding = {
+            "case_id": self.handle["id"],
+            "finding_id": self._finding_id_for("f-B-lnk-removable-media", lnk_path),
+            "tool_call_id": tcid,
+            "artifact_path": lnk_path,
+            "description": (
+                "hypothesis: LNK shortcut artifact references removable media "
+                f"activity: {examples}. The shortcut metadata includes a "
+                "removable-media target or volume serial number. Treat this as a "
+                "shortcut/removable-media staging lead only; if the source path is "
+                "a Recent folder, use it as a recent activity pivot. Corroborate "
+                "with filesystem, registry, event-log, or network evidence before "
+                "asserting user activity."
+            ),
+            "confidence": "HYPOTHESIS",
+            "pool_origin": "B",
+            "mitre_technique": "T1074",
+            "derived_from": [tcid],
+        }
+        self.findings_pool_b.append(finding)
+        print(f"  pool-B LNK finding: {finding['finding_id']} (HYPOTHESIS)")
+
+    def _emit_recyclebin_staging_finding(
+        self,
+        candidates: list[dict[str, Any]],
+        recycle_path: str,
+        tcid: str,
+    ) -> None:
+        """Emit one Pool B lead for deleted staging/tool artifacts."""
+        if not candidates:
+            return
+        examples = "; ".join(
+            f"{c.get('path')}"
+            + (f" (deleted {c.get('timestamp')})" if c.get("timestamp") else "")
+            for c in candidates[:5]
+        )
+        parsers = sorted({str(c.get("parser") or "recycle_bin") for c in candidates})
+        parser_text = ", ".join(parsers)
+        finding = {
+            "case_id": self.handle["id"],
+            "finding_id": self._finding_id_for("f-B-recyclebin-staging", recycle_path),
+            "tool_call_id": tcid,
+            "artifact_path": recycle_path,
+            "description": (
+                f"hypothesis: Recycle Bin {parser_text} deleted-item artifact "
+                f"records a deleted staging/tool artifact: {examples}. This is a "
+                "deletion and staging lead only; corroborate with filesystem, "
+                "registry, event-log, or network evidence before asserting broader activity."
+            ),
+            "confidence": "HYPOTHESIS",
+            "pool_origin": "B",
+            "mitre_technique": "T1070.004",
+            "derived_from": [tcid],
+        }
+        self.findings_pool_b.append(finding)
+        print(f"  pool-B Recycle Bin finding: {finding['finding_id']} (HYPOTHESIS)")
 
     def _corroborate_execution_with_userassist(
         self,
@@ -8206,7 +8896,382 @@ class Investigation:
                 exe_base = PurePosixPath(str(exe).replace("\\", "/")).name.lower()
                 self._prefetch_exec_findings.append((exe_base, prefetch_finding))
 
-        browser_entries = by_class["browser_history"][:20]
+        lnk_entries = by_class.get("lnk", [])[:50]
+        lnk_specs: list[tuple[str, dict[str, Any]]] = [
+            (
+                "ez_parse",
+                {
+                    "case_id": self.handle["id"],
+                    "tool": "lecmd",
+                    "artifact_path": str(e["path"]),
+                    "limit": 200,
+                },
+            )
+            for e in lnk_entries
+        ]
+        lnk_outs = self._parallel_tool_calls(rust, lnk_specs, timeout=600.0)
+        for entry, (_name, args), out in zip(
+            lnk_entries, lnk_specs, lnk_outs, strict=True
+        ):
+            path = str(entry["path"])
+            error = out.get("_error", {}).get("message") if "_error" in out else None
+            if error:
+                self.analysis_limitations.append(
+                    f"ez_parse/lecmd failed for {path}: {error}"
+                )
+                out = {
+                    "_error": {"message": error},
+                    "tool": "lecmd",
+                    "rows": [],
+                    "rows_seen": 0,
+                }
+            rows = out.get("rows", []) or []
+            tcid = self._record_tool(
+                py,
+                "ez_parse",
+                self._output_hash(out),
+                {
+                    "artifact_path": path,
+                    "tool": "lecmd",
+                    "rows_seen": out.get("rows_seen", len(rows)),
+                    **({"error": error} if error else {}),
+                },
+                arguments=args,
+            )
+            _merge_disk_tool_summary(
+                disk_summary,
+                "ez_parse",
+                tcid,
+                {
+                    "artifact_path": path,
+                    "tool": "lecmd",
+                    "rows_seen": out.get("rows_seen", len(rows)),
+                    "sample_targets": [
+                        _ci_get(row, "Target Path", "TargetPath", "Local Path")
+                        for row in rows[:5]
+                        if isinstance(row, dict)
+                    ],
+                    **({"error": error} if error else {}),
+                },
+            )
+            for row in rows[:50]:
+                if not isinstance(row, dict):
+                    continue
+                label = _decoded_row_label(row) or path
+                self._timeline_add(
+                    _decoded_row_timestamp(row),
+                    "ez_parse",
+                    "lnk",
+                    f"lnk shortcut: {label[:100]}",
+                    tcid,
+                    {"artifact_path": path, "tool": "lecmd"},
+                )
+            candidates = lnk_removable_media_candidates(rows)
+            if candidates:
+                self._emit_lnk_removable_media_finding(candidates, path, tcid)
+            print(f"  ez_parse/lecmd: {path} rows={len(rows)}")
+
+        for artifact_class, tool_name, limit in (
+            ("amcache", "amcacheparser", 500),
+            ("jumplist", "jlecmd", 500),
+        ):
+            entries_for_tool = by_class.get(artifact_class, [])[:20]
+            specs: list[tuple[str, dict[str, Any]]] = [
+                (
+                    "ez_parse",
+                    {
+                        "case_id": self.handle["id"],
+                        "tool": tool_name,
+                        "artifact_path": str(e["path"]),
+                        "limit": limit,
+                    },
+                )
+                for e in entries_for_tool
+            ]
+            outs = self._parallel_tool_calls(rust, specs, timeout=900.0)
+            for entry, (_name, args), out in zip(
+                entries_for_tool, specs, outs, strict=True
+            ):
+                path = str(entry["path"])
+                error = (
+                    out.get("_error", {}).get("message") if "_error" in out else None
+                )
+                if error:
+                    self.analysis_limitations.append(
+                        f"ez_parse/{tool_name} failed for {path}: {error}"
+                    )
+                    out = {
+                        "_error": {"message": error},
+                        "tool": tool_name,
+                        "rows": [],
+                        "rows_seen": 0,
+                    }
+                rows = out.get("rows", []) or []
+                tcid = self._record_tool(
+                    py,
+                    "ez_parse",
+                    self._output_hash(out),
+                    {
+                        "artifact_path": path,
+                        "artifact_class": artifact_class,
+                        "tool": tool_name,
+                        "rows_seen": out.get("rows_seen", len(rows)),
+                        **({"error": error} if error else {}),
+                    },
+                    arguments=args,
+                )
+                _merge_disk_tool_summary(
+                    disk_summary,
+                    "ez_parse",
+                    tcid,
+                    {
+                        "artifact_path": path,
+                        "artifact_class": artifact_class,
+                        "tool": tool_name,
+                        "rows_seen": out.get("rows_seen", len(rows)),
+                        "sample_paths": [
+                            _decoded_row_label(row)
+                            for row in rows[:5]
+                            if isinstance(row, dict)
+                        ],
+                        **({"error": error} if error else {}),
+                    },
+                )
+                for row in rows[:50]:
+                    if not isinstance(row, dict):
+                        continue
+                    label = _decoded_row_label(row) or path
+                    self._timeline_add(
+                        _decoded_row_timestamp(row),
+                        "ez_parse",
+                        artifact_class,
+                        f"{artifact_class} decoded row: {label[:100]}",
+                        tcid,
+                        {"artifact_path": path, "tool": tool_name},
+                    )
+                print(f"  ez_parse/{tool_name}: {path} rows={len(rows)}")
+
+        for entry in by_class.get("recyclebin", [])[:20]:
+            path = str(entry["path"])
+            leaf = PurePosixPath(path.replace("\\", "/")).name.lower()
+            if leaf == "info2":
+                args = {
+                    "case_id": self.handle["id"],
+                    "parser": "recycle_bin_info2",
+                    "artifact_path": path,
+                    "limit": 500,
+                }
+                out = rust.call_tool("plaso_parse", args, timeout=1200.0)
+                error = (
+                    out.get("_error", {}).get("message") if "_error" in out else None
+                )
+                if error:
+                    self.analysis_limitations.append(
+                        f"plaso_parse/recycle_bin_info2 failed for {path}: {error}"
+                    )
+                    out = {
+                        "_error": {"message": error},
+                        "parser": "recycle_bin_info2",
+                        "events": [],
+                        "events_seen": 0,
+                    }
+                events = out.get("events", []) or []
+                tcid = self._record_tool(
+                    py,
+                    "plaso_parse",
+                    self._output_hash(out),
+                    {
+                        "artifact_path": path,
+                        "parser": "recycle_bin_info2",
+                        "events_seen": out.get("events_seen", len(events)),
+                        **({"error": error} if error else {}),
+                    },
+                    arguments=args,
+                )
+                parser_events = [
+                    {**event, "parser": "recycle_bin_info2"}
+                    for event in events
+                    if isinstance(event, dict)
+                ]
+                _merge_disk_tool_summary(
+                    disk_summary,
+                    "plaso_parse",
+                    tcid,
+                    {
+                        "artifact_path": path,
+                        "parser": "recycle_bin_info2",
+                        "events_seen": out.get("events_seen", len(events)),
+                        "sample_paths": [
+                            _ci_get(event, "filename", "original path", "path")
+                            for event in parser_events[:5]
+                        ],
+                        **({"error": error} if error else {}),
+                    },
+                )
+                for event in parser_events[:100]:
+                    label = _decoded_row_label(event) or path
+                    self._timeline_add(
+                        _decoded_row_timestamp(event),
+                        "plaso_parse",
+                        "recyclebin",
+                        f"recycle bin deleted item: {label[:100]}",
+                        tcid,
+                        {"artifact_path": path, "parser": "recycle_bin_info2"},
+                    )
+                candidates = recyclebin_staging_candidates(parser_events)
+                if candidates:
+                    self._emit_recyclebin_staging_finding(candidates, path, tcid)
+                print(f"  plaso_parse/recycle_bin_info2: {path} events={len(events)}")
+            else:
+                args = {
+                    "case_id": self.handle["id"],
+                    "tool": "rbcmd",
+                    "artifact_path": path,
+                    "limit": 500,
+                }
+                out = rust.call_tool("ez_parse", args, timeout=600.0)
+                error = (
+                    out.get("_error", {}).get("message") if "_error" in out else None
+                )
+                if error:
+                    self.analysis_limitations.append(
+                        f"ez_parse/rbcmd failed for {path}: {error}"
+                    )
+                    out = {
+                        "_error": {"message": error},
+                        "tool": "rbcmd",
+                        "rows": [],
+                        "rows_seen": 0,
+                    }
+                rows = out.get("rows", []) or []
+                tcid = self._record_tool(
+                    py,
+                    "ez_parse",
+                    self._output_hash(out),
+                    {
+                        "artifact_path": path,
+                        "tool": "rbcmd",
+                        "rows_seen": out.get("rows_seen", len(rows)),
+                        **({"error": error} if error else {}),
+                    },
+                    arguments=args,
+                )
+                parser_rows = [
+                    {**row, "parser": "rbcmd"} for row in rows if isinstance(row, dict)
+                ]
+                _merge_disk_tool_summary(
+                    disk_summary,
+                    "ez_parse",
+                    tcid,
+                    {
+                        "artifact_path": path,
+                        "tool": "rbcmd",
+                        "rows_seen": out.get("rows_seen", len(rows)),
+                        "sample_paths": [
+                            _ci_get(row, "Original File Name", "Original Path", "Path")
+                            for row in parser_rows[:5]
+                        ],
+                        **({"error": error} if error else {}),
+                    },
+                )
+                for row in parser_rows[:100]:
+                    label = _decoded_row_label(row) or path
+                    self._timeline_add(
+                        _decoded_row_timestamp(row),
+                        "ez_parse",
+                        "recyclebin",
+                        f"recycle bin decoded row: {label[:100]}",
+                        tcid,
+                        {"artifact_path": path, "tool": "rbcmd"},
+                    )
+                candidates = recyclebin_staging_candidates(parser_rows)
+                if candidates:
+                    self._emit_recyclebin_staging_finding(candidates, path, tcid)
+                print(f"  ez_parse/rbcmd: {path} rows={len(rows)}")
+
+        for artifact_class, parser_name, limit in (
+            ("legacy_evt", "winevt", 1000),
+            ("ie_history", "msiecf", 500),
+            ("scheduled_task", "winjob", 500),
+        ):
+            entries_for_parser = by_class.get(artifact_class, [])[:20]
+            specs: list[tuple[str, dict[str, Any]]] = [
+                (
+                    "plaso_parse",
+                    {
+                        "case_id": self.handle["id"],
+                        "parser": parser_name,
+                        "artifact_path": str(e["path"]),
+                        "limit": limit,
+                    },
+                )
+                for e in entries_for_parser
+            ]
+            outs = self._parallel_tool_calls(rust, specs, timeout=1200.0)
+            for entry, (_name, args), out in zip(
+                entries_for_parser, specs, outs, strict=True
+            ):
+                path = str(entry["path"])
+                error = (
+                    out.get("_error", {}).get("message") if "_error" in out else None
+                )
+                if error:
+                    self.analysis_limitations.append(
+                        f"plaso_parse/{parser_name} failed for {path}: {error}"
+                    )
+                    out = {
+                        "_error": {"message": error},
+                        "parser": parser_name,
+                        "events": [],
+                        "events_seen": 0,
+                    }
+                events = out.get("events", []) or []
+                tcid = self._record_tool(
+                    py,
+                    "plaso_parse",
+                    self._output_hash(out),
+                    {
+                        "artifact_path": path,
+                        "artifact_class": artifact_class,
+                        "parser": parser_name,
+                        "events_seen": out.get("events_seen", len(events)),
+                        **({"error": error} if error else {}),
+                    },
+                    arguments=args,
+                )
+                parser_events = [
+                    {**event, "parser": parser_name}
+                    for event in events
+                    if isinstance(event, dict)
+                ]
+                _merge_disk_tool_summary(
+                    disk_summary,
+                    "plaso_parse",
+                    tcid,
+                    {
+                        "artifact_path": path,
+                        "artifact_class": artifact_class,
+                        "parser": parser_name,
+                        "events_seen": out.get("events_seen", len(events)),
+                        "sample_labels": [
+                            _decoded_row_label(event) for event in parser_events[:5]
+                        ],
+                        **({"error": error} if error else {}),
+                    },
+                )
+                for event in parser_events[:200]:
+                    label = _decoded_row_label(event) or parser_name
+                    self._timeline_add(
+                        _decoded_row_timestamp(event),
+                        "plaso_parse",
+                        artifact_class,
+                        f"{artifact_class} event: {label[:100]}",
+                        tcid,
+                        {"artifact_path": path, "parser": parser_name},
+                    )
+                print(f"  plaso_parse/{parser_name}: {path} events={len(events)}")
+
+        browser_entries = (by_class["browser_history"] + by_class["browser_db"])[:20]
         browser_specs: list[tuple[str, dict[str, Any]]] = [
             (
                 "browser_history",
@@ -8367,6 +9432,7 @@ class Investigation:
                 # a HYPOTHESIS exfil/staging lead citing this registry_query.
                 activity_candidates = (
                     registry_usb_candidates(rows)
+                    + registry_mounteddevices_candidates(rows)
                     + registry_sam_account_candidates(rows)
                     + registry_mru_candidates(rows)
                     + registry_shellbag_candidates(rows)
@@ -8449,7 +9515,22 @@ class Investigation:
                 event
                 for event in self.timeline_events
                 if event.get("artifact_class")
-                in {"disk/filesystem", "mft", "usnjrnl", "prefetch", "registry", "evtx"}
+                in {
+                    "disk/filesystem",
+                    "mft",
+                    "usnjrnl",
+                    "prefetch",
+                    "registry",
+                    "evtx",
+                    "browser_history",
+                    "lnk",
+                    "amcache",
+                    "jumplist",
+                    "recyclebin",
+                    "legacy_evt",
+                    "ie_history",
+                    "scheduled_task",
+                }
             ]
         )
         self.disk_artifact_summary = _finalize_disk_artifact_summary(disk_summary)
@@ -8971,6 +10052,7 @@ class Investigation:
                 "zip_path": evidence_path,
                 "entry_count": len(entries),
                 "unsupported_count": extraction.get("unsupported_count", 0),
+                "unsupported_samples": extraction.get("unsupported_samples", []),
                 "skipped_unsafe": extraction.get("skipped_unsafe", 0),
                 "skipped_oversize": extraction.get("skipped_oversize", 0),
                 "truncated": extraction.get("truncated", False),
@@ -9455,6 +10537,13 @@ class Investigation:
                 )
                 self.verifier_replay_failures.append(failure)
                 self.analysis_limitations.append(failure)
+            if action.get("action") == "rejected":
+                rejected_lead = self._verifier_rejected_lead_snapshot(
+                    finding, action, replay
+                )
+                self.verifier_rejected_leads.append(rejected_lead)
+            else:
+                rejected_lead = None
             self._audit(
                 py,
                 "verifier_action",
@@ -9473,6 +10562,8 @@ class Investigation:
                     },
                 },
             )
+            if rejected_lead:
+                self._audit(py, "verifier_rejected_lead", rejected_lead)
             handoff = py.call_tool(
                 "pool_handoff",
                 {
@@ -9494,6 +10585,38 @@ class Investigation:
                     f"{handoff['_error'].get('message', 'unknown handoff failure')}"
                 )
         return actions
+
+    def _verifier_rejected_lead_snapshot(
+        self,
+        finding: dict[str, Any],
+        action: dict[str, Any],
+        replay: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Preserve a rejected Finding as analyst-reviewable, non-evidentiary context."""
+        return {
+            "finding_id": str(
+                action.get("finding_id") or finding.get("finding_id") or ""
+            ),
+            "tool_call_id": finding.get("tool_call_id"),
+            "confidence": finding.get("confidence"),
+            "pool_origin": finding.get("pool_origin"),
+            "mitre_technique": finding.get("mitre_technique"),
+            "artifact_path": finding.get("artifact_path"),
+            "description": str(finding.get("description") or "")[:500],
+            "verifier_action": "rejected",
+            "verifier_reason": str(
+                action.get("reason")
+                or replay.get("replay_error")
+                or "unknown verifier failure"
+            )[:500],
+            "replay_matched": replay.get("replay_matched"),
+            "replay_error": replay.get("replay_error"),
+            "replay_record_sha256": replay.get("replay_record_sha256"),
+            "verdict_effect": "excluded_from_final_findings",
+            "analyst_action": (
+                "Inspect this as a rejected lead; do not treat it as evidence until replay succeeds."
+            ),
+        }
 
     def _embed_verifier_replays(
         self, findings: list[dict[str, Any]]
@@ -9921,10 +11044,22 @@ class Investigation:
             self.evidence,
         )
         attach_expert_miss_summary(attack_story, expert_miss_summary)
+        coverage_manifest = build_coverage_manifest(
+            case_id=self.handle.get("id", self.case_id),
+            evidence_path=self.evidence,
+            case_completeness=case_completeness,
+            attack_coverage=attack_coverage,
+            tool_calls=self.tool_calls,
+            evidence_inventory=self.evidence_inventory,
+            velociraptor_zip_extractions=self.velociraptor_zip_extractions,
+            analysis_limitations=self.analysis_limitations,
+        )
+        self.coverage_manifest = coverage_manifest
         return {
             "timeline": timeline,
             "case_completeness": case_completeness,
             "attack_coverage": attack_coverage,
+            "coverage_manifest": coverage_manifest,
             "attck_practitioner_coverage": attck_practitioner_coverage,
             "next_actions": next_actions,
             "source_bibliography": source_bibliography,
@@ -10116,17 +11251,20 @@ class Investigation:
             "started_at": self.started_at,
             "verdict": verdict,
             "analysis_limitations": self.analysis_limitations,
+            "rejected_finding_leads": self.verifier_rejected_leads,
             "findings": merged,
             "findings_summary": {
                 "total_merged": len(merged),
                 "contradictions_surfaced": contras,
                 "soul_md_kept": kept,
                 "soul_md_downgraded": downgraded,
+                "verifier_rejected_leads": len(self.verifier_rejected_leads),
                 "by_confidence": _confidence_distribution(merged),
             },
             "tool_calls": self.tool_calls,
             "case_completeness": report_metadata["case_completeness"],
             "attack_coverage": report_metadata["attack_coverage"],
+            "coverage_manifest": report_metadata.get("coverage_manifest", {}),
             "report_qa": report_metadata["report_qa"],
             "release_gate": release_gate,
             "signer": self.signer,
@@ -10381,6 +11519,7 @@ class Investigation:
         timeline = meta["timeline"]
         case_completeness = meta["case_completeness"]
         attack_coverage = meta["attack_coverage"]
+        coverage_manifest = meta["coverage_manifest"]
         attck_practitioner_coverage = meta["attck_practitioner_coverage"]
         next_actions = meta["next_actions"]
         source_bibliography = meta["source_bibliography"]
@@ -10444,6 +11583,7 @@ class Investigation:
                 "soul_md_downgraded": downgraded,
                 "correlation_outcomes": self.correlation_outcomes,
                 "verifier_redispatches": self.verifier_redispatches,
+                "verifier_rejected_leads": len(self.verifier_rejected_leads),
             },
             "heartbeat": {
                 "escalated": self._heartbeat_escalated,
@@ -10451,11 +11591,13 @@ class Investigation:
                 "terminated_partial": self._heartbeat_terminated,
             },
             "findings": merged,
+            "rejected_finding_leads": self.verifier_rejected_leads,
             "tool_calls": self.tool_calls,
             "evtx_summary": self.evtx_summary,
             "disk_artifact_summary": self.disk_artifact_summary,
             "case_completeness": case_completeness,
             "attack_coverage": attack_coverage,
+            "coverage_manifest": coverage_manifest,
             "attck_practitioner_coverage": attck_practitioner_coverage,
             "next_actions": next_actions,
             "expert_doctrine": meta["expert_doctrine"],
@@ -10592,6 +11734,22 @@ class Investigation:
         if self.disk_artifact_summary:
             (local_dir / "disk_artifact_summary.json").write_text(
                 json.dumps(self.disk_artifact_summary, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+        coverage_manifest = self.coverage_manifest
+        if coverage_manifest is None:
+            verdict_file = local_dir / "verdict.json"
+            if verdict_file.is_file():
+                try:
+                    verdict_obj = json.loads(verdict_file.read_text(encoding="utf-8"))
+                    loaded_manifest = verdict_obj.get("coverage_manifest")
+                    if isinstance(loaded_manifest, dict):
+                        coverage_manifest = loaded_manifest
+                except json.JSONDecodeError:
+                    coverage_manifest = None
+        if coverage_manifest:
+            (local_dir / "coverage_manifest.json").write_text(
+                json.dumps(coverage_manifest, indent=2, sort_keys=True),
                 encoding="utf-8",
             )
         if self.evidence_inventory:
@@ -10742,6 +11900,7 @@ class Investigation:
                 "run.manifest.json", self.manifest_path
             ),
             "manifest_verify_path": manifest_verify_path,
+            "coverage_manifest_path": self._summary_path("coverage_manifest.json", ""),
             "report_paths": self._summary_report_paths(),
             "timeline_paths": self._summary_timeline_paths(),
             "inventory_path": self._summary_path("evidence_inventory.json", "")

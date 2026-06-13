@@ -40,15 +40,25 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 use crate::tools::{
+    ausearch::ausearch,
     browser_history::browser_history,
     case_open,
+    cloud_audit::cloud_audit,
     disk::{disk_extract_artifacts, disk_mount, disk_unmount},
     evtx_query::evtx_query,
+    ez_parse::ez_parse,
     hayabusa_scan::hayabusa_scan,
+    indx_parse::indx_parse,
+    journalctl_query::journalctl_query,
+    login_accounting::login_accounting,
+    mac_triage::mac_triage,
     mft_timeline::mft_timeline,
+    nfdump_query::nfdump_query,
     pcap_triage::pcap_triage,
+    plaso_parse::plaso_parse,
     prefetch_parse::prefetch_parse,
     registry_query::registry_query,
+    suricata_eve::suricata_eve,
     sysmon_network_query::sysmon_network_query,
     usnjrnl_query::usnjrnl_query,
     vel_collect::vel_collect,
@@ -56,12 +66,15 @@ use crate::tools::{
     vol_pslist::vol_pslist,
     vol_psscan::vol_psscan,
     vol_psxview::vol_psxview,
+    vol_run::vol_run,
     yara_scan::yara_scan,
     zeek_summary::zeek_summary,
-    BrowserHistoryInput, CaseOpenInput, DiskExtractArtifactsInput, DiskMountInput,
-    DiskUnmountInput, EvtxQueryInput, HayabusaInput, MftInput, PcapTriageInput, PrefetchInput,
-    RegistryInput, SysmonNetworkInput, UsnJrnlInput, VelCollectInput, VolMalfindInput,
-    VolPslistInput, VolPsscanInput, VolPsxviewInput, YaraInput, ZeekSummaryInput,
+    AusearchInput, BrowserHistoryInput, CaseOpenInput, CloudAuditInput, DiskExtractArtifactsInput,
+    DiskMountInput, DiskUnmountInput, EvtxQueryInput, EzParseInput, HayabusaInput, IndxParseInput,
+    JournalctlQueryInput, LoginAccountingInput, MacTriageInput, MftInput, NfdumpQueryInput,
+    PcapTriageInput, PlasoParseInput, PrefetchInput, RegistryInput, SuricataEveInput,
+    SysmonNetworkInput, UsnJrnlInput, VelCollectInput, VolMalfindInput, VolPslistInput,
+    VolPsscanInput, VolPsxviewInput, VolRunInput, YaraInput, ZeekSummaryInput,
 };
 use crate::CRATE_VERSION;
 
@@ -642,6 +655,379 @@ fn build_registry() -> Vec<ToolEntry> {
             handler: |args| dispatch_vol_psxview(args),
         },
         ToolEntry {
+            name: "vol_run",
+            description: "Run ONE allow-listed Volatility 3 plugin against a memory image and \
+                 return its raw rows. This is the generic memory verb: where vol_pslist / \
+                 vol_psscan / vol_psxview / vol_malfind cover the high-value pivots with \
+                 fully typed output, vol_run reaches the long tail of evil-hunting plugins \
+                 through ONE verb instead of 40 bespoke tools. \
+                 plugin MUST be a canonical Vol3 name on the allow-list — any other value \
+                 (including a shell-injection-shaped string) is rejected with PluginNotAllowed \
+                 BEFORE any subprocess runs, which is the no-shell guarantee for a \
+                 parameterized verb. Allow-list (curated, evil-hunting): \
+                 windows.cmdline/dlllist/ldrmodules/handles/getsids/privileges/sessions/envars \
+                 (process+execution context), windows.svcscan/netscan/netstat (services+network), \
+                 windows.consoles/cmdscan (attacker shell history), \
+                 windows.registry.{hashdump,lsadump,cachedump} (credentials), \
+                 windows.hollowprocesses/suspicious_threads/vadinfo (injection depth), \
+                 windows.modules/modscan/driverscan/ssdt/callbacks (kernel rootkit surface), \
+                 windows.filescan/mftscan.MFTScan, windows.registry.hivelist/userassist, \
+                 linux.pslist/psscan/pstree/bash/malfind/lsmod/check_modules/check_syscall/hidden_modules, \
+                 mac.pslist/psaux/lsmod/malfind/check_syscall. \
+                 Use AFTER case_open. memory_path is the image; optional pid scopes per-process \
+                 plugins (a u32, never a shell fragment). Default limit 10000. \
+                 Returns plugin + rows[] (raw per-plugin JSON columns — output shape varies by \
+                 plugin, so the agent gets the plugin's own schema) + rows_seen + stderr_tail. \
+                 Linux/macOS images also need their ISF symbol table on the Vol3 symbol path. \
+                 Same Volatility binary discovery as vol_pslist ($VOLATILITY_BIN first, then \
+                 PATH for vol/vol.py/volatility3/volatility). \
+                 ERRORS: PluginNotAllowed (use a canonical allow-listed name, or the bespoke \
+                 vol_* tools), MemoryNotFound / MemoryNotRegular (verify path), BinaryNotFound \
+                 (install via `pip install volatility3` or use the SIFT VM), SubprocessFailed \
+                 (check stderr_tail — common causes: missing ISF symbols, unsupported profile), \
+                 OutputParse (rare; Vol3 version mismatch).",
+            annotations: ToolAnnotations {
+                title: "Run Allow-listed Memory Plugin (Volatility)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<VolRunInput>(),
+            handler: |args| dispatch_vol_run(args),
+        },
+        ToolEntry {
+            name: "ez_parse",
+            description: "Run ONE allow-listed Eric Zimmerman tool against a carved Windows \
+                 artifact and return the decoded rows. This is the decoded-execution / \
+                 persistence / anti-forensic verb: where registry_query and the raw parsers \
+                 hand back bytes, ez_parse decodes them. ONE verb instead of seven bespoke \
+                 wrappers. \
+                 tool MUST be one of: lecmd (LNK target+MAC+volserial+args), jlecmd (JumpList \
+                 recent-file MRU), amcacheparser (Amcache.hve program presence+SHA1 — \
+                 NOTE Amcache LastModified != execution, it is catalog-registration time, so \
+                 it is a >=2-artifact corroborator for Prefetch, never proof alone), \
+                 appcompatcacheparser (ShimCache path+$SI; pre-Win8 exec flag), rbcmd \
+                 (Recycle Bin $I: original path, deletion UTC, deleting SID), sbecmd \
+                 (shellbags: folders browsed incl. deleted/external/UNC), wxtcmd (Win10 \
+                 Timeline). Any other value is rejected with ToolNotAllowed BEFORE a \
+                 subprocess runs — the no-shell guarantee for a parameterized verb. \
+                 Use AFTER disk_extract_artifacts has carved the artifact. artifact_path is \
+                 the carved file (for sbecmd, the directory of hives). Default limit 10000. \
+                 Returns tool + rows[] (raw per-tool CSV columns — schema varies by tool) + \
+                 rows_seen + csv_files[] (provenance) + stderr_tail. \
+                 Binary discovery: $EZTOOLS_DIR first, then PATH (the tools ship on the SIFT \
+                 VM and run native on Linux since the .NET port). \
+                 ERRORS: ToolNotAllowed (use an allow-listed key), ArtifactNotFound (verify \
+                 the carved path), BinaryNotFound (install the EZ tools or use the SIFT VM), \
+                 SubprocessFailed (check stderr_tail), NoCsvProduced (tool ran but wrote no \
+                 CSV — usually an unsupported/empty artifact), OutputRead (rare IO error).",
+            annotations: ToolAnnotations {
+                title: "Decode Windows Artifact (Eric Zimmerman Tools)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<EzParseInput>(),
+            handler: |args| dispatch_ez_parse(args),
+        },
+        ToolEntry {
+            name: "plaso_parse",
+            description: "Run ONE allow-listed plaso (log2timeline) parser against an artifact \
+                 and return the normalized timeline events. plaso is itself a normalizer over \
+                 dozens of log formats, so this ONE verb covers a wide cross-OS swath of \
+                 text/binary logs: Linux syslog / auth.log, bash/zsh history, utmp/wtmp, dpkg, \
+                 selinux; legacy Windows .evt (winevt — use evtx_query for modern .evtx), \
+                 IE index.dat (msiecf), scheduled-task jobs (winjob), Recycle Bin, \
+                 winfirewall; viminfo; macOS asl, appfirewall, wifi. \
+                 parser MUST be an allow-listed plaso parser name (see below); any other value \
+                 is rejected with ParserNotAllowed BEFORE a subprocess runs — the no-shell \
+                 guarantee for a parameterized verb. Allow-list: syslog, bash_history, \
+                 zsh_extended_history, utmp, dpkg, selinux, winevt, msiecf, winjob, \
+                 recycle_bin, recycle_bin_info2, winfirewall, viminfo, asl_log, \
+                 mac_appfirewall_log, macwifi. \
+                 Use AFTER case_open / disk_extract_artifacts. artifact_path is the log file, a \
+                 directory, or a mounted image root. Default limit 10000. \
+                 Two-stage run (plaso's design): log2timeline.py builds a .plaso store, psort.py \
+                 exports json_line; both are fixed-argv. \
+                 Returns parser + events[] (normalized plaso event objects — schema varies by \
+                 parser) + events_seen + stderr_tail. \
+                 Binary discovery: $PLASO_DIR first, then PATH for log2timeline.py / psort.py \
+                 (plaso ships on the SIFT VM). \
+                 ERRORS: ParserNotAllowed (use an allow-listed name), ArtifactNotFound (verify \
+                 the path), BinaryNotFound (install plaso or use the SIFT VM), SubprocessFailed \
+                 (check stderr_tail — names the failing stage), OutputRead (rare IO error).",
+            annotations: ToolAnnotations {
+                title: "Normalize Logs to Timeline (plaso/log2timeline)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<PlasoParseInput>(),
+            handler: |args| dispatch_plaso_parse(args),
+        },
+        ToolEntry {
+            name: "mac_triage",
+            description: "Run ONE allow-listed mac_apt module against a mounted macOS image and \
+                 return the decoded rows. mac_apt is the macOS supertool — its modules parse \
+                 Unified Logs, FSEvents, launchd autostart, KnowledgeC, Quarantine, TCC, Safari, \
+                 Spotlight, install history, and shell sessions internally — so this ONE verb is \
+                 the macOS analogue of disk_extract_artifacts and covers most of the macOS \
+                 roadmap. \
+                 module MUST be an allow-listed mac_apt module name (see below); any other value \
+                 is rejected with ModuleNotAllowed BEFORE a subprocess runs — the no-shell \
+                 guarantee for a parameterized verb. Allow-list: UNIFIEDLOGS (the macOS \
+                 EVTX+Sysmon equivalent — process launches, network, auth, USB), FSEVENTS \
+                 (filesystem change history), AUTOSTART (launchd persistence), KNOWLEDGEC \
+                 (app-usage/activity timeline), QUARANTINE (download provenance), TCC (privacy \
+                 grants abused by spyware), SAFARI (browsing/downloads), SPOTLIGHT (file metadata \
+                 incl. where-from), INSTALLHISTORY, BASHSESSIONS (hands-on-keyboard), \
+                 NOTIFICATIONS, USERS, NETWORKING, RECENTITEMS, SUDOLASTRUN. \
+                 Use AFTER disk_mount has mounted the macOS image. image_path is the mounted \
+                 volume root (a MOUNTED input for mac_apt). Default limit 10000. \
+                 Returns module + rows[] (raw per-module CSV columns — schema varies by module) \
+                 + rows_seen + csv_files[] (provenance) + stderr_tail. \
+                 Binary discovery: $MAC_APT (path to mac_apt.py) first, then PATH (mac_apt ships \
+                 on the SIFT VM). \
+                 ERRORS: ModuleNotAllowed (use an allow-listed name), ImageNotFound (verify the \
+                 mount path), BinaryNotFound (install mac_apt or use the SIFT VM), \
+                 SubprocessFailed (check stderr_tail), NoCsvProduced (module ran but wrote no \
+                 CSV — usually the artifact class is absent on this image), OutputRead (rare IO).",
+            annotations: ToolAnnotations {
+                title: "Triage macOS Image (mac_apt)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<MacTriageInput>(),
+            handler: |args| dispatch_mac_triage(args),
+        },
+        ToolEntry {
+            name: "cloud_audit",
+            description: "Parse ONE allow-listed cloud/identity audit log into normalized events. \
+                 The attacker center of gravity has shifted to identity and control-plane abuse \
+                 (rogue IAM, OAuth consent, MFA fatigue, inbox-rule exfil, console takeover), and \
+                 no SIFT binary parses cloud logs — this is pure-Rust new code, no subprocess. \
+                 provider MUST be one of: cloudtrail (AWS API calls — rogue IAM, AssumeRole abuse, \
+                 S3 exfil, CloudTrail disable), entra_signin (Azure AD sign-ins — impossible \
+                 travel, MFA fatigue, new SP consent), entra_audit (Entra directory audit — role \
+                 grants, app consent), m365_ual (M365 Unified Audit Log — BEC, inbox rules, \
+                 mail-forwarding, mass download), gcp_audit, workspace, k8s_audit (exec-into-pod, \
+                 privileged pod, RBAC escalation), vpc_flow (AWS flow logs — exfil volume, C2). \
+                 Any other value is rejected with ProviderNotAllowed. \
+                 Accepts a top-level JSON array, {Records:[...]} / {value:[...]} containers, JSONL \
+                 (one object per line), or space-delimited VPC flow text. Use AFTER case_open. \
+                 log_path is the exported log file. Default limit 10000. \
+                 Returns provider + events[] — each a normalized envelope {timestamp, actor, \
+                 source_ip, action, resource, outcome, raw} so the agent can reason across \
+                 providers — plus events_seen. \
+                 ERRORS: ProviderNotAllowed (use an allow-listed provider), LogNotFound (verify \
+                 the path), ReadFailed (IO error), ParseFailed (content not the expected format \
+                 for that provider).",
+            annotations: ToolAnnotations {
+                title: "Parse Cloud/Identity Audit Log",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<CloudAuditInput>(),
+            handler: |args| dispatch_cloud_audit(args),
+        },
+        ToolEntry {
+            name: "journalctl_query",
+            description: "Read a binary systemd journal file via a fixed `journalctl --file \
+                 <journal_path> -o json` subprocess and return its entries as generic rows. \
+                 LINUX-HOST triage surface: systemd journals \
+                 (/var/log/journal/<machine-id>/*.journal) are opaque binary blobs — journalctl \
+                 is the only first-party reader. GPL — invoked as a SUBPROCESS only per the \
+                 Spec #2 invariant, never linked. Use AFTER case_open on a journal extracted \
+                 from the mounted image. Optional `since` / `until` bound the time window \
+                 (passed to journalctl --since/--until; supply a UTC ISO-8601 timestamp). \
+                 Default limit 10000 rows. \
+                 journalctl binary discovery: $JOURNALCTL_BIN env var first, then PATH lookup. \
+                 Returns rows[] (one free-form key/value map per journal entry — systemd field \
+                 names like MESSAGE, _PID, _SYSTEMD_UNIT, __REALTIME_TIMESTAMP) + rows_seen + \
+                 stderr_tail. The row shape is intentionally unstructured: systemd's field set \
+                 varies per unit and per version, and pinning a typed shape would drop fields. \
+                 ERRORS: NotFound / NotRegular (verify the journal path inside the mounted \
+                 image), BinaryNotFound (install systemd or set $JOURNALCTL_BIN), \
+                 SubprocessFailed (journalctl returned non-zero — check stderr_tail; common \
+                 causes: not a journal file, incompatible journal version), OutputParse (a \
+                 stdout line was not valid JSON; rare, indicates a journalctl version mismatch).",
+            annotations: ToolAnnotations {
+                title: "Query systemd Journal (journalctl)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<JournalctlQueryInput>(),
+            handler: |args| dispatch_journalctl_query(args),
+        },
+        ToolEntry {
+            name: "login_accounting",
+            description: "Parse a Linux login-accounting database (wtmp / btmp) via a fixed \
+                 `last -f <accounting_path> -F -w -R` subprocess and return typed login records. \
+                 LINUX-HOST triage surface: wtmp records successful logins/logouts/reboots, \
+                 btmp records FAILED attempts — both are opaque binary utmp-format files that \
+                 `last` (util-linux) reads. GPL — invoked as a SUBPROCESS only per the Spec #2 \
+                 invariant, never linked. An interactive login from an unexpected host, an \
+                 off-hours root session, or a burst of btmp failures are classic \
+                 lateral-movement / brute-force signals (pair with journalctl_query / ausearch \
+                 for corroboration). Use AFTER case_open on a wtmp/btmp extracted from the \
+                 mounted image. Default limit 10000 rows. \
+                 last binary discovery: $LAST_BIN env var first, then PATH lookup. \
+                 Returns rows[] (user, line, host, login_iso?, logout_iso?, raw) + rows_seen + \
+                 stderr_tail. The flags force full absolute times (-F), wide untruncated columns \
+                 (-w), and suppress the DNS column (-R) so the table stays positional. Each \
+                 row keeps the verbatim `last` line under `raw`. \
+                 ERRORS: NotFound / NotRegular (verify the wtmp/btmp path inside the mounted \
+                 image), BinaryNotFound (install util-linux or set $LAST_BIN), SubprocessFailed \
+                 (last returned non-zero — check stderr_tail; common cause: not a utmp-format \
+                 file).",
+            annotations: ToolAnnotations {
+                title: "Parse Login Accounting (wtmp/btmp)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<LoginAccountingInput>(),
+            handler: |args| dispatch_login_accounting(args),
+        },
+        ToolEntry {
+            name: "ausearch",
+            description: "Read a Linux audit log (auditd's audit.log) via a fixed \
+                 `ausearch -i -if <audit_log_path>` subprocess and return its records as \
+                 generic rows. LINUX-HOST triage surface: auditd is the authoritative \
+                 syscall-level record (execve, connect, file access, USER_LOGIN) on a hardened \
+                 host; ausearch (audit / audit-libs package) is the canonical reader and -i \
+                 interprets numeric uids/syscalls into names. GPL — invoked as a SUBPROCESS \
+                 only per the Spec #2 invariant, never linked. INSTALL-FIRST: ausearch is NOT \
+                 present on the stock SANS SIFT VM, so a missing binary is an honest \
+                 BinaryNotFound limitation, not a crash. Use AFTER case_open on an audit.log \
+                 extracted from the mounted image. Default limit 10000 records. \
+                 ausearch binary discovery: $AUSEARCH_BIN env var first, then PATH lookup. \
+                 Returns rows[] (one free-form key/value map per type=... record — fields vary \
+                 by record type: SYSCALL / EXECVE / PATH / USER_LOGIN; the verbatim line is kept \
+                 under `raw`) + rows_seen + stderr_tail. A zero-match search is returned as an \
+                 empty row set, not an error. \
+                 ERRORS: NotFound / NotRegular (verify the audit.log path inside the mounted \
+                 image), BinaryNotFound (install auditd / set $AUSEARCH_BIN — absent on the \
+                 SIFT VM by default), SubprocessFailed (ausearch returned a real error — check \
+                 stderr_tail; common cause: not an audit.log file).",
+            annotations: ToolAnnotations {
+                title: "Search Linux Audit Log (ausearch)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<AusearchInput>(),
+            handler: |args| dispatch_ausearch(args),
+        },
+        ToolEntry {
+            name: "nfdump_query",
+            description: "Read NetFlow / IPFIX / sFlow records from a captured flow file via a \
+                 FIXED `nfdump -r <flow_path> -o json` subprocess (BSD-3; subprocess-only). \
+                 INSTALL-FIRST: `nfdump` is absent on the stock SIFT VM, so an un-installed \
+                 host returns BinaryNotFound and the lane degrades honestly. POOL B exfil \
+                 triage: large outbound byte counts, beaconing to a single destination, or \
+                 connections to a known-bad IP show up in flow data without the full PCAP. \
+                 Use AFTER case_open. flow_path is the captured flow dump (nfcapd-style). \
+                 There is deliberately NO free-text filter field — nfdump's filter language \
+                 would be an injection sink — so narrow with the typed limit and filter rows \
+                 agent-side. Default limit 10000. \
+                 Returns rows[] (generic flow-record column maps, exactly as nfdump emitted \
+                 them — the column set varies with flow version), rows_seen (pre-limit), and \
+                 stderr_tail. \
+                 ERRORS: FlowNotFound / FlowNotRegular (verify the path points at a flow \
+                 file), BinaryNotFound (install via `sudo apt-get install -y nfdump` or set \
+                 $NFDUMP_BIN), SubprocessFailed (nfdump returned non-zero — check \
+                 stderr_tail; common cause: not a valid flow file), OutputParse (stdout was \
+                 not the expected JSON; rare, indicates an nfdump version mismatch).",
+            annotations: ToolAnnotations {
+                title: "Query NetFlow/IPFIX (nfdump)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<NfdumpQueryInput>(),
+            handler: |args| dispatch_nfdump_query(args),
+        },
+        ToolEntry {
+            name: "suricata_eve",
+            description: "Replay a PCAP through the Suricata network IDS via a FIXED \
+                 `suricata -r <pcap_path> -l <outdir>` subprocess (GPL-2.0; subprocess-only \
+                 per Spec #2 invariant), then read+parse the resulting eve.json. \
+                 INSTALL-FIRST: `suricata` is absent on the stock SIFT VM, so an un-installed \
+                 host returns BinaryNotFound and the lane degrades honestly. POOL B exfil + \
+                 intrusion triage: alert, flow, dns, http, tls, and fileinfo events all land \
+                 in eve.json keyed by event_type. Suricata writes into a per-call temp output \
+                 directory that is cleaned up after the events are read. \
+                 Use AFTER case_open. pcap_path is the capture to replay. Default limit \
+                 10000 events. \
+                 Returns events[] (generic eve.json event maps, exactly as Suricata emitted \
+                 them — the field set varies with event_type), events_seen (pre-limit), and \
+                 stderr_tail. \
+                 ERRORS: PcapNotFound / PcapNotRegular (verify the path points at a capture), \
+                 BinaryNotFound (install via `sudo apt-get install -y suricata` or set \
+                 $SURICATA_BIN), SubprocessFailed (Suricata returned non-zero — check \
+                 stderr_tail), NoOutput (Suricata wrote no eve.json — empty or unreadable \
+                 capture), OutputParse (an eve.json line was not valid JSON; rare, indicates \
+                 a Suricata version mismatch).",
+            annotations: ToolAnnotations {
+                title: "Run Suricata IDS (eve.json)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<SuricataEveInput>(),
+            handler: |args| dispatch_suricata_eve(args),
+        },
+        ToolEntry {
+            name: "indx_parse",
+            description: "Parse an NTFS directory-index ($I30 / INDX) stream with Willi \
+                 Ballenthin's INDXParse.py, including entries recovered from index slack \
+                 space. The $I30 stream is the canonical 'this file used to live in this \
+                 directory' artifact: even after a file is deleted and its $MFT record \
+                 reused, its INDX entry can survive in slack carrying the $FN MAC times — \
+                 an anti-forensic-deletion corroboration surface. \
+                 INSTALL-FIRST: INDXParse.py is NOT on stock SIFT; install with \
+                 `pip install INDXParse` (or `pipx install INDXParse`), which exposes the \
+                 INDXParse.py console script. When absent this tool returns BinaryNotFound \
+                 and every other tool keeps working. \
+                 Use AFTER case_open with indx_path pointing at a carved $I30 / INDX file \
+                 extracted from the image. Default limit 10000 rows. \
+                 Invocation is fixed argv `INDXParse.py <indx_path>`; with no mode flag \
+                 INDXParse.py defaults to CSV output of the dir index type. We parse its \
+                 own `,\\t`-delimited table (header + rows) into generic rows[] mapping each \
+                 column (FILENAME, PHYSICAL SIZE, LOGICAL SIZE, MODIFIED/ACCESSED/CHANGED/\
+                 CREATED TIME) to its value, plus rows_seen and stderr_tail. \
+                 Binary discovery: $INDXPARSE_BIN env var first, then PATH lookup for \
+                 INDXParse.py. \
+                 ERRORS: NotFound / NotRegular (verify the path is a carved INDX file, not \
+                 a directory), BinaryNotFound (install INDXParse or set $INDXPARSE_BIN), \
+                 SubprocessFailed (INDXParse.py returned non-zero — check stderr_tail; \
+                 the file may not be a valid INDX stream), OutputParse (no header line in \
+                 stdout; rare).",
+            annotations: ToolAnnotations {
+                title: "Parse NTFS Directory Index (INDXParse)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<IndxParseInput>(),
+            handler: |args| dispatch_indx_parse(args),
+        },
+        ToolEntry {
             name: "vel_collect",
             description: "Run a Velociraptor artifact via `velociraptor artifacts collect` and \
                  stream the resulting rows. Generic trampoline over Velociraptor's 200+ \
@@ -1127,6 +1513,180 @@ fn dispatch_vol_malfind(args: Value) -> Result<Value, ToolError> {
     }
 }
 
+fn dispatch_vol_run(args: Value) -> Result<Value, ToolError> {
+    let input: VolRunInput = parse_args(args)?;
+    // PluginNotAllowed / MemoryNotFound / MemoryNotRegular are user-input
+    // errors; surface as -32602 so the agent fixes the call rather than
+    // treating the tool as crashed.
+    match vol_run(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::VolRunError::PluginNotAllowed(_)
+            | crate::tools::VolRunError::MemoryNotFound(_)
+            | crate::tools::VolRunError::MemoryNotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("vol_run: {e}"))),
+    }
+}
+
+fn dispatch_ez_parse(args: Value) -> Result<Value, ToolError> {
+    let input: EzParseInput = parse_args(args)?;
+    // ToolNotAllowed / ArtifactNotFound are user-input errors; surface as
+    // -32602 so the agent fixes the call rather than treating it as crashed.
+    match ez_parse(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::EzParseError::ToolNotAllowed(_)
+            | crate::tools::EzParseError::ArtifactNotFound(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("ez_parse: {e}"))),
+    }
+}
+
+fn dispatch_plaso_parse(args: Value) -> Result<Value, ToolError> {
+    let input: PlasoParseInput = parse_args(args)?;
+    // ParserNotAllowed / ArtifactNotFound are user-input errors; surface as -32602.
+    match plaso_parse(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::PlasoParseError::ParserNotAllowed(_)
+            | crate::tools::PlasoParseError::ArtifactNotFound(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("plaso_parse: {e}"))),
+    }
+}
+
+fn dispatch_mac_triage(args: Value) -> Result<Value, ToolError> {
+    let input: MacTriageInput = parse_args(args)?;
+    // ModuleNotAllowed / ImageNotFound are user-input errors; surface as -32602.
+    match mac_triage(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::MacTriageError::ModuleNotAllowed(_)
+            | crate::tools::MacTriageError::ImageNotFound(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("mac_triage: {e}"))),
+    }
+}
+
+fn dispatch_cloud_audit(args: Value) -> Result<Value, ToolError> {
+    let input: CloudAuditInput = parse_args(args)?;
+    // ProviderNotAllowed / LogNotFound are user-input errors; surface as -32602.
+    match cloud_audit(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::CloudAuditError::ProviderNotAllowed(_)
+            | crate::tools::CloudAuditError::LogNotFound(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("cloud_audit: {e}"))),
+    }
+}
+
+fn dispatch_journalctl_query(args: Value) -> Result<Value, ToolError> {
+    let input: JournalctlQueryInput = parse_args(args)?;
+    // NotFound / NotRegular are user-input territory (wrong path); surface
+    // as -32602 so the agent corrects the path rather than treating the tool
+    // as crashed.
+    match journalctl_query(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::JournalctlQueryError::NotFound(_)
+            | crate::tools::JournalctlQueryError::NotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("journalctl_query: {e}"))),
+    }
+}
+
+fn dispatch_login_accounting(args: Value) -> Result<Value, ToolError> {
+    let input: LoginAccountingInput = parse_args(args)?;
+    // NotFound / NotRegular are user-input territory; surface as -32602.
+    match login_accounting(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::LoginAccountingError::NotFound(_)
+            | crate::tools::LoginAccountingError::NotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("login_accounting: {e}"))),
+    }
+}
+
+fn dispatch_ausearch(args: Value) -> Result<Value, ToolError> {
+    let input: AusearchInput = parse_args(args)?;
+    // NotFound / NotRegular are user-input territory; surface as -32602.
+    match ausearch(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::AusearchError::NotFound(_)
+            | crate::tools::AusearchError::NotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("ausearch: {e}"))),
+    }
+}
+
+fn dispatch_nfdump_query(args: Value) -> Result<Value, ToolError> {
+    let input: NfdumpQueryInput = parse_args(args)?;
+    // FlowNotFound / FlowNotRegular are user-input errors; surface as -32602
+    // so the agent corrects the path rather than treating the tool as crashed.
+    match nfdump_query(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::NfdumpQueryError::FlowNotFound(_)
+            | crate::tools::NfdumpQueryError::FlowNotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("nfdump_query: {e}"))),
+    }
+}
+
+fn dispatch_suricata_eve(args: Value) -> Result<Value, ToolError> {
+    let input: SuricataEveInput = parse_args(args)?;
+    // PcapNotFound / PcapNotRegular are user-input errors; surface as -32602.
+    match suricata_eve(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::SuricataEveError::PcapNotFound(_)
+            | crate::tools::SuricataEveError::PcapNotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("suricata_eve: {e}"))),
+    }
+}
+
+fn dispatch_indx_parse(args: Value) -> Result<Value, ToolError> {
+    let input: IndxParseInput = parse_args(args)?;
+    // NotFound / NotRegular are user-input territory (wrong path, or a
+    // directory passed in); surface as -32602 so the agent corrects the
+    // path. BinaryNotFound / SubprocessFailed / OutputParse are
+    // system-state issues → -32603.
+    match indx_parse(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::IndxError::NotFound(_) | crate::tools::IndxError::NotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("indx_parse: {e}"))),
+    }
+}
+
 fn dispatch_vel_collect(args: Value) -> Result<Value, ToolError> {
     let input: VelCollectInput = parse_args(args)?;
     // InvalidArtifactName / InvalidArgName are user-input issues; surface as -32602.
@@ -1263,6 +1823,17 @@ mod tests {
             "vol_malfind",
             "vol_psscan",
             "vol_psxview",
+            "vol_run",
+            "ez_parse",
+            "plaso_parse",
+            "mac_triage",
+            "cloud_audit",
+            "journalctl_query",
+            "login_accounting",
+            "ausearch",
+            "nfdump_query",
+            "suricata_eve",
+            "indx_parse",
             "vel_collect",
             "browser_history",
         ];

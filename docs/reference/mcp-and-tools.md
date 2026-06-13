@@ -2,19 +2,19 @@
 
 > **Status: ACTIVE.** This is the single source of truth for *which MCP servers exist*, *which
 > tools they expose*, and *what is and is not in the audit chain*. `agent-config/TOOLS.md` is
-> the agent read-order catalog of the 32 typed **product** tools; this file is the wider map
+> the agent read-order catalog of the 43 typed **product** tools; this file is the wider map
 > (every registered server + the host/browser MCP). When the two disagree, the tool *counts* in
 > both must match — fix the drift, don't pick a winner.
 
 Two numbers that look like a contradiction but aren't:
 
-- **32** = the **product tool surface** (20 Rust + 12 Python). This is the narrow, typed,
+- **43** = the **product tool surface** (31 Rust + 12 Python). This is the narrow, typed,
   audit-chained verb set the investigation runs on. It does not change lightly.
 - **6** = the number of **MCP servers actually registered in `.mcp.json`**. Only the first two
   are product-default and in the audit chain; the other four are non-product conveniences
   (operator-runtime browser/automation + the `qmd` dev-memory recall server).
 
-Neither number contradicts the other: 32 counts *product tools*, 6 counts *registered servers*.
+Neither number contradicts the other: 43 counts *product tools*, 6 counts *registered servers*.
 
 ---
 
@@ -22,7 +22,7 @@ Neither number contradicts the other: 32 counts *product tools*, 6 counts *regis
 
 | # | Server | Transport / command | Role | In audit chain? | Emits Findings? |
 |---|---|---|---|---|---|
-| 1 | `findevil-mcp` | stdio · `bash scripts/run-mcp-rust.sh` | 20 typed Rust DFIR tools | **Yes** | **Yes** |
+| 1 | `findevil-mcp` | stdio · `bash scripts/run-mcp-rust.sh` | 31 typed Rust DFIR tools | **Yes** | **Yes** |
 | 2 | `findevil-agent-mcp` | stdio · `bash scripts/run-mcp-python.sh` | 12 Python crypto / ACH / memory / ACP / expert tools | **Yes** | **Yes** |
 | 3 | `n8n-mcp` | stdio · `npx -y n8n-mcp` (`MCP_MODE=stdio`) | Post-verdict finding-to-action automation (operator-local) | No | No |
 | 4 | `playwright` | stdio · `npx -y @playwright/mcp@latest` | Browser automation / dashboard verification | No | No |
@@ -52,17 +52,31 @@ runtime from `SIFT_SSH_KEY` / `SIFT_VM_IP` / `GUEST_USER` / `GUEST_REPO_PATH`; d
 
 Per the host `~/.claude/settings.json`, a `chrome-devtools` MCP server (`cloakbrowser`) is
 registered globally and auto-spawns via `npx -y chrome-devtools-mcp`. It is used for the
-session-start "offer to open the dashboard / GitHub / report" behavior (CLAUDE.md §0). Like the
+session-start "offer to open the dashboard / GitHub / report" behavior. Like the
 operator-runtime servers, it is **not** part of the investigation surface.
 
 ---
 
-## 2. Product tools — 32 total (20 Rust + 12 Python)
+## 2. Product tools — 43 total (31 Rust + 12 Python)
 
 **Invariant: there is no `execute_shell` tool, ever.** This typed surface is the entire verb
-set the investigation has. The narrowness *is* the security pitch.
+set the investigation has. The narrowness *is* the security pitch. The five generic Rust verbs
+(`vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`, `cloud_audit`) are **allow-listed
+parameterized verbs**, not shells: the plugin/tool/module/parser/provider name is validated
+against a fixed allow-list before any argv is built, so an off-list or injection-shaped value is
+rejected with a typed error and never reaches a subprocess. The six single-purpose subprocess
+wraps (`journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`, `suricata_eve`,
+`indx_parse`) take a typed path and a fixed argv — a hostile path is one inert argv element,
+never a flag or a shell fragment.
 
-### `findevil-mcp` — 20 Rust DFIR tools (`services/mcp/src/tools/`)
+**Maturity note.** The long-tail verbs `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`,
+`cloud_audit`, `journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`,
+`suricata_eve`, and `indx_parse` are implemented as typed, allow-listed, shell-free tools and
+unit-tested against synthetic fixtures, but they have not yet been exercised on real evidence in a
+committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/YARA/
+USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
+
+### `findevil-mcp` — 31 Rust DFIR tools (`services/mcp/src/tools/`)
 
 | Tool | Purpose | Source |
 |---|---|---|
@@ -86,6 +100,17 @@ set the investigation has. The narrowness *is* the security pitch.
 | `vol_malfind` | Volatility3 `windows.malfind` (injected code, T1055) | `vol_malfind.rs` |
 | `vel_collect` | Run a Velociraptor artifact via subprocess, stream rows | `vel_collect.rs` |
 | `browser_history` | Read visited URLs from a Chrome/Edge `History` or Firefox `places.sqlite` (read-only, in-process via `rusqlite`) | `browser_history.rs` |
+| `vol_run` | Allow-listed Volatility3 plugin verb (the ~40-plugin memory tail in one tool) — `PluginNotAllowed` before argv | `vol_run.rs` |
+| `ez_parse` | Allow-listed Eric Zimmerman tool verb (LNK/JumpLists/Amcache/ShimCache/RecycleBin/shellbags/WxT) → CSV rows | `ez_parse.rs` |
+| `plaso_parse` | Allow-listed log2timeline parser verb (cross-OS text/binary logs) → normalized timeline events | `plaso_parse.rs` |
+| `mac_triage` | Allow-listed mac_apt module verb (macOS Unified Logs/FSEvents/launchd/KnowledgeC/TCC/…) | `mac_triage.rs` |
+| `cloud_audit` | Cloud/identity audit-log verb (CloudTrail/Entra/M365/GCP/k8s/VPC) — pure-Rust, normalized envelope | `cloud_audit.rs` |
+| `journalctl_query` | Binary systemd journal via `journalctl --file -o json` (Linux host) | `journalctl_query.rs` |
+| `login_accounting` | wtmp/btmp login records via `last -F -w` (Linux host; recorded remote host retained) | `login_accounting.rs` |
+| `ausearch` | Linux auditd `audit.log` via `ausearch -i -if` (install-first) | `ausearch.rs` |
+| `nfdump_query` | NetFlow/IPFIX via `nfdump -r -o json` (no free-text filter; install-first) | `nfdump_query.rs` |
+| `suricata_eve` | PCAP → Suricata `eve.json` (install-first) | `suricata_eve.rs` |
+| `indx_parse` | NTFS `$I30`/INDX slack via `INDXParse.py` (install-first) | `indx_parse.rs` |
 
 ### `findevil-agent-mcp` — 12 Python tools (`services/agent_mcp/findevil_agent_mcp/tools/`)
 

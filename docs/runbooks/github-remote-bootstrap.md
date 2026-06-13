@@ -1,9 +1,13 @@
 # GitHub remote bootstrap — runbook
 
-**Status:** open hard blocker as of 2026-04-26.  Devpost requires a
-public GitHub repo URL for submission.  This file lays out the
-decisions and commands so the bootstrap is one focused session,
-not a forensic search through `gh` docs.
+**Status:** historical bootstrap runbook, updated for the current public release repo. Devpost now points at `https://github.com/TimothyVang/verdict-dfir`, and the local `release` remote should be used for public release and PR operations. The older bootstrap steps below are retained for archaeology and for anyone recreating the setup from scratch.
+
+Current release facts:
+
+- Public repo: `TimothyVang/verdict-dfir`
+- Local release remote: `release`
+- Existing public submission tag/release: `v-submit`
+- Do not delete, retarget, or force-update `v-submit` unless the release workflows and gates have been explicitly re-verified.
 
 ---
 
@@ -80,9 +84,9 @@ gh run list --limit 5
 
 ---
 
-## Pre-v-submit checklist
+## Pre-v-submit checklist (historical)
 
-When you're ready to submit:
+When recreating the original submission flow from a new repo:
 
 ```bash
 # 1. Make the repo public if it was private.
@@ -105,6 +109,16 @@ gh release download v-submit --pattern find-evil-submission.zip
 # 5. Upload that zip to Devpost manually.
 ```
 
+For the current repo, prefer:
+
+```bash
+git remote -v                       # confirm release points at TimothyVang/verdict-dfir
+gh repo view TimothyVang/verdict-dfir
+gh release view v-submit --repo TimothyVang/verdict-dfir
+```
+
+Only cut or refresh release assets after confirming the workflow registrations and required gates for the exact target commit. If refreshing through a branch, push to the `release` remote and open a PR in `TimothyVang/verdict-dfir`; do not use `origin` for public release work unless it points at the canonical release repo.
+
 ---
 
 ## What can go wrong
@@ -121,7 +135,7 @@ gh release download v-submit --pattern find-evil-submission.zip
   `git status --ignored` shows what would be committed.
 * **L0 or L1 fail on first push.**  Most likely cause: a
   toolchain mismatch with the GHA runner (Rust 1.88 / Python
-  3.11).  See CLAUDE.md "Spec/code divergences" §1 + §3 for
+  3.11).  See `docs/divergences-resolved.md` for
   pinning context.  The amendment-a2-guard job specifically
   fails if the dropped pre-A2 modules are committed —
   `git ls-files services/agent/findevil_agent/{cli,graph,api,
@@ -134,12 +148,4 @@ gh release download v-submit --pattern find-evil-submission.zip
 
 ## Recommendation framing
 
-Pick **option 3 (private-then-public)** unless you're not
-worried about competitor recon.  The protection only matters
-during the build window — at v-submit, the repo flips public
-and competitors can see whatever they want.
-
-For repo name, **`find-evil`** matches the project's identity
-across every doc + script in this repo.  Renaming later is
-cheap with `gh repo rename` but the project keeps internal
-consistency only if the GH name matches what's documented.
+For new forks, pick a repo name that matches the public product (`verdict-dfir`) unless there is a concrete reason to preserve the older `find-evil` name. Internal script and package names still use `findevil` / `find-evil`; that is expected and not a release-blocking mismatch.

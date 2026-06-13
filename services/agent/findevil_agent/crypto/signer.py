@@ -1,23 +1,16 @@
-"""Sigstore-keyless signing of MCP tool calls + findings.
+"""Manifest signer implementations.
 
-Spec #2 §7.1 third tier. Per the design memo
-``project_crypto_custody_stack.md``, every tool-call envelope is
-JCS-canonicalized and signed via sigstore-python's keyless flow:
+The custody stack signs the canonicalized run manifest after the
+hash-chained audit log and Merkle root are built. The default signer is
+``LocalEd25519Signer``: a real local keypair whose signature verifies
+offline from data embedded in ``run.manifest.json``. ``SigstoreSigner`` is
+the customer-release identity/transparency tier when an OIDC token and
+network access are available. ``StubSigner`` is explicit test/demo fallback
+only and never cryptographic proof.
 
-  1. Acquire ONE ephemeral Fulcio cert per run (OIDC handshake).
-  2. Submit per-call signatures to Rekor in async batches.
-  3. The Sigstore bundle (cert + signature + Rekor inclusion proof)
-     is appended to ``audit.jsonl`` next to the audit record itself.
-
-Per-call latency is dominated by the Rekor round-trip; with batched
-submission + a single Fulcio handshake per run the steady-state
-overhead is sub-50ms per call.
-
-This module is structured so the agent never depends on the
-sigstore library at *type* level — the abstract ``Signer`` protocol
-keeps tests fast and fully offline. Production code instantiates
-``SigstoreSigner`` (which imports sigstore lazily); tests use
-``StubSigner`` which produces a deterministic placeholder bundle.
+This module is structured so the agent never depends on the sigstore
+library at import time — the abstract ``Signer`` protocol keeps tests fast
+and fully offline, and Sigstore imports lazily only when requested.
 """
 
 from __future__ import annotations
@@ -33,33 +26,34 @@ from typing import Any, Protocol
 
 @dataclass(frozen=True)
 class SignedBundle:
-    """The minimal structure both real + stub signers produce.
+    """The minimal structure all signers produce.
 
-    For real Sigstore output, ``raw_bundle_json`` is the verbatim
-    Sigstore Bundle JSON serialization (per the Sigstore Bundle
-    spec). For the stub, it's a compact deterministic JSON that the
-    integration tests can assert against.
+    For Sigstore output, ``raw_bundle_json`` is the verbatim Sigstore Bundle
+    JSON serialization. For Ed25519, it is a compact JSON object containing
+    the public key and signature. For the stub, it is deterministic placeholder
+    JSON that integration tests can assert against.
     """
 
     payload_sha256: str
     """SHA-256 hex of the JCS-canonicalized payload bytes."""
 
     bundle_b64: str
-    """Base64-encoded Sigstore bundle JSON, ready for embedding in
-    ``audit.jsonl`` rows."""
+    """Base64-encoded signer bundle JSON, ready for embedding in the
+    manifest."""
 
     cert_fingerprint: str
-    """SHA-256 hex of the issuing certificate. Stub uses a
-    placeholder string."""
+    """SHA-256 hex of the Sigstore certificate or Ed25519 public key. Stub
+    uses a placeholder string."""
 
     signed_at: str
     """UTC ISO-8601Z."""
 
     kind: str = "stub"
-    """Which signer produced this bundle: ``"sigstore"`` (real keyless
-    Fulcio/Rekor proof) or ``"stub"`` (deterministic dev/offline
-    placeholder). Recorded in the manifest so a verifier can tell a real
-    proof from a placeholder without reaching into the bundle."""
+    """Which signer produced this bundle: ``"ed25519"`` (offline-verifiable
+    local signature), ``"sigstore"`` (keyless Fulcio/Rekor proof), or
+    ``"stub"`` (deterministic dev/offline placeholder). Recorded in the
+    manifest so a verifier can tell a real proof from a placeholder without
+    reaching into the bundle."""
 
     fallback_reason: str | None = None
     """Set when a sigstore attempt failed and the run honestly degraded to
@@ -145,8 +139,8 @@ class StubSigner:
     Produces a bundle that's structurally similar to a real Sigstore
     bundle (so downstream parsing code exercises the same shape) but
     contains no real cryptographic signature. ``audit.jsonl`` rows
-    written under StubSigner declare ``"sigstore_bundle_kind":
-    "stub"`` so verifiers refuse to accept them as production proof.
+    written under StubSigner declare ``kind="stub"`` in the manifest
+    signature bundle so verifiers refuse to accept them as production proof.
     """
 
     def __init__(self, *, run_id: str = "stub-run") -> None:

@@ -3,7 +3,7 @@
   "version": "6.2.1",
   "released": "2026-06-02",
   "qmd_index": "verdict-memory",
-  "qmd_context": "VERDICT DFIR project memory vault (SANS Find Evil! submission). Dev/operator knowledge for the VERDICT forensic agent: DFIR tradecraft and Tier-1 artifact caveats (Amcache != execution, ShimCache ordering, Logon Type 3 vs 10) in brain/Gotchas.md; architecture and amendment decisions (A1-A6, code-wins-over-spec, no execute_shell, the 32 typed MCP tools, the 3-tier crypto chain) in brain/Key Decisions.md; investigation/build patterns in brain/Patterns.md; repo scripts and slash commands in brain/Skills.md; repo + architecture maps in reference/. This vault is the project's persistent memory layer; it is NEVER evidence, NEVER in the case audit chain, and NEVER emits a Finding. Multi-agent (Claude Code) with lifecycle hooks and QMD semantic search.",
+  "qmd_context": "VERDICT DFIR project memory vault (SANS Find Evil! submission). Dev/operator knowledge for the VERDICT forensic agent: DFIR tradecraft and Tier-1 artifact caveats (Amcache != execution, ShimCache ordering, Logon Type 3 vs 10) in brain/Gotchas.md; architecture and amendment decisions (A1-A6, code-wins-over-spec, no execute_shell, the 43 typed MCP tools, the 3-tier crypto chain) in brain/Key Decisions.md; investigation/build patterns in brain/Patterns.md; repo scripts and slash commands in brain/Skills.md; repo + architecture maps in reference/. This vault is the project's persistent memory layer; it is NEVER evidence, NEVER in the case audit chain, and NEVER emits a Finding. Multi-agent (Claude Code) with lifecycle hooks and QMD semantic search.",
   "infrastructure": [
     "CLAUDE.md",
     "AGENTS.md",

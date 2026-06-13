@@ -43,6 +43,26 @@ pub enum ArtifactKind {
     Registry,
     Evtx,
     YaraTarget,
+    Amcache,
+    Srum,
+    Lnk,
+    Jumplist,
+    ScheduledTask,
+    Recyclebin,
+    RegTxlog,
+    BrowserDb,
+    LegacyEvt,
+    IeHistory,
+    Thumbnail,
+    LinuxAccount,
+    LinuxLog,
+    LinuxShellHistory,
+    LinuxSsh,
+    LinuxCron,
+    MacosUnifiedlog,
+    MacosActivity,
+    MacosLaunchd,
+    MacosFsevents,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
@@ -919,7 +939,33 @@ fn class_priority(class: &str) -> u8 {
         "prefetch" => 2,
         "usnjrnl" => 3,
         "evtx" => 4,
-        _ => 5,
+        // Decoded execution / persistence / anti-forensic inputs — high value,
+        // drawn after the filesystem/registry/EVTX core but before the generic
+        // yara content sweep.
+        "amcache" => 5,
+        "srum" => 6,
+        "lnk" => 7,
+        "jumplist" => 8,
+        "scheduled_task" => 9,
+        "recyclebin" => 10,
+        "reg_txlog" => 11,
+        "browser_db" => 12,
+        "legacy_evt" => 13,
+        "ie_history" => 14,
+        "thumbnail" => 15,
+        // Linux + macOS auto-extracted classes.
+        "linux_account" => 16,
+        "linux_log" => 17,
+        "linux_shell_history" => 18,
+        "linux_ssh" => 19,
+        "linux_cron" => 20,
+        "macos_unifiedlog" => 21,
+        "macos_activity" => 22,
+        "macos_launchd" => 23,
+        "macos_fsevents" => 24,
+        // Generic content sweep is always last.
+        "yara_target" => 50,
+        _ => 99,
     }
 }
 
@@ -1078,23 +1124,119 @@ fn safe_join(base: &Path, rel: &str) -> PathBuf {
     dest
 }
 
+/// Map a carved file path to a forensic class. Order matters: OS-specific
+/// classes are tried before the generic Windows content sweep, so a macOS
+/// `Library/...` path or a Linux `/var/log/...` path wins over the `users/`
+/// catch-all. Split per-OS to keep each branch's complexity bounded.
 fn classify_artifact_path(rel: &str) -> Option<&'static str> {
     let rel = rel.replace('\\', "/").to_ascii_lowercase();
     let name = rel.rsplit('/').next().unwrap_or(rel.as_str());
+    classify_windows_specific(name, &rel)
+        .or_else(|| classify_linux(name, &rel))
+        .or_else(|| classify_macos(name, &rel))
+        .or_else(|| classify_windows_generic(&rel))
+}
+
+/// Windows filesystem + registry + decoded execution/persistence/anti-forensic
+/// inputs. These feed the typed downstream wrappers (`ez_parse`, `plaso_parse`).
+fn classify_windows_specific(name: &str, rel: &str) -> Option<&'static str> {
     if name == "$mft" || name == "mft" {
         Some("mft")
     } else if name == "$j" || rel.contains("$usnjrnl") || has_extension(name, "usn") {
         Some("usnjrnl")
     } else if has_extension(name, "pf") {
         Some("prefetch")
+    } else if name == "amcache.hve" {
+        Some("amcache")
+    } else if name == "srudb.dat" {
+        Some("srum")
     } else if matches!(
         name,
         "software" | "system" | "sam" | "security" | "ntuser.dat" | "usrclass.dat"
     ) {
         Some("registry")
+    } else if has_extension(name, "log1") || has_extension(name, "log2") {
+        // NTFS registry transaction logs (dirty-hive replay), e.g. SYSTEM.LOG1.
+        Some("reg_txlog")
     } else if has_extension(name, "evtx") {
         Some("evtx")
-    } else if rel.starts_with("users/")
+    } else if has_extension(name, "lnk") {
+        Some("lnk")
+    } else if name.ends_with(".automaticdestinations-ms")
+        || name.ends_with(".customdestinations-ms")
+    {
+        Some("jumplist")
+    } else if (name.starts_with("$i") && rel.contains("$recycle.bin"))
+        || (name == "info2" && (rel.starts_with("recycler/") || rel.contains("/recycler/")))
+    {
+        Some("recyclebin")
+    } else if has_extension(name, "evt") {
+        Some("legacy_evt")
+    } else if name == "index.dat"
+        && (rel.contains("/history.ie5/") || rel.contains("/temporary internet files/"))
+    {
+        Some("ie_history")
+    } else if name == "thumbs.db" || name.ends_with(".thumbcache") {
+        Some("thumbnail")
+    } else if rel.contains("/system32/tasks/") || rel.starts_with("windows/system32/tasks/") {
+        Some("scheduled_task")
+    } else if matches!(
+        name,
+        "history" | "places.sqlite" | "web data" | "cookies" | "login data"
+    ) {
+        Some("browser_db")
+    } else {
+        None
+    }
+}
+
+/// Linux host classes. `matches_filesystem_description` already accepts
+/// linux/ext, so TSK reads these — this makes them auto-extract.
+fn classify_linux(name: &str, rel: &str) -> Option<&'static str> {
+    if (rel.starts_with("etc/") || rel.contains("/etc/"))
+        && matches!(name, "passwd" | "shadow" | "group" | "sudoers")
+    {
+        Some("linux_account")
+    } else if rel.starts_with("var/log/") || rel.contains("/var/log/") {
+        Some("linux_log")
+    } else if matches!(name, ".bash_history" | ".zsh_history" | ".python_history") {
+        Some("linux_shell_history")
+    } else if rel.contains("/.ssh/authorized_keys")
+        || rel.contains("/.ssh/known_hosts")
+        || rel.starts_with(".ssh/authorized_keys")
+    {
+        Some("linux_ssh")
+    } else if rel.contains("var/spool/cron")
+        || rel.starts_with("etc/cron")
+        || rel.contains("/etc/cron")
+    {
+        Some("linux_cron")
+    } else {
+        None
+    }
+}
+
+/// macOS host classes.
+fn classify_macos(name: &str, rel: &str) -> Option<&'static str> {
+    if has_extension(name, "tracev3") {
+        Some("macos_unifiedlog")
+    } else if matches!(name, "knowledgec.db" | "tcc.db")
+        || name.starts_with("com.apple.launchservices.quarantineevents")
+    {
+        Some("macos_activity")
+    } else if rel.contains("library/launchagents/") || rel.contains("library/launchdaemons/") {
+        Some("macos_launchd")
+    } else if rel.contains(".fseventsd/") {
+        Some("macos_fsevents")
+    } else {
+        None
+    }
+}
+
+/// Generic Windows content sweep — the yara catch-all. Kept last so specific
+/// OS classes always win over the `users/`/`programdata/` directory match.
+fn classify_windows_generic(rel: &str) -> Option<&'static str> {
+    if rel.starts_with("users/")
         || rel.contains("/users/")
         || rel.starts_with("programdata/")
         || rel.contains("/programdata/")
@@ -1117,6 +1259,26 @@ fn wanted_kinds(kinds: &[ArtifactKind]) -> BTreeMap<&'static str, bool> {
             "registry",
             "evtx",
             "yara_target",
+            "amcache",
+            "srum",
+            "lnk",
+            "jumplist",
+            "scheduled_task",
+            "recyclebin",
+            "reg_txlog",
+            "browser_db",
+            "legacy_evt",
+            "ie_history",
+            "thumbnail",
+            "linux_account",
+            "linux_log",
+            "linux_shell_history",
+            "linux_ssh",
+            "linux_cron",
+            "macos_unifiedlog",
+            "macos_activity",
+            "macos_launchd",
+            "macos_fsevents",
         ]
     } else {
         kinds
@@ -1128,6 +1290,26 @@ fn wanted_kinds(kinds: &[ArtifactKind]) -> BTreeMap<&'static str, bool> {
                 ArtifactKind::Registry => "registry",
                 ArtifactKind::Evtx => "evtx",
                 ArtifactKind::YaraTarget => "yara_target",
+                ArtifactKind::Amcache => "amcache",
+                ArtifactKind::Srum => "srum",
+                ArtifactKind::Lnk => "lnk",
+                ArtifactKind::Jumplist => "jumplist",
+                ArtifactKind::ScheduledTask => "scheduled_task",
+                ArtifactKind::Recyclebin => "recyclebin",
+                ArtifactKind::RegTxlog => "reg_txlog",
+                ArtifactKind::BrowserDb => "browser_db",
+                ArtifactKind::LegacyEvt => "legacy_evt",
+                ArtifactKind::IeHistory => "ie_history",
+                ArtifactKind::Thumbnail => "thumbnail",
+                ArtifactKind::LinuxAccount => "linux_account",
+                ArtifactKind::LinuxLog => "linux_log",
+                ArtifactKind::LinuxShellHistory => "linux_shell_history",
+                ArtifactKind::LinuxSsh => "linux_ssh",
+                ArtifactKind::LinuxCron => "linux_cron",
+                ArtifactKind::MacosUnifiedlog => "macos_unifiedlog",
+                ArtifactKind::MacosActivity => "macos_activity",
+                ArtifactKind::MacosLaunchd => "macos_launchd",
+                ArtifactKind::MacosFsevents => "macos_fsevents",
             })
             .collect()
     };
@@ -1226,6 +1408,7 @@ mod tests {
     use super::{
         artifact_subrank, class_priority, classify_artifact_path, mock_list, parse_fls_line,
         parse_mmls_first_partition_offset, safe_join, select_artifacts, unmount_steps,
+        wanted_kinds,
     };
     use std::path::Path;
 
@@ -1343,6 +1526,144 @@ mod tests {
     }
 
     #[test]
+    fn classify_artifact_path_matches_extended_classes() {
+        // Windows decoded-execution / persistence / anti-forensic inputs the
+        // carve list must hand to the downstream typed wrappers (ez_parse,
+        // plaso_parse). Without these the extractor never produces an
+        // Amcache.hve / SRUDB.dat / LNK / JumpList / Tasks XML to parse.
+        assert_eq!(
+            classify_artifact_path("Windows/appcompat/Programs/Amcache.hve"),
+            Some("amcache")
+        );
+        assert_eq!(
+            classify_artifact_path("Windows/System32/sru/SRUDB.dat"),
+            Some("srum")
+        );
+        assert_eq!(
+            classify_artifact_path("Users/bob/AppData/Roaming/Microsoft/Windows/Recent/evil.lnk"),
+            Some("lnk")
+        );
+        assert_eq!(
+            classify_artifact_path("RECYCLER/S-1-5-21-1000/INFO2"),
+            Some("recyclebin")
+        );
+        assert_eq!(
+            classify_artifact_path("Windows/System32/config/SecEvent.Evt"),
+            Some("legacy_evt")
+        );
+        assert_eq!(
+            classify_artifact_path(
+                "Documents and Settings/Mr. Evil/Local Settings/History/History.IE5/index.dat"
+            ),
+            Some("ie_history")
+        );
+        assert_eq!(
+            classify_artifact_path("Documents and Settings/Mr. Evil/My Documents/Thumbs.db"),
+            Some("thumbnail")
+        );
+        assert_eq!(
+            classify_artifact_path(
+                "Users/bob/AppData/Local/Microsoft/Windows/Explorer/thumbcache_256.thumbcache"
+            ),
+            Some("thumbnail")
+        );
+        assert_eq!(
+            classify_artifact_path(
+                "Users/bob/AppData/Roaming/Microsoft/Windows/Recent/\
+                 AutomaticDestinations/1b4dd67f29cb1962.automaticDestinations-ms"
+            ),
+            Some("jumplist")
+        );
+        assert_eq!(
+            classify_artifact_path("Windows/System32/Tasks/EvilPersist"),
+            Some("scheduled_task")
+        );
+        assert_eq!(
+            classify_artifact_path("$Recycle.Bin/S-1-5-21-1004/$IABC123.txt"),
+            Some("recyclebin")
+        );
+        assert_eq!(
+            classify_artifact_path("Windows/System32/config/SYSTEM.LOG1"),
+            Some("reg_txlog")
+        );
+        assert_eq!(
+            classify_artifact_path(
+                "Users/bob/AppData/Local/Google/Chrome/User Data/Default/History"
+            ),
+            Some("browser_db")
+        );
+        // A bare SYSTEM hive still classifies as registry, not reg_txlog.
+        assert_eq!(
+            classify_artifact_path("Windows/System32/config/SYSTEM"),
+            Some("registry")
+        );
+
+        // Linux: OS-aware auto-classification. matches_filesystem_description
+        // already accepts linux/ext, so TSK reads these — now they auto-extract.
+        assert_eq!(classify_artifact_path("etc/passwd"), Some("linux_account"));
+        assert_eq!(
+            classify_artifact_path("var/log/auth.log"),
+            Some("linux_log")
+        );
+        assert_eq!(
+            classify_artifact_path("home/bob/.bash_history"),
+            Some("linux_shell_history")
+        );
+        assert_eq!(
+            classify_artifact_path("home/bob/.ssh/authorized_keys"),
+            Some("linux_ssh")
+        );
+        assert_eq!(
+            classify_artifact_path("var/spool/cron/crontabs/root"),
+            Some("linux_cron")
+        );
+
+        // macOS
+        assert_eq!(
+            classify_artifact_path("private/var/db/diagnostics/Persist/0000.tracev3"),
+            Some("macos_unifiedlog")
+        );
+        assert_eq!(
+            classify_artifact_path("Users/bob/Library/Application Support/Knowledge/knowledgeC.db"),
+            Some("macos_activity")
+        );
+        assert_eq!(
+            classify_artifact_path("Library/LaunchDaemons/com.evil.plist"),
+            Some("macos_launchd")
+        );
+        assert_eq!(
+            classify_artifact_path(".fseventsd/0000000000abcd12"),
+            Some("macos_fsevents")
+        );
+    }
+
+    #[test]
+    fn wanted_kinds_default_includes_extended_classes() {
+        // Default extraction (empty artifact_kinds) must carve the new classes,
+        // or the downstream wrappers never receive disk-image input.
+        let wanted = wanted_kinds(&[]);
+        for class in [
+            "mft",
+            "registry",
+            "amcache",
+            "srum",
+            "lnk",
+            "jumplist",
+            "scheduled_task",
+            "recyclebin",
+            "reg_txlog",
+            "browser_db",
+            "legacy_evt",
+            "ie_history",
+            "thumbnail",
+            "linux_log",
+            "macos_unifiedlog",
+        ] {
+            assert!(wanted.contains_key(class), "default set missing {class}");
+        }
+    }
+
+    #[test]
     fn class_priority_orders_high_value_before_yara() {
         assert!(class_priority("mft") < class_priority("registry"));
         assert!(class_priority("registry") < class_priority("prefetch"));
@@ -1444,12 +1765,20 @@ mod tests {
     #[test]
     fn unmount_steps_ewf_plus_ntfs_releases_loop_then_container() {
         let mp = Path::new("/m");
-        let steps = unmount_steps(mp, &mp.join("fs"), "umount");
+        let fs_dir = mp.join("fs");
+        let ewf_dir = mp.join("ewf");
+        let steps = unmount_steps(mp, &fs_dir, "umount");
         assert_eq!(
             steps,
             vec![
-                ("umount".to_string(), vec!["/m/fs".to_string()]),
-                ("umount".to_string(), vec!["/m/ewf".to_string()]),
+                (
+                    "umount".to_string(),
+                    vec![fs_dir.to_string_lossy().to_string()]
+                ),
+                (
+                    "umount".to_string(),
+                    vec![ewf_dir.to_string_lossy().to_string()]
+                ),
             ]
         );
     }
@@ -1457,10 +1786,14 @@ mod tests {
     #[test]
     fn unmount_steps_ewf_only_releases_container() {
         let mp = Path::new("/m");
-        let steps = unmount_steps(mp, &mp.join("ewf"), "umount");
+        let ewf_dir = mp.join("ewf");
+        let steps = unmount_steps(mp, &ewf_dir, "umount");
         assert_eq!(
             steps,
-            vec![("umount".to_string(), vec!["/m/ewf".to_string()])]
+            vec![(
+                "umount".to_string(),
+                vec![ewf_dir.to_string_lossy().to_string()]
+            )]
         );
     }
 
@@ -1468,7 +1801,10 @@ mod tests {
     fn unmount_steps_raw_umounts_the_mount_point() {
         let mp = Path::new("/m");
         let steps = unmount_steps(mp, mp, "umount");
-        assert_eq!(steps, vec![("umount".to_string(), vec!["/m".to_string()])]);
+        assert_eq!(
+            steps,
+            vec![("umount".to_string(), vec![mp.to_string_lossy().to_string()])]
+        );
     }
 
     #[test]

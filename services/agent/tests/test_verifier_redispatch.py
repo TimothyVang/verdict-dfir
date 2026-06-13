@@ -148,10 +148,24 @@ def test_persistent_rejection_capped_at_one_redispatch() -> None:
     assert [a["action"] for a in actions] == ["rejected"]
     assert len(inv.verifier_replay_failures) == 1
     assert inv.verifier_redispatches["f-02"]["recovered"] is False
+    assert len(inv.verifier_rejected_leads) == 1
+    lead = inv.verifier_rejected_leads[0]
+    assert lead["finding_id"] == "f-02"
+    assert lead["tool_call_id"] == "tc-f-02"
+    assert lead["description"] == "d-f-02"
+    assert lead["verifier_action"] == "rejected"
+    assert lead["verifier_reason"] == "tool re-run failed (replay_error)"
+    assert lead["replay_matched"] is False
+    assert lead["replay_error"] == "tool re-run failed (replay_error)"
+    assert lead["replay_record_sha256"]
+    assert lead["verdict_effect"] == "excluded_from_final_findings"
+    assert lead["analyst_action"].startswith("Inspect this as a rejected lead")
 
     corrections = [p for k, p in py.audits if k == "course_correction"]
     assert len(corrections) == 1
     assert corrections[0]["failed_tool"] == "verify_finding"
+    rejected_leads = [p for k, p in py.audits if k == "verifier_rejected_lead"]
+    assert rejected_leads == inv.verifier_rejected_leads
 
 
 def test_citation_veto_is_not_redispatched() -> None:

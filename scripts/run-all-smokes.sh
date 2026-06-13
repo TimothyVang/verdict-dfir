@@ -75,7 +75,7 @@ echo "=========================================="
 
 # 1. Rust MCP server end-to-end.
 run_smoke \
-    "rust-mcp-smoke (20-tool dispatch + error paths)" \
+    "rust-mcp-smoke (31-tool catalog + core error paths)" \
     "python3 scripts/rust-mcp-smoke.py --release" \
     '[ -x "${CARGO_TARGET_DIR:-target}/release/findevil-mcp" ] || [ -x "${CARGO_TARGET_DIR:-target}/release/findevil-mcp.exe" ]'
 
@@ -106,7 +106,7 @@ run_smoke \
 # and skips cleanly outside environments that can launch PowerShell.
 run_smoke \
     "readiness-gate-smoke (PacketOnly packaging + fail-closed blockers)" \
-    "python3 scripts/readiness-gate-smoke.py" \
+    "uv run --directory services/agent python ../../scripts/readiness-gate-smoke.py" \
     "command -v uv && (command -v powershell || command -v pwsh)"
 
 # 5. demo-script-a2.md structural lock.
@@ -133,7 +133,13 @@ run_smoke \
     "path-existence-smoke (every backtick-quoted path resolves to a real file/dir)" \
     "python3 scripts/path-existence-smoke.py"
 
-# 8b. install.sh --bootstrap contract — opt-in prereq install stays gated and the
+# 8b. Trace-finding tamper detection — verdict and manifest edits after finalize
+#     must break offline tracing.
+run_smoke \
+    "trace-finding-smoke (reject post-finalize verdict/manifest tampering)" \
+    "python3 scripts/trace-finding-smoke.py"
+
+# 8c. install.sh --bootstrap contract — opt-in prereq install stays gated and the
 #     default path stays fail-closed on a missing toolchain.
 run_smoke \
     "install-bootstrap-smoke (--bootstrap gated; default stays fail-closed)" \
@@ -213,6 +219,7 @@ echo "${c_red}FAIL${c_off} - ${passed} passed, ${skipped} skipped, ${failed} fai
 echo "The CI-equivalent gate runs via docker/l1-compose.yml. If a smoke"
 echo "fails locally and passes in Docker/CI, check toolchain versions:"
 echo "  cargo build --release -p findevil-mcp  (Rust 1.88 per rust-toolchain.toml)"
+echo "  uv sync --directory services/agent --extra dev (Python 3.11 in services/agent)"
 echo "  uv sync --directory services/agent_mcp --extra dev (Python 3.11 in services/agent_mcp)"
 echo "=========================================="
 exit 1

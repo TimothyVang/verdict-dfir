@@ -206,12 +206,13 @@ def fig_audit_chain(
     )
 
     sig_sha = manifest["signature"]["payload_sha256"]
+    sig_kind = str(manifest["signature"].get("kind") or "stub")
     box(
         2,
         0.2,
         6,
         0.7,
-        f"run.manifest.json (signed via sigstore StubSigner)\n"
+        f"run.manifest.json (signature tier: {sig_kind})\n"
         f"signature_payload_sha256: {sig_sha[:32]}…",
         color="#e8f5e9",
         border="#7fae6e",
@@ -826,6 +827,66 @@ def build_readiness_section(
     )
 
 
+def build_coverage_manifest_section(coverage_manifest: dict[str, Any] | None) -> str:
+    if not coverage_manifest:
+        return ""
+    summary = coverage_manifest.get("summary") or {}
+    rows = [
+        "| Artifact Class | Status | Available | Attempted | Parsed | Failed | Unsupported | Not Supplied | Parse Errors | Records Seen | Rows Returned | Tools |",
+        "|---|---|:---:|:---:|:---:|:---:|:---:|:---:|---:|---:|---:|---|",
+    ]
+    for row in coverage_manifest.get("artifact_classes", []):
+        rows.append(
+            "| {artifact_class} | `{status}` | {available} | {attempted} | {parsed} | {failed} | {unsupported} | {not_supplied} | {parse_errors} | {records_seen} | {rows_returned} | `{tools}` |".format(
+                artifact_class=md_cell(row.get("artifact_class", "?")),
+                status=md_cell(row.get("status", "")),
+                available="yes" if row.get("available") else "no",
+                attempted="yes" if row.get("attempted") else "no",
+                parsed="yes" if row.get("parsed") else "no",
+                failed="yes" if row.get("failed") else "no",
+                unsupported="yes" if row.get("unsupported") else "no",
+                not_supplied="yes" if row.get("not_supplied") else "no",
+                parse_errors=md_cell(row.get("parse_errors", 0)),
+                records_seen=md_cell(row.get("records_seen", 0)),
+                rows_returned=md_cell(row.get("rows_returned", 0)),
+                tools=md_cell(row.get("tools_attempted", [])),
+            )
+        )
+    status_counts = summary.get("status_counts", {})
+    unsupported_samples: list[str] = []
+    for row in coverage_manifest.get("artifact_classes", []):
+        if not isinstance(row, dict) or not row.get("unsupported"):
+            continue
+        for sample in row.get("sample_paths") or []:
+            if len(unsupported_samples) >= 20:
+                break
+            if sample:
+                unsupported_samples.append(str(sample))
+    unsupported_samples_section = ""
+    if unsupported_samples:
+        unsupported_samples_section = (
+            "\n### Unsupported Artifact Samples\n\n"
+            "These paths were inventoried or observed but no typed parser processed "
+            "them in this run.\n\n"
+            + "\n".join(f"* `{md_cell(sample)}`" for sample in unsupported_samples)
+            + "\n\n"
+        )
+    return (
+        "\n## Coverage Manifest\n\n"
+        f"{md_cell(coverage_manifest.get('truth_boundary', ''))}\n\n"
+        "This table is the explicit anti-overclaim record for the run. "
+        "`not_supplied`, `unsupported`, `failed`, and `partial` rows are scope gaps, not clean findings.\n\n"
+        f"* Artifact classes recorded: `{summary.get('artifact_classes_recorded', 0)}`\n"
+        f"* Attempted: `{summary.get('attempted', 0)}`; parsed: `{summary.get('parsed', 0)}`; failed: `{summary.get('failed', 0)}`\n"
+        f"* Unsupported: `{summary.get('unsupported', 0)}`; not supplied: `{summary.get('not_supplied', 0)}`\n"
+        f"* ATT&CK blind spots: `{summary.get('attack_blind_spot_count', 0)}`\n"
+        f"* Status counts: `{md_cell(status_counts)}`\n\n"
+        + "\n".join(rows)
+        + "\n\n"
+        + unsupported_samples_section
+    )
+
+
 # ---------------------------------------------------------------------------
 # Native HTML/CSS figures — authored as bespoke, VERDICT-themed markup and
 # injected into REPORT.html post-pandoc (see _inject_figures). Vector-crisp,
@@ -1408,6 +1469,7 @@ def write_markdown(
     has_psscan: bool,
     audit: list[dict[str, Any]] | None = None,
     completeness: dict[str, Any] | None = None,
+    coverage_manifest: dict[str, Any] | None = None,
     attack_coverage: dict[str, Any] | None = None,
     next_actions: list[dict[str, Any]] | None = None,
     timeline: list[dict[str, Any]] | None = None,
@@ -1430,6 +1492,7 @@ def write_markdown(
     has_attack_story_fig: bool = False,
     has_process_view_fig: bool = False,
     has_entity_timeline_fig: bool = False,
+    rejected_finding_leads: list[dict[str, Any]] | None = None,
     host_groups: list[dict[str, Any]] | None = None,
 ) -> Path:
     md = case_dir / "REPORT.md"
@@ -1604,6 +1667,45 @@ def write_markdown(
             "the audited output hash. They do not change Track 3b severity policy.\n\n"
             + "\n".join(replay_rows)
             + "\n"
+        )
+
+    rejected_leads = [
+        lead for lead in (rejected_finding_leads or []) if isinstance(lead, dict)
+    ]
+    rejected_leads_section = ""
+    if rejected_leads:
+        rows = [
+            "| Finding | Tool Call | Confidence | MITRE | Description | Verifier Reason | Effect | Analyst Action |",
+            "|---|---|---|---|---|---|---|---|",
+        ]
+        for lead in rejected_leads[:20]:
+            rows.append(
+                "| {finding} | `{tool}` | `{confidence}` | `{mitre}` | {description} | "
+                "{reason} | `{effect}` | {action} |".format(
+                    finding=md_cell(lead.get("finding_id", "")),
+                    tool=md_cell(lead.get("tool_call_id", "")),
+                    confidence=md_cell(lead.get("confidence", "")),
+                    mitre=md_cell(lead.get("mitre_technique", "") or "n/a"),
+                    description=md_cell(lead.get("description", "")),
+                    reason=md_cell(lead.get("verifier_reason", "")),
+                    effect=md_cell(
+                        lead.get("verdict_effect", "excluded_from_final_findings")
+                    ),
+                    action=md_cell(lead.get("analyst_action", "")),
+                )
+            )
+        omitted = ""
+        if len(rejected_leads) > 20:
+            omitted = (
+                f"\n\n*{len(rejected_leads) - 20} additional rejected lead(s) are "
+                "recorded in `verdict.json`.*"
+            )
+        rejected_leads_section = (
+            "\n## Verifier-Rejected Leads\n\n"
+            "These entries failed verifier replay after re-dispatch and are preserved "
+            "for analyst review only. They are excluded from final Findings, do not "
+            "support the verdict, and must not be treated as evidence unless replay "
+            "succeeds in a later run.\n\n" + "\n".join(rows) + omitted + "\n\n"
         )
 
     psscan_fig_block = ""
@@ -1821,6 +1923,7 @@ def write_markdown(
     )
     cast_section = build_cast_of_characters_section(entity_index)
     indicators_section = build_indicators_section(indicators)
+    coverage_manifest_section = build_coverage_manifest_section(coverage_manifest)
 
     visual_section = ""
     if evidence_cards:
@@ -1890,7 +1993,7 @@ def write_markdown(
 
 # VERDICT — Forensic Investigation Report
 
-[DFIR at machine speed · sigstore-signed chain of custody]{{.tagline}}
+[DFIR at machine speed · signed, replayable chain of custody]{{.tagline}}
 
 **Case ID:** `{manifest["case_id"]}`
 **Run ID:** `{manifest["run_id"]}`
@@ -1932,9 +2035,13 @@ chain-of-custody appendices.
 * **Contradictions surfaced (Pool A vs Pool B):** {contras}
 * **SOUL.md correlator:** {kept} kept, {downgraded} downgraded
 
+{coverage_manifest_section}
+
 ## Detailed Findings
 
 {findings_section}
+
+{rejected_leads_section}
 
 {beats_section}
 
@@ -1983,15 +2090,16 @@ library or the `manifest_verify` MCP tool. There is no standalone
 
 ```bash
 uv run --directory services/agent python -c "from pathlib import Path; from findevil_agent.crypto.manifest import verify_manifest; print(verify_manifest(Path('PATH/TO/run.manifest.json'), audit_log_path=Path('PATH/TO/audit.jsonl')))"
-# returns overall=True if the audit chain and Merkle root validate and signature metadata is present
+# returns overall=True if the audit chain, Merkle root, leaf count, and signature presence validate
 ```
 
 The verifier rebuilds:
 1. The audit chain by walking `prev_hash` SHA-256 links (catches backdated edits).
 2. The Merkle tree from the manifest's `leaves[]` array (catches selective redaction).
-3. The signature bundle metadata recorded in the manifest. Full signature and
-   transparency-log validation must be performed separately when a production
-   signer is used.
+3. The signature bundle recorded in the manifest. Ed25519 signatures verify
+   offline in `manifest_verify`; Sigstore bundles are recorded for
+   identity-policy-aware verification by a party that supplies the expected
+   signer identity.
 
 A tamper test against this manifest's `merkle_root_hex` was not run automatically.
 To execute it, copy the manifest, overwrite `merkle_root_hex` with `ff` repeated
@@ -2321,6 +2429,17 @@ def render_report(
         except json.JSONDecodeError:
             final_release_gate = {}
 
+    coverage_manifest = verdict_obj.get("coverage_manifest", {})
+    if not coverage_manifest:
+        coverage_manifest_path = case_dir / "coverage_manifest.json"
+        if coverage_manifest_path.exists():
+            try:
+                loaded = json.loads(coverage_manifest_path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    coverage_manifest = loaded
+            except json.JSONDecodeError:
+                coverage_manifest = {}
+
     practitioner_coverage = verdict_obj.get("attck_practitioner_coverage", {})
     has_process_view_fig = fig_process_view_comparison(
         verdict_obj.get("tool_calls", []),
@@ -2390,6 +2509,7 @@ def render_report(
         has_psscan,
         audit=audit,
         completeness=verdict_obj.get("case_completeness", {}),
+        coverage_manifest=coverage_manifest,
         attack_coverage=verdict_obj.get("attack_coverage", {}),
         next_actions=verdict_obj.get("next_actions", []),
         timeline=timeline,
@@ -2412,6 +2532,7 @@ def render_report(
         has_attack_story_fig=has_attack_story_fig,
         has_process_view_fig=has_process_view_fig,
         has_entity_timeline_fig=has_entity_timeline_fig,
+        rejected_finding_leads=verdict_obj.get("rejected_finding_leads", []),
         host_groups=verdict_obj.get("host_groups", []),
     )
     html, pdf = render_html_pdf(md, figures=figures_html)

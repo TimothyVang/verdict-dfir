@@ -10,14 +10,14 @@ Three tiers, each independently testable and composable:
     n) inclusion proofs that ``verify_manifest`` (this module's
     own ``verify_manifest`` re-export, also exposed via the
     ``manifest_verify`` MCP tool in ``services/agent_mcp``) replays.
-  * ``signer``   — sigstore-python keyless signing over each
-    JCS-canonicalized tool-call/finding/manifest. Rekor inclusion
-    proof goes in the Sigstore bundle.
+  * ``signer``   — Ed25519/Sigstore/stub signer tiers over the
+    JCS-canonicalized manifest body. Ed25519 verifies offline by
+    default; Sigstore is the identity + transparency-log tier; stub is
+    an explicit dev placeholder.
 
 The OpenTimestamps + Bitcoin anchoring tier was removed in
-Amendment A5; design rationale + downstream doc updates are
-tracked there. The other doc-surface references to a 4-tier /
-5-link chain are stale until that amendment lands.
+Amendment A5; design rationale and the current trade-off live in
+``docs/cryptographic-attestation.md``.
 
 See ``docs/specs/2026-04-25-the-product-design.md`` §7
 and ``memory/project_crypto_custody_stack.md`` for the original

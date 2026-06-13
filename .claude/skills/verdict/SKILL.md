@@ -1,105 +1,115 @@
 ---
 name: verdict
-description: Turnkey end-to-end DFIR — type /verdict <evidence> and it bootstraps everything (builds the MCP servers, prepares the SIFT VM) then runs the full pipeline with no flags. Use when the operator says /verdict, "run verdict", "investigate <path> end to end", "is there evil here", or wants the whole investigation + automation + report in one go. Auto-selects the SIFT VM (full forensic toolchain) so disk images fully extract, attempts post-verdict n8n + grounding automation, and surfaces the Verdict + every workflow that ran.
+description: Run VERDICT DFIR end to end from Claude Code. Use when the operator says /verdict, run verdict, investigate evidence end to end, is there evil here, or wants a signed Verdict and report. The skill verifies setup, uses SIFT mode when available, falls back honestly when it is not, and reports dashboard/report paths without treating optional automation as evidence.
 ---
 
-# VERDICT — turnkey one-shot DFIR + a unified "what ran" report
+# VERDICT DFIR
 
-The operator types `/verdict <evidence>` (or just `/verdict`) and gets the **whole** pipeline
-with no setup and no flags: this skill bootstraps the environment, auto-uses the SIFT VM so disk
-images actually extract, runs the parallel investigation to a signed Verdict, attempts the
-post-verdict n8n + grounding automation (skipped unless the operator has deployed the workflows),
-and shows the dashboard + report — then reports everything that fired.
+Use this skill to run the public VERDICT workflow from Claude Code. It is a guided entrypoint over the repository scripts and MCP tools; it is not a second product path.
 
-## Safety rules (do not violate)
+## Safety Rules
 
-- **Evidence is read-only.** Never mutate the evidence; the pipeline opens it read-only.
-- **Never cross the memory/automation boundary.** n8n automation and the grounding sidecar
-  are post-verdict, operator-side aids — never evidence, never a Finding, never in the
-  hash-chained audit chain. Read their sidecars to *report* them; never treat them as
-  evidence.
-- **Do not change the MCP surface** or add broad MCP servers.
-- Use DFIR vocabulary: **Case**, **Finding**, **Verdict**, **Confidence**.
+- Evidence is read-only. Never mutate source evidence, mounted evidence, or original Case files.
+- Every Finding must cite a current-case `tool_call_id`.
+- Run `verify_finding` for each Finding and record each verifier decision with `pool_handoff` before `judge_findings` consumes the Findings.
+- `report_qa` must be audited before `manifest_finalize`; a failed or missing report QA gate blocks customer-ready output and requires expert review.
+- Optional n8n, grounding, browser, dashboard, and memory sidecars are operator aids only. They are never evidence and never create Findings.
+- Do not assert attribution, actor identity, legal breach status, or business impact.
+- Do not inflate limited coverage to `NO_EVIL`, clean, cleared, no compromise, or proof of no evil.
+- Disk images are content-scoped: local Sleuth Kit/libewf or SIFT can extract supported artifacts for parsing; if mount/extract produces no supported artifacts, the raw image remains custody-only.
+- If the pipeline stops before `case_open`, no Verdict exists. Report the failing line instead of summarizing evidence.
 
 ## Steps
 
-### 1. Resolve the evidence
-- If the operator gave a path, use it. Otherwise use the newest file in `evidence/`
-  (the launcher does this for you when no path is passed).
+### 1. Resolve Evidence
 
-### 2. Bootstrap everything (no manual installs, no flags for the operator)
-- Run `bash scripts/verdict-setup.sh` and read its two stdout lines:
-  `FIND_EVIL_GUEST_IP=<ip>` and `SIFT_OK=<0|1>`.
-- It builds the MCP servers (via `install.sh`) if missing and prepares the
-  SIFT VM — resolves its **current** DHCP IP (the hardcoded default is often stale), powers it
-  on if it is off, and confirms the forensic toolchain (`ewfmount` etc.). The SIFT VM is where
-  Volatility/Hayabusa/ewfmount/TSK live pre-installed, so this is how "install everything" is
-  satisfied without installing forensic binaries on the host. (n8n is **not** brought up on the
-  default path — it is used only if already running; `FINDEVIL_ENABLE_N8N=1` starts one.)
-- Surface its progress lines to the operator. It is non-fatal: n8n is optional and off the
-  default path, so its automation is normally skipped; a missing VM falls back to local mode.
+If the operator supplied a path, use that exact path. If no path was supplied, use `scripts/verdict --watch` and ask the operator to drop evidence into `evidence/`.
 
-### 3. Run the full pipeline — auto-SIFT, parallel, n8n + grounding, all in one go
-The operator types only `/verdict <evidence>`; **this skill adds the right flags.**
-- If `SIFT_OK=1`, run:
-  `FIND_EVIL_GUEST_IP=<ip> bash scripts/verdict <evidence> --sift`
-  → DFIR tools run **in the SIFT VM** (the only way to fully extract a disk image) → signed
-  verdict + manifest → **n8n + grounding automation attempted** (skipped unless deployed) → dashboard + report.
-- If `SIFT_OK=0` (no reachable VM), run `bash scripts/verdict <evidence>` locally and tell the
-  operator a **disk image is custody-only** without the VM (memory/EVTX/network still work if
-  their tools are present).
-- Parallel is the **default** (`--workers 2`); pass `--no-parallel` only to force serial, and
-  `--no-dashboard` only if the operator does not want the browser opened.
-- Stream the launcher's stage output — it prints when n8n posts and when grounding is
-  written/skipped; surface those as they happen.
+Do not choose between multiple unrelated evidence files silently.
 
-### 4. Locate the Case outputs
-- Read `tmp/verdict-last-run.json` to get the `case_id` / case directory.
-- The Case dir is `tmp/auto-runs/<case-id>/`. Read whichever of these exist:
-  - `verdict.json` — the Verdict, confidence, findings, tool-call count.
-  - `manifest_verify.json` — `overall` must be `true` (offline-verifiable custody).
-  - `automation.json` — the n8n finding-to-action result (workflow name, reachability).
-  - `grounding.json` — the grounding research (claims researched, sources).
+### 2. Preflight And Setup
 
-### 5. Print ONE unified status block
-Summarize, in this shape:
+Run the setup helper first:
 
-```
-Verdict   : <SUSPICIOUS | INDETERMINATE | NO_EVIL>  (confidence <…>)
-Findings  : <N>  (each citing a tool_call_id)  ·  tool calls: <N>
-Custody   : manifest_verify.overall = <true|false>
-Automation: n8n <fired: workflow <name> | skipped (no workflow deployed / n8n down)>  →  automation.json
-Grounding : <K claims researched | skipped>  →  grounding.json
-Case      : tmp/auto-runs/<case-id>/   ·   REPORT.html / REPORT.pdf
+```bash
+bash scripts/verdict-setup.sh
 ```
 
-- Be honest about coverage: an `INDETERMINATE` on a custody-only or thin Case is a correct,
-  honest result — never inflate it to `NO_EVIL`/"safe".
+Read its output, especially:
 
-### 6. Show the dashboard AND the report at the end
-Unless the operator passed `--no-dashboard`, surface both:
-- **Dashboard:** `scripts/verdict` already auto-opens the live dashboard deep-linked to
-  the Case (`http://localhost:3000/?case=<case-dir>`). If it did not open (headless, or
-  the dev server was slow), open it via the browser MCP
-  (`mcp__playwright__browser_navigate`).
-- **Report:** open the generated `REPORT.html` from the Case dir
-  (`tmp/auto-runs/<case-id>/REPORT.html`) via the browser MCP so the operator sees the
-  full analyst report, not just the status block. (`REPORT.pdf` is alongside it.)
-- Always also print the paths — dashboard URL, `REPORT.html`/`REPORT.pdf`, `verdict.json`
-  — so they are reachable even when no browser MCP is wired.
-- If `--no-dashboard` was passed, skip opening but still print the paths.
+```text
+FIND_EVIL_GUEST_IP=<ip>
+SIFT_OK=<0|1>
+```
+
+This helper builds missing MCP servers through `scripts/install.sh`, checks optional n8n/grounding availability, and attempts SIFT VM discovery when possible. Missing optional automation is non-fatal. Missing core runtime dependencies must be reported plainly.
+
+### 3. Run The Case
+
+If `SIFT_OK=1`, run SIFT mode:
+
+```bash
+FIND_EVIL_GUEST_IP=<ip> bash scripts/verdict <evidence> --sift
+```
+
+If `SIFT_OK=0`, run local mode:
+
+```bash
+bash scripts/verdict <evidence>
+```
+
+In local mode, state the scope honestly: memory, EVTX, PCAP, Velociraptor collections, and extracted artifacts can still be useful; raw disk images need local Sleuth Kit/libewf support to produce parsed artifacts, and remain custody-only if mount/extract fails or yields no supported artifacts.
+
+Use default parallel execution. Pass `--no-dashboard` only when the operator explicitly does not want browser/dashboard behavior.
+
+### 4. Locate Case Outputs
+
+Read `tmp/verdict-last-run.json` if it exists, then inspect the referenced Case directory under:
+
+```text
+tmp/auto-runs/<case-id>/
+```
+
+Read the relevant outputs when present:
+
+- `verdict.json` - Verdict, confidence, Findings, and coverage.
+- `manifest_verify.json` - custody verification; `overall` must be `true` for a completed manifest.
+- `coverage_manifest.json` - artifact classes available, attempted, parsed, failed, unsupported, or not supplied.
+- `automation.json` - optional post-verdict workflow status.
+- `grounding.json` - optional post-verdict claim-grounding status.
+
+### 5. Report One Status Block
+
+If `manifest_verify.json` is missing or `overall` is not `true`, report `RUN INCOMPLETE / CUSTODY INVALID`, do not describe the output as signed, and do not present Findings as valid until custody is fixed.
+
+Otherwise use this shape:
+
+```text
+Verdict   : <SUSPICIOUS | INDETERMINATE | NO_EVIL> (confidence <value>)
+Findings  : <N> (all Findings cite tool_call_id: <yes|no>)
+Custody   : manifest_verify.overall = true
+Coverage  : <short scope statement from coverage_manifest/verdict limitations>
+Automation: n8n <fired | skipped | unavailable> -> automation.json if present
+Grounding : <claims researched | skipped | unavailable> -> grounding.json if present
+Case      : tmp/auto-runs/<case-id>/
+Report    : REPORT.html / REPORT.pdf if present
+```
+
+If any Finding lacks `tool_call_id`, call that out as invalid instead of presenting it as a valid Finding.
+
+### 6. Open Dashboard And Report When Available
+
+If a browser MCP is available and `--no-dashboard` was not requested, open:
+
+- Dashboard URL printed by `scripts/verdict`, usually `http://localhost:3000/?case=<case-dir>`.
+- `tmp/auto-runs/<case-id>/REPORT.html`.
+
+Always print paths even when a browser cannot be opened.
 
 ## Notes
-- `--sift` runs the DFIR tools inside the SANS SIFT VM over SSH (needed for full disk
-  extraction — local mode can only mount the EWF container, not the inner volume). The
-  post-verdict n8n automation + grounding are attempted in `--sift` mode too (host-side, after the
-  case dir syncs back), so `--sift` gives you the full pipeline in one go.
-- **Automation is opt-in.** Out of the box no n8n finding-to-action workflow is deployed
-  (`setup-n8n.py` provisions only an owner + API key), so `automation.json` reads
-  `skipped` / `n8n_reachable: false` unless the operator deploys a workflow (e.g.
-  `scripts/setup-grounding-workflow.py`). Report it honestly — never say automation "fired"
-  when the sidecar says it was skipped.
-- The SIFT VM IP default (`192.168.197.143`) can be stale; if `--sift` can't reach the VM,
-  set `FIND_EVIL_GUEST_IP` to the current IP (e.g. via `vmrun getGuestIPAddress`).
-- If `scripts/verdict` stops before `case_open`, report the exact failing line — do not
-  claim a Verdict that was not produced.
+
+- `scripts/verdict <evidence>` is the canonical one-shot product launcher.
+- `scripts/find-evil` or `claude` plus `investigate <path>` is the interactive path.
+- SIFT mode is recommended for disk images because it supplies the forensic workstation baseline for read-only mount and extraction.
+- n8n and grounding are opt-in operator workflow layers. Report whether they ran, but never use them as evidence or confidence boosters.
+- A scoped `INDETERMINATE` is an honest result when coverage is thin. Do not convert it into reassurance.

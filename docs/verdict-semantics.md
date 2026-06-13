@@ -75,7 +75,7 @@ type detected as `unknown`), upgrade the manual triage —
 `NO_EVIL` from a one-tool run is meaningless. The `findings_summary`
 field in `verdict.json` includes the by_confidence breakdown
 ({CONFIRMED: 0, INFERRED: 0, HYPOTHESIS: 0, total: 0} for a scoped
-NO_EVIL); a `total: 0` with `agent: "find-evil-auto"` and a
+NO_EVIL); a `total: 0` produced by `scripts/verdict` with a
 healthy audit chain (≥6 records) is stronger scoped coverage, not
 proof that unexamined evidence is benign.
 
@@ -113,6 +113,11 @@ without changing the top-line verdict policy:
 
 - `case_completeness` records which artifact classes were available
   and touched in the current run.
+- `coverage_manifest` records the explicit parser boundary per artifact
+  class: `available`, `attempted`, `parsed`, `failed`, `unsupported`,
+  `not_supplied`, `parse_errors`, `records_seen`, and `rows_returned`.
+  If a parser/tool did not extract an artifact class, VERDICT cannot
+  reason over it; this object is the first place to check that scope.
 - `attack_coverage` maps typed-tool output to ATT&CK target
   techniques. `covered_no_finding` means limited scoped coverage,
   not clean, cleared, disproven, or absence of evidence.
@@ -135,14 +140,21 @@ without changing the top-line verdict policy:
   existing typed outputs. It is triage-only: it does not identify who
   operated code, prove execution, or upgrade a Finding without
   corroboration.
+- `rejected_finding_leads` preserves Findings that failed verifier
+  replay after the one allowed re-dispatch. These are
+  non-evidentiary analyst-review leads, explicitly marked
+  `excluded_from_final_findings`; they do not reach the judge,
+  final Findings, or verdict policy until replay succeeds.
 - `analysis_limitations` records material scope gaps, such as disk
   auto mode registering a disk image without mounting or parsing
   filesystem artifacts.
 
-Auto disk mode is deliberately custody-only today. A disk-only auto
-run that only performs `case_open` cannot support `NO_EVIL`; it should
-return `INDETERMINATE` with an analysis limitation instead of a
-placeholder Finding.
+Auto disk mode is content-scoped. A disk-only auto run that only
+performs `case_open` remains custody-only and cannot support `NO_EVIL`;
+it should return `INDETERMINATE` with an analysis limitation instead of
+a placeholder Finding. Disk-content Findings require supported parsed
+artifacts from `disk_mount` / `disk_extract_artifacts`, either locally
+through Sleuth Kit/libewf or under SIFT.
 
 ## Triage flow
 

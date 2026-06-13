@@ -1,6 +1,6 @@
 # `docs/release-evidence/` — release-validation evidence
 
-This directory holds small, reviewable evidence summaries that explain what the release workflows validated.
+This directory holds small, reviewable evidence summaries that explain what the release workflows validated. The current file records the historical `v-submit` release boundary; it is not proof that later post-tag commits have passed a refreshed release gate.
 
 ## Files
 
@@ -17,6 +17,7 @@ This is intentionally narrow:
 - It does not contain raw evidence, disk images, reports, or case artifacts.
 - It records hashes and gate outcomes only.
 - It preserves the truth boundary: the packet is `READY_FOR_EXPERT_REVIEW`, not customer-releasable.
+- It does not mutate or refresh the GitHub `v-submit` release asset set.
 
 Validator:
 

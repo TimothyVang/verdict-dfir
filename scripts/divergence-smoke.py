@@ -25,7 +25,7 @@ The divergences (matching CLAUDE.md "Spec/code divergences"):
   §1  Rust 1.83 -> 1.88                bad: rust:1.83-bookworm
   §2  Cargo.lock committed             declarative; nothing to scan
   §3  findevil_agent.cli dropped (A2)  bad: python -m findevil_agent.cli
-  §4  Rust MCP tool count is 20        bad: "11 typed Rust" / "12 typed Rust"
+  §4  Rust MCP tool count is 31        bad: stale 11/12/20 Rust or 32-tool count
   §5  rmcp not a runtime dep           bad: live `rmcp = "=...` (uncommented)
   §7  A3 MemoryStore phrase-quote      doc-only; no shipped wrong-pattern
   §8  A3 audit push: SSE not WebSocket bad: "ws": "..." dep in apps/web pkg
@@ -66,6 +66,11 @@ EXCLUDED_PATH_PARTS = (
     ".venv",
     "__pycache__",
     ".git",
+    # Claude Code subagent worktrees created under the project-local
+    # .claude directory. These are ignored runtime checkouts, not part
+    # of the active publication tree, and can legitimately contain
+    # stale text from the branch they were created from.
+    "worktrees",
     # Sibling worktrees from `git worktree add .worktrees/<name>` —
     # checked-out copies of feature branches living under the repo
     # root. .gitignore'd at /.worktrees/ but git rglob still finds
@@ -189,17 +194,27 @@ DIVERGENCES = [
     },
     {
         "id": "#4",
-        "label": "Rust MCP tool count is 20 (vol_psscan + vol_psxview added for DKOM)",
+        "label": "Rust MCP tool count is 31 (long-tail typed wrappers included)",
         "regex": re.compile(
             r"(?:1[12]\s+typed\s+Rust|"
             r"1[12]\s+DFIR\s+tools|"
+            r"1[23]\s+typed\s+Rust\s+MCP\s+tools|"
+            r"1[239]-tool\s+(?:dispatch|catalog|surface)|"
+            r"20\s+(?:typed\s+)?(?:Rust|DFIR)(?:\s+(?:DFIR\s+)?tools|\s+primitives)?|"
+            r"20-tool\s+(?:dispatch|catalog|surface)|"
+            r"20/20\s+shipped|"
+            r"twenty\s+real\s+forensic\s+tools\s+in\s+Rust|"
+            r"\b32\s+(?:narrow,\s+schema-validated\s+|typed,\s+read-only\s+|typed\s+read-only\s+)?(?:product\s+)?tools\b|"
+            r"\b32-tool\s+surface\b|"
+            r"\b32-tool\s+(?:typed\s+)?product\b|"
+            r"\b32-tool\s+count\b|"
             r"all\s+1[12]\s+Rust|"
             r"findevil-mcp.*?\(1[12]\s+(?:typed|DFIR|tools))"
         ),
         "allowed_in_path": (),
         "remediation": (
-            "vol_psscan and vol_psxview are shipped for DKOM "
-            "cross-validation against vol_pslist. Tool count is 20. "
+            "The current product surface is 43 tools: 31 Rust DFIR "
+            "tools plus 12 Python crypto/ACH/memory/ACP/expert tools. "
             "See CLAUDE.md 'Spec/code divergences' §4."
         ),
     },
@@ -331,6 +346,29 @@ _MCP_JSON_REQUIRED_SERVERS = frozenset({"findevil-mcp", "findevil-agent-mcp"})
 _MCP_JSON_ALLOWED_NONPRODUCT_SERVERS = frozenset(
     {"n8n-mcp", "playwright", "puppeteer", "qmd"}
 )
+_MCP_DOC_FORBIDDEN_PHRASES = (
+    (Path("CLAUDE.md"), "Two MCP servers registered in `.mcp.json`"),
+    (
+        Path("AGENTS.md"),
+        ".mcp.json` is the canonical local MCP config: `findevil-mcp` via `cargo run",
+    ),
+)
+_MCP_DOC_FORBIDDEN_REGEXES = (
+    re.compile(r"Find Evil ships two MCP servers in `\.mcp\.json`", re.IGNORECASE),
+    re.compile(
+        r"`?\.mcp\.json`?[^.\n]{0,90}\b(?:registers|ships|contains|has)\b"
+        r"[^.\n]{0,90}\btwo\s+(?:typed\s+)?MCP servers\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"This mirrors `\.mcp\.json` and does not require tokens\.",
+        re.IGNORECASE,
+    ),
+)
+_MCP_DOC_SCAN_EXCLUDED_PREFIXES = (
+    "docs/plans/",
+    "docs/specs/",
+)
 
 
 def _check_mcp_json_surface() -> list[str]:
@@ -380,6 +418,41 @@ def _check_mcp_json_surface() -> list[str]:
                 issues.append(
                     f".mcp.json server '{name}' contains forbidden token '{token}' "
                     f"in command/args — gateway/shell pass-through is not permitted"
+                )
+    return issues
+
+
+def _check_mcp_json_doc_wording(files: list[Path]) -> list[str]:
+    issues = []
+    for rel_path, phrase in _MCP_DOC_FORBIDDEN_PHRASES:
+        path = REPO / rel_path
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if phrase in text:
+            issues.append(
+                f"{rel_path.as_posix()} still uses stale .mcp.json wording: {phrase!r}"
+            )
+    for path in files:
+        rel = path.relative_to(REPO).as_posix()
+        if rel in ALLOWED_FILES:
+            continue
+        if _path_is_allowed(rel, ()):
+            continue
+        if any(rel.startswith(prefix) for prefix in _MCP_DOC_SCAN_EXCLUDED_PREFIXES):
+            continue
+        if path.suffix.lower() not in {".md", ".txt", ".py", ".yml", ".yaml"}:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for regex in _MCP_DOC_FORBIDDEN_REGEXES:
+            for match in regex.finditer(text):
+                line_no = text[: match.start()].count("\n") + 1
+                line = text.splitlines()[line_no - 1].strip()
+                issues.append(
+                    f"{rel}:{line_no} implies .mcp.json has only two servers: {line!r}"
                 )
     return issues
 
@@ -435,19 +508,42 @@ def main() -> int:
     mcp_issues = _check_mcp_json_surface()
     if mcp_issues:
         print(
-            "[FAIL] #10  .mcp.json locked to two typed servers, no gateway/shell drift"
+            "[FAIL] #10  .mcp.json locks product servers plus documented non-product servers"
         )
         for issue in mcp_issues:
             print(f"         {issue}")
         print(
-            "         remediation: .mcp.json must contain exactly findevil-mcp and "
-            "findevil-agent-mcp with no protocol-sift, sift-gateway, execute_shell, "
-            "bash -c, fetch, or browser tokens in command/args."
+            "         remediation: .mcp.json must contain findevil-mcp, "
+            "findevil-agent-mcp, and only the documented non-product servers; product "
+            "server command/args must not contain protocol-sift, sift-gateway, "
+            "execute_shell, bash -c, fetch, or browser tokens."
         )
         failed += 1
     else:
         print(
-            "[OK  ] #10  .mcp.json locked to two typed servers, no gateway/shell drift"
+            "[OK  ] #10  .mcp.json locks product servers plus documented non-product servers"
+        )
+
+    # Documentation check: active guidance must not imply .mcp.json has only
+    # the two product servers. That stale wording obscures the product vs.
+    # non-product boundary and causes avoidable judge-review confusion.
+    total_checks += 1
+    mcp_doc_issues = _check_mcp_json_doc_wording(files)
+    if mcp_doc_issues:
+        print(
+            "[FAIL] #11  active docs distinguish registered servers from product tools"
+        )
+        for issue in mcp_doc_issues:
+            print(f"         {issue}")
+        print(
+            "         remediation: active guidance must say .mcp.json has 6 registered "
+            "servers total, with only findevil-mcp and findevil-agent-mcp in the "
+            "audit-chained product surface."
+        )
+        failed += 1
+    else:
+        print(
+            "[OK  ] #11  active docs distinguish registered servers from product tools"
         )
 
     print()

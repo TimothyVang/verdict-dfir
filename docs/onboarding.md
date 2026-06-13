@@ -1,6 +1,6 @@
 # Session-Start Onboarding (VERDICT)
 
-This doc holds the verbatim onboarding behavior referenced by `CLAUDE.md` §0. Read it when
+This doc holds the onboarding behavior referenced by `CLAUDE.md` "Required Setup". Read it when
 a session triggers onboarding: the user's first message is `help`, `hello`, `hi`, or they
 ask "what can you do" / "how do I use this" / "what is this", **or** a preflight check fails.
 
@@ -16,7 +16,7 @@ of the triggers above, greet them with:
 > You can do two things here:
 >
 > 1. **Investigate evidence** — paste a path to your evidence file and say `investigate <path>`. Example: `investigate /cases/nist-hacking-case.E01`
->    VERDICT will open the case, fork two analysis pools, run DFIR tools, and produce a sigstore-signed report. Or run it hands-free: `scripts/verdict <path>` (or `scripts/verdict --watch` and drop a file into `evidence/`).
+>    VERDICT will open the case, fork two analysis pools, run DFIR tools, and produce a signed, replayable report. Or run it hands-free: `scripts/verdict <path>` (or `scripts/verdict --watch` and drop a file into `evidence/`).
 >
 > 2. **Develop the tool** — ask me to read/write code, fix bugs, or run a live test (the demo video has its own pipeline).
 >
@@ -175,7 +175,7 @@ investigate <path>          Run a full DFIR investigation against evidence
 scripts/verdict <path>           Live-test the app end-to-end on your evidence (the real check)
 scripts/verdict --watch          Drop a file into evidence/ and auto-run when the copy finishes
 bash scripts/run-all-smokes.sh   (optional) Local CI predictor — what L1 runs; NOT a live test
-bash scripts/find-evil-auto <evidence>   Headless end-to-end run
+scripts/verdict <path> --no-dashboard --unattended  Non-interactive no-dashboard run
 bash scripts/make-demo-video.sh  Generate the demo video (needs edge-tts + pnpm)
 pnpm --filter @findevil/web dev  Start the live audit dashboard at localhost:3000
 

@@ -27,7 +27,7 @@ class TestTreeBasics:
         t = MerkleTree()
         leaf = sha(b"only")
         t.append(leaf)
-        # With a single leaf, the "Bitcoin-style duplication" at tier 0
+        # With a single leaf, the duplicate-last rule at tier 0
         # hashes H(leaf || leaf). We test both: either the leaf itself
         # or H(leaf||leaf) is valid depending on the spec variant. Our
         # impl goes into the while-loop only when len(tier) > 1; with

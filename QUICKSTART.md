@@ -8,13 +8,13 @@ For the project pitch + claims, see [README.md](README.md). For the full doc map
 
 ```bash
 git clone --depth 1 https://github.com/TimothyVang/verdict-dfir.git verdict && cd verdict
-bash scripts/setup                    # installs EVERYTHING: toolchain + all DFIR tools + Playwright + both MCP servers, then runs doctor
+bash scripts/setup                    # installs the product toolchain, common DFIR tools, browser helpers, and both MCP servers, then runs doctor
 scripts/verdict <path-to-evidence>    # investigate -> live dashboard -> signed verdict + report
 ```
 
 **Prefer to drive it with Claude Code?** Drop your evidence into **`evidence/`**, open `claude`, and
-type **`investigate evidence/`**. (Or hands-free in a session: `/verdict <path>` does the whole thing
-and also fetches + builds the SANS SIFT VM via the browser.)
+type **`investigate evidence/`**. (Or hands-free in a session: `/verdict <path>` runs the pipeline
+and attempts SIFT VM setup when disk evidence needs it.)
 
 No evidence yet? `bash scripts/fetch-fixtures.sh` stages public datasets (into `fixtures/`).
 Canonical install detail — prerequisites and how to verify — is in [INSTALL.md](INSTALL.md).
@@ -28,8 +28,8 @@ run-mode catalog.
 
 ### Path A — SIFT VM (recommended; matches the SANS judging environment)
 
-**The one-command way** — install everything, fetch the gated OVA headlessly via Playwright, and
-build the VM:
+**The one-command way** — install local prerequisites, attempt the gated OVA fetch via Playwright,
+and build the VM when the download succeeds:
 
 ```bash
 bash scripts/setup --with-sift
@@ -54,7 +54,7 @@ bash scripts/sift-vm-bootstrap.sh
 
 This converts the OVA, boots the VM headless, installs Rust + DFIR tools inside, sets up the SSH transport, and rewrites `.mcp.json.sift` to point at the running VM. Runs ~15 min on first invocation; subsequent runs detect existing state and skip.
 
-> **Hypervisor note:** `scripts/find-evil-sift` is VMware-only today (uses `vmrun.exe`); a VirtualBox path is stubbed but not implemented (see `scripts/find-evil-sift` lines 10–12). If you only have VirtualBox, use Path B.
+> **Hypervisor note:** `scripts/verdict <path> --sift` invokes the SIFT helper under the hood. The helper is VMware-only today (uses `vmrun.exe`); a VirtualBox path is stubbed but not implemented (see `scripts/find-evil-sift` lines 10–12). If you only have VirtualBox, use Path B.
 
 ### Path B — Local Windows host (faster iteration)
 
@@ -80,11 +80,10 @@ The shortest path. In a Claude Code session (`claude` in the repo), type:
 /verdict <path-to-evidence>
 ```
 
-The skill does **everything** with no flags and no manual installs: it bootstraps the MCP servers
-+ n8n + the SANS SIFT VM, auto-uses `--sift` so disk images fully extract, runs the parallel
-investigation to a signed Verdict, fires the n8n automation + grounding workflows, opens the
-dashboard + report, and prints the Verdict + every workflow that ran. You never run
-`install.sh`/`doctor.sh` or type `--sift`. Full reference:
+The skill is the turnkey path: it checks/builds the MCP servers, attempts SIFT VM setup when disk
+evidence needs it, auto-uses `--sift` when the VM is reachable, runs the parallel investigation to
+a signed Verdict, attempts optional n8n/grounding workflows only when enabled or already available,
+opens the dashboard + report, and prints the Verdict plus the workflow status. Full reference:
 [docs/using/running-verdict.md §0](docs/using/running-verdict.md). (Loaded at session start — if you
 just pulled it, start a fresh `claude` session.)
 
@@ -96,11 +95,11 @@ scripts/find-evil
 # or:
 claude
 
-# SIFT-VM mode:
-bash scripts/find-evil-sift
+# SIFT-VM evidence run:
+scripts/verdict <path-to-evidence> --sift
 ```
 
-`.mcp.json` (or `.mcp.json.sift`, swapped automatically) tells Claude Code to spawn both MCP servers — `findevil-mcp` (Rust, 20 typed DFIR tools) and `findevil-agent-mcp` (Python, 12 typed crypto/ACH/memory/ACP/expert-feedback tools).
+`.mcp.json` (or `.mcp.json.sift`, swapped automatically) tells Claude Code to spawn both MCP servers — `findevil-mcp` (Rust, 31 typed DFIR tools) and `findevil-agent-mcp` (Python, 12 typed crypto/ACH/memory/ACP/expert-feedback tools).
 
 In the session, prompt:
 
@@ -126,7 +125,7 @@ scripts/verdict --sift /mnt/hgfs/evidence/extracted/base-dc/base-dc-memory.img -
 # Single EVTX:
 scripts/verdict --sift /home/sansforensics/find-evil/fixtures/single-evtx/Security.evtx --unattended
 
-# Disk image (read-only mount/extract where SIFT supports it; otherwise custody-only):
+# Disk image (read-only mount/extract where prerequisites support it; otherwise custody-only):
 scripts/verdict --sift /mnt/hgfs/evidence/disk-images/base-dc-cdrive.E01 --unattended
 
 # Mixed case directory (memory, EVTX, disk artifacts, network logs, Velociraptor zips):
@@ -143,7 +142,7 @@ What it does in one command (no interactive prompts):
 
 1. Detects evidence type from the file extension or inventories a mixed case directory
 2. Opens both MCP servers inside the SIFT VM via SSH stdio
-3. case_open or case inventory → tool sequence per type → audit chain → judge → correlator → manifest_finalize. Raw disk image support is bounded: auto mode attempts read-only mount/extract where SIFT supports it, otherwise it records custody-only limitations and next actions.
+3. case_open or case inventory -> tool sequence per type -> audit chain -> judge -> correlator -> manifest_finalize. Raw disk image support is bounded: auto mode attempts read-only mount/extract through local Sleuth Kit/libewf or SIFT, otherwise it records custody-only limitations and next actions.
 4. Synthesizes Pool A (persistence-biased) and Pool B (exfil-biased) findings deterministically from tool outputs
 5. Writes `verdict.json` with the verdict (`SUSPICIOUS` / `NO_EVIL` / `INDETERMINATE` — see [`docs/verdict-semantics.md`](docs/verdict-semantics.md)), case completeness, ATT&CK/practitioner coverage, normalized timeline data, evidence-card data, source bibliography, and next analyst actions
 6. Generates a fully-templated PDF investigation report (figures + findings + ATT&CK/practitioner coverage + timeline + visual evidence cards + source bibliography + chain-of-custody attestation)
@@ -164,7 +163,7 @@ tmp/auto-runs/auto-<uuid>/
 └── figures/
 ```
 
-`run-summary.json` is written wherever you pass `--run-summary`; it is not copied into the case directory unless you choose a path there.
+`run-summary.json` is written wherever you pass `--run-summary`; it is not copied into the case directory unless you choose a path there. `scripts/verdict` delegates to the internal engine for this run; call the engine directly only when debugging engine-only flags.
 
 Run with `--no-report` to skip PDF rendering (saves ~5 seconds).
 
@@ -212,7 +211,7 @@ For the full doc map (every file with status badge + one-line purpose), see [`do
 - "What if a tool is missing?" → The agent returns `BinaryNotFound -32602`. Install the binary OR set the env var pointing at it (e.g. `VOLATILITY_BIN=/path/to/vol`).
 - "I changed something — how do I prove the app still works?" → run a **live test**: `scripts/verdict evidence/<file>` (e.g. the staged `evidence/DE_1102_security_log_cleared.evtx`), then confirm `tmp/auto-runs/<case-id>/verdict.json` has a real Verdict with `tool_call_id`-cited Findings and `manifest_verify.json` `overall=true`. A live test — not a smoke run — is the verification standard.
 - "I changed something — how do I confirm L1 CI will be happy?" → `bash scripts/run-all-smokes.sh` on POSIX/Git Bash, or `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-all-smokes.ps1` on native Windows. These are CI-predictor smoke runners, not live tests: they predict what L1 runs but don't exercise a real investigation. The scripts print the current smoke tally; runtime depends on Rust cache and shell startup. If native Windows Git Bash startup is slow enough to trip launcher syntax-check timeouts, set `FINDEVIL_LAUNCHER_SMOKE_BASH_TIMEOUT_SECONDS` to a larger value before rerunning.
-- "How do I produce a review packet?" → `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -EvidencePath <path-inside-sift-vm> -RunL1Docker`. The gate writes `readiness-summary.json`, `readiness-packet-manifest.json`, and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`. Fixed `-RunId` reruns refresh generated packet contents and may create a fresh timestamped build child run. A passing gate prints `READY_FOR_EXPERT_REVIEW`, not customer-ready; a failing gate prints `READINESS_BLOCKED` and lists blockers in `readiness-summary.json`.
+- "How do I produce a review packet?" → `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 -Mode Full -EvidencePath <path-inside-sift-vm> -RunL1Docker`. The gate writes `readiness-summary.json` and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`, with packet/readiness-packet-manifest.json listing copied artifacts. Fixed `-RunId` reruns refresh generated packet contents and may create a fresh timestamped build child run. A passing gate prints `READY_FOR_EXPERT_REVIEW`, not customer-ready; a failing gate prints `READINESS_BLOCKED` and lists blockers in `readiness-summary.json`.
 
 ---
 

@@ -183,3 +183,11 @@ scripts/make-demo-video/.tts-cache/
 /old-reddit-*.png
 /x-*.png
 /yt-*.png
+/hn-submit.png
+/claudeai-*.png
+
+# Operator-local competitive/release strategy notes. These are useful for
+# positioning and planning, but they are not product documentation and should
+# not ship in the public submission repo.
+/docs/competitive-analysis.md
+/docs/plans/parser-coverage-execution.md

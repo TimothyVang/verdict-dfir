@@ -1,10 +1,10 @@
 name: Release
 
 # Glue Spec #4 §4, post-A2 packaging. Triggered by git tag v<N> push.
-# Verifies L3 green, builds Docker image + offline report.html,
-# uploads artifacts to GH Release, pushes release=true score to the
-# leaderboard, posts #releases Slack. For v-submit, devpost-submit.yml
-# chains downstream.
+# Verifies L3 green, builds offline report.html, uploads artifacts to GH
+# Release, pushes release=true score to the leaderboard, posts #releases
+# Slack. The GHCR image is best-effort so package permissions cannot block the
+# v-submit Devpost path.
 
 on:
   push:
@@ -62,6 +62,7 @@ jobs:
     name: Build + push Docker image
     needs: l3-gate
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -124,7 +125,7 @@ jobs:
 
   publish:
     name: Publish GitHub Release
-    needs: [build-docker, build-report]
+    needs: [l3-gate, build-report]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -166,7 +167,7 @@ jobs:
           SLACK_WEBHOOK_RELEASES: ${{ secrets.SLACK_WEBHOOK_RELEASES }}
         run: |
           msg="[find-evil CI] release | PASS | ${GITHUB_SHA:0:7} | ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}
-          ${GITHUB_REF_NAME} shipped — Docker ghcr + report.html."
+          ${GITHUB_REF_NAME} shipped — report.html attached; GHCR image is best-effort."
           curl -fsSL -X POST "${SLACK_WEBHOOK_RELEASES}" \
             -H 'Content-Type: application/json' \
             -d "$(jq -nR --arg t "$msg" '{text:$t}')" \

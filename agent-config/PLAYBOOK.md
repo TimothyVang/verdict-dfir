@@ -50,12 +50,12 @@ the matching `investigate_*` method too, or the two paths drift.**
 
 ---
 
-## Tool inventory (32 product tools)
+## Tool inventory (43 product tools)
 
 The complete typed surface both paths can drive. Argument/output shapes live in `TOOLS.md`; this is
 the at-a-glance map of *what exists* and *when it runs*.
 
-### Rust `findevil-mcp` (20) — DFIR primitives, read-only on evidence, SHA-256 every output
+### Rust `findevil-mcp` (31) — DFIR primitives, read-only on evidence, SHA-256 every output
 
 | Tool | What | Runs for |
 |---|---|---|
@@ -122,10 +122,13 @@ Note: `scripts/find-evil-auto` intentionally deviates today for raw disk images:
 | 6 | `usnjrnl_query` | Filesystem mutation log — corroborates MFT, surfaces deletes | both |
 | 7 | `registry_query` | Run / RunOnce / IFEO / Services / WMI consumers / Scheduled Tasks | A |
 | 8 | `evtx_query` | Security.evtx (4624/4625/4688/7045), System.evtx, Application.evtx | A |
-| 9 | `hayabusa_scan` | Sigma rules over the **extracted EVTX directory** (dir-based) | A |
-| 10 | `yara_scan` | YARA over extracted yara-target files — **skipped when extraction yields no yara-targets** (see gap note) | B |
-| 11 | `vel_collect` (optional) | Additional OS-level artifacts the wrappers don't cover | both |
-| 12 | `disk_unmount` | Release the mount (finally-block) | both |
+| 9 | `browser_history` | Extracted Chrome/Edge/Firefox browser DBs | B |
+| 10 | `ez_parse` | LNK, JumpLists, Amcache, and modern Recycle Bin decoders | both |
+| 11 | `plaso_parse` | Legacy EVT, IE index.dat, task, and Recycle Bin timelines | both |
+| 12 | `hayabusa_scan` | Sigma rules over the **extracted EVTX directory** (dir-based) | A |
+| 13 | `yara_scan` | YARA over extracted yara-target files — **skipped when extraction yields no yara-targets** (see gap note) | B |
+| 14 | `vel_collect` (optional) | Additional OS-level artifacts the wrappers don't cover | both |
+| 15 | `disk_unmount` | Release the mount (finally-block) | both |
 
 The headless engine runs steps 4-7 **in parallel** across a pool of `findevil-mcp` connections
 (`--parallel`, default on; `--workers 2`); records stay serial so the verdict is identical to serial.
@@ -247,5 +250,5 @@ Even in unattended mode, halt and surface to the analyst when:
 ## What this playbook is NOT
 
 - **Not a script.** The supervisor is the agent; this file is its prior. If a case looks weird, deviate.
-- **Not exhaustive of DFIR.** It covers what the 20 typed Rust MCP tools can reach. If the case needs Plaso/log2timeline, Sleuthkit's `fls`/`icat`, Bulk Extractor, or broad interactive packet carving, those are out of our automation scope today; surface that as a gap to the analyst. (Browser history IS covered now — see `browser_history`.)
+- **Not exhaustive of DFIR.** It covers what the 31 typed Rust MCP tools can reach, including the allow-listed `plaso_parse`, `vol_run`, `ez_parse`, `mac_triage`, and `cloud_audit` long-tail verbs. If the case needs broad unstructured carving, a parser outside the allow-lists, or interactive packet reconstruction beyond `pcap_triage` / `zeek_summary` / `suricata_eve`, surface that as a gap to the analyst. (Browser history IS covered now — see `browser_history`.)
 - **Not a substitute for SOUL.md or AGENTS.md.** Read those first; this file is the operational layer that sits below the epistemic and role-definition layers.

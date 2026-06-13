@@ -65,11 +65,11 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 
 ### Current automation outputs
 
-- `scripts/verdict <evidence>` is THE ONE COMMAND: preflight → investigate → open the live dashboard → signed verdict + report. Flags: `--sift` (run DFIR tools in the SANS SIFT VM), `--no-dashboard`, `--skip-build`, `--dry-run`, `--run-summary`. `find-evil-run` and `find-evil-live` are deprecated shims that forward to `verdict`; `find-evil-auto` is the internal headless engine wrapper `verdict` calls; `find-evil-sift` is the SIFT-VM helper.
-- `scripts/verdict --run-summary <path>` (delegating to the internal `scripts/find-evil-auto` engine) writes a machine-readable run summary outside the normal case artifact set. It points to the local run directory and records artifact paths, report QA, release-gate/expert-signoff state, signer, readiness state, blockers, warnings, and final result/error.
-- `scripts/readiness-gate.ps1` is the packet-producing readiness flow. Full mode writes `readiness-summary.json`, `readiness-packet-manifest.json`, and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`; fixed `-RunId` reruns refresh generated packet contents and may use a timestamped local-build child run; passing states mean ready for human expert review, not customer release.
+- `scripts/verdict <evidence>` is THE ONE COMMAND: preflight → investigate → open the live dashboard → signed verdict + report. Flags: `--sift` (run DFIR tools in the SANS SIFT VM), `--no-dashboard`, `--skip-build`, `--dry-run`, `--run-summary`. `find-evil-run` and `find-evil-live` are deprecated shims that forward to `verdict`; the headless automation engine is internal; `find-evil-sift` is the SIFT-VM helper.
+- `scripts/verdict --run-summary <path>` writes a machine-readable run summary outside the normal case artifact set while delegating to the internal automation engine. It points to the local run directory and records artifact paths, report QA, release-gate/expert-signoff state, signer, readiness state, blockers, warnings, and final result/error.
+- `scripts/readiness-gate.ps1` is the packet-producing readiness flow. Full mode writes `readiness-summary.json` and `readiness-packet.zip` under `tmp/readiness-gates/<run-id>/`, with packet/readiness-packet-manifest.json listing copied artifacts; fixed `-RunId` reruns refresh generated packet contents and may use a timestamped local-build child run; passing states mean ready for human expert review, not customer release.
 - `scripts/readiness-gate.sh` is POSIX strict/check-only. It can print `SUBMISSION_READY` for its legacy checks, but it does not create the readiness packet ZIP.
-- The dev "done" gate is a passing **live test**: run `scripts/verdict <evidence>` against real evidence and confirm a real verdict in `verdict.json` (each Finding citing a `tool_call_id`) plus `manifest_verify.json` `overall=true`. Per-evidence-type expectations and current gaps live in the live-test matrix in `CLAUDE.md` §5.
+- The dev "done" gate is a passing **live test**: run `scripts/verdict <evidence>` against real evidence and confirm a real verdict in `verdict.json` (each Finding citing a `tool_call_id`) plus `manifest_verify.json` `overall=true`. Per-evidence-type expectations and current gaps live in [`live-test-matrix.md`](live-test-matrix.md) and `CLAUDE.md` "Running A Case".
 - Local smoke runners (`bash scripts/run-all-smokes.sh` for POSIX/Git Bash, `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-all-smokes.ps1` for native Windows) are a **CI predictor** — they mirror what L1 runs, not a live test. Do not copy old hard-coded smoke counts; the scripts print the current tally.
 - `bash scripts/make-demo-video.sh` generates `docs/find-evil-demo.mp4` from `docs/demo-script-a2.md` using Remotion (React animated video, headless Chrome) + edge-tts TTS audio. Prerequisites: `pip install edge-tts` + `pnpm install --dir scripts/make-demo-video --ignore-workspace`. If `claude` is on PATH, narration is auto-enriched via `claude -p` before TTS.
 - `python3 scripts/make-demo-video-prep.py --dry-run` verifies beat parsing (9 beats, 300s) without invoking TTS or Remotion.
@@ -78,7 +78,7 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 
 | File | Status | Purpose |
 |---|---|---|
-| `mcp-and-tools.md` | **ACTIVE** | Single source of truth for MCP servers (6 registered: 2 product + 4 non-product incl. `qmd` dev-memory) + the 32 product tools + the no-`execute_shell` invariant. Resolves the server "undercount." |
+| `mcp-and-tools.md` | **ACTIVE** | Single source of truth for MCP servers (6 registered: 2 product + 4 non-product incl. `qmd` dev-memory) + the 43 product tools + the no-`execute_shell` invariant. Resolves the server "undercount." |
 | `dependencies.md` | **ACTIVE** | Dependency + external-DFIR-tool + version matrix mirroring `scripts/doctor.sh`; licenses + expected-failure-when-missing. |
 | `environment-variables.md` | **ACTIVE** | The ~35 `FIND_EVIL_*`/`FINDEVIL_*`/credential/SIFT/n8n env vars in one table. |
 
@@ -100,21 +100,21 @@ The authoritative *precedence* hierarchy (which spec overrides which) lives in `
 
 ## `agent-config/` (runtime DFIR agent identity)
 
-These are read by the agent at investigation start (per CLAUDE.md "Agent investigation prompt").
+These are read by the agent at investigation start (per `CLAUDE.md` "Investigation Read Order").
 
 | File | Status | Purpose |
 |---|---|---|
 | `agent-config/SOUL.md` | **ACTIVE** | Mission + epistemic hierarchy (CONFIRMED > INFERRED > HYPOTHESIS) + FRE 902(14) stance + cross-artifact rule + no-attribution rule. |
 | `agent-config/AGENTS.md` | **ACTIVE** | Supervisor / Pool A / Pool B / judge / verifier / correlator role descriptions. |
 | `agent-config/PLAYBOOK.md` | **ACTIVE** | Tool sequences per evidence type (`.e01`, `.mem`, `.evtx`, Velociraptor `.zip`, mixed dirs). |
-| `agent-config/TOOLS.md` | **ACTIVE** | Typed tool surface — 20 Rust + 12 Python MCP tools. |
+| `agent-config/TOOLS.md` | **ACTIVE** | Typed tool surface — 31 Rust + 12 Python MCP tools. |
 | `agent-config/MEMORY.md` | **ACTIVE** | Tier-1 DFIR caveats (Amcache LastModified ≠ execution, ShimCache order changed at Win8.1, Logon Type 3 vs 10, etc.). |
 | `agent-config/HEARTBEAT.md` | **ACTIVE** | Per-iteration self-check loop. |
 | `agent-config/JUDGING.md` | **ACTIVE** | Pre-submission self-assessment rubric (6 quality criteria) that `scripts/self-score.py` grades a completed case against. Not part of the investigation pipeline. |
 
 ## `docs/specs/` (architecture specs)
 
-Status-banner-prefixed within each file. Read in CLAUDE.md "Document hierarchy" precedence order.
+Status-banner-prefixed within each file. Read in `repo-guide.md` "Document hierarchy" precedence order.
 
 | File | Status | Purpose |
 |---|---|---|
@@ -122,7 +122,7 @@ Status-banner-prefixed within each file. Read in CLAUDE.md "Document hierarchy" 
 | `2026-04-23-amendment-option-b-claude-code-mode.md` (**A1**) | **SHIPPED** (swarm specifics superseded by A6) | Was subscription-mode credentials for the build swarm; LiteLLM proxy never built. Swarm removed under A6; Product still uses the three credential modes. |
 | `2026-04-25-amendment-a2-claude-code-primary-interface.md` (**A2**) | **SHIPPED** | Drops the custom Python orchestrator; Claude Code IS the orchestrator. |
 | `2026-04-26-amendment-a3-agent-army-and-dashboard.md` (**A3**) | **SHIPPED** (Phases 1-4 + role-state dashboard) / **RESEARCH** (pixel-art/chrome polish) | Memory + ACP MCP tools + SSE dashboard with role-state sprite containers; pixel-art and bead/chip chrome remain parked. |
-| `2026-04-30-amendment-a5-ots-removal.md` (**A5**) | **SHIPPED** | Removes the OpenTimestamps/Bitcoin fourth tier; chain collapses to 3 tiers (audit prev_hash → rs_merkle → sigstore). |
+| `2026-04-30-amendment-a5-ots-removal.md` (**A5**) | **SHIPPED** | Removes the OpenTimestamps/Bitcoin fourth tier; chain collapses to 3 tiers (audit prev_hash → rs_merkle → manifest signature; Ed25519 default, Sigstore identity tier when configured). |
 | `2026-04-23-layered-test-sandbox-design.md` (**Spec #3**) | **SHIPPED** | L0/L1/L2/L3 sandbox stack. L2 advisory only. |
 | `2026-04-25-the-product-design.md` (**Spec #2**) | **SHIPPED** (with A2 + A5 amendments) | The DFIR tool the judges run. |
 | `2026-04-26-orchestration-glue-design.md` (**Spec #4**) | **SHIPPED** | Thin GHA CI pipeline. |
@@ -149,11 +149,17 @@ The original five implementation plans shipped (the build-swarm plan was removed
 |---|---|---|
 | `ci-smoke-checklist.md` | **ACTIVE** | End-to-end pipeline verification before submission. |
 | `dockerfile-a2-decision.md` | **RESEARCH** (decision archive) | Cut the in-container `find-evil` wrapper + `.deb` packaging (PR #4, 2026-04-27, "Option B"). Body retained as decision record. |
-| `obsidian-mind-memory.md` | **ACTIVE** | The dev/operator **memory layer**: the obsidian-mind vault (QMD semantic recall + `brain/` notes) as VERDICT's project memory. Optional, gitignored, **never evidence, never in the audit chain**. Pairs with CLAUDE.md §8.5. |
-| `github-remote-bootstrap.md` | **ACTIVE** | Pre-submission ops doc for setting up the public GitHub repo URL Devpost requires. |
+| `obsidian-mind-memory.md` | **ACTIVE** | The dev/operator **memory layer**: the obsidian-mind vault (QMD semantic recall + `brain/` notes) as VERDICT's project memory. Optional, gitignored, **never evidence, never in the audit chain**. Pairs with `CLAUDE.md` "Non-Negotiable Guardrails". |
+| `github-remote-bootstrap.md` | **HISTORICAL / ACTIVE RELEASE-REMOTE REFERENCE** | Historical bootstrap plus current `release` remote checks for `TimothyVang/verdict-dfir`; `v-submit` is already published. |
 | `local-smoke-gate.md` | **ACTIVE** | Prerequisites, per-smoke coverage map, and common failure → fix pairs for `bash scripts/run-all-smokes.sh`. |
 | `n8n-automation-integration.md` | **ACTIVE** | Optional: wire n8n as an operator-local harness *around* the product — repeatable runs + post-verdict finding-to-action (via `n8n-mcp`, user-scope). Not bundled, not the orchestrator, not in the audit chain. |
 | `readiness-packet-windows.md` | **ACTIVE** | Three invocation modes for `scripts/readiness-gate.ps1`, readiness-state meanings, and `READINESS_BLOCKED` unblocking guide. |
+
+## Adversarial Validation
+
+| File | Status | Purpose |
+|---|---|---|
+| `red-team-challenge.md` | **ACTIVE** | "Break VERDICT" challenge matrix for unsupported artifacts, benign-admin false positives, single-source execution traps, DKOM-vs-smear, exfil-without-network, and parser failures. |
 
 ## `docs/release-evidence/`
 
@@ -184,6 +190,6 @@ Investigation reports + their figures. Currently:
 
 ## What this index does NOT cover
 
-- Memory: the **obsidian-mind vault** (`obsidian-mind/`, gitignored) is now the dev/operator memory layer — see [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md) + CLAUDE.md §8.5. The user-level `~/.claude/.../memory/MEMORY.md` is a thin index pointing into it.
+- Memory: the **obsidian-mind vault** (`obsidian-mind/`, gitignored) is now the dev/operator memory layer — see [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md) + `CLAUDE.md` "Non-Negotiable Guardrails". The user-level `~/.claude/.../memory/MEMORY.md` is a thin index pointing into it.
 - Source code (`services/`, `apps/`, `scripts/`) — see `repo-guide.md` "Repository layout" + per-service `README.md`.
 - External clones (`obsidian-mind/`, `n8n-references/`) — gitignored; see `repo-guide.md` "External clones (gitignored…)".

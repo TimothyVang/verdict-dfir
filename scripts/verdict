@@ -118,6 +118,63 @@ _evidence_size() {
   else echo 0; fi
 }
 
+safe_guest_basename() {
+  local value="$1"
+  if [[ -z "${value}" || "${value}" == "." || "${value}" == ".." || "${value}" == -* || ! "${value}" =~ ^[[:alnum:]_][[:alnum:]_.+-]*$ ]]; then
+    fail "--sift: unsafe evidence filename for --sift staging: ${value}"
+  fi
+  printf '%s' "${value}"
+}
+
+safe_guest_user() {
+  local value="$1"
+  if [[ -z "${value}" || "${value}" == -* || ! "${value}" =~ ^[[:alnum:]_][[:alnum:]_.-]*$ ]]; then
+    fail "--sift: unsafe SIFT guest user: ${value}"
+  fi
+  printf '%s' "${value}"
+}
+
+safe_guest_dir() {
+  local value="$1" normalized
+  normalized="/${value#/}/"
+  if [[ -z "${value}" || ! "${value}" =~ ^/[[:alnum:]_./+-]+$ || "${normalized}" == *"/../"* || "${normalized}" == *"/./"* ]]; then
+    fail "--sift: unsafe SIFT guest evidence dir: ${value}"
+  fi
+  printf '%s' "${value}"
+}
+
+safe_guest_host() {
+  local value="$1"
+  if [[ -z "${value}" || "${value}" == -* || ! "${value}" =~ ^[[:alnum:]][[:alnum:].-]*$ || "${value}" == *..* || "${value}" == *[-.] ]]; then
+    fail "--sift: unsafe SIFT guest host/IP: ${value}"
+  fi
+  printf '%s' "${value}"
+}
+
+verdict_selftest_sift_sanitizers() {
+  local ok_value
+  ok_value="$(safe_guest_basename "evidence.E01")" && [[ "${ok_value}" == "evidence.E01" ]] || fail "selftest basename accept failed"
+  ok_value="$(safe_guest_user "sansforensics")" && [[ "${ok_value}" == "sansforensics" ]] || fail "selftest user accept failed"
+  ok_value="$(safe_guest_dir "/home/sansforensics/evidence")" && [[ "${ok_value}" == "/home/sansforensics/evidence" ]] || fail "selftest dir accept failed"
+  ok_value="$(safe_guest_host "192.168.137.130")" && [[ "${ok_value}" == "192.168.137.130" ]] || fail "selftest host accept failed"
+
+  ( safe_guest_basename "." >/dev/null 2>&1 ) && fail "selftest basename dot reject failed"
+  ( safe_guest_basename ".." >/dev/null 2>&1 ) && fail "selftest basename dotdot reject failed"
+  ( safe_guest_basename "-Ftmp" >/dev/null 2>&1 ) && fail "selftest basename option reject failed"
+  ( safe_guest_basename "evil name.E01" >/dev/null 2>&1 ) && fail "selftest basename space reject failed"
+  ( safe_guest_user "-lroot" >/dev/null 2>&1 ) && fail "selftest user option reject failed"
+  ( safe_guest_dir "/home/sansforensics/evidence/../.ssh" >/dev/null 2>&1 ) && fail "selftest dir traversal reject failed"
+  ( safe_guest_dir "/home/sansforensics/evidence/./tmp" >/dev/null 2>&1 ) && fail "selftest dir dot reject failed"
+  ( safe_guest_host "192.168.137.130;id" >/dev/null 2>&1 ) && fail "selftest host metachar reject failed"
+  ( safe_guest_host "-oProxyCommand=id" >/dev/null 2>&1 ) && fail "selftest host option reject failed"
+  printf 'sift sanitizer selftest OK\n'
+}
+
+if [[ "${FINDEVIL_VERDICT_SELFTEST:-}" == "sift-sanitizers" ]]; then
+  verdict_selftest_sift_sanitizers
+  exit 0
+fi
+
 # newest non-placeholder entry (file OR case folder) in a dir; empty if none.
 # -d keeps a dropped directory as the entry itself rather than expanding it.
 newest_evidence() {
@@ -266,24 +323,26 @@ fi
 # FIND_EVIL_GUEST_EVIDENCE_DIR.
 if [[ "${SIFT}" == "1" && "${DRY}" != "1" ]]; then
   GUSER="${FIND_EVIL_GUEST_USER:-sansforensics}"
+  GUSER="$(safe_guest_user "${GUSER}")"
   GKEY="${FIND_EVIL_SSH_KEY:-${HOME}/.ssh/sift_key}"
-  GEVDIR="${FIND_EVIL_GUEST_EVIDENCE_DIR:-/home/${GUSER}/evidence}"
+  GEVDIR="$(safe_guest_dir "${FIND_EVIL_GUEST_EVIDENCE_DIR:-/home/${GUSER}/evidence}")"
   if [[ -z "${FIND_EVIL_GUEST_IP:-}" ]]; then
     FIND_EVIL_GUEST_IP="$(bash scripts/sift-guest-ip.sh 2>/dev/null || true)"
-    [[ -n "${FIND_EVIL_GUEST_IP}" ]] && { export FIND_EVIL_GUEST_IP; ok "--sift: resolved SIFT VM at ${FIND_EVIL_GUEST_IP}"; }
   fi
   [[ -n "${FIND_EVIL_GUEST_IP:-}" ]] || fail "--sift: could not resolve the SIFT VM IP. Start the VM, or set FIND_EVIL_GUEST_IP=<ip>."
+  FIND_EVIL_GUEST_IP="$(safe_guest_host "${FIND_EVIL_GUEST_IP}")"
   export FIND_EVIL_GUEST_IP
+  ok "--sift: resolved SIFT VM at ${FIND_EVIL_GUEST_IP}"
   # Point the live .mcp.json (interactive session) at the resolved VM too; the
   # committed .mcp.json.sift template keeps its documentation-placeholder IP.
   sed -i "s#192\.0\.2\.10#${FIND_EVIL_GUEST_IP}#g" .mcp.json 2>/dev/null || true
   GADDR="${GUSER}@${FIND_EVIL_GUEST_IP}"
-  SSHB=(ssh -i "${GKEY}" -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8)
+  SSHB=(ssh -i "${GKEY}" -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8 --)
   if [[ -e "${EVIDENCE}" ]]; then
     if [[ -d "${EVIDENCE}" && ( -d "${EVIDENCE}/hosts" || -d "${EVIDENCE}/disks" ) ]]; then
       fail "--sift: '${EVIDENCE}' is a multi-host case folder — run: scripts/verdict ${EVIDENCE} --fleet (one command for all three fleet stages), or pass a single host's evidence."
     fi
-    rbase="$(basename "${EVIDENCE}")"
+    rbase="$(safe_guest_basename "$(basename "${EVIDENCE}")")"
     remote="${GEVDIR}/${rbase}"
     lsize="$(_evidence_size "${EVIDENCE}")"
     rsize="$("${SSHB[@]}" "${GADDR}" "stat -c%s '${remote}' 2>/dev/null || echo 0" 2>/dev/null || echo 0)"
@@ -298,7 +357,7 @@ if [[ "${SIFT}" == "1" && "${DRY}" != "1" ]]; then
         || fail "--sift: could not reach the SIFT VM at ${FIND_EVIL_GUEST_IP} (ssh failed)"
       log "--sift: staging ${rbase} into the VM (scp → ${GADDR}:${remote})…"
       scpflag=(); [[ -d "${EVIDENCE}" ]] && scpflag=(-r)
-      scp -i "${GKEY}" -o StrictHostKeyChecking=accept-new "${scpflag[@]}" "${EVIDENCE}" "${GADDR}:${remote}" \
+      scp -i "${GKEY}" -o StrictHostKeyChecking=accept-new "${scpflag[@]}" -- "${EVIDENCE}" "${GADDR}:${remote}" \
         || fail "--sift: staging copy failed (scp to ${remote})"
       ok "--sift: staged → ${remote}"
     fi
@@ -376,7 +435,24 @@ fi
 if [[ -n "${CASE_DIR:-}" && -f scripts/n8n_post.py ]]; then
   log "automation (n8n finding-to-action; post-verdict, not in the audit chain)"
   if python3 scripts/n8n_post.py "${CASE_DIR}" >/tmp/verdict-n8n.log 2>&1; then
-    ok "n8n posted — ${CASE_DIR}/automation.json"
+    automation_state="$(python3 - "${CASE_DIR}/automation.json" <<'PY' 2>/dev/null || true
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    print("unknown")
+else:
+    if data.get("n8n_reachable"):
+        print("reachable")
+    else:
+        print("skipped")
+PY
+)"
+    if [[ "${automation_state}" == "reachable" ]]; then
+      ok "n8n reachable; automation sidecar recorded — ${CASE_DIR}/automation.json"
+    else
+      warn "n8n automation skipped or unreachable — ${CASE_DIR}/automation.json"
+    fi
   else
     warn "n8n automation skipped (down or unreachable); details: /tmp/verdict-n8n.log"
   fi

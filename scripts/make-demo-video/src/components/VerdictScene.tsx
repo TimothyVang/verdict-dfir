@@ -66,7 +66,7 @@ export function VerdictScene() {
 
         {/* The seal */}
         <div style={{ marginTop: 36, display: "flex", alignItems: "center", gap: 28 }}>
-          <Stamp label="Signed · sigstore" frame={frame} delay={200} color={C.confirmed} rotate={-6} size={26} />
+          <Stamp label="Signed · manifest" frame={frame} delay={200} color={C.confirmed} rotate={-6} size={26} />
           <div style={{ fontFamily: MONO, fontSize: 14, color: C.inkMuted, lineHeight: 1.7, opacity: interpolate(frame - 215, [0, 14], [0, 1], clampOpts) }}>
             merkle d1e4bc7a906f2c38<br />
             chain OK · verifiable offline, years from now

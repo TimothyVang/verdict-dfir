@@ -99,21 +99,28 @@ reproducible; the asymmetry pays for specifics, not adjectives.
 > How much case data can the agent handle? Depth on fewer types beats
 > shallow coverage of many.
 
-**Demonstrate via:** the case manifest's `evidence_inventory[]` lists
-every artifact class touched (Prefetch, MFT, EVTX, Amcache, ShimCache,
-USN, Registry, Memory, YARA hits, …) with bytes-scanned and rows-
-returned per class. Depth is shown by the cross-artifact corroboration
-chain — execution claims **must** cite ≥2 artifact classes (CLAUDE.md
-non-negotiable + SOUL.md hard rule). One deep persistence chain across
-4 artifact classes scores higher than 12 shallow EVTX queries.
+**Demonstrate via:** `coverage_manifest.json` and the embedded
+`verdict.json.coverage_manifest`: every artifact class is labeled
+`available`, `attempted`, `parsed`, `failed`, `unsupported`, or
+`not_supplied`, with parser errors, records seen, and rows returned.
+`evidence_inventory[]` records the custody inventory when present.
+Depth is shown by the cross-artifact corroboration chain — execution
+claims **must** cite ≥2 artifact classes (CLAUDE.md non-negotiable +
+SOUL.md hard rule). One deep persistence chain across 4 artifact
+classes scores higher than 12 shallow EVTX queries.
 
 ## 4. Constraint Implementation
 > Are guardrails architectural or prompt-based? Judges evaluate where
 > security boundaries are enforced and whether they were tested for
 > bypass.
 
-**Demonstrate via:** the typed Rust MCP tool surface (20 shipped
-tools, including `vol_psscan` and `vol_psxview` for DKOM cross-validation). No `execute_shell`, no path traversal, every tool serializes
+**Demonstrate via:** the typed product MCP surface: 43 audit-chained
+tools total, including 31 Rust DFIR tools and 12 Python
+crypto/ACH/memory/ACP/expert-feedback tools. The Rust surface includes
+`vol_psscan` and `vol_psxview` for DKOM cross-validation plus
+allow-listed long-tail wrappers (`vol_run`, `ez_parse`, `plaso_parse`,
+`mac_triage`, `cloud_audit`) and single-purpose Linux/network/NTFS
+wrappers. No `execute_shell`, no path traversal, every tool serializes
 typed Input/Output. Architectural enforcement points:
 - Read-only evidence opener (libewf in `case_open`, no mutation path).
 - SHA-256 verification of image at open and at every tool re-execution.
@@ -132,7 +139,8 @@ score lower than typed-surface enforcement.
 
 **Demonstrate via:** Finding → `tool_call_id` → JSONL audit record →
 SHA-256 of the tool's stdout → `manifest_finalize` Merkle root →
-sigstore signature with Rekor transparency-log inclusion proof.
+manifest signature metadata. Ed25519 is the offline-verifiable default;
+Sigstore/Rekor is the identity + transparency-log tier when configured.
 The chain is verifiable offline by the `manifest_verify` MCP tool —
 judges run it against the submitted run manifest and reach the
 underlying tool execution with one path. M2 crypto stack is the

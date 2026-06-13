@@ -108,6 +108,29 @@ def make_run(
             "customer_releasable": customer_releasable,
         },
     )
+    write_json(
+        run / "coverage_manifest.json",
+        {
+            "summary": {"parsed": 1, "unsupported": 0},
+            "truth_boundary": "synthetic coverage sidecar",
+        },
+    )
+    write_json(
+        run / "evidence_inventory.json",
+        {
+            "parent_case_id": "case-ready",
+            "summary": {"supported": 1, "unsupported": 0},
+        },
+    )
+    write_json(run / "disk_artifact_summary.json", {"prefetch": {"parsed": 1}})
+    write_json(run / "psscan.json", {"processes": []})
+    write_json(run / "psxview.json", {"rows": []})
+    write_json(run / "malfind.json", {"hits": []})
+    write_json(run / "malware_triage.json", {"aggregate_iocs": {}})
+    write_json(run / "automation.json", {"actions": []})
+    write_json(run / "self-score.json", {"score": 0})
+    write_json(run / "recall-score.json", {"score": 0})
+    write_json(run / "grounding.json", {"judged_by": "synthetic smoke"})
     (run / "REPORT.html").write_text(
         "<!doctype html><html><body><h1>Find Evil Report</h1>"
         "<p>Cryptographic attestation. QA / Expert Signoff. "
@@ -125,6 +148,14 @@ def make_run(
         "stub signatures are dev/offline only\n\n"
         "customer-ready reports must embed verifier replay evidence.\n",
         encoding="utf-8",
+    )
+    (run / "REPORT-internal.md").write_text(
+        "# Internal QA packet\n\nSynthetic smoke packet.\n",
+        encoding="utf-8",
+    )
+    (run / "REPORT.new.pdf").write_bytes(b"%PDF-1.7\n% synthetic fallback\n")
+    (run / "REPORT-internal.new.pdf").write_bytes(
+        b"%PDF-1.7\n% synthetic internal fallback\n"
     )
     return run
 
@@ -230,7 +261,21 @@ def main() -> int:
             "run.manifest.json",
             "manifest_verify.json",
             "verdict.json",
+            "coverage_manifest.json",
+            "evidence_inventory.json",
+            "disk_artifact_summary.json",
+            "psscan.json",
+            "psxview.json",
+            "malfind.json",
+            "malware_triage.json",
+            "automation.json",
+            "self-score.json",
+            "recall-score.json",
+            "grounding.json",
             "REPORT.html",
+            "REPORT.new.pdf",
+            "REPORT-internal.md",
+            "REPORT-internal.new.pdf",
             "readiness-summary.json",
             "expert_signoff.json",
             "customer_release_gate.final.json",

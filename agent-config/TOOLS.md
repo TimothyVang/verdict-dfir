@@ -4,12 +4,12 @@ The agent has access to two MCP servers, both auto-spawned by Claude Code via `.
 
 | Server | Lang | Tools |
 |---|---|---|
-| `findevil-mcp` | Rust (`services/mcp/`) | 20 typed DFIR tools |
+| `findevil-mcp` | Rust (`services/mcp/`) | 31 typed DFIR tools |
 | `findevil-agent-mcp` | Python (`services/agent_mcp/`) | 12 crypto + ACH + memory + ACP + expert-feedback tools (post-A5; the `ots_stamp` + `ots_verify` pair was removed) |
 
 Every successful tool call carries `_meta.output_sha256` (hex SHA-256 of the canonical JSON output). Findings cite tool calls by `tool_call_id`. The verifier vetoes any finding that doesn't.
 
-> **This file is the agent read-order catalog of the 32 typed PRODUCT tools** (the only verbs in
+> **This file is the agent read-order catalog of the 43 typed PRODUCT tools** (the only verbs in
 > the audit chain). The *full* set of MCP servers actually registered in `.mcp.json` (incl. the
 > operator-runtime `n8n-mcp`, `playwright`, `puppeteer` that emit no Findings) and the external
 > DFIR binaries + dependency pins are inventoried in
@@ -20,6 +20,13 @@ Every successful tool call carries `_meta.output_sha256` (hex SHA-256 of the can
 ---
 
 ## Rust DFIR tools (`findevil-mcp`)
+
+**Maturity note.** The long-tail verbs `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`,
+`cloud_audit`, `journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`,
+`suricata_eve`, and `indx_parse` are implemented as typed, allow-listed, shell-free tools and
+unit-tested against synthetic fixtures, but they have not yet been exercised on real evidence in a
+committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/YARA/
+USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
 
 ### case_open
 Args: `{image_path: str, expected_sha256?: str, label?: str}`
@@ -106,6 +113,61 @@ Args: `{case_id, history_path: str, limit?: int}`
 Returns: `{browser_family, rows[]: {url, title, last_visit_time_iso, visit_count}, rows_seen}`
 Use when: an extracted browser history DB — Chrome/Edge `History` or Firefox `places.sqlite` — is in scope (downloaded-payload URL, phishing visit, C2 panel). Opened read-only + `immutable=1` (no `-wal`/`-journal` write on evidence); browser auto-detected by schema; timestamps normalized to ISO-8601Z from each native epoch (Chrome WebKit µs-since-1601, Firefox µs-since-1970). HONEST SCOPE: a row CONFIRMS a URL was *recorded as visited* at T — a browser-artifact fact, NOT execution, so a single `browser_history` Finding is a legitimate CONFIRMED browser fact and never trips the ≥2-artifact-class rule; intent is a separate `hypothesis:` layer. In-process via `rusqlite` (MIT, vendored SQLite).
 
+### vol_run
+Args: `{case_id, memory_path, plugin: str, pid?: int, limit?}`
+Returns: `{plugin, rows[]: per-plugin JSON columns, rows_seen, stderr_tail}`
+Use when: a memory plugin beyond the four bespoke `vol_*` pivots is needed. `plugin` MUST be one of the curated canonical-name allow-list (windows/linux/mac cmdline, netscan, svcscan, consoles, handles, dlllist, cred trio, hollow/rootkit, etc.); any off-list value — including a shell-injection-shaped string — is rejected with `PluginNotAllowed` BEFORE any subprocess (the no-shell guarantee for a parameterized verb). Output is generic rows because plugin schemas differ. Subprocess to `volatility3` (`$VOLATILITY_BIN` first then PATH). This is the long-tail memory verb; the four typed `vol_*` tools stay for the pivots playbooks depend on.
+
+### ez_parse
+Args: `{case_id, tool: str, artifact_path, limit?}`
+Returns: `{tool, rows[]: per-tool CSV columns, rows_seen, csv_files[], stderr_tail}`
+Use when: decoding a carved Windows artifact. `tool` ∈ `{lecmd, jlecmd, amcacheparser, appcompatcacheparser, rbcmd, sbecmd, wxtcmd}` (LNK / JumpLists / Amcache / ShimCache / Recycle Bin / shellbags / Win10 Timeline); off-list/injection values reject with `ToolNotAllowed` before any subprocess. Runs the Eric Zimmerman tool's fixed-argv CSV invocation and parses the result. **Amcache LastModified ≠ execution** (catalog-registration time) — it is a ≥2-artifact corroborator for Prefetch, never proof alone. Binary discovery `$EZTOOLS_DIR` then PATH; graceful `BinaryNotFound`.
+
+### plaso_parse
+Args: `{case_id, parser: str, artifact_path, limit?}`
+Returns: `{parser, events[]: normalized plaso event objects, events_seen, stderr_tail}`
+Use when: a cross-OS log plaso normalizes (`syslog`, `bash_history`, `zsh_extended_history`, `utmp`, `dpkg`, `selinux`, legacy `winevt`/`msiecf`/`winjob`, `recycle_bin`, `viminfo`, macOS `asl_log`/`macwifi`). `parser` validated against the allow-list before argv. Two-stage fixed-argv run (`log2timeline.py` → `psort.py json_line`); `$PLASO_DIR` then PATH. For modern Windows `.evtx`, prefer the in-process `evtx_query`.
+
+### mac_triage
+Args: `{case_id, module: str, image_path, limit?}`
+Returns: `{module, rows[]: per-module CSV columns, rows_seen, csv_files[], stderr_tail}`
+Use when: triaging a mounted macOS image. `module` ∈ allow-listed `mac_apt` modules (`UNIFIEDLOGS`, `FSEVENTS`, `AUTOSTART`, `KNOWLEDGEC`, `QUARANTINE`, `TCC`, `SAFARI`, `SPOTLIGHT`, `INSTALLHISTORY`, `BASHSESSIONS`, …); off-list/injection rejects with `ModuleNotAllowed` before subprocess. Intended as the macOS analogue of `disk_extract_artifacts`; once `mac_apt` is provisioned it covers most macOS classes, but this verb is not yet exercised on a real macOS image in a committed run. `$MAC_APT` then PATH; graceful `BinaryNotFound`.
+
+### cloud_audit
+Args: `{case_id, provider: str, log_path, limit?}`
+Returns: `{provider, events[]: {timestamp, actor, source_ip, action, resource, outcome, raw}, events_seen}`
+Use when: a cloud/identity audit log is in scope (the modern attacker center of gravity). `provider` ∈ `{cloudtrail, entra_signin, entra_audit, m365_ual, gcp_audit, workspace, k8s_audit, vpc_flow}`; off-list rejects with `ProviderNotAllowed`. **Pure Rust — no subprocess, no external binary.** Accepts JSON arrays, `{Records}`/`{value}` containers, JSONL, M365 UAL CSV `AuditData`, and space-delimited VPC flow; normalizes every provider into one envelope so the agent reasons across clouds.
+
+### journalctl_query
+Args: `{case_id, journal_path: str, since?: str, until?: str, limit?}`
+Returns: `{rows[]: free-form systemd-field maps, rows_seen, stderr_tail}`
+Use when: a binary systemd journal (`*.journal`) is carved. Fixed `journalctl --file <path> -o json` subprocess (GPL, subprocess-only). Optional `since`/`until` (UTC ISO-8601). `$JOURNALCTL_BIN` then PATH; graceful `BinaryNotFound`.
+
+### login_accounting
+Args: `{case_id, accounting_path: str, limit?}`
+Returns: `{rows[]: {user, line, host, login_iso?, logout_iso?, raw}, rows_seen, stderr_tail}`
+Use when: a Linux wtmp/btmp login-accounting DB is carved (lateral-movement / brute-force triage). Fixed `last -f <path> -F -w` subprocess, deliberately keeping the recorded remote host column. `$LAST_BIN` then PATH.
+
+### ausearch
+Args: `{case_id, audit_log_path: str, limit?}`
+Returns: `{rows[]: free-form type=... record maps, rows_seen, stderr_tail}`
+Use when: a Linux auditd `audit.log` is carved (highest-fidelity execve/syscall record). Fixed `ausearch -i -if <path>` subprocess. INSTALL-FIRST (absent on stock SIFT) — graceful `BinaryNotFound`. `$AUSEARCH_BIN` then PATH.
+
+### nfdump_query
+Args: `{case_id, flow_path: str, limit?}`
+Returns: `{rows[]: flow-record column maps, rows_seen, stderr_tail}`
+Use when: a NetFlow/IPFIX capture (`nfcapd`-style) is in scope (Pool B exfil-volume / beaconing). Fixed `nfdump -r <path> -o json`; **no free-text filter field** (injection guard). INSTALL-FIRST. `$NFDUMP_BIN` then PATH.
+
+### suricata_eve
+Args: `{case_id, pcap_path: str, limit?}`
+Returns: `{events[]: eve.json event maps, events_seen, stderr_tail}`
+Use when: a PCAP needs IDS replay (alert/dns/http/tls/fileinfo by `event_type`). Fixed `suricata -r <pcap> -l <outdir>` (GPL, subprocess-only) → reads `eve.json` from a temp outdir. INSTALL-FIRST. `$SURICATA_BIN` then PATH.
+
+### indx_parse
+Args: `{case_id, indx_path: str, limit?}`
+Returns: `{rows[]: INDX column maps, rows_seen, stderr_tail}`
+Use when: a carved NTFS `$I30`/INDX stream may hold slack entries for deleted files (anti-forensic-deletion corroboration). Fixed `INDXParse.py <path>` subprocess; parses its `,\t`-delimited table. INSTALL-FIRST (`pip install INDXParse`). `$INDXPARSE_BIN` then PATH.
+
 ---
 
 ## Python crypto + ACH tools (`findevil-agent-mcp`)
@@ -128,7 +190,7 @@ Use when: closing a case. Builds the rs_merkle tree over every audit-log leaf, s
 ### manifest_verify
 Args: `{manifest_path, audit_log_path?}`
 Returns: `{overall: bool, audit_chain_ok, merkle_root_ok, signature_present, ...}`
-Use when: any third party wants offline verification. Replays the audit chain → recomputes the Merkle root from `leaves[]` → checks signature presence. Tampering with `merkle_root_hex` produces a precise diagnostic naming both the declared and rebuilt roots.
+Use when: any third party wants offline verification. Replays the audit chain → recomputes the Merkle root from `leaves[]` → checks signature presence and reports `signature_kind` / `signature_verified`. Ed25519 signatures verify cryptographically offline; Sigstore bundles are recorded for identity-policy-aware verification; stub bundles are explicit placeholders. Tampering with `merkle_root_hex` produces a precise diagnostic naming both the declared and rebuilt roots.
 
 ### verify_finding
 Args: `{finding, tool_call_index, findevil_mcp_command: list[str]}`

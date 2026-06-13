@@ -270,7 +270,7 @@ export function FleetScene() {
 
         {/* signed note + seal */}
         <div style={{ marginTop: 40, display: "flex", alignItems: "center", gap: 24 }}>
-          <Stamp label="Signed · sigstore" frame={frame} delay={sealD} color={C.confirmed} rotate={-6} size={22} />
+          <Stamp label="Signed · manifest" frame={frame} delay={sealD} color={C.confirmed} rotate={-6} size={22} />
           <div
             style={{
               fontFamily: MONO,

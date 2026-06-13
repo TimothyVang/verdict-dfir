@@ -77,7 +77,7 @@ The memory layer is integrated into the **main repo** `.claude/`, so a single `c
 root gives you the whole loop:
 
 - **Recall (automatic).** `mcp__qmd__query` (index `verdict-memory`) is available, and CLAUDE.md
-  §8.5 instructs the agent to query it before answering brain-topic questions. Fallback:
+  `CLAUDE.md` "Non-Negotiable Guardrails" keeps memory outside evidence and the audit chain. Fallback:
   `qmd --index verdict-memory query "<topic>"` from `obsidian-mind/`.
 - **Context injection (automatic, dev sessions only).** The repo SessionStart hook runs
   `scripts/obsidian-mind-hook.sh session-start`, injecting the North Star + brain-topic index. It

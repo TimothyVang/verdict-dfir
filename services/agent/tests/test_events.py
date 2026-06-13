@@ -71,7 +71,7 @@ class TestDiscriminator:
                 "case_id": "c-1",
                 "merkle_root": "deadbeef",
                 "leaf_count": 3,
-                "ots_pending": True,
+                "signature_pending": True,
             },
             {
                 "event_type": "RunVerdict",
@@ -80,7 +80,7 @@ class TestDiscriminator:
                 "confidence_score": 0.92,
                 "finding_count": 14,
                 "manifest_path": "/tmp/run.manifest.json",
-                "ots_receipt_path": "/tmp/run.manifest.ots",
+                "manifest_verify_path": "/tmp/manifest_verify.json",
             },
             {
                 "event_type": "PlanProposed",

@@ -22,7 +22,7 @@ three files `main()` loads unconditionally (a missing one is a hard error):
 
 | File | Role |
 |---|---|
-| `run.manifest.json` | Signed, hash-chained manifest (sigstore stub signer + rs_merkle root). Drives the chain-of-custody figure and the offline-verification appendix. |
+| `run.manifest.json` | Signed, hash-chained manifest (rs_merkle root plus the effective signer tier: Ed25519 by default, Sigstore when identity/transparency is configured, or explicit stub fallback). Drives the chain-of-custody figure and the offline-verification appendix. |
 | `verdict.json` | The Verdict word plus every structured payload the report renders (see below). |
 | `audit.jsonl` | Append-only, hash-chained audit log (`prev_hash` per line). Parsed line-by-line for the chain-of-custody figure; bad lines are skipped, not fatal. |
 
@@ -36,18 +36,21 @@ present, each gating an optional section or exhibit:
 | `verdict`, `evidence_path` | Bottom-Line-Up-Front scorecard, masthead |
 | `attack_story.attack_chain` | "How they got hacked" evidence-bound attack story + BLUF |
 | `normalized_timeline.events` | Tier-1 timeline, entity rollup, event-sequence figure |
+| `coverage_manifest` | Coverage Manifest section: available / attempted / parsed / failed / unsupported / not supplied per artifact class |
 | `attack_coverage`, `attck_practitioner_coverage` | ATT&CK coverage tables + practitioner figure |
 | `malware_triage.aggregate_iocs` | Indicators of Compromise (IOC) tables |
 | `entity_index`, `indicators`, `evtx_summary` | Entity rollup, IOC leads, composition figure |
 | `report_evidence_cards`, `tool_calls` | Evidence cards, process-view comparison figure |
+| `rejected_finding_leads` | Non-evidentiary verifier-rejected leads for analyst review; these are excluded from final Findings |
 
 Optional **sidecar files** in the Case dir are read only if present:
+`coverage_manifest.json` (fallback for the Coverage Manifest section),
 `psscan.json` (process-creation timeline figure), `timeline.json` / `timeline.csv`
 (detailed event timeline + analyst CSV export note), and
 `customer_release_gate.final.json` (final release-gate state). Each is best-effort:
 absent or malformed JSON degrades gracefully instead of failing the render.
 
-> Only the **32 product tools** (20 Rust + 12 Python) are audit-chained, so every
+> Only the **43 product tools** (31 Rust + 12 Python) are audit-chained, so every
 > Finding the report prints cites a `tool_call_id` traceable back through `audit.jsonl`.
 > See `docs/reference/mcp-and-tools.md` for the tool surface.
 

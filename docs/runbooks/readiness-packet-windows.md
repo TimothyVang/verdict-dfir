@@ -15,7 +15,7 @@ the host's VMware Workstation.
 | Requirement | Notes |
 |---|---|
 | Windows with PowerShell 5.1+ | All invocations use `-ExecutionPolicy Bypass` |
-| VMware Workstation | Required for Full mode (`scripts/find-evil-sift` SSH path); not needed for PacketOnly |
+| VMware Workstation | Required for Full mode SIFT transport (`scripts/verdict <path> --sift` invokes the helper); not needed for PacketOnly |
 | `uv` on PATH | `pip install uv` |
 | `cargo` on PATH | Rust 1.88 (`rust-toolchain.toml`) |
 | `gh` CLI authenticated | `gh auth login` |
@@ -27,7 +27,7 @@ the host's VMware Workstation.
 
 ### Full mode — one command from a clean tree
 
-Runs local build/smokes, drives `scripts/find-evil-auto` against evidence, validates the
+Runs local build/smokes, drives the same internal automation engine used by `scripts/verdict`, validates the
 resulting manifest, checks report QA + expert signoff, packages artifacts, and writes
 `readiness-packet.zip`.
 
@@ -38,8 +38,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/readiness-gate.ps1 `
     -RunL1Docker
 ```
 
-Artifacts land in `tmp/readiness-gates/<run-id>/packet/`. Summary JSON at
-`tmp/readiness-gates/<run-id>/readiness-summary.json`.
+Artifacts land in `tmp/readiness-gates/<run-id>/packet/`. Summary JSON is written
+at `tmp/readiness-gates/<run-id>/readiness-summary.json` and copied into the
+packet. The packet manifest is `tmp/readiness-gates/<run-id>/packet/readiness-packet-manifest.json`.
 
 **Fixed `-RunId` rerun** (refreshes packet, reuses existing run artifacts):
 
@@ -97,8 +98,8 @@ Blockers are printed to stderr during the run and collected in `readiness-summar
 |---|---|
 | Missing L1 evidence / L1 Docker status not `passed` | Pass `-RunL1Docker` in Full mode, or set `L1_DOCKER_STATUS=passed` env var in POSIX mode only after confirming the L1 Docker run actually passed |
 | `manifest_verify` failed | The `audit.jsonl` or `run.manifest.json` in the run directory is corrupt or tampered; re-run evidence collection from scratch |
-| Report QA failed | Open the `report_qa` section of `readiness-summary.json` for the failing checks; fix the investigation report, re-run `find-evil-auto` |
-| Expert signoff absent or not recorded | The human expert must run the signoff step — `find-evil-auto` marks `expert_signoff_state` as `required`; see `agent-config/EXPERT.md` for the signoff protocol |
+| Report QA failed | Open the `report_qa` section of `readiness-summary.json` for the failing checks; fix the investigation report, then rerun the gate or `scripts/verdict` |
+| Expert signoff absent or not recorded | The human expert must run the signoff step — the internal automation engine marks `expert_signoff_state` as `required`; see `agent-config/EXPERT.md` for the signoff protocol |
 | `customer_releasable: false` | This is expected and correct — `READINESS_BLOCKED` in this context means the flag was unexpectedly set to `true` by automation. Do not flip it to `true` without an explicit policy decision. |
 | Build skipped / `SkipBuild` flag set + no prior binary | Either remove `-SkipBuild` or provide a pre-built binary |
 
@@ -110,14 +111,25 @@ After a successful Full-mode run:
 
 ```
 tmp/readiness-gates/<run-id>/
+├── logs/
 ├── packet/
-│   ├── run.manifest.json       ← manifest to upload with submission
-│   ├── audit.jsonl             ← append-only hash chain
-│   ├── findings.json           ← verified findings with tool_call_ids
-│   └── report.md               ← human-readable investigation report
-├── readiness-summary.json      ← machine-readable gate outcome
-└── readiness-packet-manifest.json  ← list of packet files + checksums
-readiness-packet.zip            ← ZIP of packet/ contents
+│   ├── audit.jsonl                         ← append-only hash chain
+│   ├── run.manifest.json                   ← manifest to upload with submission
+│   ├── manifest_verify.json                ← recomputed offline verification
+│   ├── verdict.json                        ← Verdict + traced Findings
+│   ├── expert_signoff.json                 ← expert-review state
+│   ├── customer_release_gate.final.json    ← customer-release gate state
+│   ├── REPORT.html                         ← rendered report artifact
+│   ├── REPORT.pdf                          ← included when PDF rendering succeeds
+│   ├── REPORT.md                           ← included when the run emitted it
+│   ├── evidence_inventory.json             ← included when emitted
+│   ├── timeline.json / timeline.csv        ← included when emitted
+│   ├── figures/                            ← included when emitted
+│   ├── readiness-summary.json              ← machine-readable gate outcome
+│   ├── readiness-packet-manifest.json      ← packet files + checksums
+│   └── logs/                               ← validator logs copied when present
+├── readiness-summary.json                  ← same summary, outside the ZIP source
+└── readiness-packet.zip                    ← ZIP of packet/ contents
 ```
 
 ---
@@ -130,7 +142,7 @@ readiness-packet.zip            ← ZIP of packet/ contents
 | `-EvidencePath` | `$env:EVIDENCE_PATH` | Path to evidence file/dir inside SIFT VM (Full mode) |
 | `-ExistingRunDir` | `$env:EVIDENCE_RUN_DIR` | Skip evidence run; validate existing run directory |
 | `-RunId` | auto-generated | Fix the run ID for reruns; gate refreshes packet contents |
-| `-Signer` | `stub` | `stub` (offline, no sigstore) or `sigstore` (real Rekor signature) |
+| `-Signer` | `ed25519` | `ed25519` (real local signature, verifies offline), `sigstore` (identity + Rekor transparency log), or `stub` (explicit test placeholder) |
 | `-ForceFreshReplay` | off | Force replay even if a cached run exists |
 | `-RunL1Docker` | off | Also run L1 Docker gate during Full mode |
 | `-SkipBuild` | off | Skip `cargo build` (use pre-built binary) |

@@ -16,7 +16,7 @@ const CREDITS: Credit[] = [
   { label: "Source", value: "github.com/TimothyVang/verdict-dfir", mono: true },
   { label: "License", value: "Apache-2.0" },
   { label: "Continuous integration", value: "L0 · L1 · L2 · L3 — all green", tone: C.confirmed },
-  { label: "Tool surface", value: "20 Rust · 12 Python", mono: true },
+  { label: "Tool surface", value: "31 Rust · 12 Python", mono: true },
 ];
 
 export function OutroScene() {
@@ -151,7 +151,7 @@ export function OutroScene() {
               lineHeight: 1.8,
             }}
           >
-            Signed · sigstore · merkle d1e4bc7a906f2c38
+            Signed · manifest · merkle d1e4bc7a906f2c38
             <br />
             <span style={{ color: C.confirmed }}>chain OK</span> — verifiable offline, years from now
           </div>

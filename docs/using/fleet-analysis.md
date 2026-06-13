@@ -41,7 +41,7 @@ evidence is each host's own `run.manifest.json`, verifiable offline via `manifes
 ## Prerequisites
 
 - **The SIFT VM must be reachable.** Stage 1 SSHes into the VM to enumerate evidence and runs
-  `find-evil-auto` per host. It reads the VM coordinates from environment variables (see
+  the internal automation engine per host. It reads the VM coordinates from environment variables (see
   `docs/reference/environment-variables.md`):
   - `FIND_EVIL_GUEST_IP` (default `192.168.197.143`)
   - `FIND_EVIL_GUEST_USER` (default `sansforensics`)
@@ -68,7 +68,7 @@ not `scp` a multi-GB corpus; **share it** instead:
 4. Run with `FIND_EVIL_GUEST_IP=<actual guest IP>` — the `192.168.197.143` default drifts; read the
    live IP from `.mcp.json.sift` or `vmrun -T ws getGuestIPAddress <vmx> -wait`.
 
-Known first-run fixes (all shipped): `find-evil-auto` resolves `python3` (not `python`);
+Known first-run fixes (all shipped): the internal automation engine resolves `python3` (not `python`);
 `render_fleet_report.py` resolves `pandoc`/`chrome` from PATH (override via `PANDOC_BIN`/`CHROME_BIN`).
 If `fleet_correlate.py` reports **0 cross-host correlations despite populated runs**, the guest's
 Volatility symbol cache is unwritable — `psscan.json` will be empty (`[]`); make
@@ -78,8 +78,8 @@ Volatility symbol cache is unwritable — `psscan.json` will be empty (`[]`); ma
 
 ## Stage 1 — `fleet_investigate.py`
 
-Walks the VM's evidence root, and for every `.img` it finds (smallest first), spawns
-`scripts/find-evil-auto <path> --unattended --no-report --skip-preflight` and captures the
+Walks the VM's evidence root, and for every `.img` it finds (smallest first), spawns the
+same internal engine used by `scripts/verdict` and captures the
 resulting Verdict. Sequential by default to avoid VM RAM contention; the Volatility symbol cache
 makes every image after the first cheaper.
 
@@ -228,8 +228,8 @@ Open `FLEET_REPORT.pdf` (or `.html`) and work top-down:
    of cross-host process correlations and temporal clusters, and a one-line cryptographic-integrity
    check (all Merkle roots unique = chain integrity intact).
 2. **Verdict distribution** — the **SUSPICIOUS hosts are your priority queue.** Open each one's
-   `verdict.json` and (if you want a per-host PDF) re-run `find-evil-auto` on that image without
-   `--no-report`.
+   `verdict.json` and (if you want a per-host PDF) re-run `scripts/verdict` on that image without
+   report-suppression flags.
 3. **MITRE density** — if a `pslist`=0 / `psscan`>0 divergence (`T1014`) shows up on a large
    fraction of the fleet, the report deliberately reframes it as a **HYPOTHESIS**: high fleet
    prevalence argues for a shared acquisition-smear / kernel-global read failure, not N
@@ -248,7 +248,7 @@ Open `FLEET_REPORT.pdf` (or `.html`) and work top-down:
 
 ## See also
 
-- `docs/reference/mcp-and-tools.md` — the 32 audit-chained product tools (20 Rust + 12 Python) and
+- `docs/reference/mcp-and-tools.md` — the 43 audit-chained product tools (31 Rust + 12 Python) and
   `manifest_verify`. (`.mcp.json` registers 6 servers in total; 4 are non-product.)
 - `docs/reference/dependencies.md` — installing matplotlib and the rest of the toolchain.
 - `docs/reference/environment-variables.md` — `FIND_EVIL_GUEST_IP` / `_GUEST_USER` / `_SSH_KEY`

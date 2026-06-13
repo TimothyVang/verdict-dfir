@@ -13,7 +13,7 @@ MCP pipeline → open the live dashboard at the Case → signed Verdict + report
 
 The Verdict word is always one of **`SUSPICIOUS`** / **`INDETERMINATE`** / **`NO_EVIL`** (see
 [`../verdict-semantics.md`](../verdict-semantics.md)). Every Finding cites a `tool_call_id` from
-the 32 audit-chained product tools (20 Rust + 12 Python) — the only surface sealed into the
+the 43 audit-chained product tools (31 Rust + 12 Python) — the only surface sealed into the
 manifest. `.mcp.json` registers 6 servers total; 4 are non-product
 (`n8n-mcp`, `playwright`, `puppeteer`, plus the `qmd` dev-memory recall server) — full table in
 [`../reference/mcp-and-tools.md`](../reference/mcp-and-tools.md).
@@ -23,25 +23,24 @@ manifest. `.mcp.json` registers 6 servers total; 4 are non-product
 ## 0. The `/verdict` skill — turnkey, zero flags (recommended)
 
 In a Claude Code session (`claude` in the repo), type **`/verdict <evidence>`** and the skill runs
-the *entire* pipeline with no setup and no flags:
+the supported pipeline with no flags:
 
-1. **Bootstraps** (`scripts/verdict-setup.sh`): builds the MCP servers via `install.sh` if missing,
-   brings up n8n, and prepares the SANS SIFT VM — resolves the VM's *current* DHCP IP (the hardcoded
-   default goes stale), powers it on if it is off, and confirms the forensic toolchain (`ewfmount`,
-   Volatility, Hayabusa, …).
-2. **Auto-selects `--sift`** when the VM is reachable, so disk images fully extract — local mode can
-   only mount the EWF container, not the inner NTFS volume. Falls back to local with a clear
-   custody-only warning when there is no VM.
-3. **Runs the parallel investigation** to a signed Verdict, then **fires the n8n finding-to-action +
-   grounding workflows** (host-side, post-verdict — never in the audit chain), and opens the
-   dashboard + report.
+1. **Bootstraps** (`scripts/verdict-setup.sh`): builds/checks the MCP servers via `install.sh` if
+   missing, optionally brings up n8n when enabled or already available, and prepares the SANS SIFT VM
+   when the gated OVA and implemented VMware path are available.
+2. **Auto-selects `--sift`** when the VM is reachable, so supported disk images can mount/extract
+   inside the SIFT environment. Local mode can parse supported disk artifacts when Sleuth Kit/libewf
+   prerequisites are present; otherwise it falls back with a clear custody-only warning.
+3. **Runs the parallel investigation** to a signed Verdict, then attempts optional n8n
+   finding-to-action + grounding workflows (host-side, post-verdict — never in the audit chain), and
+   opens the dashboard + report.
 4. **Reports** the Verdict + confidence, the finding / tool-call counts, `manifest_verify.overall`,
-   and every workflow that fired.
+   and the status of every optional host-side workflow (`reachable`, `recorded`, `skipped`, or
+   `unreachable`) without treating sidecar reachability as audit-chain evidence.
 
-You never run `install.sh` / `doctor.sh`, and never type `--sift` or `--parallel` — the skill adds
-them. It is a turnkey wrapper around `scripts/verdict` (documented below); anything it does you can
-also do by hand with the flags in §1. The forensic toolchain lives pre-installed in the SIFT VM, so
-"install everything" is satisfied by preparing the VM, not by installing binaries on the host.
+It is a turnkey wrapper around `scripts/verdict` (documented below); anything it does you can also
+do by hand with the flags in §1. The SIFT VM provides the broad forensic workstation baseline when
+available; host-local mode remains useful but has narrower disk-content coverage.
 
 > The skill is loaded at session start. If you just pulled it (e.g. after a merge), start a fresh
 > `claude` session so `/verdict` is registered. To force serial or local, the skill honors the same
@@ -60,7 +59,7 @@ Every flag the launcher actually parses:
 | Flag | Effect |
 |---|---|
 | `<evidence>` (positional) | Path to the Observable. Omit it to use the newest non-placeholder entry already in `evidence/`. |
-| `--sift` | Run the DFIR tools inside the SANS SIFT VM over SSH (default: tools on the local host) — **the only way to fully extract a disk image** (local mode mounts the EWF container but not the inner volume). The post-verdict n8n automation + grounding **now fire in `--sift` mode too** (host-side, after the case dir syncs back). Requires a one-time `bash scripts/sift-vm-bootstrap.sh`; set `FIND_EVIL_GUEST_IP` if the VM's IP changed. |
+| `--sift` | Run the DFIR tools inside the SANS SIFT VM over SSH (default: tools on the local host). This is the recommended parity path for raw disk image content extraction; local mode can also parse supported disk artifacts when Sleuth Kit/libewf prerequisites are present, but otherwise records custody-only limitations. The post-verdict n8n automation + grounding can run in `--sift` mode too (host-side, after the case dir syncs back). Requires a one-time `bash scripts/sift-vm-bootstrap.sh`; set `FIND_EVIL_GUEST_IP` if the VM's IP changed. |
 | `--fleet` | Whole multi-host case in ONE command: per-host investigations → cross-host correlation → `FLEET_REPORT`. **Auto-detected** when `<evidence>` is a folder with `hosts/` or `disks/` (the whole-case layout). Resumable: re-run the same command and completed hosts are skipped. Combine with `--sift` to run the per-host stage inside the SIFT VM (`fleet_investigate.py`). See `docs/using/fleet-analysis.md`. |
 | `--watch` | No path? Block until a file **or** a case folder is dropped into `evidence/`, debounced until the copy finishes, then go. |
 | `--no-dashboard` | Do not auto-open the web dashboard. |
@@ -183,6 +182,7 @@ it is synced back to the host after the run):
 ```
 tmp/auto-runs/auto-<uuid>/
 ├── verdict.json              the evidence-bound Verdict + Findings (each cites a tool_call_id + confidence tier)
+├── coverage_manifest.json    explicit available/attempted/parsed/failed/unsupported/not-supplied coverage sidecar
 ├── run.manifest.json         Merkle root over canonical tool outputs + signature metadata — verifiable offline
 ├── manifest_verify.json      offline verification result; check overall == true
 ├── audit.jsonl               append-only, hash-chained log of every tool call and Finding (prev_hash per record)
@@ -198,6 +198,7 @@ One line on the load-bearing four:
 | File | What it is |
 |---|---|
 | `verdict.json` | THE answer: the Verdict word, the Findings list, ATT&CK/practitioner coverage, evidence cards, source bibliography, next analyst actions. |
+| `coverage_manifest.json` | The anti-overclaim scope record: for each artifact class, whether it was available, attempted, parsed, failed, unsupported, not supplied, and how many records/rows/errors were observed. |
 | `run.manifest.json` | The signed manifest — Merkle root + signature metadata. The thing a third party verifies offline. |
 | `manifest_verify.json` | The verification result. A passing live test requires `overall: true`. |
 | `audit.jsonl` | The hash-chained chain of custody; every `tool_call_id` a Finding cites resolves to a line here. |

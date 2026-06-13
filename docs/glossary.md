@@ -10,7 +10,7 @@ sources: [CLAUDE.md](../CLAUDE.md), [verdict-semantics.md](verdict-semantics.md)
 |---|---|
 | **VERDICT** | The DFIR agent in this repo. Point it at evidence; it returns a signed Verdict ("is there evil here?") plus a report. |
 | **DFIR** | Digital Forensics & Incident Response — investigating compromised systems to determine what happened. |
-| **MCP** | Model Context Protocol — the typed tool interface Claude Code calls. VERDICT exposes 32 product tools across two MCP servers and adds no `execute_shell`. |
+| **MCP** | Model Context Protocol — the typed tool interface Claude Code calls. VERDICT exposes 43 product tools across two MCP servers and adds no `execute_shell`. |
 | **Claude Code is the engine** | Amendment A2: there is no separate app server. When you run `claude`/`scripts/verdict`, that session *is* the forensic analyst. |
 
 ## DFIR vocabulary (used deliberately throughout)
@@ -53,7 +53,7 @@ Full semantics in [verdict-semantics.md](verdict-semantics.md). None of them mea
 | **`tool_call_id`** | A SHA-256 over a tool's raw output. Every Finding cites one or it is vetoed. |
 | **audit chain / `audit.jsonl`** | Append-only, hash-chained log (each record carries `prev_hash`) of every tool call and finding. |
 | **Merkle root / `run.manifest.json`** | A Merkle tree over canonical tool outputs, recorded in the run manifest. |
-| **manifest / `manifest_verify`** | The signed seal over the run; `manifest_verify` re-checks the chain + Merkle root **offline**. Post-A5 the chain is 3 tiers (audit `prev_hash` → `rs_merkle` → sigstore). |
+| **manifest / `manifest_verify`** | The signed seal over the run; `manifest_verify` re-checks the chain + Merkle root **offline**. Post-A5 the chain is audit `prev_hash` → `rs_merkle` → manifest signature, with Ed25519 as the offline-verifiable default and Sigstore as the identity/transparency tier. |
 | **SIFT VM** | The SANS SIFT Workstation VM (a gated ~9.3 GB download) that supplies the full disk-forensics toolchain. Needed only for disk-image inner-volume extraction. |
 | **Live test** | The dev "done" gate: a real investigation producing a real Verdict + `manifest_verify overall:true` — not a smoke run. |
 
@@ -69,16 +69,17 @@ The narrow, typed tool surface is the security pitch — it bounds what the agen
 and keeps every action in the audit chain. Adding shell pass-through would forfeit that.
 
 **Do I need the SIFT VM?**
-Only for disk-image inner-volume extraction (`.E01`/`.dd`). Memory, EVTX, PCAP, and Velociraptor
-evidence run fully in local-host mode. Without SIFT, disk evidence is custody-only.
+Only for disk-image parity and for hosts without local Sleuth Kit/libewf. Memory, EVTX, PCAP, and
+Velociraptor evidence run fully in local-host mode. Disk evidence is custody-only whenever
+`disk_mount` / `disk_extract_artifacts` cannot produce supported parsed artifacts.
 
 **Is a Claude credential required?**
-Yes for the investigating agent (one of three modes — see [CLAUDE.md §8](../CLAUDE.md)).
+Yes for the investigating agent (one of three modes — see [CLAUDE.md "Required Setup"](../CLAUDE.md)).
 
 **Is VERDICT's memory part of the evidence?**
 No — never. Both memory systems (the obsidian-mind dev/operator vault and the in-flow Hermes recall)
 are outside the audit chain: never evidence, never a Finding, never a Merkle leaf. See
-[CLAUDE.md §8.5](../CLAUDE.md).
+[CLAUDE.md "Non-Negotiable Guardrails"](../CLAUDE.md) and [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md).
 
 **Where does output go?**
 `tmp/auto-runs/<case-id>/` — `verdict.json`, `audit.jsonl`, `run.manifest.json`, `manifest_verify.json`,

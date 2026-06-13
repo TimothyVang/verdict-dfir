@@ -171,10 +171,10 @@ require "uv"      "curl -LsSf https://astral.sh/uv/install.sh | sh" \
 GROUP="MCP servers"
 [ -z "${JSON_MODE}" ] && { echo; echo "${c_blu}MCP servers${c_off} ${c_dim}(auto-spawned by Claude Code from .mcp.json)${c_off}"; }
 
-# findevil-mcp — Rust, 20 typed DFIR tools. Needs the release binary
+# findevil-mcp — Rust, 31 typed DFIR tools. Needs the release binary
 # (scripts/run-mcp-rust.sh falls back to a slow `cargo run` without it).
 if [ -x "target/release/findevil-mcp" ] || [ -x "target/release/findevil-mcp.exe" ]; then
-  row ok "findevil-mcp" "Rust · 20 DFIR tools · target/release/findevil-mcp"
+  row ok "findevil-mcp" "Rust · 31 DFIR tools · target/release/findevil-mcp"
 else
   row err "findevil-mcp" "not built — run: bash scripts/install.sh"
   REMEDIES+=("findevil-mcp: bash scripts/install.sh   # cargo build --release -p findevil-mcp")
@@ -250,6 +250,24 @@ dfir "tshark/zeek"  TSHARK_BIN      "sudo apt-get install -y tshark   (pcap_tria
      -- tshark zeek
 dfir "sleuthkit"    SLEUTHKIT_BIN   "sudo apt-get install -y sleuthkit   (disk_extract_artifacts on .e01/.dd; fls/icat/mmls)" \
      -- fls
+dfir "EZ tools"     EZTOOLS_DIR     "install the Eric Zimmerman tools (ship on the SIFT VM; native-Linux since the .NET port) and set \$EZTOOLS_DIR or add them to PATH   (ez_parse: LNK/Amcache/ShimCache/RecycleBin/shellbags)" \
+     -- LECmd AmcacheParser RBCmd SBECmd
+dfir "plaso"        PLASO_DIR       "install plaso/log2timeline (ships on the SIFT VM) and set \$PLASO_DIR or add to PATH   (plaso_parse: Linux/legacy-Win/macOS logs)" \
+     -- log2timeline.py psort.py
+dfir "mac_apt"      MAC_APT         "install mac_apt (ships on the SIFT VM) and set \$MAC_APT to mac_apt.py or add it to PATH   (mac_triage: macOS image triage)" \
+     -- mac_apt.py mac_apt
+dfir "journalctl"   JOURNALCTL_BIN  "install systemd or set \$JOURNALCTL_BIN   (journalctl_query: binary systemd journals)" \
+     -- journalctl
+dfir "last (wtmp)"  LAST_BIN        "install util-linux or set \$LAST_BIN   (login_accounting: wtmp/btmp)" \
+     -- last
+dfir "ausearch"     AUSEARCH_BIN    "sudo apt-get install -y auditd   (ausearch: Linux audit.log; INSTALL-FIRST, absent on stock SIFT)" \
+     -- ausearch
+dfir "nfdump"       NFDUMP_BIN      "sudo apt-get install -y nfdump   (nfdump_query: NetFlow/IPFIX; INSTALL-FIRST)" \
+     -- nfdump
+dfir "suricata"     SURICATA_BIN    "sudo apt-get install -y suricata   (suricata_eve: IDS on PCAP; INSTALL-FIRST)" \
+     -- suricata
+dfir "INDXParse"    INDXPARSE_BIN   "pip install INDXParse   (or: pipx install INDXParse) for indx_parse (\$I30/INDX slack; INSTALL-FIRST)" \
+     -- INDXParse.py
 
 # ---------------------------------------------------------------------------
 # Reporting + demo-recording helpers (warn-only).

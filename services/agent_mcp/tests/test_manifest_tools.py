@@ -106,34 +106,38 @@ class TestEd25519Tier:
         )
         assert result.signer_effective == "ed25519"
 
-    async def test_ed25519_degrades_to_stub_when_key_unwritable(
+    async def test_ed25519_degrades_to_stub_when_key_parent_is_not_directory(
         self, seeded_audit_log: Path, tmp_path: Path, monkeypatch
     ) -> None:
-        # Point the key inside a read-only dir: generation fails, the run
-        # honestly degrades to stub and says why — never crashes.
-        ro_dir = tmp_path / "ro"
-        ro_dir.mkdir()
-        monkeypatch.setenv("FINDEVIL_SIGNING_KEY", str(ro_dir / "nested" / "signing.key"))
-        ro_dir.chmod(0o500)
-        try:
-            out_path = tmp_path / "run.manifest.json"
-            result = await FINALIZE_SPEC.handler(
-                ManifestFinalizeInput(
-                    case_id="case-ro",
-                    run_id="run-ro",
-                    started_at="2026-04-25T00:00:00Z",
-                    audit_log_path=str(seeded_audit_log),
-                    output_path=str(out_path),
-                    signer="ed25519",
-                )
+        # Point the key under a regular file: parent creation fails on
+        # Linux/macOS/Windows, so the run honestly degrades to stub and says
+        # why — never crashes.
+        not_a_dir = tmp_path / "not-a-dir"
+        not_a_dir.write_text("blocking file", encoding="utf-8")
+        monkeypatch.setenv("FINDEVIL_SIGNING_KEY", str(not_a_dir / "signing.key"))
+
+        out_path = tmp_path / "run.manifest.json"
+        result = await FINALIZE_SPEC.handler(
+            ManifestFinalizeInput(
+                case_id="case-ro",
+                run_id="run-ro",
+                started_at="2026-04-25T00:00:00Z",
+                audit_log_path=str(seeded_audit_log),
+                output_path=str(out_path),
+                signer="ed25519",
             )
-            assert result.signer_effective == "stub"
-            assert result.fallback_reason
-        finally:
-            ro_dir.chmod(0o700)
+        )
+        assert result.signer_effective == "stub"
+        assert result.fallback_reason
 
 
 class TestManifestVerify:
+    def test_tool_description_names_current_signature_tiers(self) -> None:
+        description = VERIFY_SPEC.description
+        assert "ed25519/sigstore/stub" in description
+        assert "offline-verified Ed25519 signature" in description
+        assert "sigstore/stub bundle" not in description
+
     async def test_clean_manifest_verifies(self, seeded_audit_log: Path, tmp_path: Path) -> None:
         out_path = tmp_path / "run.manifest.json"
         await FINALIZE_SPEC.handler(

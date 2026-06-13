@@ -21,7 +21,7 @@ export const BEATS: Beat[] = [
     rubric: "Cold open",
     accentColor: "#9b59b6",
     narration:
-      "Here's the problem every forensics analyst knows. A machine gets popped, and now you've got to work out exactly what the attacker did — and prove it. By hand, that's days. So I pointed VERDICT at a real NIST hacking-case disk and let it run. A few minutes later: nine findings, eight of them confirmed, verdict — suspicious. And every one with a receipt you can verify offline. It does the grind for you, and you don't just get answers — you get answers you can prove.",
+      "Here's the problem every forensics analyst knows. A machine gets popped, and now you've got to work out exactly what the attacker did — and prove it. By hand, that's days. So I pointed VERDICT at a real NIST hacking-case disk and let it run. A few minutes later: a suspicious verdict, tool-cited findings, and an explicit coverage manifest saying what it did and did not parse. Every supported finding has a receipt you can verify offline. It does the grind for you, and you don't just get answers — you get answers you can prove.",
   },
   {
     number: 2,
@@ -31,7 +31,7 @@ export const BEATS: Beat[] = [
     rubric: "How to run it",
     accentColor: "#6f93b8",
     narration:
-      "And running it is honestly simple. VERDICT lives inside Claude Code — the AI assistant right in your terminal. You type one line: investigate, then the evidence — a disk image, or a snapshot of the machine's memory. That's the whole command. Now watch this part closely — we sabotage one finding on purpose, to prove the verifier is awake. Midway through, its replay comes back wrong, so it throws the finding out — re-runs the tool, recovers it clean. It catches the mistake, on camera.",
+      "And running it is honestly simple. VERDICT lives inside Claude Code — the AI assistant right in your terminal. You type one line: investigate, then supported evidence — a disk image, an event log, a packet capture, or a snapshot of the machine's memory. That's the whole command. Now watch this part closely — we sabotage one finding on purpose, to prove the verifier is awake. Midway through, its replay comes back wrong, so it throws the finding out — re-runs the tool, recovers it clean. It catches the mistake, on camera.",
   },
   {
     number: 3,
@@ -51,7 +51,7 @@ export const BEATS: Beat[] = [
     rubric: "The tools",
     accentColor: "#c79a4a",
     narration:
-      "And it's not guessing. It's driving thirty-two typed tools — twenty real forensic tools in Rust, plus twelve in Python for the crypto and the analysis — right inside the SANS SIFT Workstation. And the key design choice: not one of them can run arbitrary commands, so it can't be tricked into going rogue. Each tool answers one plain question. What ran on this machine? What did the system quietly log? What left over the network? And — can we prove it?",
+      "And it's not guessing. It's driving forty-three typed tools — thirty-one real forensic tools in Rust, plus twelve in Python for the crypto and the analysis — right inside the SANS SIFT Workstation. And the key design choice: not one of them can run arbitrary commands, so it can't be tricked into going rogue. Each tool answers one plain question. What ran on this machine? What did the system quietly log? What left over the network? And — can we prove it?",
   },
   {
     number: 5,
@@ -71,7 +71,7 @@ export const BEATS: Beat[] = [
     rubric: "The dashboard",
     accentColor: "#9b59b6",
     narration:
-      "And while it works, you're not just staring at a spinner. This is the live dashboard. Every finding pops up the moment it's proven — tagged confirmed, inferred, or hypothesis, so you always know how sure it is. A timeline builds itself, the pipeline lights up stage by stage, and every finding links straight back to the exact tool call behind it. Nothing hidden, nothing hand-waved.",
+      "And while it works, you're not just staring at a spinner. This is the live dashboard. Findings and leads appear as they are vetted — tagged confirmed, inferred, or hypothesis, so you always know how sure it is. A timeline builds itself, the pipeline lights up stage by stage, and every finding links straight back to the exact tool call behind it. Nothing hidden, nothing hand-waved.",
   },
   {
     number: 7,
@@ -111,7 +111,7 @@ export const BEATS: Beat[] = [
     rubric: "Signed verdict",
     accentColor: "#9b59b6",
     narration:
-      "And at the end, you get the one thing that actually matters — a signed verdict. And an honest one. It only ever says three things: suspicious, indeterminate, or no evil found in what we looked at. It never promises more than it can back up. VERDICT is open source and ready today. Point it at your evidence — minutes instead of days, with a receipt for every single finding.",
+      "And at the end, you get the one thing that actually matters — a signed verdict. And an honest one. It only ever says three things: suspicious, indeterminate, or no evil found in what we looked at. It never promises more than it can back up. VERDICT is open source and ready today. Point it at supported evidence — minutes instead of days, with a receipt for every single finding.",
   },
 ];
 

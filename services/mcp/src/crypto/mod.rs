@@ -11,7 +11,7 @@
 //! Sub-modules:
 //!
 //! * ``merkle`` — append-only SHA-256 Merkle tree with O(log n)
-//!   inclusion proofs. Bitcoin-style duplicate-last when a tier
+//!   inclusion proofs. Duplicate-last when a tier
 //!   has odd cardinality. Empty root is 32 zero bytes.
 //! * ``manifest`` — JCS canonicalization helpers for the run
 //!   manifest. (Lands in a follow-up.)

@@ -35,7 +35,7 @@ def parse_front_matter(text: str) -> dict[str, str]:
     for key, pattern in {
         "Merkle root": r"Merkle root `([^`]+)`",
         "Audit log final hash": r"Audit log final hash `([^`]+)`",
-        "Sigstore signature SHA-256": r"Sigstore signature SHA-256 `([^`]+)`",
+        "Signature SHA-256": r"(?:Sigstore signature|Ed25519 signature|Signature \([^`]+\)) SHA-256 `([^`]+)`",
         "Cert fingerprint": r"Cert fingerprint `([^`]+)`",
     }.items():
         match = re.search(pattern, text)
@@ -109,8 +109,8 @@ def build_html(source: Path) -> str:
         ("Merkle root", fields.get("Merkle root", "not recorded")),
         ("Audit final hash", fields.get("Audit log final hash", "not recorded")),
         (
-            "Sigstore signature",
-            fields.get("Sigstore signature SHA-256", "not recorded"),
+            "Manifest signature",
+            fields.get("Signature SHA-256", "not recorded"),
         ),
         ("Certificate", fields.get("Cert fingerprint", "not recorded")),
     ]

@@ -6,7 +6,9 @@ pitch see [README.md](README.md); for run modes and every flag see
 
 VERDICT runs as a [Claude Code](https://claude.com/claude-code) agent. Installation builds the two
 product MCP servers and the host DFIR toolchain; Claude Code auto-spawns the servers from
-`.mcp.json` on session start.
+`.mcp.json` on session start. The product surface is 43 tools total: 31 Rust DFIR tools in
+`findevil-mcp` plus 12 Python crypto/ACH/memory/ACP/expert-feedback tools in
+`findevil-agent-mcp`.
 
 ---
 
@@ -21,8 +23,8 @@ via `fnm` (best-effort, since Node is optional).
 
 | Tool | Version | Why | Required? |
 |---|---|---|---|
-| Rust + Cargo | 1.88 (pinned in `rust-toolchain.toml`) | builds `findevil-mcp` (20 DFIR tools) | **yes** |
-| uv | latest | syncs the Python `findevil-agent-mcp` env | **yes** |
+| Rust + Cargo | 1.88 (pinned in `rust-toolchain.toml`) | builds `findevil-mcp` (31 DFIR tools) | **yes** |
+| uv | latest | syncs the Python `findevil-agent-mcp` env (12 tools) | **yes** |
 | Python | 3.11–3.12 | runs the Python `findevil-agent-mcp` + smoke/score tooling | **yes** |
 | git | recent | clones the repo; used by the smokes | **yes** |
 | unzip | any | extracts Velociraptor `.zip` collections + fixtures | **yes** |
@@ -39,9 +41,10 @@ via `fnm` (best-effort, since Node is optional).
 ### Two hard floors (stated plainly, not bugs)
 
 - **The Claude credential is required** for the investigating agent (one of the three modes above).
-- **Disk-image inner-volume extraction needs the SANS SIFT VM** (a ~9.3 GB browser-gated download —
-  see [QUICKSTART.md](QUICKSTART.md) "Path A"). Local-host mode fully handles memory, EVTX, PCAP, and
-  Velociraptor evidence; raw `.E01`/`.dd` disks are custody-only without SIFT.
+- **Disk-image inner-volume extraction needs Sleuth Kit/libewf locally or the SANS SIFT VM** (a
+  ~9.3 GB browser-gated download — see [QUICKSTART.md](QUICKSTART.md) "Path A"). Local-host mode
+  fully handles memory, EVTX, PCAP, and Velociraptor evidence; raw `.E01`/`.dd` disks are custody-only
+  when mount/extract prerequisites are absent or no supported artifacts are produced.
 
 ---
 
@@ -86,7 +89,7 @@ Point VERDICT at evidence. Output lands in `tmp/auto-runs/<case-id>/`, and the l
 `http://localhost:3000` streams the run.
 
 ```bash
-# Your own evidence (memory / EVTX / PCAP / Velociraptor work locally; disk needs --sift):
+# Your own evidence (memory / EVTX / PCAP / Velociraptor work locally; disk needs local Sleuth Kit/libewf or --sift):
 scripts/verdict evidence/<your-file>
 
 # No evidence yet? Stage public test datasets (into fixtures/, never evidence/):

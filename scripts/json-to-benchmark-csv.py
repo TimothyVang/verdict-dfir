@@ -25,7 +25,7 @@ CSV_COLUMNS = [
     "verdict",
     "verdict_correct",
     "wall_clock_seconds",
-    "ots_pending",
+    "manifest_verify_overall",
     "run_duration_seconds",
     "contradictions_found",
     "contradictions_auto_resolved",
@@ -60,7 +60,7 @@ def _record_from_file(p: Path) -> dict:
         "verdict_correct": data.get("verdict_correct", ""),
         "wall_clock_seconds": data.get("wall_clock_seconds")
         or data.get("run_duration_seconds", ""),
-        "ots_pending": data.get("ots_pending", ""),
+        "manifest_verify_overall": data.get("manifest_verify_overall", ""),
         "run_duration_seconds": data.get("run_duration_seconds", ""),
         "contradictions_found": data.get("contradictions_found", ""),
         "contradictions_auto_resolved": data.get("contradictions_auto_resolved", ""),

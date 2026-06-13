@@ -15,8 +15,8 @@ param(
     [string]$OutputRoot = $env:READINESS_OUTPUT_ROOT,
     [string]$RunId = $env:READINESS_RUN_ID,
 
-    [ValidateSet("stub", "sigstore")]
-    [string]$Signer = $(if ($env:READINESS_SIGNER) { $env:READINESS_SIGNER } else { "stub" }),
+    [ValidateSet("stub", "ed25519", "sigstore")]
+    [string]$Signer = $(if ($env:READINESS_SIGNER) { $env:READINESS_SIGNER } else { "ed25519" }),
 
     [switch]$ForceFreshReplay,
     [switch]$RunL1Docker,
@@ -808,13 +808,27 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
     Copy-PacketFile -Source $expertSignoffPath -RelativePath "expert_signoff.json" -Required
     Copy-PacketFile -Source $releaseGatePath -RelativePath "customer_release_gate.final.json" -Required
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "expert_signoff_manifest_link.json") -RelativePath "expert_signoff_manifest_link.json"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "coverage_manifest.json") -RelativePath "coverage_manifest.json"
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "evidence_inventory.json") -RelativePath "evidence_inventory.json"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "disk_artifact_summary.json") -RelativePath "disk_artifact_summary.json"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "psscan.json") -RelativePath "psscan.json"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "psxview.json") -RelativePath "psxview.json"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "malfind.json") -RelativePath "malfind.json"
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "malware_triage.json") -RelativePath "malware_triage.json"
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "timeline.json") -RelativePath "timeline.json"
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "timeline.csv") -RelativePath "timeline.csv"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "automation.json") -RelativePath "automation.json"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "self-score.json") -RelativePath "self-score.json"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "recall-score.json") -RelativePath "recall-score.json"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "grounding.json") -RelativePath "grounding.json"
     Copy-PacketFile -Source $reportMdPath -RelativePath "REPORT.md"
     Copy-PacketFile -Source $reportHtmlPath -RelativePath "REPORT.html"
     Copy-PacketFile -Source $reportPdfPath -RelativePath "REPORT.pdf"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT.new.pdf") -RelativePath "REPORT.new.pdf"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.md") -RelativePath "REPORT-internal.md"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.html") -RelativePath "REPORT-internal.html"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.pdf") -RelativePath "REPORT-internal.pdf"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.new.pdf") -RelativePath "REPORT-internal.new.pdf"
     Copy-PacketDirectory -Source (Join-Path $resolvedRunDir "figures") -RelativePath "figures"
 }
 

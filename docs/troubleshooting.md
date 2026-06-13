@@ -60,11 +60,14 @@ What the engine does about a rejection (current code): each *re-runnable* reject
 **re-dispatched exactly once** with a fresh replay (`verifier_redispatch` audit record;
 recoveries are listed in `verdict.json → findings_summary.verifier_redispatches` and in
 `analysis_limitations` as transparency notes, not blockers). A rejection that persists is a
-`course_correction`, and **two consecutive** persistent failures trip the HEARTBEAT
-terminator: remaining lanes are skipped (`heartbeat_terminated` record), the run still
-seals, the empty-findings verdict is forced to `INDETERMINATE`, and the run summary reports
-`readiness_state: "partial"` with a HEARTBEAT blocker. Citation vetoes (`missing_citation`
-/ `missing_audit_record`) are never re-dispatched.
+`course_correction` and a `verifier_rejected_lead` audit record, mirrored into
+`verdict.json → rejected_finding_leads` as non-evidentiary analyst-review context. The rejected
+lead is not passed to the judge, final Findings, or verdict policy. **Two consecutive**
+persistent failures trip the HEARTBEAT terminator: remaining lanes are skipped
+(`heartbeat_terminated` record), the run still seals, the empty-findings verdict is forced to
+`INDETERMINATE`, and the run summary reports `readiness_state: "partial"` with a HEARTBEAT
+blocker. Citation vetoes (`missing_citation` / `missing_audit_record`) are never
+re-dispatched.
 
 | Symptom | Detector | Fix |
 |---|---|---|
@@ -77,7 +80,7 @@ seals, the empty-findings verdict is forced to `INDETERMINATE`, and the run summ
 | Symptom | Detector | Fix |
 |---|---|---|
 | `ERROR: SSH key not found at <path>` | `find_evil_auto.py` SIFT preflight | First time: `bash scripts/sift-vm-bootstrap.sh`; or `export FIND_EVIL_SSH_KEY=/path/to/key` |
-| `ERROR: cannot reach SIFT VM at <user>@<ip> or MCP server prerequisite missing` (lists the 3 prerequisites) | same preflight (10 s SSH probe) | Boot the VM (`bash scripts/find-evil-sift` auto-boots), check `ping $FIND_EVIL_GUEST_IP`, and verify all three listed paths exist on the guest |
+| `ERROR: cannot reach SIFT VM at <user>@<ip> or MCP server prerequisite missing` (lists the 3 prerequisites) | same preflight (10 s SSH probe) | Run `bash scripts/sift-vm-bootstrap.sh` once, then rerun `scripts/verdict <path> --sift`; check `ping $FIND_EVIL_GUEST_IP`, and verify all three listed paths exist on the guest |
 | SSH probe times out with the default IP | default `FIND_EVIL_GUEST_IP` may not match your VM's network | `export FIND_EVIL_GUEST_IP=<your VM's IP>` (NAT setups commonly land on `192.168.137.x`); also `FIND_EVIL_GUEST_USER` / `FIND_EVIL_GUEST_REPO` if non-default |
 
 **You do not need SIFT mode for full results.** Local mode parses disk artifacts

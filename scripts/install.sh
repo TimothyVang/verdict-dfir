@@ -75,7 +75,7 @@ if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && command -v claude &> /dev/null; then
 elif command -v claude &> /dev/null && [ -d "${HOME}/.claude" ]; then
     ok "claude CLI on PATH + ~/.claude/ populated (mode 2: interactive session)."
 elif [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    ok "ANTHROPIC_API_KEY present (mode 3: direct API)."
+    ok "ANTHROPIC_API_KEY present (mode 3: direct API credential)."
 else
     fail "Find Evil! requires one of (any works — pick whichever you have):"
     echo ""
@@ -339,7 +339,7 @@ ok "services/agent_mcp/.venv ready."
 info "Verifying MCP servers (findevil-mcp + findevil-agent-mcp)..."
 
 if [ -x "target/release/findevil-mcp" ] || [ -x "target/release/findevil-mcp.exe" ]; then
-    ok "findevil-mcp (Rust, 20 DFIR tools) binary present."
+    ok "findevil-mcp (Rust, 31 DFIR tools) binary present."
 else
     fail "findevil-mcp binary missing after build — cannot continue."
     exit 1
@@ -348,7 +348,8 @@ fi
 if (cd services/agent_mcp && uv run --frozen python -c "import findevil_agent_mcp" >/dev/null 2>&1); then
     ok "findevil-agent-mcp (Python, 12 crypto/ACH/memory tools) imports cleanly."
 else
-    warn "findevil-agent-mcp import check failed — the Python MCP server may not start; re-run: uv sync --directory services/agent_mcp"
+    fail "findevil-agent-mcp import check failed — the Python MCP server will not start; re-run: uv sync --directory services/agent_mcp"
+    exit 1
 fi
 
 if [ -f scripts/run-mcp-rust.sh ] && [ -f scripts/run-mcp-python.sh ]; then
@@ -679,8 +680,10 @@ connect_sift_vm || true
 # plus pandoc for report rendering — user-space into ~/.local/bin (no sudo),
 # pinned to known-good versions, idempotent and best-effort. Then
 # scripts/doctor.sh (the canonical checker, resolving binaries the SAME way the
-# server does) re-verifies them and prints a remedy for any still absent. Never
-# fatal: a missing DFIR binary degrades to a clean BinaryNotFound at run time.
+# server does) re-verifies them and prints a remedy for any still absent. The
+# installer exits with doctor.sh readiness status; individual missing DFIR
+# binaries still degrade to clean BinaryNotFound at run time if an operator runs
+# with reduced coverage.
 
 echo ""
 info "Installing host DFIR tools (user-space, ~/.local/bin)..."
@@ -690,7 +693,12 @@ export PATH="${HOME}/.local/bin:${PATH}"
 
 echo ""
 info "Verifying DFIR tools + environment (scripts/doctor.sh)..."
-bash "${REPO}/scripts/doctor.sh" || true
+if bash "${REPO}/scripts/doctor.sh"; then
+    DOCTOR_STATUS=0
+else
+    DOCTOR_STATUS=$?
+    warn "scripts/doctor.sh reported NOT READY; build artifacts may be present, but the environment still needs the remedies above."
+fi
 
 # ---------------------------------------------------------------------------
 # 10. Next steps.
@@ -698,7 +706,12 @@ bash "${REPO}/scripts/doctor.sh" || true
 
 echo ""
 echo "=========================================="
-echo "${c_grn}VERDICT / Find Evil! is ready.${c_off}"
+if [ "${DOCTOR_STATUS}" -eq 0 ]; then
+    echo "${c_grn}VERDICT / Find Evil! is ready.${c_off}"
+else
+    echo "${c_yel}VERDICT / Find Evil! build complete, but environment is NOT READY.${c_off}"
+    echo "Run ${c_blu}bash scripts/doctor.sh${c_off} after applying the remedies above."
+fi
 echo "=========================================="
 echo ""
 echo "${c_blu}HOW TO USE THIS TOOL${c_off}"
@@ -710,9 +723,9 @@ echo ""
 echo "  2. Type 'help' to see all commands."
 echo ""
 echo "  3. To run an investigation:"
-echo "       investigate /path/to/evidence.E01"
-echo "     The agent will open the case, fork Pool A + Pool B, emit signed Findings,"
-echo "     and produce REPORT.html + a sigstore-verified audit.jsonl."
+echo "       scripts/verdict /path/to/evidence.E01"
+echo "     Add --sift when disk evidence should run through the SANS SIFT VM."
+echo "     Interactive path: open claude or scripts/find-evil, then prompt investigate <path>."
 echo ""
 echo "  4. To watch the live dashboard while an investigation runs:"
 echo "       pnpm --filter @findevil/web dev"
@@ -722,10 +735,13 @@ echo "     Playwright or Puppeteer (host Chrome) — just ask: 'screenshot the d
 echo ""
 echo "${c_blu}QUICK COMMAND REFERENCE${c_off}"
 echo ""
+echo "  bash scripts/verdict <evidence>           # canonical one-shot local mode"
+echo "  bash scripts/verdict <evidence> --sift    # one-shot SIFT-VM mode"
+echo "  bash scripts/verdict <evidence> --run-summary tmp/run.json"
 echo "  bash scripts/find-evil                    # interactive local mode"
 echo "  bash scripts/sift-vm-bootstrap.sh         # build the SIFT VM (VMware or KVM/libvirt)"
 echo "  bash scripts/find-evil-sift               # SIFT-VM mode (after bootstrap)"
-echo "  bash scripts/find-evil-auto <evidence>    # headless single-shot"
+echo "  bash scripts/find-evil-auto <evidence>    # internal engine wrapper used by scripts/verdict"
 echo "  bash scripts/run-all-smokes.sh            # full smoke gate (pre-commit)"
 echo "  bash scripts/make-demo-video.sh           # generate demo video"
 echo "  pnpm --filter @findevil/web dev           # start live dashboard"
@@ -741,3 +757,4 @@ echo "  To verify a signed manifest offline:"
 echo "    uv run --directory services/agent_mcp python -m findevil_agent_mcp.server"
 echo "    # then call the manifest_verify MCP tool"
 echo ""
+exit "${DOCTOR_STATUS}"

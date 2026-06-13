@@ -11,6 +11,12 @@ scoring harness — nothing is asserted without a path you can re-run.*
 > dishonest verdict is a failure; an honest `INDETERMINATE` on a custody-only run is a pass. The
 > scorer enforces both.
 
+> **Parser boundary.** If no parser/tool extracts an artifact class, VERDICT cannot reason over it.
+> Current runs emit `coverage_manifest.json` and embed the same object in `verdict.json`: each
+> artifact class records `available`, `attempted`, `parsed`, `failed`, `unsupported`,
+> `not_supplied`, `parse_errors`, `records_seen`, and `rows_returned`. The goal is not to claim
+> complete coverage; it is to make incomplete coverage impossible to hide.
+
 ---
 
 ## 1. How accuracy is measured
@@ -31,7 +37,9 @@ scoring harness — nothing is asserted without a path you can re-run.*
   `<case-dir>/recall-score.json`.
 
 The corpus, fetch mechanism, and per-case tiers are in [`DATASET.md`](DATASET.md); the
-false-positive architecture is in [`false-positives.md`](false-positives.md).
+false-positive architecture is in [`false-positives.md`](false-positives.md). Some golden files
+still use the legacy scoring label `CONFIRMED_EVIL`; map that to VERDICT's current top-line
+`SUSPICIOUS` when comparing polarity.
 
 ---
 
@@ -41,17 +49,17 @@ The golden corpus is **10 scoreable cases** (real published ground truth) + 2 li
 controls. Fixtures are not committed (license/size); `scripts/fetch-fixtures.sh` pulls them. Status
 as of this report:
 
-| # | Case | Class | Golden verdict | Recall bar | Result | Status |
+| # | Case | Class | Golden outcome | Recall bar | Result | Status |
 |---|---|---|---|---|---|---|
-| 1 | `nitroba` | network (pcap) | CONFIRMED_EVIL | 80% | **5/5 = 100%** · run `INDETERMINATE` | **PASS** (committed: `docs/sample-run/nitroba`) |
-| 2 | `nist-hacking-case` | disk (XP) | CONFIRMED_EVIL | 71% | **5/14 = 36%** · run `SUSPICIOUS` | **FAIL** — narrowed gap, up from 7% (committed: `docs/sample-run/nist-hacking-case`) |
-| 3 | `nist-data-leakage` | disk | CONFIRMED_EVIL | 60% | — | staged, scheduled (SIFT) |
-| 4 | `alihadi-09-encrypt` | disk (FP control) | **INDETERMINATE** | 50% | — | staged, scheduled (SIFT) |
-| 5 | `alihadi-01-webserver` | disk | CONFIRMED_EVIL | 60% | — | staged, scheduled (SIFT) |
-| 6 | `dfrws-2008-linux` | memory | CONFIRMED_EVIL | 50% | — | staged, scheduled |
-| 7 | `m57-jean` | disk | CONFIRMED_EVIL | 60% | — | staged, scheduled (SIFT) |
-| 8 | `alihadi-07-sysinternals` | disk | CONFIRMED_EVIL | 50% | — | staged, scheduled (SIFT) |
-| 9 | `volatility-cridex` | memory | CONFIRMED_EVIL | 50% | — | staged, scheduled |
+| 1 | `nitroba` | network (pcap) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 80% | **5/5 = 100%** · run `INDETERMINATE` | **PASS** (committed: `docs/sample-run/nitroba`) |
+| 2 | `nist-hacking-case` | disk (XP) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 71% | **5/14 = 36%** · run `SUSPICIOUS` | **FAIL** — narrowed gap, up from 7% (committed: `docs/sample-run/nist-hacking-case`) |
+| 3 | `nist-data-leakage` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
+| 4 | `alihadi-09-encrypt` | disk (FP control) | **INDETERMINATE** | 50% | — | staged, scheduled (local TSK / SIFT parity) |
+| 5 | `alihadi-01-webserver` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
+| 6 | `dfrws-2008-linux` | memory | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled |
+| 7 | `m57-jean` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
+| 8 | `alihadi-07-sysinternals` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled (local TSK / SIFT parity) |
+| 9 | `volatility-cridex` | memory | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled |
 | 10 | `synthetic-benign` | negative control | **NO_EVIL** (0 findings) | 100% | — | staged, scheduled |
 
 **Honest summary:** 1 of 10 fully scored and passing (`nitroba`, 100%); 1 scored and failing but
@@ -61,11 +69,15 @@ now recalls five of the golden's fourteen canonical claims — hacking-tool exec
 account `Mr. Evil`** (SAM, T1136.001), and the **recently-opened-file MRU** — after the SAM /
 NTUSER-MRU / shellbag artifact lanes landed. It still misses the deleted-email, internet-history,
 LNK, recycle-bin, event-log, thumbcache, USB-history, and named-pipe artifacts the golden also
-expects, so it honestly scopes to `SUSPICIOUS` rather than claim the case (verdict polarity matches
-the golden's CONFIRMED_EVIL). The number is reproducible:
+expects, so it honestly scopes to `SUSPICIOUS` rather than overstate coverage (verdict polarity maps
+to the legacy golden's `CONFIRMED_EVIL` label). The number is reproducible:
 `scripts/score-recall.py docs/sample-run/nist-hacking-case --golden goldens/nist-hacking-case`. The
-remaining 8 goldens are fixture-staged and pending a SIFT-VM batch — **scheduled, not yet run.** We
-publish the gap, and the progress, rather than hide either.
+remaining 8 goldens are fixture-staged and pending batch execution — **scheduled, not yet run.** We
+publish the gap, and the progress, rather than hide either. The adversarial posture is tracked in
+[`red-team-challenge.md`](red-team-challenge.md): unsupported artifact evil, benign admin activity,
+single-source execution traps, log clearing, DKOM-vs-smear, exfil-without-network, and parser-failure
+cases are expected to pass by staying scoped, preserving limitations, and producing replayable
+citations — not by always finding evil.
 
 `nitroba` is the strongest single result, and it is reproducible from the committed run
 (`scripts/score-recall.py docs/sample-run/nitroba --golden goldens/nitroba` → 5/5 PASS): against a
@@ -94,7 +106,7 @@ Three architectural layers plus the scorer's asymmetric gate enforce it (full de
 
 **The false-positive control** (`alihadi-09-encrypt`) is designed to catch over-escalation: its golden
 verdict is `INDETERMINATE` (encryption tooling is present but doesn't prove evil), so the scorer's
-asymmetric gate **fails the run if it escalates** to `SUSPICIOUS`/`CONFIRMED_EVIL`. The
+asymmetric gate **fails the run if it escalates** to `SUSPICIOUS` (or the legacy scoring label `CONFIRMED_EVIL`). The
 `synthetic-benign` negative control (0 expected findings, `NO_EVIL`) establishes the environment's FP
 floor. Both are staged and scheduled.
 
@@ -206,7 +218,7 @@ Accuracy claims mean nothing if the agent could have altered what it measured. E
 protection here is **architectural, not prompt-based** — there is no instruction saying "don't
 modify the evidence"; there is no code path that *can*:
 
-- **No write verbs exist.** The entire product surface is 32 typed, read-only MCP tools — no
+- **No write verbs exist.** The entire product surface is 43 typed, read-only MCP tools — no
   `execute_shell`, no file-write tool, no delete, no mount-rw. A model that "ignores the
   restriction" has nothing to ignore: the destructive call it might hallucinate does not exist in
   the tool schema, so it fails at the JSON-RPC validation boundary before touching anything
@@ -232,9 +244,11 @@ modify the evidence"; there is no code path that *can*:
 
 ## 7. Honest limits
 
-- **Disk classes need the SIFT VM.** A local-mode disk run without SIFT degrades to custody-only and
-  returns a scoped verdict (e.g. NIST 5/14 = 36%) — honest, but below the recall bar. Full disk recall
-  requires `scripts/verdict --sift`. This is why 8 goldens are pending.
+- **Disk classes are parser-bounded, not SIFT-bounded.** Local mode can extract supported disk
+  artifacts via Sleuth Kit direct-read when host prerequisites are present, and the committed local
+  NIST SCHARDT result matches the SIFT-mode result exactly (5/14 = 36%). If extraction prerequisites
+  are absent or unsupported artifact classes are needed, those gaps stay as named limitations, not
+  clean findings.
 - **Single-source claims floor at HYPOTHESIS.** The ≥2-artifact-class rule is conservative by design;
   it will hold a real-but-uncorroborated execution claim below CONFIRMED. That trades some recall for
   a far lower false-positive rate — the right trade for a forensics tool.
@@ -252,7 +266,7 @@ modify the evidence"; there is no code path that *can*:
 
 ```bash
 scripts/fetch-fixtures.sh                       # stage the scoreable fixtures
-scripts/verdict --sift fixtures/<case>          # run a case (disk classes need SIFT)
+scripts/verdict fixtures/<case>                 # run a case; --sift provides VM parity for disk images
 python scripts/score-recall.py tmp/auto-runs/<case-id>   # recall vs golden -> recall-score.json
 scripts/trace-finding docs/sample-run/nist-hacking-case  # verify a committed run offline, zero deps
 ```

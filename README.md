@@ -23,37 +23,52 @@ narrow, typed tool surface, so every conclusion cites the exact tool call that p
 
 > **There is no separate app server — Claude Code _is_ the engine.** Run `scripts/verdict <evidence>`
 > (or `claude`) in this repo and *this session* becomes the forensic analyst: it opens the case,
-> drives the 32 typed read-only tools, runs the verifier, and signs the verdict. The product *is*
+> drives the 43 typed read-only product tools, runs the verifier, and signs the verdict. The product *is*
 > the agent loop — not a service it calls.
 
-## Run it against any evidence
+## Run it against supported evidence
 
-VERDICT is a Claude Code skill. Point it at **any** evidence — a memory image, EVTX log, disk
-image (`.E01` / `.dd`), packet capture, or a whole multi-host case folder — and it opens the case,
-drives the typed read-only DFIR tools, verifies every finding, and produces a signed verdict + report.
+VERDICT is a Claude Code skill. Point it at supported evidence — a memory image, EVTX log, disk
+image (`.E01` / `.dd`), packet capture, Velociraptor collection, or a whole multi-host case folder —
+and it opens the case, drives the typed read-only DFIR tools, verifies every finding, and produces a
+signed verdict + report. Unsupported formats degrade to custody/limitation records instead of a
+broad clearance claim.
 
 ```bash
-# First run — ONE command installs everything (toolchain, MCP servers, the SANS SIFT VM) then runs:
+# First run — install/check prerequisites, attempt SIFT VM setup, then run:
 bash scripts/setup --with-sift --run
 
-# Any time after — point it at any evidence:
+# Any time after — point it at supported evidence:
 /verdict <evidence>                 # in Claude Code: the turnkey skill (recommended)
 bash scripts/verdict <evidence>     # the same pipeline, headless from a shell
 #  …or in an interactive `claude` session just say:  investigate <evidence>
 ```
 
-**It drives the SIFT VM dynamically.** `/verdict` discovers the SANS SIFT VM on its own — boots it
-if it is down, resolves its IP (VMware Tools *or* the DHCP lease), and routes every forensic tool
-into it over SSH so disk images fully extract — then runs the whole pipeline to a signed Verdict.
-No reachable VM? It transparently falls back to the host's local tools — same hash-chained,
-offline-verifiable audit trail, every finding still citing the exact `tool_call_id` that produced
-it (local mode can't crack disk inner volumes, so the SIFT VM is the recommended path for disk
-images).
+**It can drive the SIFT VM dynamically.** `/verdict` attempts to discover the SANS SIFT VM, boot it
+when the implemented VMware path is available, resolve its IP (VMware Tools or the DHCP lease), and
+route supported forensic tools into it over SSH so disk images can mount/extract. No reachable VM?
+It falls back to host-local tools with the same hash-chained, offline-verifiable audit trail; local
+disk parsing requires Sleuth Kit/libewf and supported extracted artifacts, while raw disk with no
+mounted/extracted content stays custody-only. The SIFT VM remains the recommended parity path for
+disk images.
+
+## What VERDICT can miss
+
+If no parser/tool extracts an artifact class, VERDICT cannot reason over it. That is the trust
+boundary, not a footnote. Every run now writes a `coverage_manifest.json` sidecar and embeds the
+same object in `verdict.json`, with one row per artifact class: `available`, `attempted`, `parsed`,
+`failed`, `unsupported`, `not_supplied`, `parse_errors`, `records_seen`, and `rows_returned`.
+
+The strongest claim is not "the AI reviewed the whole image." It is: **VERDICT never pretends it
+did.** A finding must trace `Finding -> tool_call_id -> tool output hash -> verifier replay ->
+audit hash chain -> signed manifest`. Pool A / Pool B disagreement is useful because it preserves
+contradictions; it is not proof. Disputed or unsupported leads stay visible as contradictions,
+`HYPOTHESIS`, or `analysis_limitations`.
 
 <p align="center">
   <img src="docs/showcase/sift-scenario/srl-basefile-sift.gif" alt="VERDICT investigating the SRL-2018 base-file host with the forensic tools running inside the SANS SIFT VM" width="760">
 </p>
-<p align="center"><sub>The hardest case — SANS <b>SRL-2018</b>, a 198&nbsp;GB / 22-host compromised enterprise — run host-by-host with the forensic toolchain executing inside the SANS SIFT VM over SSH. <a href="https://youtu.be/4RQnVden6L8">Watch the full walkthrough on YouTube (4:35) →</a> · <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">mp4 mirror</a></sub></p>
+<p align="center"><sub>The hardest case — SANS <b>SRL-2018</b>, a 198&nbsp;GB / 22-host compromised enterprise — run host-by-host with the forensic toolchain executing inside the SANS SIFT VM over SSH. <a href="https://youtu.be/4RQnVden6L8">Watch the full walkthrough on YouTube (4:35) →</a> · <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">historical v-submit mp4 mirror</a></sub></p>
 
 <p align="center">
   <img src="docs/showcase/sift-scenario/srl-fleet-report-hero.png" alt="Fleet rollup — 22 hosts investigated, 74 cross-host process correlations, 53 multi-host temporal clusters" width="380">
@@ -62,7 +77,7 @@ images).
 </p>
 <p align="center"><sub>22-host fleet rollup · the <b>base-file</b> file server flagged <b>SUSPICIOUS</b> — a <b>confirmed</b> Windows Security-log wipe (EID&nbsp;1102), with PowerShell-LOLBin and service-install leads held at HYPOTHESIS · every finding cites a <code>tool_call_id</code>, signed and verifiable offline.</sub></p>
 
-### A clean single-disk run, end to end
+### A single-disk run, end to end
 
 <p align="center">
   <img src="docs/showcase/dashboard-hero.png" alt="Verdict banner — SUSPICIOUS, 8 confirmed findings on SCHARDT.dd, signed and verifiable offline" width="250">
@@ -81,8 +96,9 @@ Every run writes a self-contained case directory:
 |---|---|
 | `audit.jsonl` | Append-only, **hash-chained** log of every tool call and finding (`prev_hash` per record) |
 | `verdict.json` | The evidence-bound verdict + findings, each citing a `tool_call_id` and a confidence tier |
+| `coverage_manifest.json` | Explicit anti-overclaim sidecar: available / attempted / parsed / failed / unsupported / not supplied per artifact class |
 | `run.manifest.json` | Merkle root over canonical tool outputs + signature metadata — verifiable offline |
-| `report.html` | Analyst report: findings, ATT&CK coverage, normalized timeline, next analyst actions |
+| `REPORT.md` / `REPORT.html` / `REPORT.pdf` | Analyst report: findings, ATT&CK coverage, normalized timeline, next analyst actions |
 
 <p align="center">
   <img src="assets/screenshots/chain-of-custody.png" alt="Cryptographic chain of custody: hash-chained audit log to Merkle root to signed manifest" width="760">
@@ -128,24 +144,35 @@ live on the dashboard as it completes:
 </p>
 <p align="center"><sub>The dashboard's Audit view streams every tool call as it lands; the whole chain verifies offline with <code>manifest_verify</code>.</sub></p>
 
-Underneath, three ideas exercised end-to-end on every CI run:
+Underneath, three ideas covered by the smoke/CI gates, with the core DFIR path exercised by
+committed live runs:
 
-1. **A typed MCP tool surface — no `execute_shell`.** 32 narrow, schema-validated tools: 20 Rust
-   DFIR tools (`case_open`, `vol_pslist`/`psscan`/`psxview`, `mft_timeline`, `evtx_query`,
-   `hayabusa_scan`, `yara_scan`, `registry_query`, `prefetch_parse`, `pcap_triage`, …) + 12 Python
-   crypto/analysis tools. Copyleft / source-available engines (Hayabusa, pandoc, tshark) and the
+1. **A typed MCP tool surface — no `execute_shell`.** 43 narrow, schema-validated product tools:
+   31 Rust DFIR tools (`case_open`, `vol_pslist`/`psscan`/`psxview`, `vol_run`, `ez_parse`,
+   `plaso_parse`, `mac_triage`, `cloud_audit`, `mft_timeline`, `evtx_query`, `hayabusa_scan`,
+   `yara_scan`, `registry_query`, `prefetch_parse`, `pcap_triage`, …) + 12 Python crypto/analysis
+   tools. Copyleft / source-available engines (Hayabusa, pandoc, tshark) and the
    permissively licensed Volatility 3 and Velociraptor are invoked as subprocesses only, so the
    Apache-2.0 tree stays license-clean.
 
+   **Maturity note.** The long-tail verbs `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`,
+   `cloud_audit`, `journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`,
+   `suricata_eve`, and `indx_parse` are implemented as typed, allow-listed, shell-free tools and
+   unit-tested against synthetic fixtures, but they have not yet been exercised on real evidence in
+   a committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/
+   YARA/USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
+
 2. **A cryptographic chain of custody.** Hash-chained audit log → `rs_merkle` Merkle root over
-   canonical-JSON tool outputs → a manifest signature (Sigstore/Rekor in production; a clearly
-   labeled stub signer for offline runs). `manifest_verify` checks the chain + root offline. Framed
+   canonical-JSON tool outputs → a manifest signature. The default signer is a real local Ed25519
+   key that verifies offline; Sigstore/Rekor is the identity + transparency-log tier; the stub
+   signer is explicit dev-only fallback. `manifest_verify` checks the chain + root offline. Framed
    for FRE 902(14) self-authenticating evidence — see [`docs/cryptographic-attestation.md`](docs/cryptographic-attestation.md).
 
 3. **Analysis of Competing Hypotheses as agent topology.** Two pools investigate the same evidence
    with opposing priors (persistence-biased vs. exfil-biased). Their disagreements are emitted as
    first-class `kind=contradiction` records *before* a credibility-weighted **judge** merges them —
    surfaced, not hidden in consensus. Heuer's intelligence-analysis method as live architecture.
+   Two pools do not prove truth; the replayable tool-output chain does.
 
 Findings follow a strict epistemic hierarchy — **CONFIRMED** (≥2 corroborating artifact classes,
 verifier-passed) > **INFERRED** (derived from confirmed facts) > **HYPOTHESIS** — and execution
@@ -155,9 +182,11 @@ claims require at least two artifact classes. Evidence is opened read-only.
 
 Beyond the three ideas above, a single case run also:
 
-- **Works disk *and* memory end-to-end.** Mounts raw/E01 images read-only and extracts `$MFT`,
-  registry hives, EVTX, and Prefetch (`disk_mount` / `disk_extract_artifacts` / `disk_unmount`),
-  then analyzes memory in the same case — no manual carving. ([tool inventory](docs/reference/mcp-and-tools.md))
+- **Works disk *and* memory when the required evidence access exists.** With local Sleuth Kit/libewf
+  support or in SIFT mode, it opens raw/E01 images read-only and extracts `$MFT`, registry hives,
+  EVTX, and Prefetch (`disk_mount` / `disk_extract_artifacts` / `disk_unmount`), then analyzes memory
+  in the same case. Raw disk with no supported mounted/extracted content remains custody-only and
+  honestly `INDETERMINATE`. ([tool inventory](docs/reference/mcp-and-tools.md))
 - **Re-verifies its own findings.** `verify_finding` re-runs each cited tool call and confirms the
   output SHA-256 still matches, and `detect_contradictions` raises Pool A vs Pool B conflicts as
   first-class records before the judge merges — so a third party can independently replay the chain.
@@ -181,30 +210,33 @@ expected findings — 100% recall**, which you can re-run yourself:
 `scripts/score-recall.py docs/sample-run/nitroba --golden goldens/nitroba`. (Recall measures
 whether the golden *facts* were surfaced; the run verdict stays `INDETERMINATE` because network
 metadata attributes activity to a host, not a person — full recall and a scoped verdict are
-consistent, not a contradiction.) **Every finding across committed runs cites a `tool_call_id`.** On the **NIST hacking case** it reaches **7% recall (1 of
-14)**: it surfaces real hacking-tool execution, but not the account-creation, MRU, thumbcache, and
+consistent, not a contradiction.) **Every finding across committed runs cites a `tool_call_id`.** On the **NIST hacking case** it reaches **36% recall (5 of
+14, up from 7%)**: it surfaces real hacking-tool execution, shellbag/MRU traces, and the suspicious
+SAM account, but not the email carving, browser cache, LNK/recycle-bin, XP `.evt`, thumbcache, and
 named-pipe artifacts the answer key also expects — so it scopes to `SUSPICIOUS` rather than
 overclaim, and we publish the gap rather than hide it. Full method, the recall table, the
 false-positive controls, and the honest limits: **[`docs/accuracy-report.md`](docs/accuracy-report.md)**.
+The adversarial "break VERDICT" challenge is in
+[`docs/red-team-challenge.md`](docs/red-team-challenge.md).
 
 ## Hi, I'm new — start here
 
-**One command installs everything.** From a fresh clone:
+**One command installs the product prerequisites.** From a fresh clone:
 
 ```bash
 bash scripts/setup
 ```
 
-That single command installs the toolchain (Rust, uv, Node, pnpm), **all the DFIR tools**
-(Volatility 3, Hayabusa, Chainsaw, Velociraptor, Sleuth Kit, tshark, pandoc — YARA is built into
-the Rust binary), **Playwright + Puppeteer + Chromium** for browser automation, builds and verifies
-**both MCP servers**, pre-fetches the helper MCPs, runs the preflight **`doctor`**, and prints an
-honest green/red summary. Safe to re-run; Claude Code never has to install anything afterward.
+That command installs the toolchain (Rust, uv, Node, pnpm), the supported local DFIR binaries it can
+manage (Volatility 3, Hayabusa, Chainsaw, Velociraptor, Sleuth Kit, tshark, pandoc — YARA is built
+into the Rust binary), browser automation helpers, builds and verifies **both MCP servers**,
+pre-fetches helper MCPs, runs the preflight **`doctor`**, and prints an honest green/red summary.
+Optional or gated tools can still show as warnings with exact follow-up steps.
 
 **The simplest path — install and run in one command:**
 
 ```bash
-bash scripts/setup --run     # installs everything, then watches evidence/ and investigates on drop
+bash scripts/setup --run     # installs/checks prerequisites, then watches evidence/ and investigates on drop
 ```
 
 Drop a case file into **`evidence/`** (a memory image, `.evtx`, disk image, `.pcap`, `.zip`, or a
@@ -214,9 +246,9 @@ case folder) and it runs automatically — no further commands.
 and type **`investigate evidence/`**.
 
 > **Setup flags (you may not know these):**
-> - **`bash scripts/setup --with-sift`** — install everything **and** set up the SANS SIFT VM
->   (recommended): fetches the OVA headlessly via Playwright, then builds the VM. Falls back to local
->   if it can't fetch.
+> - **`bash scripts/setup --with-sift`** — install local prerequisites **and** attempt SANS SIFT VM
+>   setup (recommended): fetches the OVA headlessly via Playwright when the gated page permits it,
+>   then builds the VM. Falls back to local if it can't fetch.
 > - **`bash scripts/setup --run`** — install **and** immediately investigate (watches `evidence/` and
 >   runs on the first drop, or uses the newest file already there). The one-command install-and-go.
 > - **`bash scripts/setup`** — install only, then print an honest green/red summary of what (if
@@ -226,7 +258,8 @@ and type **`investigate evidence/`**.
 > Run `bash scripts/setup --help` to see them all.
 
 **Recommended: set up the SANS SIFT VM too.** It's the SANS-blessed environment the judges run in
-and it bundles every DFIR tool — one command installs everything **and** fetches + builds the VM:
+and it provides the expected forensic workstation baseline — one command installs the local
+prerequisites **and** fetches + builds the VM:
 
 ```bash
 bash scripts/setup --with-sift
@@ -271,12 +304,11 @@ repo), just type:
 /verdict <path-to-evidence>
 ```
 
-The skill **bootstraps everything for you** — builds the MCP servers (`install.sh` if needed)
-and prepares the SANS SIFT VM so disk images fully extract — then runs the whole pipeline,
-attempts the optional post-verdict n8n + grounding automation (off the default path — used only
-if n8n is already up, or set `FINDEVIL_ENABLE_N8N=1`), and prints the Verdict plus every workflow
-that ran (and opens the dashboard + report). You never run `install.sh`/`doctor.sh` or
-pass `--sift`/`--parallel` — the skill adds them. Full reference:
+The skill checks and bootstraps the product pieces it can control — builds the MCP servers
+(`install.sh` if needed), prepares the SANS SIFT VM when the gated OVA and hypervisor are available,
+then runs the whole pipeline. It attempts optional post-verdict n8n + grounding automation only when
+n8n is already up or `FINDEVIL_ENABLE_N8N=1`, prints the Verdict plus workflow status, and opens the
+dashboard + report. Full reference:
 [docs/using/running-verdict.md §`/verdict` skill](docs/using/running-verdict.md).
 
 **Prefer to drive it yourself?** Open Claude Code in the repo (`claude`) and prompt
@@ -301,7 +333,7 @@ Per-environment setup (local DFIR binaries vs. the SANS SIFT VM) and evidence pl
 ```
 .
 ├── agent-config/        — runtime agent identity (SOUL / AGENTS / PLAYBOOK / TOOLS / MEMORY)
-├── services/mcp/        — Rust MCP server (20 typed DFIR tools)
+├── services/mcp/        — Rust MCP server (31 typed DFIR tools)
 ├── services/agent_mcp/  — Python MCP server (12 crypto / ACH / memory tools)
 ├── services/agent/      — findevil_agent package (crypto chain + ACH primitives)
 ├── apps/web/            — Next.js dashboard (live audit-stream viewer + design system)
@@ -330,4 +362,4 @@ research-only and gitignored — they do not ship.
 
 <sub>VERDICT began as an entry in the SANS <i>Find Evil!</i> 2026 hackathon; internal identifiers
 (<code>findevil-mcp</code>, <code>@findevil/web</code>, <code>scripts/find-evil</code>) retain that
-name.</sub>
+name, while the canonical one-shot operator command is <code>scripts/verdict</code>.</sub>

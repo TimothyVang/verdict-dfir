@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { deriveInvestigationStream } from "./InvestigationStreamPanel";
 import {
+  buildVerdictSummaryLine,
+  deriveVerdictWord,
+  summarizeVerdictCaveats,
+  type VerdictPayload,
+  type VerdictWord,
+} from "@/lib/verdict-summary-policy";
+import {
   VERDICT,
   MONO,
   SERIF,
@@ -22,8 +29,6 @@ interface AuditLine {
   raw_line: string;
 }
 
-type VerdictWord = "SUSPICIOUS" | "INDETERMINATE" | "NO EVIL" | "INVESTIGATING";
-
 interface VerdictMeta {
   color: string;
   line: string;
@@ -40,7 +45,7 @@ const VERDICT_META: Record<VerdictWord, VerdictMeta> = {
   },
   "NO EVIL": {
     color: VERDICT.confirmed,
-    line: "No evil found — the evidence looks clean.",
+    line: "No reportable findings in examined artifacts; scope remains explicit.",
   },
   INVESTIGATING: {
     color: VERDICT.accentPurpleLight,
@@ -89,8 +94,8 @@ export function VerdictSummary({
     return { confirmed, inferred, hypothesis, total: findings.length };
   }, [findings]);
 
-  // Authoritative verdict from the signed verdict.json once finalized.
-  const [authVerdict, setAuthVerdict] = useState<string | null>(null);
+  // Authoritative verdict packet from the signed verdict.json once finalized.
+  const [verdictPayload, setVerdictPayload] = useState<VerdictPayload | null>(null);
   useEffect(() => {
     if (!manifestDone || !caseDir) return;
     let cancelled = false;
@@ -100,8 +105,8 @@ export function VerdictSummary({
           `/api/report?case=${encodeURIComponent(caseDir)}&file=verdict.json`,
         );
         if (!r.ok) return;
-        const d = (await r.json()) as { verdict?: string };
-        if (!cancelled && typeof d.verdict === "string") setAuthVerdict(d.verdict);
+        const d = (await r.json()) as VerdictPayload;
+        if (!cancelled) setVerdictPayload(d);
       } catch {
         /* verdict.json may not exist (curated case) — fall back to derivation */
       }
@@ -116,34 +121,26 @@ export function VerdictSummary({
     };
   }, [manifestDone, caseDir]);
 
-  const verdict: VerdictWord = useMemo(() => {
-    const a = (authVerdict ?? "").toUpperCase().replace(/_/g, " ");
-    if (a.includes("SUSPICIOUS")) return "SUSPICIOUS";
-    if (a.includes("INDETERMINATE")) return "INDETERMINATE";
-    if (a.includes("NO EVIL")) return "NO EVIL";
-    // Derive from findings when no signed verdict word is available.
-    if (tally.confirmed > 0) return "SUSPICIOUS";
-    if (tally.inferred > 0 || tally.hypothesis > 0) return "INDETERMINATE";
-    if (manifestDone) return "NO EVIL";
-    return "INVESTIGATING";
-  }, [authVerdict, tally, manifestDone]);
+  const verdict = useMemo(
+    () => deriveVerdictWord(verdictPayload?.verdict, tally, manifestDone),
+    [verdictPayload, tally, manifestDone],
+  );
+
+  const caveats = useMemo(
+    () => summarizeVerdictCaveats(verdictPayload),
+    [verdictPayload],
+  );
 
   // Nothing connected yet — let the empty-state of the page speak.
   if (!caseDir && events.length === 0) return null;
 
   const meta = VERDICT_META[verdict];
-  const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
-
-  const summaryLine =
-    verdict === "SUSPICIOUS"
-      ? `${plural(tally.confirmed, "confirmed finding")}` +
-        (tally.inferred ? ` and ${plural(tally.inferred, "inferred lead")}` : "") +
-        ` on ${evidenceName ?? "the evidence"}.`
-      : verdict === "INVESTIGATING"
-        ? `${plural(tally.total, "finding")} so far · ${events.length} events streamed.`
-        : verdict === "INDETERMINATE"
-          ? `${plural(tally.inferred + tally.hypothesis, "lead")} on ${evidenceName ?? "the evidence"} — not yet proven. ${meta.line}`
-          : meta.line;
+  const summaryLine = buildVerdictSummaryLine(
+    verdict,
+    tally,
+    evidenceName,
+    caveats,
+  );
 
   return (
     <section
@@ -189,6 +186,35 @@ export function VerdictSummary({
         >
           {summaryLine}
         </div>
+        {caveats.length > 0 ? (
+          <div
+            aria-label="scope caveats"
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              marginTop: 14,
+            }}
+          >
+            {caveats.slice(0, 6).map((caveat) => (
+              <span
+                key={caveat}
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 11,
+                  color: VERDICT.inferred,
+                  border: `1px solid ${VERDICT.inferred}`,
+                  borderRadius: 999,
+                  padding: "4px 9px",
+                  background: `${VERDICT.inferred}16`,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {caveat}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {/* Right — the tallies + proof state */}

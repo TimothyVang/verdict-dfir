@@ -24,7 +24,7 @@ under Amendment A2.
 | `config.resolve_credentials()` (3 modes — Amendment A1) | ✅ |
 | `events.py` AgentEvent union (11 variants) | ✅ |
 | `mcp_client.py` (stdio subprocess manager for the Rust MCP server) | ✅ |
-| `crypto/signer.py` sigstore-based per-call signing (M2) | ✅ |
+| `crypto/signer.py` Ed25519/Sigstore/stub manifest signer tiers (M2) | ✅ |
 | `crypto/audit_log.py` hash-chained JSONL writer | ✅ |
 | `crypto/merkle.py` rs_merkle Merkle tree builder | ✅ |
 | `crypto/manifest.py` build + write `run.manifest.json` | ✅ |
@@ -67,8 +67,8 @@ The 11 variants:
 - `ToolCallStart`, `ToolCallOutput` — tool lifecycle
 - `AgentMessage` — specialist/supervisor/judge/verifier/correlator reasoning
 - `Finding` (requires `tool_call_id`), `VerifierAction` — findings + vetos
-- `ChainUpdate` — merkle_root + leaf_count + ots_pending
-- `RunVerdict` — final verdict + confidence + manifest path
+- `ChainUpdate` — merkle_root + leaf_count + signature_pending
+- `RunVerdict` — final verdict + confidence + manifest/verification paths
 - `PlanProposed`, `PlanApproved` — Plan Mode gate
 - `HypothesisUpdate` — MITRE board drive
 - `ContradictionFound` — emits BEFORE the judge reconciles; the architectural moat

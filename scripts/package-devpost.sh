@@ -9,6 +9,8 @@
 #   - RELEASE_ASSETS_DIR env var (defaults to release-assets/) containing report.html and optional legacy .deb (from
 #     `gh release download`)
 #   - BENCHMARK_CSV env var (defaults to benchmark-results.csv at cwd, produced by json-to-benchmark-csv.py)
+#   - optional READINESS_PACKET_ZIP env var (defaults to release-assets/readiness-packet.zip)
+#     containing the validated expert-review packet from scripts/readiness-gate.ps1
 #   - LICENSE + docs/templates/devpost-readme.md from the repo
 #
 # Strict mode is the default. Set FINDEVIL_DEVPOST_MODE=smoke only for
@@ -22,6 +24,7 @@ cd "${REPO_ROOT}"
 OUT_ZIP="${OUT_ZIP:-find-evil-submission.zip}"
 RELEASE_ASSETS_DIR="${RELEASE_ASSETS_DIR:-release-assets}"
 BENCHMARK_CSV="${BENCHMARK_CSV:-benchmark-results.csv}"
+READINESS_PACKET_ZIP="${READINESS_PACKET_ZIP:-${RELEASE_ASSETS_DIR}/readiness-packet.zip}"
 STAGE_DIR="$(mktemp -d)"
 trap 'rm -rf "${STAGE_DIR}"' EXIT
 
@@ -115,7 +118,16 @@ else
 fi
 
 # ---------------------------------------------------------------------
-# 6. benchmark-results.csv.
+# 6. readiness-packet.zip — optional portable proof packet.
+# ---------------------------------------------------------------------
+if [[ -f "${READINESS_PACKET_ZIP}" ]]; then
+  cp "${READINESS_PACKET_ZIP}" "${STAGE_DIR}/readiness-packet.zip"
+else
+  log "WARN: no readiness packet at ${READINESS_PACKET_ZIP}; package will omit optional readiness-packet.zip"
+fi
+
+# ---------------------------------------------------------------------
+# 7. benchmark-results.csv.
 # ---------------------------------------------------------------------
 if [[ -f "${BENCHMARK_CSV}" ]]; then
   cp "${BENCHMARK_CSV}" "${STAGE_DIR}/benchmark-results.csv"
@@ -160,11 +172,16 @@ if [[ "${missing}" -gt 0 ]]; then
 fi
 
 if [[ "${FINDEVIL_DEVPOST_MODE}" == "strict" ]]; then
-  "${PYTHON_BIN}" scripts/validate-submission-assets.py \
+  validator_args=(
     --demo-url "${DEMO_VIDEO_URL}" \
     --benchmark "${STAGE_DIR}/benchmark-results.csv" \
     --report "${STAGE_DIR}/report.html" \
     --stage-dir "${STAGE_DIR}"
+  )
+  if [[ -f "${STAGE_DIR}/readiness-packet.zip" ]]; then
+    validator_args+=(--readiness-packet "${STAGE_DIR}/readiness-packet.zip")
+  fi
+  "${PYTHON_BIN}" scripts/validate-submission-assets.py "${validator_args[@]}"
 else
   log "WARN: skipping strict artifact validator in smoke mode"
 fi

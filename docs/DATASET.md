@@ -33,7 +33,7 @@ This document covers every fixture the Find Evil! submission was tested against.
 | Purpose | Canonical DFIR benchmark case; industry-standard ground truth |
 | SHA-256 | *(recorded on first pull)* |
 | Expected findings | **14 canonical findings** — enumerated in `goldens/nist-hacking-case/expected-findings.json` |
-| Verdict | `CONFIRMED_EVIL` |
+| Expected VERDICT top-line | `SUSPICIOUS` when corroborated; older goldens may still use `CONFIRMED_EVIL` as a scoring label |
 
 **Rationale:** NIST's authority makes this a standard reference. Multiple DFIR tools publish accuracy against it, so our DFIR-Metric score is directly comparable to any competitor.
 
@@ -203,23 +203,23 @@ decision it is NOT a scoring gate (training-data contamination is not modeled). 
 🟢 score against (trustworthy) · 🟡 build/test, score with care (answers gated) ·
 🟠 practice only (solutions public — likely in model training data) · 🔴 not ready.
 
-| # | Case id | Class | Tier | Fetch | Expected verdict | Recall target |
+| # | Case id | Class | Tier | Fetch | Expected outcome | Recall target |
 |---|---|---|---|---|---|---|
-| 1 | `nitroba` | network (pcap) | 🟢 | `NITROBA_URL` (default digitalcorpora) | CONFIRMED_EVIL | 80% |
-| 2 | `nist-data-leakage` | disk (insider exfil) | 🟢 | `DATA_LEAKAGE_URL` | CONFIRMED_EVIL | 60% |
-| 3 | `nist-hacking-case` | disk (XP) | 🟢 | default cfreds URL (already wired) | CONFIRMED_EVIL | 71% |
+| 1 | `nitroba` | network (pcap) | 🟢 | `NITROBA_URL` (default digitalcorpora) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 80% |
+| 2 | `nist-data-leakage` | disk (insider exfil) | 🟢 | `DATA_LEAKAGE_URL` | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 60% |
+| 3 | `nist-hacking-case` | disk (XP) | 🟢 | default cfreds URL (already wired) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 71% |
 | 4 | `alihadi-09-encrypt` | disk (crypto) | 🟡 | `ALIHADI09_URL` | **INDETERMINATE** (false-positive control) | 50% |
-| 5 | `alihadi-01-webserver` | disk + memory | 🟡 | `ALIHADI01_URL` | CONFIRMED_EVIL | 60% |
-| 6 | `dfrws-2008-linux` | memory+disk+network | 🟡 | git clone | CONFIRMED_EVIL | 50% |
-| 7 | `m57-jean` | disk/email | 🟠 | `M57_JEAN_URL` (default digitalcorpora) | CONFIRMED_EVIL | 60% |
-| 8 | `alihadi-07-sysinternals` | disk (E01) | 🟠 | `ALIHADI07_URL` | CONFIRMED_EVIL | 50% |
+| 5 | `alihadi-01-webserver` | disk + memory | 🟡 | `ALIHADI01_URL` | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 60% |
+| 6 | `dfrws-2008-linux` | memory+disk+network | 🟡 | git clone | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 50% |
+| 7 | `m57-jean` | disk/email | 🟠 | `M57_JEAN_URL` (default digitalcorpora) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 60% |
+| 8 | `alihadi-07-sysinternals` | disk (E01) | 🟠 | `ALIHADI07_URL` | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 50% |
 | 9 | `dfrws-2011-android` | mobile/disk | 🔴 | `DFRWS2011_URL` | UNKNOWN (stub) | 40% |
-| 10 | `volatility-cridex` | memory | 🔴 (sourcing) | `CRIDEX_URL` (canonical link dead) | CONFIRMED_EVIL | 50% |
+| 10 | `volatility-cridex` | memory | 🔴 (sourcing) | `CRIDEX_URL` (canonical link dead) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 50% |
 
 **Notable cases**
 - **`alihadi-09-encrypt` is the false-positive control.** Encryption tooling is present
   but its presence is not proof of malice. The golden verdict is `INDETERMINATE`; a run
-  that escalates to `SUSPICIOUS`/`CONFIRMED_EVIL` FAILS the asymmetric verdict-match check
+  that escalates to `SUSPICIOUS` (or the legacy scoring label `CONFIRMED_EVIL`) FAILS the asymmetric verdict-match check
   in `score-recall.py`. Findings are intentionally `INFERRED`/`HYPOTHESIS`.
 - **`dfrws-2011-android` TRAP:** the upstream README hashes are labeled MD5 but are
   actually **SHA1** — do not chase a phantom mismatch. Evidence is on a personal Dropbox
@@ -230,10 +230,11 @@ decision it is NOT a scoring gate (training-data contamination is not modeled). 
   to a verified mirror (a SANS-hosted copy with published hashes was requested in the
   thread). The IOCs themselves are canonical (`reader_sl.exe` ← `explorer.exe`, malfind
   injection, C2).
-- **Disk classes need `--sift`.** Locally, raw `.dd/.E01` runs return `INDETERMINATE`
-  (custody-only) because host-side disk-content tooling is a known gap; real disk verdicts
-  come from `scripts/verdict --sift`. `INDETERMINATE` is an honest PASS of the live-test
-  gate but will score below the recall target until run under SIFT.
+- **Disk classes need mount/extract prerequisites.** Local raw `.dd/.E01` runs can parse supported
+  artifacts when Sleuth Kit/libewf are present; otherwise they return `INDETERMINATE`
+  (custody-only). SIFT remains the recommended parity path. `INDETERMINATE` is an honest PASS of
+  the live-test gate when coverage is limited, but it will score below the recall target until
+  supported artifacts are parsed.
 
 ### Run results (recall against golden)
 

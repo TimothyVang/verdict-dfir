@@ -42,7 +42,7 @@ export type EventType1 = "ToolCallOutput";
 export type ToolCallId1 = string;
 export type OutputHash = string;
 export type RowCount = number | null;
-export type SigstoreBundle = string | null;
+export type SignatureBundle = string | null;
 export type MerkleLeafIndex = number | null;
 /**
  * UUID4 of the case this event belongs to
@@ -101,7 +101,7 @@ export type Ts6 = string;
 export type EventType5 = "ChainUpdate";
 export type MerkleRoot = string;
 export type LeafCount = number;
-export type OtsPending = boolean;
+export type SignaturePending = boolean;
 /**
  * UUID4 of the case this event belongs to
  */
@@ -113,7 +113,7 @@ export type Verdict = "CONFIRMED_EVIL" | "SUSPICIOUS" | "BENIGN" | "INCONCLUSIVE
 export type ConfidenceScore = number;
 export type FindingCount = number;
 export type ManifestPath = string;
-export type OtsReceiptPath = string;
+export type ManifestVerifyPath = string | null;
 /**
  * UUID4 of the case this event belongs to
  */
@@ -173,7 +173,7 @@ export interface ToolCallOutput {
   tool_call_id: ToolCallId1;
   output_hash: OutputHash;
   row_count?: RowCount;
-  sigstore_bundle?: SigstoreBundle;
+  signature_bundle?: SignatureBundle;
   merkle_leaf_index?: MerkleLeafIndex;
 }
 export interface AgentMessage {
@@ -230,7 +230,7 @@ export interface ChainUpdate {
   event_type?: EventType5;
   merkle_root: MerkleRoot;
   leaf_count: LeafCount;
-  ots_pending: OtsPending;
+  signature_pending: SignaturePending;
 }
 export interface RunVerdict {
   case_id: CaseId7;
@@ -241,7 +241,7 @@ export interface RunVerdict {
   confidence_score: ConfidenceScore;
   finding_count: FindingCount;
   manifest_path: ManifestPath;
-  ots_receipt_path: OtsReceiptPath;
+  manifest_verify_path?: ManifestVerifyPath;
 }
 export interface PlanProposed {
   case_id: CaseId8;

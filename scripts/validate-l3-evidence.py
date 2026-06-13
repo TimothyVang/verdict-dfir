@@ -121,7 +121,7 @@ def benchmark_verdict(data: dict[str, Any]) -> dict[str, Any]:
         "verdict": run.get("verdict", ""),
         "verdict_correct": data.get("verdict_correct", ""),
         "wall_clock_seconds": data.get("wall_clock_seconds", ""),
-        "ots_pending": False,
+        "manifest_verify_overall": data["artifacts"].get("manifest_verify_overall", ""),
         "run_duration_seconds": data.get("run_duration_seconds", ""),
         "contradictions_found": data.get("contradictions_found", 0),
         "contradictions_auto_resolved": data.get("contradictions_auto_resolved", 0),

@@ -9,6 +9,8 @@ story, QA / expert signoff, evidence-bound tool calls, and overclaim caveats.
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import io
 import json
 import sys
 import tempfile
@@ -41,6 +43,67 @@ def load_submission_validator():
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+def build_readiness_packet_zip(report_html: str) -> bytes:
+    packet_files: dict[str, bytes] = {
+        "audit.jsonl": (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+        ).encode(),
+        "run.manifest.json": b'{"case_id":"case-ready"}\n',
+        "manifest_verify.json": b'{"overall":true}\n',
+        "verdict.json": json.dumps(
+            {
+                "verdict": "INDETERMINATE",
+                "report_qa": {
+                    "status": "PASS",
+                    "ready_for_expert_signoff": True,
+                    "customer_releasable": False,
+                },
+                "release_gate": {"customer_releasable": False},
+                "expert_signoff": {"customer_releasable": False},
+            },
+            sort_keys=True,
+        ).encode(),
+        "expert_signoff.json": b'{"decision":"pending","customer_releasable":false}\n',
+        "customer_release_gate.final.json": (
+            b'{"customer_releasable":false,"expert_decision":"pending"}\n'
+        ),
+        "REPORT.html": report_html.encode(),
+        "readiness-summary.json": json.dumps(
+            {
+                "readiness_state": "READY_FOR_EXPERT_REVIEW",
+                "customer_releasable": False,
+                "blockers": [],
+            },
+            sort_keys=True,
+        ).encode(),
+    }
+    manifest = {
+        "readiness_state": "READY_FOR_EXPERT_REVIEW",
+        "artifacts": [
+            {
+                "path": name,
+                "bytes": len(data),
+                "sha256": hashlib.sha256(data).hexdigest(),
+            }
+            for name, data in sorted(packet_files.items())
+        ],
+    }
+    packet_files["readiness-packet-manifest.json"] = json.dumps(
+        manifest, sort_keys=True
+    ).encode()
+
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, data in sorted(packet_files.items()):
+            zf.writestr(name, data)
+    return out.getvalue()
 
 
 def load_find_evil_auto():
@@ -370,12 +433,89 @@ def main() -> int:
             report_qa=report_qa,
             expert_doctrine=doctrine,
             release_gate=release_gate,
+            coverage_manifest={
+                "truth_boundary": "If no parser/tool extracts an artifact class, VERDICT cannot reason over it.",
+                "summary": {
+                    "artifact_classes_recorded": 2,
+                    "attempted": 1,
+                    "parsed": 1,
+                    "failed": 0,
+                    "unsupported": 0,
+                    "not_supplied": 1,
+                    "attack_blind_spot_count": 3,
+                    "status_counts": {"not_supplied": 1, "parsed": 1},
+                },
+                "artifact_classes": [
+                    {
+                        "artifact_class": "evtx",
+                        "status": "parsed",
+                        "available": True,
+                        "attempted": True,
+                        "parsed": True,
+                        "failed": False,
+                        "unsupported": False,
+                        "not_supplied": False,
+                        "parse_errors": 0,
+                        "records_seen": 5,
+                        "rows_returned": 5,
+                        "tools_attempted": ["evtx_query"],
+                    },
+                    {
+                        "artifact_class": "network",
+                        "status": "not_supplied",
+                        "available": False,
+                        "attempted": False,
+                        "parsed": False,
+                        "failed": False,
+                        "unsupported": False,
+                        "not_supplied": True,
+                        "parse_errors": 0,
+                        "records_seen": 0,
+                        "rows_returned": 0,
+                        "tools_attempted": [],
+                    },
+                    {
+                        "artifact_class": "unsupported",
+                        "status": "unsupported",
+                        "available": True,
+                        "attempted": False,
+                        "parsed": False,
+                        "failed": False,
+                        "unsupported": True,
+                        "not_supplied": False,
+                        "parse_errors": 0,
+                        "records_seen": 2,
+                        "rows_returned": 0,
+                        "tools_attempted": [],
+                        "sample_paths": [
+                            "unsupported/evil.bin",
+                            "collection.zip::Uploads/odd-artifact.bin",
+                        ],
+                    },
+                ],
+            },
             timeline=entity_timeline,
             normalized_timeline={"events": entity_timeline},
             entity_index=entity_index,
             indicators=indicators,
             event_narratives=event_narratives,
             practitioner_coverage=practitioner_coverage,
+            rejected_finding_leads=[
+                {
+                    "finding_id": "f-rejected",
+                    "tool_call_id": "tc-rejected",
+                    "confidence": "CONFIRMED",
+                    "pool_origin": "pool_a",
+                    "mitre_technique": "T1005",
+                    "artifact_path": "artifact.json",
+                    "description": "Rejected lead with a | pipe and `tick`.",
+                    "verifier_reason": "tool re-run failed",
+                    "verdict_effect": "excluded_from_final_findings",
+                    "analyst_action": (
+                        "Inspect this as a rejected lead; do not treat it as evidence until replay succeeds."
+                    ),
+                }
+            ],
             has_attack_story_fig=True,
             host_groups=host_groups,
         )
@@ -439,6 +579,9 @@ def main() -> int:
             zf.writestr("demo-video-link.txt", "https://example.org/findevil-demo\n")
             zf.writestr("LICENSE", "Test license fixture\n")
             zf.writestr("report.html", valid_html_text)
+            zf.writestr(
+                "readiness-packet.zip", build_readiness_packet_zip(valid_html_text)
+            )
         valid_zip_result = validator.validate_zip(valid_zip)
 
     checks = [
@@ -508,7 +651,22 @@ def main() -> int:
             "Administrator" in text and "DC01" in text,
         ),
         ("finding tool call preserved", "tc-psscan" in text),
+        ("verifier-rejected leads heading", "## Verifier-Rejected Leads" in text),
+        (
+            "rejected lead marked non-evidentiary",
+            "tc-rejected" in text and "excluded_from_final_findings" in text,
+        ),
         ("limitations section present", "## Limitations" in text),
+        ("coverage manifest section present", "## Coverage Manifest" in text),
+        (
+            "coverage manifest renders not-supplied scope",
+            "`not_supplied`" in text and "network" in text,
+        ),
+        (
+            "coverage manifest names unsupported samples",
+            "unsupported/evil.bin" in text
+            and "collection.zip::Uploads/odd-artifact.bin" in text,
+        ),
         (
             "no narrative leftovers (story/cast/beats)",
             not any(
@@ -557,9 +715,11 @@ def main() -> int:
             "clean, cleared" not in text and "clean/cleared" not in text,
         ),
         (
-            "public copy frames disk-only as custody registration",
-            "disk-content conclusions require mounted or extracted artifacts"
-            in public_text,
+            "public copy frames supported local disk parsing honestly",
+            "Supported disk images can be parsed locally through Sleuth Kit direct-read when prerequisites are present"
+            in public_text
+            and "`case_open` alone remains custody-only" in public_text
+            and "unsupported artifact classes stay as named limitations" in public_text,
         ),
         (
             "public copy names expert signoff packet",

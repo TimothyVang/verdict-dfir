@@ -4,7 +4,7 @@
 # auto-discovers it via the repo-root .mcp.json.
 #
 # This package is a thin protocol shim — it owns no domain logic.
-# All Merkle/sigstore/OTS/judge/correlator logic lives in
+# All Merkle/signer/judge/correlator logic lives in
 # `findevil-agent`; we depend on it as a path dep.
 
 [project]

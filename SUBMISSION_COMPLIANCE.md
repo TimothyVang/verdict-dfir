@@ -96,8 +96,8 @@ of your Project.
 > **Short summary:**
 > Find Evil! is a Claude Code DFIR agent that investigates Windows host evidence (memory
 > images, EVTX logs, disk artifacts) and produces a cryptographically signed verdict any
-> third party can verify offline. It exposes 32 narrow typed MCP tools (20 Rust DFIR +
-> 12 Python crypto/ACH/memory) — no `execute_shell`. Two competing-hypothesis agent pools
+> third party can verify offline. It exposes 43 narrow typed MCP tools (31 Rust DFIR +
+> 12 Python crypto/ACH/memory/ACP/expert support) — no `execute_shell`. Two competing-hypothesis agent pools
 > (persistence-biased Pool A + exfil-biased Pool B) investigate in parallel; disagreements
 > are surfaced as first-class `kind=contradiction` audit records before the judge merges.
 > A standalone maintainer tool (`scripts/self-score.py`) grades a completed run against the
@@ -113,7 +113,7 @@ of your Project.
 **STATUS: SATISFIED — rendered, hosted on YouTube, published (2026-06-12)**
 
 > **The hosted cut.** The full 4:35 film (10 beats, voiceover, real-footage exhibits) is
-> public on YouTube, with the mp4 mirrored as a release asset:
+> public on YouTube, with the mp4 mirrored as the historical `v-submit` release asset:
 >
 > **Hosted URL (YouTube):** <https://youtu.be/4RQnVden6L8>
 >
@@ -209,6 +209,11 @@ of your Project.
 >   `goldens/nist-hacking-case/expected-findings.json`)
 >
 > Key findings — **SRL-2018 DC** (the showcase report, a different dataset):
+> - **Live memory self-correction first:** [`docs/sample-run/memory-dc/`](docs/sample-run/memory-dc/)
+>   records the current engine seeing `vol_pslist`=0 vs `vol_psscan`=124, re-sequencing to
+>   `vol_psxview`, and holding the divergence at **HYPOTHESIS** (acquisition smear) on first pass.
+>   The run is Ed25519-signed and offline-verifiable; this is the in-run catch judges should read
+>   before the older SRL post-run correction below.
 > - **Process-enumeration divergence** (`vol_pslist`=0 vs `vol_psscan`=124) stands as a
 >   **HYPOTHESIS** (acquisition smear / kernel-global read failure: `KeNumberProcessors`=0, core
 >   OS singletons recovered only by `psscan`, duplicate `System` EPROCESS), not confirmed DKOM.
@@ -228,8 +233,9 @@ of your Project.
 **STATUS: SATISFIED**
 
 > **Committed sample runs (self-contained on a fresh clone):**
-> [`docs/sample-run/`](docs/sample-run/) ships seven real, completed investigations — their
-> `audit.jsonl`, `run.manifest.json`, `verdict.json`, `manifest_verify.json`, and `REPORT.md`.
+> [`docs/sample-run/`](docs/sample-run/) ships seven real, completed investigations — each has
+> `audit.jsonl`, `run.manifest.json`, `verdict.json`, and `manifest_verify.json`; most include
+> `REPORT.md`, while partial runs can omit it by policy.
 > All verify **offline** (`manifest_verify` returns `overall: true`), and
 > [`docs/sample-run/README.md`](docs/sample-run/README.md) walks a single finding all the way
 > back to the tool execution and Merkle leaf that produced it. Every live investigation also
@@ -271,7 +277,7 @@ of your Project.
 > ├── verdict.json         # final verdict with confidence and MITRE mappings
 > ├── run.manifest.json    # Merkle root + signature metadata
 > ├── manifest_verify.json # offline verification result (overall: true)
-> └── REPORT.md            # human-readable investigation report
+> └── REPORT.md            # human-readable investigation report, when present
 > ```
 
 ---
@@ -285,7 +291,7 @@ of your Project.
 | 3 | README with setup instructions | [`README.md`](README.md) · [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 4 | Deployment / step-by-step instructions | [`QUICKSTART.md`](QUICKSTART.md) | SATISFIED |
 | 5 | Feature / functionality description | [`README.md`](README.md) | SATISFIED |
-| 6 | Demonstration video | [YouTube (4:35)](https://youtu.be/4RQnVden6L8) · [mp4 mirror](https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
+| 6 | Demonstration video | [YouTube (4:35)](https://youtu.be/4RQnVden6L8) · [historical `v-submit` mp4 mirror](https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4) · [`beats-data.ts`](scripts/make-demo-video/src/beats/beats-data.ts) (narration canon) | SATISFIED (4:35 cut, real exhibits — see §6) |
 | 7 | Architecture diagram | [`docs/architecture.md`](docs/architecture.md) | SATISFIED |
 | 8 | Evidence dataset documentation | [`docs/DATASET.md`](docs/DATASET.md) | SATISFIED |
 | 9 | Accuracy report | [`docs/accuracy-report.md`](docs/accuracy-report.md) (incl. §6 evidence integrity + named caught hallucinations) · [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) | SATISFIED (best: nitroba 100% recall, reproducible; NIST 36% (up from 7%) — honest coverage gap) |

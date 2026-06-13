@@ -126,6 +126,19 @@ TOOL_SEQUENCES: dict[str, list[PlaybookStep]] = {
         PlaybookStep("prefetch_parse", "Prefetch execution evidence", pool="A", optional=True),
         PlaybookStep("registry_query", "Registry hive queries", pool="A", optional=True),
         PlaybookStep("usnjrnl_query", "UsnJrnl change log", pool="A", optional=True),
+        PlaybookStep("browser_history", "Browser history databases", pool="B", optional=True),
+        PlaybookStep(
+            "ez_parse",
+            "LNK, JumpList, Amcache, and Recycle Bin decoders",
+            pool="both",
+            optional=True,
+        ),
+        PlaybookStep(
+            "plaso_parse",
+            "Legacy EVT, IE history, task, and Recycle Bin timelines",
+            pool="both",
+            optional=True,
+        ),
         PlaybookStep("yara_scan", "YARA over extracted executables", pool="both", optional=True),
     ],
     "directory": [
@@ -225,11 +238,23 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "prefetch_parse",
         }
+    if name == "amcache.hve":
+        return {
+            "artifact_class": "amcache",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
     if name in REGISTRY_HIVE_NAMES:
         return {
             "artifact_class": "registry",
             "evidence_type": "extracted_disk",
             "parser_tool": "registry_query",
+        }
+    if name == "srudb.dat":
+        return {
+            "artifact_class": "srum",
+            "evidence_type": "extracted_disk",
+            "parser_tool": None,
         }
     if (
         name in {"$j", "$usnjrnl", "usnjrnl", "usnjrnl.j"}
@@ -242,9 +267,57 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "usnjrnl_query",
         }
-    if name in {"history", "places.sqlite"} or name.endswith(".sqlite"):
+    if name.endswith(".evt"):
         return {
-            "artifact_class": "browser_history",
+            "artifact_class": "legacy_evt",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "plaso_parse",
+        }
+    if name.endswith(".lnk"):
+        return {
+            "artifact_class": "lnk",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
+    if name.endswith((".automaticdestinations-ms", ".customdestinations-ms")):
+        return {
+            "artifact_class": "jumplist",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
+    if name == "info2":
+        return {
+            "artifact_class": "recyclebin",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "plaso_parse",
+        }
+    if name.startswith("$i") and "$recycle.bin" in lower_path:
+        return {
+            "artifact_class": "recyclebin",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
+    if name == "index.dat" and "history.ie5" in lower_path:
+        return {
+            "artifact_class": "ie_history",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "plaso_parse",
+        }
+    if name == "thumbs.db" or name.endswith(".thumbcache"):
+        return {
+            "artifact_class": "thumbnail",
+            "evidence_type": "extracted_disk",
+            "parser_tool": None,
+        }
+    if name in {
+        "history",
+        "places.sqlite",
+        "web data",
+        "cookies",
+        "login data",
+    } or name.endswith(".sqlite"):
+        return {
+            "artifact_class": "browser_db",
             "evidence_type": "extracted_disk",
             "parser_tool": "browser_history",
         }

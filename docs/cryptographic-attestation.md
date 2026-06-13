@@ -17,7 +17,7 @@ file collects the load-bearing claims in one place.
 > **Amendment A5 (2026-05-01):** the OpenTimestamps + Bitcoin
 > anchoring tier was removed. The chain dropped from five links
 > to four primitives composed across three tiers (audit chain →
-> Merkle root → sigstore signature). The Bitcoin tier required
+> Merkle root → manifest signature). The Bitcoin tier required
 > network reach to a calendar server plus a multi-hour wait for
 > the attestation to mature, neither of which a judge scoring
 > offline can exercise. The honest implication for the FRE 902(14)
@@ -42,7 +42,7 @@ backed by composed cryptographic primitives across three tiers:
        ▼  rs_merkle = 1.4 (Rust, in-process)
    Merkle tree over canonical-JSON record bytes
        │
-       ▼  sigstore-python = 3.x (sigstore Fulcio cert + Rekor log)
+       ▼  signer tier (Ed25519 default; Sigstore for identity; stub for tests)
    signature  (signed over the manifest body bytes)
 ```
 
@@ -70,10 +70,10 @@ never silently overstates its tier.
 
 **No single primitive is load-bearing alone.** A SHA-256 by itself
 proves byte equality but not freshness; a Merkle root proves set
-membership but not who built the set; a sigstore signature proves
-identity AND (via Rekor inclusion) lower-bounds time, but only as
-late as the Rekor entry's own timestamp. The composition is the
-attestation.
+membership but not who built the set; the signer tier states who, if
+anyone, sealed the manifest. Ed25519 proves local key continuity
+offline, while Sigstore adds public identity and a Rekor time lower
+bound. The composition is the attestation.
 
 ---
 
@@ -87,7 +87,7 @@ services/mcp/                                    ← (Rust DFIR tool MCP)
 services/agent/findevil_agent/crypto/            ← (M2 crypto stack)
 ├── audit.py                                     — link 2: prev_hash chain
 ├── merkle.py                                    — link 3: rs_merkle tree
-├── signer.py                                    — link 4: sigstore Fulcio + Rekor
+├── signer.py                                    — link 4: Ed25519/Sigstore/stub signer tiers
 └── manifest.py                                  — composes 2/3/4 into run.manifest.json
 
 services/agent_mcp/findevil_agent_mcp/tools/     ← (Python MCP wrapping the above)
@@ -109,7 +109,7 @@ A judge, regulator, or counter-party who has zero trust in the
 agent can verify a Find Evil! manifest with one tool, offline:
 
 ```bash
-# The sigstore signature, audit chain, and Merkle root.
+# The manifest signature, audit chain, and Merkle root.
 # No network required (the manifest is self-contained).
 # Direct library call — no MCP server, no JSON-RPC plumbing.
 uv run --directory services/agent python -c "

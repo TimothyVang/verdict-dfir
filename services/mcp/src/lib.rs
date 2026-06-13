@@ -33,11 +33,18 @@ pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 /// Re-exports for test + binary convenience.
 pub use crate::crypto::merkle::{verify_inclusion_proof, InclusionProof, MerkleError, MerkleTree};
+pub use crate::tools::ausearch::{
+    ausearch, path_looks_like_audit_log, AuditRow, AusearchError, AusearchInput, AusearchOutput,
+};
 pub use crate::tools::browser_history::{
     browser_history, path_looks_like_browser_history, BrowserHistoryError, BrowserHistoryInput,
     BrowserHistoryOutput, BrowserHistoryRow,
 };
 pub use crate::tools::case_open::{case_open, CaseHandle, CaseOpenError, CaseOpenInput};
+pub use crate::tools::cloud_audit::{
+    cloud_audit, is_allowed_provider, CloudAuditError, CloudAuditInput, CloudAuditOutput,
+    CloudEvent,
+};
 pub use crate::tools::disk::{
     disk_extract_artifacts, disk_mount, disk_unmount, DiskError, DiskExtractArtifactsInput,
     DiskExtractArtifactsOutput, DiskMode, DiskMountInput, DiskMountOutput, DiskUnmountInput,
@@ -46,14 +53,35 @@ pub use crate::tools::disk::{
 pub use crate::tools::evtx_query::{
     evtx_query, path_looks_like_evtx, EvtxError, EvtxQueryInput, EvtxQueryOutput, EvtxRow,
 };
+pub use crate::tools::ez_parse::{
+    ez_parse, is_allowed_ez_tool, EzParseError, EzParseInput, EzParseOutput,
+};
 pub use crate::tools::hayabusa_scan::{
     hayabusa_scan, HayabusaAlert, HayabusaError, HayabusaInput, HayabusaOutput,
+};
+pub use crate::tools::indx_parse::{indx_parse, IndxError, IndxParseInput, IndxParseOutput};
+pub use crate::tools::journalctl_query::{
+    journalctl_query, path_looks_like_journal, JournalRow, JournalctlQueryError,
+    JournalctlQueryInput, JournalctlQueryOutput,
+};
+pub use crate::tools::login_accounting::{
+    login_accounting, path_looks_like_accounting, LoginAccountingError, LoginAccountingInput,
+    LoginAccountingOutput, LoginRecord,
+};
+pub use crate::tools::mac_triage::{
+    is_allowed_module, mac_triage, MacTriageError, MacTriageInput, MacTriageOutput,
 };
 pub use crate::tools::mft_timeline::{
     mft_timeline, path_looks_like_mft, MftEntryRow, MftError, MftInput, MftOutput,
 };
+pub use crate::tools::nfdump_query::{
+    nfdump_query, NfdumpQueryError, NfdumpQueryInput, NfdumpQueryOutput,
+};
 pub use crate::tools::pcap_triage::{
     path_looks_like_pcap, pcap_triage, PcapTriageError, PcapTriageInput, PcapTriageOutput,
+};
+pub use crate::tools::plaso_parse::{
+    is_allowed_parser, plaso_parse, PlasoParseError, PlasoParseInput, PlasoParseOutput,
 };
 pub use crate::tools::prefetch_parse::{
     path_looks_like_prefetch, prefetch_parse, PrefetchError, PrefetchInput, PrefetchOutput,
@@ -61,6 +89,9 @@ pub use crate::tools::prefetch_parse::{
 pub use crate::tools::registry_query::{
     path_looks_like_hive, registry_query, RegistryEntry, RegistryError, RegistryInput,
     RegistryOutput, RegistryValue,
+};
+pub use crate::tools::suricata_eve::{
+    suricata_eve, SuricataEveError, SuricataEveInput, SuricataEveOutput,
 };
 pub use crate::tools::sysmon_network_query::{
     path_looks_like_sysmon_evtx, sysmon_network_query, SysmonNetworkError, SysmonNetworkInput,
@@ -83,6 +114,9 @@ pub use crate::tools::vol_psscan::{
 };
 pub use crate::tools::vol_psxview::{
     vol_psxview, VolPsxviewError, VolPsxviewInput, VolPsxviewOutput, VolPsxviewRow,
+};
+pub use crate::tools::vol_run::{
+    is_allowed_plugin, vol_run, VolRunError, VolRunInput, VolRunOutput,
 };
 pub use crate::tools::yara_scan::{
     path_looks_like_yara_rules, yara_scan, YaraError, YaraInput, YaraMatch, YaraOutput,

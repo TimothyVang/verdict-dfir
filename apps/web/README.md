@@ -74,7 +74,7 @@ The SSE tail at `GET /api/audit?case=<dir>` (`app/api/audit/route.ts`) validates
 Default allow-listed roots (resolved against `process.cwd()`, which for the dashboard is the repo root):
 
 - `goldens/` — committed L3 test fixtures
-- `tmp/auto-runs/` — `find-evil-auto` headless output
+- `tmp/auto-runs/` — `scripts/verdict` / internal automation-engine run output
 - `tmp/smoke/` — synthetic smoke output
 - `test-forensics/` — operator's local DFIR corpus (gitignored)
 

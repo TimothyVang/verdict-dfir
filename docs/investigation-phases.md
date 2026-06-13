@@ -129,7 +129,7 @@ case_open
 
 **Tool:** `manifest_finalize`
 
-**What it produces:** `run.manifest.json` — the signed manifest covering the audit chain, Merkle root, and sigstore signature. Also writes the final `verdict.json`.
+**What it produces:** `run.manifest.json` — the signed manifest covering the audit chain, Merkle root, and effective signer tier. Also writes the final `verdict.json`.
 
 **What verdict.json contains:**
 
