@@ -43,7 +43,6 @@ fi
 # Pre-flight.
 # ---------------------------------------------------------------------
 RELEASE_TAG="${RELEASE_TAG:-v-submit}"
-ACCURACY="${ACCURACY:-0}"
 DATE="${DATE:-$(date -u +%Y-%m-%d)}"
 FINDEVIL_DEVPOST_MODE="${FINDEVIL_DEVPOST_MODE:-strict}"
 case "${FINDEVIL_DEVPOST_MODE}" in
@@ -60,6 +59,39 @@ else
   DEMO_VIDEO_URL="${DEMO_VIDEO_URL:-https://example.invalid/findevil-smoke-demo}"
   log "WARN: smoke mode enabled; generated package is NOT submission-ready"
 fi
+
+ACCURACY="${ACCURACY:-}"
+if [[ -z "${ACCURACY}" || "${ACCURACY}" == "0" ]] && [[ -f "${BENCHMARK_CSV}" ]]; then
+  derived_accuracy="$("${PYTHON_BIN}" - "${BENCHMARK_CSV}" <<'PY'
+import csv
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        rows = list(csv.DictReader(fh))
+except OSError:
+    rows = []
+
+for row in rows:
+    if row.get("fixture") != "nist-hacking-case":
+        continue
+    try:
+        matched = int(str(row.get("findings_matched", "")).strip())
+        expected = int(str(row.get("findings_expected", "")).strip())
+    except ValueError:
+        continue
+    if matched > 0 and expected >= matched:
+        print(round((matched / expected) * 100))
+        break
+PY
+)"
+  if [[ -n "${derived_accuracy}" ]]; then
+    ACCURACY="${derived_accuracy}"
+    log "derived ACCURACY=${ACCURACY} from ${BENCHMARK_CSV}"
+  fi
+fi
+ACCURACY="${ACCURACY:-0}"
 
 # ---------------------------------------------------------------------
 # 1. README-submission.md via envsubst.
@@ -133,7 +165,7 @@ if [[ -f "${BENCHMARK_CSV}" ]]; then
   cp "${BENCHMARK_CSV}" "${STAGE_DIR}/benchmark-results.csv"
 elif [[ "${FINDEVIL_DEVPOST_MODE}" == "smoke" ]]; then
   log "WARN: no ${BENCHMARK_CSV}; creating smoke-only stub"
-  echo 'fixture,findings_matched' > "${STAGE_DIR}/benchmark-results.csv"
+  echo 'fixture,findings_matched,findings_expected' > "${STAGE_DIR}/benchmark-results.csv"
 else
   log "ERROR: no ${BENCHMARK_CSV}"
   exit 1

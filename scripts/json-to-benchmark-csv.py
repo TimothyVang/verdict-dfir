@@ -51,11 +51,16 @@ def _record_from_file(p: Path) -> dict:
         data = json.loads(p.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError:
         return {c: "" for c in CSV_COLUMNS} | {"source_file": str(p)}
+    recall = data.get("recall") if isinstance(data.get("recall"), dict) else {}
     return {
         "fixture": fixture_name(data, p),
-        "findings_matched": data.get("finding_count")
+        "findings_matched": data.get("findings_matched")
+        or recall.get("recalled_n")
+        or data.get("finding_count")
         or len(data.get("findings", []) or []),
-        "findings_expected": data.get("findings_expected", ""),
+        "findings_expected": data.get("findings_expected")
+        or recall.get("expected_n")
+        or "",
         "verdict": data.get("verdict", ""),
         "verdict_correct": data.get("verdict_correct", ""),
         "wall_clock_seconds": data.get("wall_clock_seconds")

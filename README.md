@@ -210,11 +210,12 @@ expected findings — 100% recall**, which you can re-run yourself:
 `scripts/score-recall.py docs/sample-run/nitroba --golden goldens/nitroba`. (Recall measures
 whether the golden *facts* were surfaced; the run verdict stays `INDETERMINATE` because network
 metadata attributes activity to a host, not a person — full recall and a scoped verdict are
-consistent, not a contradiction.) **Every finding across committed runs cites a `tool_call_id`.** On the **NIST hacking case** it reaches **36% recall (5 of
-14, up from 7%)**: it surfaces real hacking-tool execution, shellbag/MRU traces, and the suspicious
-SAM account, but not the email carving, browser cache, LNK/recycle-bin, XP `.evt`, thumbcache, and
-named-pipe artifacts the answer key also expects — so it scopes to `SUSPICIOUS` rather than
-overclaim, and we publish the gap rather than hide it. Full method, the recall table, the
+consistent, not a contradiction.) **Every finding across committed runs cites a `tool_call_id`.** On the **NIST hacking case** it reaches **50% recall (7 of
+14, up from 7%)**: it surfaces real hacking-tool execution, shellbag/MRU traces, removable-media
+LNKs, recycle-bin staging artifacts, and the suspicious SAM account, but not the ACMru search,
+USB-history, deleted-email, browser-history, XP `.evt`, thumbcache, and named-pipe artifacts the
+answer key also expects — so it scopes to `SUSPICIOUS` rather than overclaim, and we publish the gap
+rather than hide it. Full method, the recall table, the
 false-positive controls, and the honest limits: **[`docs/accuracy-report.md`](docs/accuracy-report.md)**.
 The adversarial "break VERDICT" challenge is in
 [`docs/red-team-challenge.md`](docs/red-team-challenge.md).

@@ -81,6 +81,7 @@ EXCLUDED_PATH_PARTS = (
     ".worktrees",
     # Generated artifacts (PDFs, HTML have embedded assets that
     # can grep-match the wrong-pattern coincidentally).
+    "graphify-out",
     "tmp",
     # Pre-Phase-2 (2026-05-02), the historical specs + plans lived
     # at docs/superpowers/{specs,plans}/ and were excluded via the
