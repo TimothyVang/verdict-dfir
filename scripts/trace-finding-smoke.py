@@ -56,6 +56,16 @@ def _write_malformed_manifest(run_dir: Path) -> None:
     (run_dir / "run.manifest.json").write_text("{\n", encoding="utf-8")
 
 
+def _write_semantically_malformed_manifest(run_dir: Path) -> None:
+    manifest_path = run_dir / "run.manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["leaves"] = ["not-object"]
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="trace-finding-smoke-") as tmp:
         run_dir = Path(tmp) / "run"
@@ -101,6 +111,30 @@ def main() -> int:
             )
             print(malformed_manifest.stdout, file=sys.stderr)
             print(malformed_manifest.stderr, file=sys.stderr)
+            return 1
+
+        semantic_manifest_run = Path(tmp) / "semantic-manifest-run"
+        shutil.copytree(SAMPLE, semantic_manifest_run)
+        _write_semantically_malformed_manifest(semantic_manifest_run)
+        semantic_manifest = _run_trace(semantic_manifest_run)
+        if semantic_manifest.returncode == 0:
+            print(
+                "semantically malformed manifest unexpectedly traced successfully",
+                file=sys.stderr,
+            )
+            print(semantic_manifest.stdout, file=sys.stderr)
+            print(semantic_manifest.stderr, file=sys.stderr)
+            return 1
+        if (
+            "manifest:    BROKEN -- manifest leaf 0 is not an object"
+            not in semantic_manifest.stdout
+        ):
+            print(
+                "semantically malformed manifest failed without leaf diagnostic",
+                file=sys.stderr,
+            )
+            print(semantic_manifest.stdout, file=sys.stderr)
+            print(semantic_manifest.stderr, file=sys.stderr)
             return 1
 
         _tamper_verdict(run_dir)

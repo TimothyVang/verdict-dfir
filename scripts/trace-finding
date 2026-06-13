@@ -113,7 +113,17 @@ def _check_manifest(
     """
     problems: list[str] = []
     leaves = manifest.get("leaves", [])
-    leaf_ids = {str(leaf.get("record_id")) for leaf in leaves}
+    leaf_ids: set[str] = set()
+    if not isinstance(leaves, list):
+        problems.append("manifest leaves is not a list")
+        leaves = []
+    for index, leaf in enumerate(leaves):
+        if not isinstance(leaf, dict):
+            problems.append(f"manifest leaf {index} is not an object")
+            continue
+        record_id = leaf.get("record_id")
+        if record_id:
+            leaf_ids.add(str(record_id))
 
     if manifest.get("audit_log_record_count") not in (None, len(records)):
         problems.append(
