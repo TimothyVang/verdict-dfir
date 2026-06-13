@@ -250,6 +250,12 @@ dfir "tshark/zeek"  TSHARK_BIN      "sudo apt-get install -y tshark   (pcap_tria
      -- tshark zeek
 dfir "sleuthkit"    SLEUTHKIT_BIN   "sudo apt-get install -y sleuthkit   (disk_extract_artifacts on .e01/.dd; fls/icat/mmls)" \
      -- fls
+dfir "EZ tools"     EZTOOLS_DIR     "install the Eric Zimmerman tools (ship on the SIFT VM; native-Linux since the .NET port) and set \$EZTOOLS_DIR or add them to PATH   (ez_parse: LNK/Amcache/ShimCache/RecycleBin/shellbags)" \
+     -- LECmd AmcacheParser RBCmd SBECmd
+dfir "plaso"        PLASO_DIR       "install plaso/log2timeline (ships on the SIFT VM) and set \$PLASO_DIR or add to PATH   (plaso_parse: Linux/legacy-Win/macOS logs)" \
+     -- log2timeline.py psort.py
+dfir "mac_apt"      MAC_APT         "install mac_apt (ships on the SIFT VM) and set \$MAC_APT to mac_apt.py or add it to PATH   (mac_triage: macOS image triage)" \
+     -- mac_apt.py mac_apt
 
 # ---------------------------------------------------------------------------
 # Reporting + demo-recording helpers (warn-only).
