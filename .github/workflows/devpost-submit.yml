@@ -77,21 +77,46 @@ jobs:
             echo "::warning::No readiness-packet.zip release asset found; Devpost package will omit the optional expert-review packet."
           fi
 
-      - name: Download latest weekly L3 verdicts
+      - name: Download L3 verdicts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ github.sha }}
         run: |
           mkdir -p logs/l3
-          # Most recent successful weekly-golden run.
-          run_id=$(gh run list \
-            --workflow=l3-weekly-goldens.yml \
-            --status=success --limit=1 --json databaseId --jq '.[0].databaseId' || true)
-          if [[ -z "${run_id:-}" && "${GITHUB_REF_NAME}" == "v-submit" ]]; then
-            echo "::error::No successful weekly L3 verdict run found for final submission"
+          # Prefer the full weekly matrix when GitHub has indexed it, but allow
+          # the required same-SHA nightly gate to supply the final package.
+          downloaded=false
+          for source in \
+            "l3-weekly-goldens.yml:l3-weekly-verdicts:weekly" \
+            "l3-nightly.yml:l3-verdicts:nightly"
+          do
+            IFS=: read -r workflow artifact label <<< "${source}"
+            run_id=$(gh run list \
+              --workflow="${workflow}" \
+              --branch=master \
+              --status=success \
+              --limit=20 \
+              --json databaseId,headSha \
+              --jq "[.[] | select(.headSha == \"${TARGET_SHA}\")] | .[0].databaseId // \"\"" \
+              2>/dev/null || true)
+            if [[ -z "${run_id:-}" ]]; then
+              echo "::warning::No same-SHA ${label} L3 run found via ${workflow}"
+              continue
+            fi
+            if gh run download "${run_id}" --name "${artifact}" --dir logs/l3; then
+              echo "Downloaded ${label} L3 verdicts from run ${run_id}"
+              downloaded=true
+              break
+            fi
+            echo "::warning::Run ${run_id} did not expose artifact ${artifact}"
+          done
+          if [[ "${downloaded}" != "true" && "${GITHUB_REF_NAME}" == "v-submit" ]]; then
+            echo "::error::No same-SHA L3 verdict artifacts found for final submission"
             exit 1
           fi
-          if [[ -n "${run_id:-}" ]]; then
-            gh run download "${run_id}" --name l3-weekly-verdicts --dir logs/l3
+          if [[ -z "$(find logs/l3 -name '*-verdict.json' -print -quit)" && "${GITHUB_REF_NAME}" == "v-submit" ]]; then
+            echo "::error::Downloaded L3 artifacts did not include verdict JSON"
+            exit 1
           fi
 
       - name: Convert verdicts to CSV
