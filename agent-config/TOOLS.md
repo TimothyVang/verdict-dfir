@@ -4,12 +4,12 @@ The agent has access to two MCP servers, both auto-spawned by Claude Code via `.
 
 | Server | Lang | Tools |
 |---|---|---|
-| `findevil-mcp` | Rust (`services/mcp/`) | 25 typed DFIR tools |
+| `findevil-mcp` | Rust (`services/mcp/`) | 31 typed DFIR tools |
 | `findevil-agent-mcp` | Python (`services/agent_mcp/`) | 12 crypto + ACH + memory + ACP + expert-feedback tools (post-A5; the `ots_stamp` + `ots_verify` pair was removed) |
 
 Every successful tool call carries `_meta.output_sha256` (hex SHA-256 of the canonical JSON output). Findings cite tool calls by `tool_call_id`. The verifier vetoes any finding that doesn't.
 
-> **This file is the agent read-order catalog of the 37 typed PRODUCT tools** (the only verbs in
+> **This file is the agent read-order catalog of the 43 typed PRODUCT tools** (the only verbs in
 > the audit chain). The *full* set of MCP servers actually registered in `.mcp.json` (incl. the
 > operator-runtime `n8n-mcp`, `playwright`, `puppeteer` that emit no Findings) and the external
 > DFIR binaries + dependency pins are inventoried in
@@ -130,6 +130,36 @@ Use when: triaging a mounted macOS image. `module` ∈ allow-listed `mac_apt` mo
 Args: `{case_id, provider: str, log_path, limit?}`
 Returns: `{provider, events[]: {timestamp, actor, source_ip, action, resource, outcome, raw}, events_seen}`
 Use when: a cloud/identity audit log is in scope (the modern attacker center of gravity). `provider` ∈ `{cloudtrail, entra_signin, entra_audit, m365_ual, gcp_audit, workspace, k8s_audit, vpc_flow}`; off-list rejects with `ProviderNotAllowed`. **Pure Rust — no subprocess, no external binary.** Accepts JSON arrays, `{Records}`/`{value}` containers, JSONL, and space-delimited VPC flow; normalizes every provider into one envelope so the agent reasons across clouds.
+
+### journalctl_query
+Args: `{case_id, journal_path: str, since?: str, until?: str, limit?}`
+Returns: `{rows[]: free-form systemd-field maps, rows_seen, stderr_tail}`
+Use when: a binary systemd journal (`*.journal`) is carved. Fixed `journalctl --file <path> -o json` subprocess (GPL, subprocess-only). Optional `since`/`until` (UTC ISO-8601). `$JOURNALCTL_BIN` then PATH; graceful `BinaryNotFound`.
+
+### login_accounting
+Args: `{case_id, accounting_path: str, limit?}`
+Returns: `{rows[]: {user, line, host, login_iso?, logout_iso?, raw}, rows_seen, stderr_tail}`
+Use when: a Linux wtmp/btmp login-accounting DB is carved (lateral-movement / brute-force triage). Fixed `last -f <path> -F -w -R` subprocess. `$LAST_BIN` then PATH.
+
+### ausearch
+Args: `{case_id, audit_log_path: str, limit?}`
+Returns: `{rows[]: free-form type=... record maps, rows_seen, stderr_tail}`
+Use when: a Linux auditd `audit.log` is carved (highest-fidelity execve/syscall record). Fixed `ausearch -i -if <path>` subprocess. INSTALL-FIRST (absent on stock SIFT) — graceful `BinaryNotFound`. `$AUSEARCH_BIN` then PATH.
+
+### nfdump_query
+Args: `{case_id, flow_path: str, limit?}`
+Returns: `{rows[]: flow-record column maps, rows_seen, stderr_tail}`
+Use when: a NetFlow/IPFIX capture (`nfcapd`-style) is in scope (Pool B exfil-volume / beaconing). Fixed `nfdump -r <path> -o json`; **no free-text filter field** (injection guard). INSTALL-FIRST. `$NFDUMP_BIN` then PATH.
+
+### suricata_eve
+Args: `{case_id, pcap_path: str, limit?}`
+Returns: `{events[]: eve.json event maps, events_seen, stderr_tail}`
+Use when: a PCAP needs IDS replay (alert/dns/http/tls/fileinfo by `event_type`). Fixed `suricata -r <pcap> -l <outdir>` (GPL, subprocess-only) → reads `eve.json` from a temp outdir. INSTALL-FIRST. `$SURICATA_BIN` then PATH.
+
+### indx_parse
+Args: `{case_id, indx_path: str, limit?}`
+Returns: `{rows[]: INDX column maps, rows_seen, stderr_tail}`
+Use when: a carved NTFS `$I30`/INDX stream may hold slack entries for deleted files (anti-forensic-deletion corroboration). Fixed `INDXParse.py <path>` subprocess; parses its `,\t`-delimited table. INSTALL-FIRST (`pip install INDXParse`). `$INDXPARSE_BIN` then PATH.
 
 ---
 

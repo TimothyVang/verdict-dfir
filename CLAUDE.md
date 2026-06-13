@@ -35,7 +35,7 @@ live dashboard at `http://localhost:3000` → read the Verdict in
 - `NO_EVIL` — scoped-clean *within what was actually examined*; never "definitely safe."
 
 **Under the hood.** `case_open` SHA-256s the evidence and opens a **Case**; it forks **Pool A**
-(persistence) and **Pool B** (exfil), which drive the typed, read-only MCP tools (25 Rust +
+(persistence) and **Pool B** (exfil), which drive the typed, read-only MCP tools (31 Rust +
 12 Python). Every **Finding** must cite a `tool_call_id`. The whole run is sealed into a
 hash-chained, signed manifest you can verify offline.
 
@@ -101,7 +101,7 @@ analyst resolves → `verify_finding` re-runs each cited tool → `judge_finding
 
 Violating any of these breaks the judging story or an integration contract.
 
-- **No `execute_shell` MCP tool, ever.** The Rust surface is deliberately narrow (25 typed tools — the long-tail verbs `vol_run`/`ez_parse`/`plaso_parse`/`mac_triage` are allow-listed parameterized verbs, not shells: an off-list plugin/tool/module/parser name is rejected before argv). Adding shell pass-through undoes the "reduces the attack surface" pitch. The 25 Rust + 12 Python product tools are the only verbs in the audit chain; the non-product servers `.mcp.json` also registers (`n8n-mcp`/`playwright`/`puppeteer`/`qmd`) never touch evidence and never emit Findings.
+- **No `execute_shell` MCP tool, ever.** The Rust surface is deliberately narrow (31 typed tools — the long-tail verbs `vol_run`/`ez_parse`/`plaso_parse`/`mac_triage` are allow-listed parameterized verbs, not shells: an off-list plugin/tool/module/parser name is rejected before argv; the single-purpose subprocess wraps `journalctl_query`/`login_accounting`/`ausearch`/`nfdump_query`/`suricata_eve`/`indx_parse` take a typed path + fixed argv, never a shell). Adding shell pass-through undoes the "reduces the attack surface" pitch. The 31 Rust + 12 Python product tools are the only verbs in the audit chain; the non-product servers `.mcp.json` also registers (`n8n-mcp`/`playwright`/`puppeteer`/`qmd`) never touch evidence and never emit Findings.
 - **Every Finding cites a `tool_call_id`.** The verifier vetos any Finding without one. UI chips render `[confirmed · tool · sha256]` per finding.
 - **Epistemic hierarchy is strict.** `CONFIRMED` (backed by tool output) > `INFERRED` (≥2 confirmed facts, labeled) > `HYPOTHESIS` (prefixed "hypothesis:"). Nothing else is legal.
 - **Execution claims need ≥2 artifact classes** (Prefetch + Amcache+ShimCache, or EDR telemetry). Amcache alone is insufficient — it's catalog-registration time, not execution.
@@ -121,13 +121,13 @@ in `agent-config/TOOLS.md`.
 
 | Server | Lang | Count | Scope |
 |---|---|---|---|
-| `findevil-mcp` | Rust (`services/mcp/`) | 25 | DFIR primitives: `case_open`, disk mount/extract/unmount, evtx/mft/usnjrnl/registry/prefetch, hayabusa, vol_pslist/psscan/psxview/malfind, yara, vel_collect, browser_history, sysmon/zeek/pcap, **+ 5 allow-listed generic verbs: `vol_run` (Vol3 plugin), `ez_parse` (Eric Zimmerman), `plaso_parse` (log2timeline), `mac_triage` (mac_apt), `cloud_audit` (CloudTrail/Entra/M365/GCP/k8s/VPC)**. Read-only on evidence; SHA-256 every output. |
+| `findevil-mcp` | Rust (`services/mcp/`) | 31 | DFIR primitives: `case_open`, disk mount/extract/unmount, evtx/mft/usnjrnl/registry/prefetch, hayabusa, vol_pslist/psscan/psxview/malfind, yara, vel_collect, browser_history, sysmon/zeek/pcap, **+ 5 allow-listed generic verbs: `vol_run` (Vol3 plugin), `ez_parse` (Eric Zimmerman), `plaso_parse` (log2timeline), `mac_triage` (mac_apt), `cloud_audit` (CloudTrail/Entra/M365/GCP/k8s/VPC)**, **+ 6 single-purpose subprocess wraps: `journalctl_query`, `login_accounting`, `ausearch` (Linux host), `nfdump_query`, `suricata_eve` (network), `indx_parse` ($I30/INDX)**. Read-only on evidence; SHA-256 every output. |
 | `findevil-agent-mcp` | Python (`services/agent_mcp/`) | 12 | Crypto/ACH: audit_append/verify, manifest_finalize/verify, verify_finding, detect_contradictions, judge_findings, correlate_findings. Memory: memory_remember/recall. ACP: pool_handoff. Expert: expert_miss_capture. |
 
 `.mcp.json` registers **4 additional non-product servers** — `n8n-mcp` (post-verdict automation),
 `playwright`, `puppeteer` (browser tasks), and `qmd` (obsidian-mind dev-memory recall) — that are
 **not in the audit chain and emit no Findings**. So `.mcp.json` has 6 servers total while the
-product surface is 37 tools; neither number contradicts the other. Full server + dependency
+product surface is 43 tools; neither number contradicts the other. Full server + dependency
 inventory: `docs/reference/mcp-and-tools.md` and `docs/reference/dependencies.md`.
 
 **DKOM redundancy is intentional.** `vol_pslist` walks the active list; `vol_psscan`
@@ -266,7 +266,7 @@ the audit chain.
 | Commands, live-test gate, per-evidence-type matrix | `docs/live-test-matrix.md` |
 | Repo layout, 3 subsystems, sandbox layers, A1–A6 amendment history, project state | `docs/repo-guide.md` |
 | Judge-facing trust boundaries & architecture diagram | `docs/architecture.md` |
-| Full MCP-server + tool inventory (6 servers / 37 product tools) | `docs/reference/mcp-and-tools.md` |
+| Full MCP-server + tool inventory (6 servers / 43 product tools) | `docs/reference/mcp-and-tools.md` |
 | Dependency + external-DFIR-tool + version matrix | `docs/reference/dependencies.md` |
 | Env-var reference (~35 vars) | `docs/reference/environment-variables.md` |
 | How to run the product (flags, modes, output layout) | `docs/using/running-verdict.md` |

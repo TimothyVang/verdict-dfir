@@ -121,6 +121,34 @@ if ! command -v fls >/dev/null 2>&1; then
 fi
 command -v fls >/dev/null 2>&1 && log "  sleuthkit: $(command -v fls)" || true
 
+# nfdump (nfdump_query: NetFlow/IPFIX) — INSTALL-FIRST, absent on stock SIFT.
+if ! command -v nfdump >/dev/null 2>&1; then
+  log "  installing nfdump via apt..."
+  sudo -n apt-get install -y nfdump >/dev/null 2>&1 || warn "  nfdump install failed; the agent will get BinaryNotFound for nfdump_query"
+fi
+command -v nfdump >/dev/null 2>&1 && log "  nfdump: $(command -v nfdump)" || true
+
+# suricata (suricata_eve: IDS replay on PCAP) — INSTALL-FIRST, absent on stock SIFT.
+if ! command -v suricata >/dev/null 2>&1; then
+  log "  installing suricata via apt..."
+  sudo -n apt-get install -y suricata >/dev/null 2>&1 || warn "  suricata install failed; the agent will get BinaryNotFound for suricata_eve"
+fi
+command -v suricata >/dev/null 2>&1 && log "  suricata: $(command -v suricata)" || true
+
+# INDXParse (indx_parse: $I30/INDX slack) — INSTALL-FIRST, pip package.
+if ! command -v INDXParse.py >/dev/null 2>&1; then
+  log "  installing INDXParse via pip --user..."
+  pip3 install --user --quiet INDXParse >/dev/null 2>&1 || warn "  INDXParse install failed; the agent will get BinaryNotFound for indx_parse"
+fi
+command -v INDXParse.py >/dev/null 2>&1 && log "  INDXParse: $(command -v INDXParse.py)" || true
+
+# auditd/ausearch (ausearch: Linux audit.log) — INSTALL-FIRST, absent on stock SIFT.
+if ! command -v ausearch >/dev/null 2>&1; then
+  log "  installing auditd via apt..."
+  sudo -n apt-get install -y auditd >/dev/null 2>&1 || warn "  auditd install failed; the agent will get BinaryNotFound for ausearch"
+fi
+command -v ausearch >/dev/null 2>&1 && log "  ausearch: $(command -v ausearch)" || true
+
 # Hayabusa — not in SIFT; pull a release binary.
 HAYABUSA_VERSION="${HAYABUSA_VERSION:-2.18.0}"
 if ! command -v hayabusa >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/hayabusa" ]]; then

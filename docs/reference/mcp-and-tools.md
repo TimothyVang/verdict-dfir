@@ -2,19 +2,19 @@
 
 > **Status: ACTIVE.** This is the single source of truth for *which MCP servers exist*, *which
 > tools they expose*, and *what is and is not in the audit chain*. `agent-config/TOOLS.md` is
-> the agent read-order catalog of the 37 typed **product** tools; this file is the wider map
+> the agent read-order catalog of the 43 typed **product** tools; this file is the wider map
 > (every registered server + the host/browser MCP). When the two disagree, the tool *counts* in
 > both must match — fix the drift, don't pick a winner.
 
 Two numbers that look like a contradiction but aren't:
 
-- **37** = the **product tool surface** (25 Rust + 12 Python). This is the narrow, typed,
+- **43** = the **product tool surface** (31 Rust + 12 Python). This is the narrow, typed,
   audit-chained verb set the investigation runs on. It does not change lightly.
 - **6** = the number of **MCP servers actually registered in `.mcp.json`**. Only the first two
   are product-default and in the audit chain; the other four are non-product conveniences
   (operator-runtime browser/automation + the `qmd` dev-memory recall server).
 
-Neither number contradicts the other: 37 counts *product tools*, 6 counts *registered servers*.
+Neither number contradicts the other: 43 counts *product tools*, 6 counts *registered servers*.
 
 ---
 
@@ -22,7 +22,7 @@ Neither number contradicts the other: 37 counts *product tools*, 6 counts *regis
 
 | # | Server | Transport / command | Role | In audit chain? | Emits Findings? |
 |---|---|---|---|---|---|
-| 1 | `findevil-mcp` | stdio · `bash scripts/run-mcp-rust.sh` | 25 typed Rust DFIR tools | **Yes** | **Yes** |
+| 1 | `findevil-mcp` | stdio · `bash scripts/run-mcp-rust.sh` | 31 typed Rust DFIR tools | **Yes** | **Yes** |
 | 2 | `findevil-agent-mcp` | stdio · `bash scripts/run-mcp-python.sh` | 12 Python crypto / ACH / memory / ACP / expert tools | **Yes** | **Yes** |
 | 3 | `n8n-mcp` | stdio · `npx -y n8n-mcp` (`MCP_MODE=stdio`) | Post-verdict finding-to-action automation (operator-local) | No | No |
 | 4 | `playwright` | stdio · `npx -y @playwright/mcp@latest` | Browser automation / dashboard verification | No | No |
@@ -57,16 +57,19 @@ operator-runtime servers, it is **not** part of the investigation surface.
 
 ---
 
-## 2. Product tools — 37 total (25 Rust + 12 Python)
+## 2. Product tools — 43 total (31 Rust + 12 Python)
 
 **Invariant: there is no `execute_shell` tool, ever.** This typed surface is the entire verb
-set the investigation has. The narrowness *is* the security pitch. The five newest Rust verbs
+set the investigation has. The narrowness *is* the security pitch. The five generic Rust verbs
 (`vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`, `cloud_audit`) are **allow-listed
 parameterized verbs**, not shells: the plugin/tool/module/parser/provider name is validated
 against a fixed allow-list before any argv is built, so an off-list or injection-shaped value is
-rejected with a typed error and never reaches a subprocess.
+rejected with a typed error and never reaches a subprocess. The six single-purpose subprocess
+wraps (`journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`, `suricata_eve`,
+`indx_parse`) take a typed path and a fixed argv — a hostile path is one inert argv element,
+never a flag or a shell fragment.
 
-### `findevil-mcp` — 25 Rust DFIR tools (`services/mcp/src/tools/`)
+### `findevil-mcp` — 31 Rust DFIR tools (`services/mcp/src/tools/`)
 
 | Tool | Purpose | Source |
 |---|---|---|
@@ -95,6 +98,12 @@ rejected with a typed error and never reaches a subprocess.
 | `plaso_parse` | Allow-listed log2timeline parser verb (cross-OS text/binary logs) → normalized timeline events | `plaso_parse.rs` |
 | `mac_triage` | Allow-listed mac_apt module verb (macOS Unified Logs/FSEvents/launchd/KnowledgeC/TCC/…) | `mac_triage.rs` |
 | `cloud_audit` | Cloud/identity audit-log verb (CloudTrail/Entra/M365/GCP/k8s/VPC) — pure-Rust, normalized envelope | `cloud_audit.rs` |
+| `journalctl_query` | Binary systemd journal via `journalctl --file -o json` (Linux host) | `journalctl_query.rs` |
+| `login_accounting` | wtmp/btmp login records via `last -F -w -R` (Linux host) | `login_accounting.rs` |
+| `ausearch` | Linux auditd `audit.log` via `ausearch -i -if` (install-first) | `ausearch.rs` |
+| `nfdump_query` | NetFlow/IPFIX via `nfdump -r -o json` (no free-text filter; install-first) | `nfdump_query.rs` |
+| `suricata_eve` | PCAP → Suricata `eve.json` (install-first) | `suricata_eve.rs` |
+| `indx_parse` | NTFS `$I30`/INDX slack via `INDXParse.py` (install-first) | `indx_parse.rs` |
 
 ### `findevil-agent-mcp` — 12 Python tools (`services/agent_mcp/findevil_agent_mcp/tools/`)
 
