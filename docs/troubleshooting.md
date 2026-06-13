@@ -60,11 +60,14 @@ What the engine does about a rejection (current code): each *re-runnable* reject
 **re-dispatched exactly once** with a fresh replay (`verifier_redispatch` audit record;
 recoveries are listed in `verdict.json → findings_summary.verifier_redispatches` and in
 `analysis_limitations` as transparency notes, not blockers). A rejection that persists is a
-`course_correction`, and **two consecutive** persistent failures trip the HEARTBEAT
-terminator: remaining lanes are skipped (`heartbeat_terminated` record), the run still
-seals, the empty-findings verdict is forced to `INDETERMINATE`, and the run summary reports
-`readiness_state: "partial"` with a HEARTBEAT blocker. Citation vetoes (`missing_citation`
-/ `missing_audit_record`) are never re-dispatched.
+`course_correction` and a `verifier_rejected_lead` audit record, mirrored into
+`verdict.json → rejected_finding_leads` as non-evidentiary analyst-review context. The rejected
+lead is not passed to the judge, final Findings, or verdict policy. **Two consecutive**
+persistent failures trip the HEARTBEAT terminator: remaining lanes are skipped
+(`heartbeat_terminated` record), the run still seals, the empty-findings verdict is forced to
+`INDETERMINATE`, and the run summary reports `readiness_state: "partial"` with a HEARTBEAT
+blocker. Citation vetoes (`missing_citation` / `missing_audit_record`) are never
+re-dispatched.
 
 | Symptom | Detector | Fix |
 |---|---|---|

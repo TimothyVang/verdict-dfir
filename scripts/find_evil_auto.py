@@ -6749,6 +6749,10 @@ class Investigation:
         # (HEARTBEAT.md: reason about the failure and try again). Keyed by
         # finding_id; mirrored into verdict.json findings_summary.
         self.verifier_redispatches: dict[str, dict[str, Any]] = {}
+        # Rejected findings are excluded from evidence-backed Findings, but
+        # retained as non-evidentiary leads so an analyst can inspect potential
+        # false negatives without weakening the verifier gate.
+        self.verifier_rejected_leads: list[dict[str, Any]] = []
         # FIND_EVIL_FAULT_INJECT bookkeeping: the hook fires at most once per
         # run, so a faulted showcase corrupts exactly one verify attempt.
         self._faults_consumed: set[str] = set()
@@ -10504,6 +10508,13 @@ class Investigation:
                 )
                 self.verifier_replay_failures.append(failure)
                 self.analysis_limitations.append(failure)
+            if action.get("action") == "rejected":
+                rejected_lead = self._verifier_rejected_lead_snapshot(
+                    finding, action, replay
+                )
+                self.verifier_rejected_leads.append(rejected_lead)
+            else:
+                rejected_lead = None
             self._audit(
                 py,
                 "verifier_action",
@@ -10522,6 +10533,8 @@ class Investigation:
                     },
                 },
             )
+            if rejected_lead:
+                self._audit(py, "verifier_rejected_lead", rejected_lead)
             handoff = py.call_tool(
                 "pool_handoff",
                 {
@@ -10543,6 +10556,38 @@ class Investigation:
                     f"{handoff['_error'].get('message', 'unknown handoff failure')}"
                 )
         return actions
+
+    def _verifier_rejected_lead_snapshot(
+        self,
+        finding: dict[str, Any],
+        action: dict[str, Any],
+        replay: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Preserve a rejected Finding as analyst-reviewable, non-evidentiary context."""
+        return {
+            "finding_id": str(
+                action.get("finding_id") or finding.get("finding_id") or ""
+            ),
+            "tool_call_id": finding.get("tool_call_id"),
+            "confidence": finding.get("confidence"),
+            "pool_origin": finding.get("pool_origin"),
+            "mitre_technique": finding.get("mitre_technique"),
+            "artifact_path": finding.get("artifact_path"),
+            "description": str(finding.get("description") or "")[:500],
+            "verifier_action": "rejected",
+            "verifier_reason": str(
+                action.get("reason")
+                or replay.get("replay_error")
+                or "unknown verifier failure"
+            )[:500],
+            "replay_matched": replay.get("replay_matched"),
+            "replay_error": replay.get("replay_error"),
+            "replay_record_sha256": replay.get("replay_record_sha256"),
+            "verdict_effect": "excluded_from_final_findings",
+            "analyst_action": (
+                "Inspect this as a rejected lead; do not treat it as evidence until replay succeeds."
+            ),
+        }
 
     def _embed_verifier_replays(
         self, findings: list[dict[str, Any]]
@@ -11176,12 +11221,14 @@ class Investigation:
             "started_at": self.started_at,
             "verdict": verdict,
             "analysis_limitations": self.analysis_limitations,
+            "rejected_finding_leads": self.verifier_rejected_leads,
             "findings": merged,
             "findings_summary": {
                 "total_merged": len(merged),
                 "contradictions_surfaced": contras,
                 "soul_md_kept": kept,
                 "soul_md_downgraded": downgraded,
+                "verifier_rejected_leads": len(self.verifier_rejected_leads),
                 "by_confidence": _confidence_distribution(merged),
             },
             "tool_calls": self.tool_calls,
@@ -11506,6 +11553,7 @@ class Investigation:
                 "soul_md_downgraded": downgraded,
                 "correlation_outcomes": self.correlation_outcomes,
                 "verifier_redispatches": self.verifier_redispatches,
+                "verifier_rejected_leads": len(self.verifier_rejected_leads),
             },
             "heartbeat": {
                 "escalated": self._heartbeat_escalated,
@@ -11513,6 +11561,7 @@ class Investigation:
                 "terminated_partial": self._heartbeat_terminated,
             },
             "findings": merged,
+            "rejected_finding_leads": self.verifier_rejected_leads,
             "tool_calls": self.tool_calls,
             "evtx_summary": self.evtx_summary,
             "disk_artifact_summary": self.disk_artifact_summary,

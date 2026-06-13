@@ -140,6 +140,11 @@ without changing the top-line verdict policy:
   existing typed outputs. It is triage-only: it does not identify who
   operated code, prove execution, or upgrade a Finding without
   corroboration.
+- `rejected_finding_leads` preserves Findings that failed verifier
+  replay after the one allowed re-dispatch. These are
+  non-evidentiary analyst-review leads, explicitly marked
+  `excluded_from_final_findings`; they do not reach the judge,
+  final Findings, or verdict policy until replay succeeds.
 - `analysis_limitations` records material scope gaps, such as disk
   auto mode registering a disk image without mounting or parsing
   filesystem artifacts.

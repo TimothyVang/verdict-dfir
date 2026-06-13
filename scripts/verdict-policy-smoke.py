@@ -1378,6 +1378,11 @@ def main() -> int:
             reject_inv.compute_verdict(rejected_merged),
             "INDETERMINATE",
         ),
+        (
+            "rejected verifier finding is preserved as a non-evidentiary lead",
+            reject_inv.verifier_rejected_leads[0].get("verdict_effect"),
+            "excluded_from_final_findings",
+        ),
     ]
     for label, actual, expected in reject_cases:
         process_checks += 1

@@ -41,6 +41,7 @@ present, each gating an optional section or exhibit:
 | `malware_triage.aggregate_iocs` | Indicators of Compromise (IOC) tables |
 | `entity_index`, `indicators`, `evtx_summary` | Entity rollup, IOC leads, composition figure |
 | `report_evidence_cards`, `tool_calls` | Evidence cards, process-view comparison figure |
+| `rejected_finding_leads` | Non-evidentiary verifier-rejected leads for analyst review; these are excluded from final Findings |
 
 Optional **sidecar files** in the Case dir are read only if present:
 `coverage_manifest.json` (fallback for the Coverage Manifest section),
