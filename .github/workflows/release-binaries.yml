@@ -111,8 +111,9 @@ jobs:
           tag="${GITHUB_REF_NAME}"
           # release.yml's publish job also creates this release; create-if-missing
           # keeps the two workflows order-independent.
-          if ! gh release view "${tag}" >/dev/null 2>&1; then
-            gh release create "${tag}" --title "${tag}" \
+          repo="${GITHUB_REPOSITORY}"
+          if ! gh release view "${tag}" --repo "${repo}" >/dev/null 2>&1; then
+            gh release create "${tag}" --repo "${repo}" --title "${tag}" \
               --notes "Prebuilt findevil-mcp binaries (checksummed)." || true
           fi
-          gh release upload "${tag}" findevil-mcp-*.tar.xz SHA256SUMS --clobber
+          gh release upload "${tag}" findevil-mcp-*.tar.xz SHA256SUMS --repo "${repo}" --clobber
