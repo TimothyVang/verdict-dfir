@@ -420,38 +420,42 @@ Investigation Report</h1>
 <p><span class="tagline">DFIR at machine speed · signed, replayable
 chain of custody</span></p>
 <p><strong>Case ID:</strong>
-<code>b639fdda-146c-48ec-9080-1e144ec7ceae</code> <strong>Run
-ID:</strong> <code>auto-1781289206</code> <strong>Started:</strong>
-2026-06-12T18:33:26Z <strong>Finalized:</strong> 2026-06-12T18:33:33Z
-<strong>Evidence:</strong> <code>evidence/SCHARDT.dd</code>
+<code>bb2953cd-bdd9-4251-a493-70c97663f892</code> <strong>Run
+ID:</strong> <code>auto-1781370852</code> <strong>Started:</strong>
+2026-06-13T17:14:12Z <strong>Finalized:</strong> 2026-06-13T17:14:22Z
+<strong>Evidence:</strong>
+<code>/home/analyst/Desktop/PUG-Projects/sans-hackathon/evidence/SCHARDT.dd</code>
 <strong>Verdict:</strong> <strong><span class="verdict-alert">SUSPICIOUS</span></strong></p>
 <blockquote>
 <p><strong>Cryptographic attestation:</strong> Merkle root
-<code>eb6dd243b6ab4129278260ebd97c94e1f5fc24837572e8359980fed5fdce3386</code>
+<code>1a2b2f39dd4d8a03e00aae54cd7ace5441eb510f9219dbed593d9e2ded98072a</code>
 Audit log final hash
-<code>64263c769823cbca52ca0d99a7c223951aff59e348feb6f675d08da26c731d98</code>
+<code>42edd1aa1402b0d1002c9349010f99ad614d54bb9ef204530b65198ee6ef21a9</code>
 Ed25519 signature SHA-256
-<code>83e2e6bca923952dab1b7aab9f7f06959e11e843d47924fd2bd44ea7495ea8d4</code>
+<code>1f438b48930bf5316c8ff2aa79dfb160efba74b5727c32f962785226bef96d18</code>
 Cert fingerprint
 <code>b98df1a9d09da3741e295d7da21b9b675287adfb36b10ca17c280e2a1fee0f54</code></p>
 </blockquote>
 <hr />
 <h2 id="bottom-line-up-front">Bottom Line Up Front</h2>
-<div class="vfig vsc vsc-alert"><div class="vsc-rail"></div><div class="vsc-body"><div class="vsc-top"><span class="vsc-verdict vsc-verdict-alert"><span class="verdict-alert">SUSPICIOUS</span></span><span class="vsc-cert">Certainty&nbsp;·&nbsp;High</span></div><div class="vsc-headline">Confirmed: cain.exe executed.</div><div class="vsc-meta">SAM &nbsp;·&nbsp; T1136.001</div><div class="vsc-chips"><span class="vchip vchip-confirmed">8 Confirmed</span><span class="vchip vchip-inferred">2 Inferred</span><span class="vchip vchip-hypothesis">9 Hypothesis</span></div></div></div>
+<div class="vfig vsc vsc-alert"><div class="vsc-rail"></div><div class="vsc-body"><div class="vsc-top"><span class="vsc-verdict vsc-verdict-alert"><span class="verdict-alert">SUSPICIOUS</span></span><span class="vsc-cert">Certainty&nbsp;·&nbsp;High</span></div><div class="vsc-headline">Confirmed: cain.exe executed.</div><div class="vsc-meta">SAM &nbsp;·&nbsp; T1136.001</div><div class="vsc-chips"><span class="vchip vchip-confirmed">8 Confirmed</span><span class="vchip vchip-hypothesis">19 Hypothesis</span></div></div></div>
 <p><strong>Verdict: <span class="verdict-alert">SUSPICIOUS</span>.</strong> Confirmed: cain.exe
 executed.</p>
 <p>The supplied evidence shows cain.exe executed at
 2004-08-27T15:33:03Z.</p>
-<p><strong>Scope:</strong> findings span 13 hosts —
+<p><strong>Scope:</strong> findings span 20 hosts —
 ETHEREAL.EXE-1C148EEF.pf (confirmed); CAIN.EXE-23D61279.pf (confirmed);
 ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf (confirmed);
 NETSTUMBLER.EXE-0BFEE568.pf (confirmed); LOOKATLAN.EXE-1F991DD9.pf
 (confirmed); MIRC.EXE-0661EC22.pf (confirmed); MIRC612.EXE-02791C37.pf
-(confirmed); CAIN25B45.EXE-056F3A6E.pf (confirmed); software (inferred);
-NTUSER.DAT (hypothesis); NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf
-(hypothesis); SAM (hypothesis); $MFT (hypothesis). Each is assessed
-separately below; the evidence does not establish them as one
-incident.</p>
+(confirmed); CAIN25B45.EXE-056F3A6E.pf (confirmed); NTUSER.DAT
+(hypothesis); target.lnk (hypothesis);
+NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf (hypothesis); SAM
+(hypothesis); $MFT (hypothesis); Anonyymizer.lnk (hypothesis); channels
+(2).lnk (hypothesis); channels.lnk (hypothesis); GhostWare.lnk
+(hypothesis); keys.lnk (hypothesis); Temp on m1200 (4.12.220.254).lnk
+(hypothesis); INFO2 (hypothesis). Each is assessed separately below; the
+evidence does not establish them as one incident.</p>
 <p><strong>Assessment:</strong> The cited tool output meets a defined
 detection rule for this technique. Treat single-source signals as leads
 until corroborated across artifact classes.</p>
@@ -460,10 +464,6 @@ reproducible (the verifier re-ran it and the SHA-256 matched). The
 confidence is in the artifact, not in intent or actor.</p>
 <p><strong>Key findings:</strong></p>
 <ul>
-<li><p>A Run-key persistence entry (<span class="conf-inferred">INFERRED</span>, T1547.001, cited by
-tc-098).</p></li>
-<li><p>A Run-key persistence entry (<span class="conf-inferred">INFERRED</span>, T1547.001, cited by
-tc-098).</p></li>
 <li><p>Suspicious activity (<span class="conf-confirmed">CONFIRMED</span>, T1588.002, cited by
 tc-010).</p></li>
 <li><p>Suspicious activity (<span class="conf-confirmed">CONFIRMED</span>, T1588.002, cited by
@@ -476,7 +476,7 @@ tc-040).</p></li>
 <li><p>Suspicious activity (<span class="conf-confirmed">CONFIRMED</span>, T1071.001, cited by
 tc-041).</p></li>
 <li><p>Suspicious activity (<span class="conf-confirmed">CONFIRMED</span>, T1046, cited by tc-047).</p></li>
-<li><p>Findings: 19 total — 8 confirmed, 2 inferred, 9
+<li><p>Findings: 27 total — 8 confirmed, 0 inferred, 19
 hypothesis.</p></li>
 <li><p>Most important next step: Collect Security, Sysmon, and
 PowerShell Operational EVTX and rerun EVTX/Hayabusa analysis.</p></li>
@@ -519,43 +519,43 @@ across artifact classes.</p>
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain25b45.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal-setup-0.10.6.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of lookatlan.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc612.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 </tbody>
 </table>
@@ -594,43 +594,43 @@ across artifact classes.</p>
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain25b45.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal-setup-0.10.6.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of lookatlan.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc612.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 </tbody>
 </table>
@@ -669,43 +669,43 @@ across artifact classes.</p>
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain25b45.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal-setup-0.10.6.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of lookatlan.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc612.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 </tbody>
 </table>
@@ -743,43 +743,43 @@ across artifact classes.</p>
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain25b45.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal-setup-0.10.6.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of lookatlan.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc612.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 </tbody>
 </table>
@@ -817,43 +817,43 @@ across artifact classes.</p>
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain25b45.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal-setup-0.10.6.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of lookatlan.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc612.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 </tbody>
 </table>
@@ -891,43 +891,43 @@ across artifact classes.</p>
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain25b45.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal-setup-0.10.6.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of lookatlan.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc612.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 </tbody>
 </table>
@@ -965,43 +965,43 @@ across artifact classes.</p>
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain25b45.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal-setup-0.10.6.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of lookatlan.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc612.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 </tbody>
 </table>
@@ -1039,80 +1039,43 @@ across artifact classes.</p>
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of cain25b45.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal-setup-0.10.6.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of ethereal.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of lookatlan.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
+<td><code>tc-214</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-27T15:46:13Z</td>
 <td>UserAssist records execution of mirc612.exe</td>
 <td>—</td>
-<td><code>tc-112</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="software">software</h3>
-<p><em>2 finding(s) — 0 confirmed, 2 inferred, 0 hypothesis · 1 events ·
-2004-08-19T22:37:33Z · source: software</em></p>
-<p><strong>Persistence: Boot or Logon Autostart Execution: Registry Run
-Keys</strong> <code>[INFERRED]</code> <code>tc-098</code></p>
-<p>Run keys launch a program at logon — a simple, durable persistence
-spot. Most Run-key entries are legitimate software; the target path is
-the lead.</p>
-<p><strong>Persistence: Boot or Logon Autostart Execution: Registry Run
-Keys</strong> <code>[INFERRED]</code> <code>tc-098</code></p>
-<p>Run keys launch a program at logon — a simple, durable persistence
-spot. Most Run-key entries are legitimate software; the target path is
-the lead.</p>
-<table>
-<colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Time (UTC)</th>
-<th>Event</th>
-<th>Account</th>
-<th>Tool Call</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>2004-08-19T22:37:33Z</td>
-<td>registry key: Microsoft\Windows\CurrentVersion\Run</td>
-<td>—</td>
-<td><code>tc-098</code></td>
+<td><code>tc-214</code></td>
 </tr>
 </tbody>
 </table>
@@ -1121,32 +1084,32 @@ the lead.</p>
 · 2004-08-20T15:07:26Z → 2004-08-27T15:32:08Z · source:
 NTUSER.DAT</em></p>
 <p><strong>Other: T1074.001</strong> <code>[HYPOTHESIS]</code>
-<code>tc-078</code></p>
+<code>tc-179</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<p><strong>Other: T1217</strong> <code>[HYPOTHESIS]</code>
+<code>tc-176</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<p><strong>Other: T1217</strong> <code>[HYPOTHESIS]</code>
+<code>tc-176</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<p><strong>Other: T1217</strong> <code>[HYPOTHESIS]</code>
+<code>tc-176</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<p><strong>Other: T1217</strong> <code>[HYPOTHESIS]</code>
+<code>tc-176</code></p>
 <p>The cited tool output meets a defined detection rule for this
 technique. Treat single-source signals as leads until corroborated
 across artifact classes.</p>
 <p><strong>Other: T1074.001</strong> <code>[HYPOTHESIS]</code>
-<code>tc-079</code></p>
-<p>The cited tool output meets a defined detection rule for this
-technique. Treat single-source signals as leads until corroborated
-across artifact classes.</p>
-<p><strong>Other: T1217</strong> <code>[HYPOTHESIS]</code>
-<code>tc-076</code></p>
-<p>The cited tool output meets a defined detection rule for this
-technique. Treat single-source signals as leads until corroborated
-across artifact classes.</p>
-<p><strong>Other: T1217</strong> <code>[HYPOTHESIS]</code>
-<code>tc-076</code></p>
-<p>The cited tool output meets a defined detection rule for this
-technique. Treat single-source signals as leads until corroborated
-across artifact classes.</p>
-<p><strong>Other: T1217</strong> <code>[HYPOTHESIS]</code>
-<code>tc-076</code></p>
-<p>The cited tool output meets a defined detection rule for this
-technique. Treat single-source signals as leads until corroborated
-across artifact classes.</p>
-<p><strong>Other: T1217</strong> <code>[HYPOTHESIS]</code>
-<code>tc-076</code></p>
+<code>tc-178</code></p>
 <p>The cited tool output meets a defined detection rule for this
 technique. Treat single-source signals as leads until corroborated
 across artifact classes.</p>
@@ -1171,58 +1134,76 @@ across artifact classes.</p>
 <td>registry key:
 Software\Microsoft\Windows\ShellNoRoam\BagMRU\0\1\0</td>
 <td>—</td>
-<td><code>tc-079</code></td>
+<td><code>tc-179</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-20T15:07:26Z</td>
 <td>registry key:
 Software\Microsoft\Windows\ShellNoRoam\BagMRU\0\1\0\0</td>
 <td>—</td>
-<td><code>tc-079</code></td>
+<td><code>tc-179</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-20T15:07:26Z</td>
 <td>registry key:
 Software\Microsoft\Windows\ShellNoRoam\BagMRU\0\1\0\0\0</td>
 <td>—</td>
-<td><code>tc-079</code></td>
+<td><code>tc-179</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-20T15:07:26Z</td>
 <td>registry key:
 Software\Microsoft\Windows\ShellNoRoam\BagMRU\0\1\0\0\0\0\0</td>
 <td>—</td>
-<td><code>tc-079</code></td>
+<td><code>tc-179</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-20T15:09:56Z</td>
 <td>registry key:
 Software\Microsoft\Windows\ShellNoRoam\BagMRU\0\1\0\0\0\0\1</td>
 <td>—</td>
-<td><code>tc-079</code></td>
+<td><code>tc-179</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-20T15:10:06Z</td>
 <td>registry key:
 Software\Microsoft\Windows\ShellNoRoam\BagMRU\0\1\0\0\0\0</td>
 <td>—</td>
-<td><code>tc-079</code></td>
+<td><code>tc-179</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-20T15:11:11Z</td>
 <td>registry key:
 Software\Microsoft\Windows\ShellNoRoam\BagMRU\0\1\1\0</td>
 <td>—</td>
-<td><code>tc-079</code></td>
+<td><code>tc-179</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-20T15:19:00Z</td>
 <td>registry key: Software\Microsoft\Windows\ShellNoRoam\BagMRU\0\0</td>
 <td>—</td>
-<td><code>tc-079</code></td>
+<td><code>tc-179</code></td>
 </tr>
 </tbody>
 </table>
+<h3 id="target.lnk">target.lnk</h3>
+<p><em>3 finding(s) — 0 confirmed, 0 inferred, 3 hypothesis · 0 events ·
+time not recorded · source: target.lnk</em></p>
+<p><strong>Other: T1074</strong> <code>[HYPOTHESIS]</code>
+<code>tc-055</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<p><strong>Other: T1074</strong> <code>[HYPOTHESIS]</code>
+<code>tc-056</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<p><strong>Other: T1074</strong> <code>[HYPOTHESIS]</code>
+<code>tc-057</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
 <h3 id="netstumblerinstaller_0_4_0.ex-0bd9920c.pf">NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf</h3>
 <p><em>1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 1 events ·
 2004-08-27T15:12:11Z · source:
@@ -1260,7 +1241,7 @@ across artifact classes.</p>
 <p><em>1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 6 events ·
 2004-08-19T16:59:24Z → 2004-08-19T23:03:54Z · source: SAM</em></p>
 <p><strong>Persistence: T1136.001</strong> <code>[HYPOTHESIS]</code>
-<code>tc-103</code></p>
+<code>tc-206</code></p>
 <p>The cited tool output meets a defined detection rule for this
 technique. Treat single-source signals as leads until corroborated
 across artifact classes.</p>
@@ -1284,37 +1265,37 @@ across artifact classes.</p>
 <td>2004-08-19T16:59:24Z</td>
 <td>registry key: SAM\Domains\Account\Users\Names\Administrator</td>
 <td>—</td>
-<td><code>tc-103</code></td>
+<td><code>tc-206</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-19T16:59:24Z</td>
 <td>registry key: SAM\Domains\Account\Users\Names\Guest</td>
 <td>—</td>
-<td><code>tc-103</code></td>
+<td><code>tc-206</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-19T22:28:24Z</td>
 <td>registry key: SAM\Domains\Account\Users\Names\HelpAssistant</td>
 <td>—</td>
-<td><code>tc-103</code></td>
+<td><code>tc-206</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-19T22:35:19Z</td>
 <td>registry key: SAM\Domains\Account\Users\Names\SUPPORT_388945a0</td>
 <td>—</td>
-<td><code>tc-103</code></td>
+<td><code>tc-206</code></td>
 </tr>
 <tr class="odd">
 <td>2004-08-19T23:03:54Z</td>
 <td>registry key: SAM\Domains\Account\Users\Names</td>
 <td>—</td>
-<td><code>tc-103</code></td>
+<td><code>tc-206</code></td>
 </tr>
 <tr class="even">
 <td>2004-08-19T23:03:54Z</td>
 <td>registry key: SAM\Domains\Account\Users\Names\Mr. Evil</td>
 <td>—</td>
-<td><code>tc-103</code></td>
+<td><code>tc-206</code></td>
 </tr>
 </tbody>
 </table>
@@ -1386,6 +1367,63 @@ across artifact classes.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="anonyymizer.lnk">Anonyymizer.lnk</h3>
+<p><em>1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 0 events ·
+time not recorded · source: Anonyymizer.lnk</em></p>
+<p><strong>Other: T1074</strong> <code>[HYPOTHESIS]</code>
+<code>tc-058</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<h3 id="channels-2.lnk">channels (2).lnk</h3>
+<p><em>1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 0 events ·
+time not recorded · source: channels (2).lnk</em></p>
+<p><strong>Other: T1074</strong> <code>[HYPOTHESIS]</code>
+<code>tc-059</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<h3 id="channels.lnk">channels.lnk</h3>
+<p><em>1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 0 events ·
+time not recorded · source: channels.lnk</em></p>
+<p><strong>Other: T1074</strong> <code>[HYPOTHESIS]</code>
+<code>tc-060</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<h3 id="ghostware.lnk">GhostWare.lnk</h3>
+<p><em>1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 0 events ·
+time not recorded · source: GhostWare.lnk</em></p>
+<p><strong>Other: T1074</strong> <code>[HYPOTHESIS]</code>
+<code>tc-061</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<h3 id="keys.lnk">keys.lnk</h3>
+<p><em>1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 0 events ·
+time not recorded · source: keys.lnk</em></p>
+<p><strong>Other: T1074</strong> <code>[HYPOTHESIS]</code>
+<code>tc-062</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<h3 id="temp-on-m1200-4.12.220.254.lnk">Temp on m1200
+(4.12.220.254).lnk</h3>
+<p><em>1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 0 events ·
+time not recorded · source: Temp on m1200 (4.12.220.254).lnk</em></p>
+<p><strong>Other: T1074</strong> <code>[HYPOTHESIS]</code>
+<code>tc-063</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
+<h3 id="info2">INFO2</h3>
+<p><em>1 finding(s) — 0 confirmed, 0 inferred, 1 hypothesis · 0 events ·
+time not recorded · source: INFO2</em></p>
+<p><strong>Defense Evasion: T1070.004</strong> <code>[HYPOTHESIS]</code>
+<code>tc-135</code></p>
+<p>The cited tool output meets a defined detection rule for this
+technique. Treat single-source signals as leads until corroborated
+across artifact classes.</p>
 <h2 id="recommendations">Recommendations</h2>
 <ul>
 <li>Collect Security, Sysmon, and PowerShell Operational EVTX and rerun
@@ -1413,14 +1451,8 @@ process and injection plugins.</li>
 <li>Undetermined: logon, process-creation, and PowerShell activity
 cannot be reviewed without event logs. To resolve: collect the Security,
 Sysmon/Operational, and PowerShell/Operational logs.</li>
-<li><span class="conf-inferred">INFERRED</span> finding f-A-reg-persist-srfirstrun cites 1 confirmed
-fact(s) in derived_from; the SOUL.md ≥2-fact rule wants two independent
-sources before an inference is fully corroborated. Treat as a
-single-source lead pending a second artifact class.</li>
-<li><span class="conf-inferred">INFERRED</span> finding f-A-reg-persist-schedulingagent cites 1 confirmed
-fact(s) in derived_from; the SOUL.md ≥2-fact rule wants two independent
-sources before an inference is fully corroborated. Treat as a
-single-source lead pending a second artifact class.</li>
+<li>A tool did not complete (tool error); raw output is in the run audit
+log. Resolve the tool’s prerequisites and re-run.</li>
 </ul>
 <h1 class="tier-break" id="technical-report">Technical Report</h1>
 <p>The sections below are the full analyst-grade record: every finding
@@ -1429,16 +1461,136 @@ timeline, the entity rollup and indicators, coverage matrices, triage,
 sources, and the reproducibility and chain-of-custody appendices.</p>
 <h2 id="case-summary">Case Summary</h2>
 <ul>
-<li><strong>Total merged findings:</strong> 19</li>
+<li><strong>Total merged findings:</strong> 27</li>
 <li><strong>By confidence:</strong>
 <ul>
 <li><span class="conf-confirmed">CONFIRMED</span>: 8</li>
-<li><span class="conf-inferred">INFERRED</span>: 2</li>
-<li><span class="conf-hypothesis">HYPOTHESIS</span>: 9</li>
+<li><span class="conf-inferred">INFERRED</span>: 0</li>
+<li><span class="conf-hypothesis">HYPOTHESIS</span>: 19</li>
 </ul></li>
 <li><strong>Contradictions surfaced (Pool A vs Pool B):</strong> 8</li>
-<li><strong>SOUL.md correlator:</strong> 19 kept, 0 downgraded</li>
+<li><strong>SOUL.md correlator:</strong> 27 kept, 0 downgraded</li>
 </ul>
+<h2 id="coverage-manifest">Coverage Manifest</h2>
+<p>If no parser/tool extracts an artifact class, VERDICT cannot reason
+over it. This manifest records that boundary explicitly.</p>
+<p>This table is the explicit anti-overclaim record for the run.
+<code>not_supplied</code>, <code>unsupported</code>,
+<code>failed</code>, and <code>partial</code> rows are scope gaps, not
+clean findings.</p>
+<ul>
+<li>Artifact classes recorded: <code>11</code></li>
+<li>Attempted: <code>7</code>; parsed: <code>7</code>; failed:
+<code>1</code></li>
+<li>Unsupported: <code>0</code>; not supplied: <code>4</code></li>
+<li>ATT&amp;CK blind spots: <code>5</code></li>
+<li>Status counts:
+<code>{&#39;not_supplied&#39;: 4, &#39;parsed&#39;: 6, &#39;partial&#39;: 1}</code></li>
+</ul>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 5%" />
+<col style="width: 5%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 9%" />
+<col style="width: 7%" />
+<col style="width: 7%" />
+<col style="width: 7%" />
+<col style="width: 5%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Artifact Class</th>
+<th>Status</th>
+<th style="text-align: center;">Available</th>
+<th style="text-align: center;">Attempted</th>
+<th style="text-align: center;">Parsed</th>
+<th style="text-align: center;">Failed</th>
+<th style="text-align: center;">Unsupported</th>
+<th style="text-align: center;">Not Supplied</th>
+<th style="text-align: right;">Parse Errors</th>
+<th style="text-align: right;">Records Seen</th>
+<th style="text-align: right;">Rows Returned</th>
+<th>Tools</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>custody</td>
+<td><code>parsed</code></td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td><code>case_open</code></td>
+</tr>
+<tr class="even">
+<td>disk/filesystem</td>
+<td><code>parsed</code></td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;"></td>
+<td><code>ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse, ez_parse</code></td>
+</tr>
+<tr class="odd">
+<td>evtx</td>
+<td><code>not_supplied</code></td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td><code>| | memory | `not_supplied` | no | no | no | no | no | yes |  |  |  |</code></td>
+</tr>
+<tr class="even">
+<td>mft</td>
+<td><code>parsed</code></td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;">5000</td>
+<td style="text-align: right;">5000</td>
+<td><code>mft_timeline</code></td>
+</tr>
+<tr class="odd">
+<td>network</td>
+<td><code>not_supplied</code></td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td><code>| | prefetch | `parsed` | yes | yes | yes | no | no | no |  |  |  | `prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse, prefetch_parse` | | registry | `parsed` | yes | yes | yes | no | no | no |  |  |  | `registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query, registry_query` | | timeline | `partial` | yes | yes | yes | yes | no | no |  | 4 |  | `plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse, plaso_parse` | | unknown_tool_output | `parsed` | yes | yes | yes | no | no | no |  | 276 |  | `disk_mount, disk_extract_artifacts, disk_unmount` | | velociraptor | `not_supplied` | no | no | no | no | no | yes |  |  |  |</code></td>
+</tr>
+</tbody>
+</table>
 <h2 id="detailed-findings">Detailed Findings</h2>
 <h3 id="finding-1-confidence-hypothesis-pool-a-mitre-t1588.002-replay-exact_match-match">Finding
 1 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: A, MITRE: T1588.002, replay:
@@ -1450,12 +1602,12 @@ files in Program Files / on the user’s Desktop with creation timestamps
 clustered around the incident window; they are downloaded applications,
 not operating-system components. <span class="conf-inferred">INFERRED</span> from two tool-backed facts per
 file: the artifact’s existence (MFT) and its name matching a known-tool
-heuristic (anonymizer). Corroborates the Prefetch execution findings for
-the same toolset; file presence itself is not an execution claim.</p>
+heuristic (anonymizer). Corroborates Prefetch observations for the same
+toolset; file presence itself remains a filesystem fact.</p>
 <ul>
 <li><code>tool_call_id</code>: <code>tc-004</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/mft/$MFT</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/mft/$MFT</code></li>
 <li>confidence: Hypothesis — a single-source triage lead; corroborate
 before any response action.</li>
 </ul>
@@ -1467,12 +1619,11 @@ Settings\Mr. Evil\Desktop\lalsetup250.exe’
 (Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU\*,
 registry_query, last_write 2004-08-27T15:18:05Z). <span class="conf-inferred">INFERRED</span> user
 activity: the MRU entry’s existence is tool-backed and reflects
-deliberate user action. It records intent/recency, not execution of any
-binary.</p>
+deliberate user action. It records intent/recency only.</p>
 <ul>
-<li><code>tool_call_id</code>: <code>tc-076</code></li>
+<li><code>tool_call_id</code>: <code>tc-176</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
 <li>confidence: Hypothesis — a single-source triage lead; corroborate
 before any response action.</li>
 </ul>
@@ -1484,12 +1635,11 @@ Settings\Mr. Evil\Desktop\netstumblerinstaller_0_4_0.exe’
 (Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU\*,
 registry_query, last_write 2004-08-27T15:18:05Z). <span class="conf-inferred">INFERRED</span> user
 activity: the MRU entry’s existence is tool-backed and reflects
-deliberate user action. It records intent/recency, not execution of any
-binary.</p>
+deliberate user action. It records intent/recency only.</p>
 <ul>
-<li><code>tool_call_id</code>: <code>tc-076</code></li>
+<li><code>tool_call_id</code>: <code>tc-176</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
 <li>confidence: Hypothesis — a single-source triage lead; corroborate
 before any response action.</li>
 </ul>
@@ -1501,12 +1651,11 @@ Settings\Mr. Evil\Desktop\ethereal-setup-0.10.6.exe’
 (Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU\*,
 registry_query, last_write 2004-08-27T15:18:05Z). <span class="conf-inferred">INFERRED</span> user
 activity: the MRU entry’s existence is tool-backed and reflects
-deliberate user action. It records intent/recency, not execution of any
-binary.</p>
+deliberate user action. It records intent/recency only.</p>
 <ul>
-<li><code>tool_call_id</code>: <code>tc-076</code></li>
+<li><code>tool_call_id</code>: <code>tc-176</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
 <li>confidence: Hypothesis — a single-source triage lead; corroborate
 before any response action.</li>
 </ul>
@@ -1518,47 +1667,16 @@ Settings\Mr. Evil\Desktop\WinPcap_3_01_a.exe’
 (Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU\*,
 registry_query, last_write 2004-08-27T15:18:05Z). <span class="conf-inferred">INFERRED</span> user
 activity: the MRU entry’s existence is tool-backed and reflects
-deliberate user action. It records intent/recency, not execution of any
-binary.</p>
+deliberate user action. It records intent/recency only.</p>
 <ul>
-<li><code>tool_call_id</code>: <code>tc-076</code></li>
+<li><code>tool_call_id</code>: <code>tc-176</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
 <li>confidence: Hypothesis — a single-source triage lead; corroborate
 before any response action.</li>
 </ul>
-<h3 id="finding-6-confidence-inferred-pool-a-mitre-t1547.001-replay-exact_match-match">Finding
-6 — confidence: <span class="conf-inferred">INFERRED</span>, pool: A, MITRE: T1547.001, replay: exact_match
-(match)</h3>
-<p>Registry Run-key persistence mechanism present:
-Microsoft\Windows\CurrentVersion\Run\SRFirstRun -&gt; rundll32
-srclient.dll (registry_query, last_write 2004-08-19T22:37:33Z). The
-mechanism’s existence is tool-backed; execution of the target is NOT
-claimed (an execution claim needs &gt;=2 artifact classes).</p>
-<ul>
-<li><code>tool_call_id</code>: <code>tc-098</code></li>
-<li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/WINDOWS/repair/software</code></li>
-<li>confidence: Inferred — derived from corroborated facts; confirm
-before acting.</li>
-</ul>
-<h3 id="finding-7-confidence-inferred-pool-a-mitre-t1547.001-replay-exact_match-match">Finding
-7 — confidence: <span class="conf-inferred">INFERRED</span>, pool: A, MITRE: T1547.001, replay: exact_match
-(match)</h3>
-<p>Registry Run-key persistence mechanism present:
-Microsoft\Windows\CurrentVersion\Run\SchedulingAgent -&gt; mstinit.exe
-(registry_query, last_write 2004-08-19T22:37:33Z). The mechanism’s
-existence is tool-backed; execution of the target is NOT claimed (an
-execution claim needs &gt;=2 artifact classes).</p>
-<ul>
-<li><code>tool_call_id</code>: <code>tc-098</code></li>
-<li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/WINDOWS/repair/software</code></li>
-<li>confidence: Inferred — derived from corroborated facts; confirm
-before acting.</li>
-</ul>
-<h3 id="finding-8-confidence-hypothesis-pool-a-mitre-t1136.001-replay-exact_match-match">Finding
-8 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: A, MITRE: T1136.001, replay:
+<h3 id="finding-6-confidence-hypothesis-pool-a-mitre-t1136.001-replay-exact_match-match">Finding
+6 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: A, MITRE: T1136.001, replay:
 exact_match (match)</h3>
 <p>hypothesis: User account ‘Mr. Evil’ with suspicious naming was
 created on this system: it is recorded in the SAM (Security Account
@@ -1570,14 +1688,14 @@ Whether it holds elevated privileges is NOT yet claimed — enumerate
 group membership (Administrators) and logon artifacts to
 corroborate.</p>
 <ul>
-<li><code>tool_call_id</code>: <code>tc-103</code></li>
+<li><code>tool_call_id</code>: <code>tc-206</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/WINDOWS/system32/config/SAM</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/registry/WINDOWS/system32/config/SAM</code></li>
 <li>confidence: Hypothesis — a single-source triage lead; corroborate
 before any response action.</li>
 </ul>
-<h3 id="finding-9-confidence-confirmed-pool-b-mitre-t1588.002-replay-exact_match-match">Finding
-9 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1588.002, replay:
+<h3 id="finding-7-confidence-confirmed-pool-b-mitre-t1588.002-replay-exact_match-match">Finding
+7 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1588.002, replay:
 exact_match (match)</h3>
 <p>cain.exe executed on this host: Windows Prefetch records its
 execution and the UserAssist key (per-user GUI execution) records the
@@ -1586,12 +1704,12 @@ registry/UserAssist) corroborate execution.</p>
 <ul>
 <li><code>tool_call_id</code>: <code>tc-010</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf</code></li>
 <li>confidence: Confirmed — the cited tool output is reproducible; this
 does not imply attribution or complete scope.</li>
 </ul>
-<h3 id="finding-10-confidence-confirmed-pool-b-mitre-t1588.002-replay-exact_match-match">Finding
-10 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1588.002, replay:
+<h3 id="finding-8-confidence-confirmed-pool-b-mitre-t1588.002-replay-exact_match-match">Finding
+8 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1588.002, replay:
 exact_match (match)</h3>
 <p>cain25b45.exe executed on this host: Windows Prefetch records its
 execution and the UserAssist key (per-user GUI execution) records the
@@ -1600,12 +1718,12 @@ registry/UserAssist) corroborate execution.</p>
 <ul>
 <li><code>tool_call_id</code>: <code>tc-011</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf</code></li>
 <li>confidence: Confirmed — the cited tool output is reproducible; this
 does not imply attribution or complete scope.</li>
 </ul>
-<h3 id="finding-11-confidence-confirmed-pool-b-mitre-t1040-replay-exact_match-match">Finding
-11 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1040, replay: exact_match
+<h3 id="finding-9-confidence-confirmed-pool-b-mitre-t1040-replay-exact_match-match">Finding
+9 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1040, replay: exact_match
 (match)</h3>
 <p>ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch
 records its execution and the UserAssist key (per-user GUI execution)
@@ -1614,12 +1732,12 @@ registry/UserAssist) corroborate execution.</p>
 <ul>
 <li><code>tool_call_id</code>: <code>tc-020</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf</code></li>
 <li>confidence: Confirmed — the cited tool output is reproducible; this
 does not imply attribution or complete scope.</li>
 </ul>
-<h3 id="finding-12-confidence-confirmed-pool-b-mitre-t1040-replay-exact_match-match">Finding
-12 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1040, replay: exact_match
+<h3 id="finding-10-confidence-confirmed-pool-b-mitre-t1040-replay-exact_match-match">Finding
+10 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1040, replay: exact_match
 (match)</h3>
 <p>ethereal.exe executed on this host: Windows Prefetch records its
 execution and the UserAssist key (per-user GUI execution) records the
@@ -1628,12 +1746,12 @@ registry/UserAssist) corroborate execution.</p>
 <ul>
 <li><code>tool_call_id</code>: <code>tc-021</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf</code></li>
 <li>confidence: Confirmed — the cited tool output is reproducible; this
 does not imply attribution or complete scope.</li>
 </ul>
-<h3 id="finding-13-confidence-confirmed-pool-b-mitre-t1046-replay-exact_match-match">Finding
-13 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1046, replay: exact_match
+<h3 id="finding-11-confidence-confirmed-pool-b-mitre-t1046-replay-exact_match-match">Finding
+11 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1046, replay: exact_match
 (match)</h3>
 <p>lookatlan.exe executed on this host: Windows Prefetch records its
 execution and the UserAssist key (per-user GUI execution) records the
@@ -1642,12 +1760,12 @@ registry/UserAssist) corroborate execution.</p>
 <ul>
 <li><code>tool_call_id</code>: <code>tc-038</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf</code></li>
 <li>confidence: Confirmed — the cited tool output is reproducible; this
 does not imply attribution or complete scope.</li>
 </ul>
-<h3 id="finding-14-confidence-confirmed-pool-b-mitre-t1071.001-replay-exact_match-match">Finding
-14 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1071.001, replay:
+<h3 id="finding-12-confidence-confirmed-pool-b-mitre-t1071.001-replay-exact_match-match">Finding
+12 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1071.001, replay:
 exact_match (match)</h3>
 <p>mirc.exe executed on this host: Windows Prefetch records its
 execution and the UserAssist key (per-user GUI execution) records the
@@ -1656,12 +1774,12 @@ registry/UserAssist) corroborate execution.</p>
 <ul>
 <li><code>tool_call_id</code>: <code>tc-040</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf</code></li>
 <li>confidence: Confirmed — the cited tool output is reproducible; this
 does not imply attribution or complete scope.</li>
 </ul>
-<h3 id="finding-15-confidence-confirmed-pool-b-mitre-t1071.001-replay-exact_match-match">Finding
-15 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1071.001, replay:
+<h3 id="finding-13-confidence-confirmed-pool-b-mitre-t1071.001-replay-exact_match-match">Finding
+13 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1071.001, replay:
 exact_match (match)</h3>
 <p>mirc612.exe executed on this host: Windows Prefetch records its
 execution and the UserAssist key (per-user GUI execution) records the
@@ -1670,12 +1788,12 @@ registry/UserAssist) corroborate execution.</p>
 <ul>
 <li><code>tool_call_id</code>: <code>tc-041</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf</code></li>
 <li>confidence: Confirmed — the cited tool output is reproducible; this
 does not imply attribution or complete scope.</li>
 </ul>
-<h3 id="finding-16-confidence-confirmed-pool-b-mitre-t1046-replay-exact_match-match">Finding
-16 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1046, replay: exact_match
+<h3 id="finding-14-confidence-confirmed-pool-b-mitre-t1046-replay-exact_match-match">Finding
+14 — confidence: <span class="conf-confirmed">CONFIRMED</span>, pool: B, MITRE: T1046, replay: exact_match
 (match)</h3>
 <p>netstumbler.exe executed on this host: Windows Prefetch records its
 execution and the UserAssist key (per-user GUI execution) records the
@@ -1684,12 +1802,12 @@ registry/UserAssist) corroborate execution.</p>
 <ul>
 <li><code>tool_call_id</code>: <code>tc-047</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf</code></li>
 <li>confidence: Confirmed — the cited tool output is reproducible; this
 does not imply attribution or complete scope.</li>
 </ul>
-<h3 id="finding-17-confidence-hypothesis-pool-b-mitre-t1046-replay-exact_match-match">Finding
-17 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1046, replay: exact_match
+<h3 id="finding-15-confidence-hypothesis-pool-b-mitre-t1046-replay-exact_match-match">Finding
+15 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1046, replay: exact_match
 (match)</h3>
 <p>hypothesis: Windows Prefetch contains NETSTUMBLERINSTALLER_0_4_0.EX
 with run_count=1; NetStumbler wireless discovery tool is a NIST Hacking
@@ -1698,49 +1816,246 @@ corroboration before any standalone activity claim.</p>
 <ul>
 <li><code>tool_call_id</code>: <code>tc-048</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf</code></li>
 <li>confidence: Hypothesis — a single-source triage lead; corroborate
 before any response action.</li>
 </ul>
-<h3 id="finding-18-confidence-hypothesis-pool-b-mitre-t1074.001-replay-exact_match-match">Finding
-18 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074.001, replay:
+<h3 id="finding-16-confidence-hypothesis-pool-b-mitre-t1074-replay-exact_match-match">Finding
+16 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074, replay: exact_match
+(match)</h3>
+<p>hypothesis: LNK shortcut artifact references removable media
+activity:
+/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents
+and Settings/Mr. Evil/NetHood/CD Drive (F) on Andrews-1/target.lnk.
+LECmd was unavailable for at least one shortcut, so path-only
+Recent/NetHood context is used and volume serial is not claimed for
+those rows. Treat this as a shortcut/removable-media staging lead only;
+if the source path is a Recent folder, use it as a recent activity
+pivot. Corroborate with filesystem, registry, event-log, or network
+evidence before asserting user activity.</p>
+<ul>
+<li><code>tool_call_id</code>: <code>tc-055</code></li>
+<li>artifact:
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents and Settings/Mr. Evil/NetHood/CD Drive \(F\) on Andrews-1/target.lnk</code></li>
+<li>confidence: Hypothesis — a single-source triage lead; corroborate
+before any response action.</li>
+</ul>
+<h3 id="finding-17-confidence-hypothesis-pool-b-mitre-t1074-replay-exact_match-match">Finding
+17 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074, replay: exact_match
+(match)</h3>
+<p>hypothesis: LNK shortcut artifact references removable media
+activity:
+/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents
+and Settings/Mr. Evil/NetHood/Temp on m1200 (4.12.220.254)/target.lnk.
+LECmd was unavailable for at least one shortcut, so path-only
+Recent/NetHood context is used and volume serial is not claimed for
+those rows. Treat this as a shortcut/removable-media staging lead only;
+if the source path is a Recent folder, use it as a recent activity
+pivot. Corroborate with filesystem, registry, event-log, or network
+evidence before asserting user activity.</p>
+<ul>
+<li><code>tool_call_id</code>: <code>tc-056</code></li>
+<li>artifact:
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents and Settings/Mr. Evil/NetHood/Temp on m1200 \(4.12.220.254\)/target.lnk</code></li>
+<li>confidence: Hypothesis — a single-source triage lead; corroborate
+before any response action.</li>
+</ul>
+<h3 id="finding-18-confidence-hypothesis-pool-b-mitre-t1074-replay-exact_match-match">Finding
+18 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074, replay: exact_match
+(match)</h3>
+<p>hypothesis: LNK shortcut artifact references removable media
+activity:
+/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents
+and Settings/Mr. Evil/NetHood/Temp on N-1a9odn6zxk4lq/target.lnk. LECmd
+was unavailable for at least one shortcut, so path-only Recent/NetHood
+context is used and volume serial is not claimed for those rows. Treat
+this as a shortcut/removable-media staging lead only; if the source path
+is a Recent folder, use it as a recent activity pivot. Corroborate with
+filesystem, registry, event-log, or network evidence before asserting
+user activity.</p>
+<ul>
+<li><code>tool_call_id</code>: <code>tc-057</code></li>
+<li>artifact:
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents and Settings/Mr. Evil/NetHood/Temp on N-1a9odn6zxk4lq/target.lnk</code></li>
+<li>confidence: Hypothesis — a single-source triage lead; corroborate
+before any response action.</li>
+</ul>
+<h3 id="finding-19-confidence-hypothesis-pool-b-mitre-t1074-replay-exact_match-match">Finding
+19 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074, replay: exact_match
+(match)</h3>
+<p>hypothesis: LNK shortcut artifact references removable media
+activity:
+/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents
+and Settings/Mr. Evil/Recent/Anonyymizer.lnk. LECmd was unavailable for
+at least one shortcut, so path-only Recent/NetHood context is used and
+volume serial is not claimed for those rows. Treat this as a
+shortcut/removable-media staging lead only; if the source path is a
+Recent folder, use it as a recent activity pivot. Corroborate with
+filesystem, registry, event-log, or network evidence before asserting
+user activity.</p>
+<ul>
+<li><code>tool_call_id</code>: <code>tc-058</code></li>
+<li>artifact:
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents and Settings/Mr. Evil/Recent/Anonyymizer.lnk</code></li>
+<li>confidence: Hypothesis — a single-source triage lead; corroborate
+before any response action.</li>
+</ul>
+<h3 id="finding-20-confidence-hypothesis-pool-b-mitre-t1074-replay-exact_match-match">Finding
+20 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074, replay: exact_match
+(match)</h3>
+<p>hypothesis: LNK shortcut artifact references removable media
+activity:
+/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents
+and Settings/Mr. Evil/Recent/channels (2).lnk. LECmd was unavailable for
+at least one shortcut, so path-only Recent/NetHood context is used and
+volume serial is not claimed for those rows. Treat this as a
+shortcut/removable-media staging lead only; if the source path is a
+Recent folder, use it as a recent activity pivot. Corroborate with
+filesystem, registry, event-log, or network evidence before asserting
+user activity.</p>
+<ul>
+<li><code>tool_call_id</code>: <code>tc-059</code></li>
+<li>artifact:
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents and Settings/Mr. Evil/Recent/channels \(2\).lnk</code></li>
+<li>confidence: Hypothesis — a single-source triage lead; corroborate
+before any response action.</li>
+</ul>
+<h3 id="finding-21-confidence-hypothesis-pool-b-mitre-t1074-replay-exact_match-match">Finding
+21 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074, replay: exact_match
+(match)</h3>
+<p>hypothesis: LNK shortcut artifact references removable media
+activity:
+/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents
+and Settings/Mr. Evil/Recent/channels.lnk. LECmd was unavailable for at
+least one shortcut, so path-only Recent/NetHood context is used and
+volume serial is not claimed for those rows. Treat this as a
+shortcut/removable-media staging lead only; if the source path is a
+Recent folder, use it as a recent activity pivot. Corroborate with
+filesystem, registry, event-log, or network evidence before asserting
+user activity.</p>
+<ul>
+<li><code>tool_call_id</code>: <code>tc-060</code></li>
+<li>artifact:
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents and Settings/Mr. Evil/Recent/channels.lnk</code></li>
+<li>confidence: Hypothesis — a single-source triage lead; corroborate
+before any response action.</li>
+</ul>
+<h3 id="finding-22-confidence-hypothesis-pool-b-mitre-t1074-replay-exact_match-match">Finding
+22 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074, replay: exact_match
+(match)</h3>
+<p>hypothesis: LNK shortcut artifact references removable media
+activity:
+/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents
+and Settings/Mr. Evil/Recent/GhostWare.lnk. LECmd was unavailable for at
+least one shortcut, so path-only Recent/NetHood context is used and
+volume serial is not claimed for those rows. Treat this as a
+shortcut/removable-media staging lead only; if the source path is a
+Recent folder, use it as a recent activity pivot. Corroborate with
+filesystem, registry, event-log, or network evidence before asserting
+user activity.</p>
+<ul>
+<li><code>tool_call_id</code>: <code>tc-061</code></li>
+<li>artifact:
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents and Settings/Mr. Evil/Recent/GhostWare.lnk</code></li>
+<li>confidence: Hypothesis — a single-source triage lead; corroborate
+before any response action.</li>
+</ul>
+<h3 id="finding-23-confidence-hypothesis-pool-b-mitre-t1074-replay-exact_match-match">Finding
+23 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074, replay: exact_match
+(match)</h3>
+<p>hypothesis: LNK shortcut artifact references removable media
+activity:
+/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents
+and Settings/Mr. Evil/Recent/keys.lnk. LECmd was unavailable for at
+least one shortcut, so path-only Recent/NetHood context is used and
+volume serial is not claimed for those rows. Treat this as a
+shortcut/removable-media staging lead only; if the source path is a
+Recent folder, use it as a recent activity pivot. Corroborate with
+filesystem, registry, event-log, or network evidence before asserting
+user activity.</p>
+<ul>
+<li><code>tool_call_id</code>: <code>tc-062</code></li>
+<li>artifact:
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents and Settings/Mr. Evil/Recent/keys.lnk</code></li>
+<li>confidence: Hypothesis — a single-source triage lead; corroborate
+before any response action.</li>
+</ul>
+<h3 id="finding-24-confidence-hypothesis-pool-b-mitre-t1074-replay-exact_match-match">Finding
+24 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074, replay: exact_match
+(match)</h3>
+<p>hypothesis: LNK shortcut artifact references removable media
+activity:
+/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents
+and Settings/Mr. Evil/Recent/Temp on m1200 (4.12.220.254).lnk. LECmd was
+unavailable for at least one shortcut, so path-only Recent/NetHood
+context is used and volume serial is not claimed for those rows. Treat
+this as a shortcut/removable-media staging lead only; if the source path
+is a Recent folder, use it as a recent activity pivot. Corroborate with
+filesystem, registry, event-log, or network evidence before asserting
+user activity.</p>
+<ul>
+<li><code>tool_call_id</code>: <code>tc-063</code></li>
+<li>artifact:
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/lnk/Documents and Settings/Mr. Evil/Recent/Temp on m1200 \(4.12.220.254\).lnk</code></li>
+<li>confidence: Hypothesis — a single-source triage lead; corroborate
+before any response action.</li>
+</ul>
+<h3 id="finding-25-confidence-hypothesis-pool-b-mitre-t1070.004-replay-exact_match-match">Finding
+25 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1070.004, replay:
+exact_match (match)</h3>
+<p>hypothesis: Recycle Bin recycle_bin_info2 deleted-item artifact
+records a deleted staging/tool artifact: C:\Documents and
+Settings\Mr. Evil\Desktop\WinPcap_3_01_a.exe; C:\Documents and
+Settings\Mr. Evil\Desktop\ethereal-setup-0.10.6.exe; C:\Documents and
+Settings\Mr. Evil\Desktop\lalsetup250.exe; C:\Documents and
+Settings\Mr. Evil\Desktop\netstumblerinstaller_0_4_0.exe. This is a
+deletion and staging lead only; corroborate with filesystem, registry,
+event-log, or network evidence before asserting broader activity.</p>
+<ul>
+<li><code>tool_call_id</code>: <code>tc-135</code></li>
+<li>artifact:
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/recyclebin/RECYCLER/S-1-5-21-2000478354-688789844-1708537768-1003/INFO2</code></li>
+<li>confidence: Hypothesis — a single-source triage lead; corroborate
+before any response action.</li>
+</ul>
+<h3 id="finding-26-confidence-hypothesis-pool-b-mitre-t1074.001-replay-exact_match-match">Finding
+26 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074.001, replay:
 exact_match (match)</h3>
 <p>hypothesis: NTUSER.DAT shellbag entries record user folder navigation
 to staging/tooling locations: \\4.12.220.254\Temp (registry_query,
 last_write 2004-08-26T15:06:50Z). Shellbags persist that a user browsed
 these folders in Explorer — here including a network staging share and
-tool directories. Navigation shows interest/access, not that files were
-staged or exfiltrated; corroborate with file-system and timeline
-artifacts.</p>
+tool directories. Navigation shows interest/access only; corroborate
+with file-system and timeline artifacts.</p>
 <ul>
-<li><code>tool_call_id</code>: <code>tc-078</code></li>
+<li><code>tool_call_id</code>: <code>tc-178</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
 <li>confidence: Hypothesis — a single-source triage lead; corroborate
 before any response action.</li>
 </ul>
-<h3 id="finding-19-confidence-hypothesis-pool-b-mitre-t1074.001-replay-exact_match-match">Finding
-19 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074.001, replay:
+<h3 id="finding-27-confidence-hypothesis-pool-b-mitre-t1074.001-replay-exact_match-match">Finding
+27 — confidence: <span class="conf-hypothesis">HYPOTHESIS</span>, pool: B, MITRE: T1074.001, replay:
 exact_match (match)</h3>
 <p>hypothesis: NTUSER.DAT shellbag entries record user folder navigation
 to staging/tooling locations: mIRC, Whois, channels, ftp,
 mirror.sg.depaul.edu, temp, ethereal, TEMPON~1.254, \\4.12.220.254\Temp
 (registry_query, last_write 2004-08-20T15:10:06Z). Shellbags persist
 that a user browsed these folders in Explorer — here including a network
-staging share and tool directories. Navigation shows interest/access,
-not that files were staged or exfiltrated; corroborate with file-system
-and timeline artifacts.</p>
+staging share and tool directories. Navigation shows interest/access
+only; corroborate with file-system and timeline artifacts.</p>
 <ul>
-<li><code>tool_call_id</code>: <code>tc-079</code></li>
+<li><code>tool_call_id</code>: <code>tc-179</code></li>
 <li>artifact:
-<code>/home/analyst/.findevil/cases/b639fdda-146c-48ec-9080-1e144ec7ceae/extracted/disk/disk-extract-8916c754-f6e4-46c8-8e2a-884d47b08bad/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
+<code>/home/analyst/.findevil/cases/bb2953cd-bdd9-4251-a493-70c97663f892/extracted/disk/disk-extract-affa2c27-51ae-4505-912a-27a7ec2a93a8/registry/Documents and Settings/Mr. Evil/NTUSER.DAT</code></li>
 <li>confidence: Hypothesis — a single-source triage lead; corroborate
 before any response action.</li>
 </ul>
 <h2 id="full-event-timeline">Full Event Timeline</h2>
-<p>Normalized timeline events: 626. First 40 rows shown below
+<p>Normalized timeline events: 627. First 40 rows shown below
 (consecutive identical events collapsed with an [Nx] count); full data
-is in <code>timeline.json</code>.</p>
+is in <code>timeline.json</code> and analyst-friendly
+<code>timeline.csv</code>.</p>
 <table style="width:100%;">
 <colgroup>
 <col style="width: 10%" />
@@ -2279,10 +2594,12 @@ corroborate before detection deployment or blocking.</p>
 <td>File paths</td>
 <td>C:\Documents and Settings\Mr. Evil\Desktop\WinPcap_3_01_a.exe’
 (Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU\,
+C:\Documents and Settings\Mr. Evil\Desktop\WinPcap_3_01_a.exe; C,
 C:\Documents and Settings\Mr. Evil\Desktop\ethereal-setup-0.10.6.exe’
 (Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU\,
 C:\Documents and Settings\Mr. Evil\Desktop\lalsetup250.exe’
 (Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU\,
+C:\Documents and Settings\Mr. Evil\Desktop\lalsetup250.exe; C,
 C:\Documents and
 Settings\Mr. Evil\Desktop\netstumblerinstaller_0_4_0.exe’
 (Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU\</td>
@@ -2290,7 +2607,7 @@ Settings\Mr. Evil\Desktop\netstumblerinstaller_0_4_0.exe’
 </tbody>
 </table>
 <h2 id="mitre-attck-coverage">MITRE ATT&amp;CK Coverage</h2>
-<p>6/12 ATT&amp;CK targets covered by typed-tool output; 2 target(s)
+<p>6/12 ATT&amp;CK targets covered by typed-tool output; 1 target(s)
 produced finding-level evidence; 5 target(s) remain blind spots</p>
 <table>
 <colgroup>
@@ -2383,9 +2700,9 @@ produced finding-level evidence; 5 target(s) remain blind spots</p>
 <tr class="odd">
 <td>T1547.001 Registry Run Keys / Startup Folder</td>
 <td>Persistence / Privilege Escalation</td>
-<td>finding (<span class="conf-inferred">INFERRED</span>)</td>
+<td>covered, no finding (limited)</td>
 <td><code>mft_timeline, prefetch_parse, registry_query</code></td>
-<td>finding-level evidence exists; preserve cited tool output</td>
+<td>limited coverage — not proof of absence</td>
 </tr>
 <tr class="even">
 <td>T1053.005 Scheduled Task</td>
@@ -2562,13 +2879,13 @@ artifact corroboration.</li>
 <ul>
 <li>Card: <code>evidence-card-002</code></li>
 <li>Linked findings: <code>f-A-mru-lalsetup250-exe</code></li>
-<li>Tool call: <code>tc-076</code></li>
+<li>Tool call: <code>tc-176</code></li>
 <li>Source records:
-<code>registry_query:561, registry_query:607, registry_query:608</code></li>
+<code>registry_query:562, registry_query:608, registry_query:609</code></li>
 <li>Confidence: <code>HYPOTHESIS</code></li>
 <li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
 <li>Why suspicious/relevant: This observable is relevant because finding
-‘f-A-mru-lalsetup250-exe’ is backed by parsed tool output ‘tc-076’ and
+‘f-A-mru-lalsetup250-exe’ is backed by parsed tool output ‘tc-176’ and
 should be interpreted with the cited artifact and source caveats.</li>
 <li>Snippet:
 <code>hypothesis: User recently opened-file MRU records &#39;C:\\Documents and Settings\\Mr. Evil\\Desktop\\lalsetup250.exe&#39; \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z\). INF</code></li>
@@ -2581,14 +2898,14 @@ artifact corroboration.</li>
 <li>Card: <code>evidence-card-003</code></li>
 <li>Linked findings:
 <code>f-A-mru-netstumblerinstaller-0-4-0-exe</code></li>
-<li>Tool call: <code>tc-076</code></li>
+<li>Tool call: <code>tc-176</code></li>
 <li>Source records:
-<code>registry_query:561, registry_query:607, registry_query:608</code></li>
+<code>registry_query:562, registry_query:608, registry_query:609</code></li>
 <li>Confidence: <code>HYPOTHESIS</code></li>
 <li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
 <li>Why suspicious/relevant: This observable is relevant because finding
 ‘f-A-mru-netstumblerinstaller-0-4-0-exe’ is backed by parsed tool output
-‘tc-076’ and should be interpreted with the cited artifact and source
+‘tc-176’ and should be interpreted with the cited artifact and source
 caveats.</li>
 <li>Snippet:
 <code>hypothesis: User recently opened-file MRU records &#39;C:\\Documents and Settings\\Mr. Evil\\Desktop\\netstumblerinstaller_0_4_0.exe&#39; \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T</code></li>
@@ -2600,14 +2917,14 @@ artifact corroboration.</li>
 <ul>
 <li>Card: <code>evidence-card-004</code></li>
 <li>Linked findings: <code>f-A-mru-ethereal-setup-0-10-6-exe</code></li>
-<li>Tool call: <code>tc-076</code></li>
+<li>Tool call: <code>tc-176</code></li>
 <li>Source records:
-<code>registry_query:561, registry_query:607, registry_query:608</code></li>
+<code>registry_query:562, registry_query:608, registry_query:609</code></li>
 <li>Confidence: <code>HYPOTHESIS</code></li>
 <li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
 <li>Why suspicious/relevant: This observable is relevant because finding
 ‘f-A-mru-ethereal-setup-0-10-6-exe’ is backed by parsed tool output
-‘tc-076’ and should be interpreted with the cited artifact and source
+‘tc-176’ and should be interpreted with the cited artifact and source
 caveats.</li>
 <li>Snippet:
 <code>hypothesis: User recently opened-file MRU records &#39;C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup-0.10.6.exe&#39; \(Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18</code></li>
@@ -2619,13 +2936,13 @@ artifact corroboration.</li>
 <ul>
 <li>Card: <code>evidence-card-005</code></li>
 <li>Linked findings: <code>f-A-mru-winpcap-3-01-a-exe</code></li>
-<li>Tool call: <code>tc-076</code></li>
+<li>Tool call: <code>tc-176</code></li>
 <li>Source records:
-<code>registry_query:561, registry_query:607, registry_query:608</code></li>
+<code>registry_query:562, registry_query:608, registry_query:609</code></li>
 <li>Confidence: <code>HYPOTHESIS</code></li>
 <li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
 <li>Why suspicious/relevant: This observable is relevant because finding
-‘f-A-mru-winpcap-3-01-a-exe’ is backed by parsed tool output ‘tc-076’
+‘f-A-mru-winpcap-3-01-a-exe’ is backed by parsed tool output ‘tc-176’
 and should be interpreted with the cited artifact and source
 caveats.</li>
 <li>Snippet:
@@ -2634,53 +2951,17 @@ caveats.</li>
 replace parsed tool output., <span class="conf-hypothesis">HYPOTHESIS</span> confidence requires additional
 artifact corroboration.</li>
 </ul>
-<h3 id="registry-run-key-persistence-mechanism-present">Registry Run-key
-persistence mechanism present</h3>
-<ul>
-<li>Card: <code>evidence-card-006</code></li>
-<li>Linked findings: <code>f-A-reg-persist-srfirstrun</code></li>
-<li>Tool call: <code>tc-098</code></li>
-<li>Source records: <code>registry_query:392</code></li>
-<li>Confidence: <code>INFERRED</code></li>
-<li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
-<li>Why suspicious/relevant: This observable is relevant because finding
-‘f-A-reg-persist-srfirstrun’ is backed by parsed tool output ‘tc-098’
-and should be interpreted with the cited artifact and source
-caveats.</li>
-<li>Snippet:
-<code>Registry Run-key persistence mechanism present: Microsoft\\Windows\\CurrentVersion\\Run\\SRFirstRun -&amp;gt; rundll32 srclient.dll \(registry_query, last_write 2004-08-19T22:37:33Z\). The mechanism&#39;s existence is tool-backed; execution of the target is</code></li>
-<li>Caveats: Visual exhibit supports the cited finding but does not
-replace parsed tool output.</li>
-</ul>
-<h3 id="registry-run-key-persistence-mechanism-present-1">Registry
-Run-key persistence mechanism present</h3>
-<ul>
-<li>Card: <code>evidence-card-007</code></li>
-<li>Linked findings: <code>f-A-reg-persist-schedulingagent</code></li>
-<li>Tool call: <code>tc-098</code></li>
-<li>Source records: <code>registry_query:392</code></li>
-<li>Confidence: <code>INFERRED</code></li>
-<li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
-<li>Why suspicious/relevant: This observable is relevant because finding
-‘f-A-reg-persist-schedulingagent’ is backed by parsed tool output
-‘tc-098’ and should be interpreted with the cited artifact and source
-caveats.</li>
-<li>Snippet:
-<code>Registry Run-key persistence mechanism present: Microsoft\\Windows\\CurrentVersion\\Run\\SchedulingAgent -&amp;gt; mstinit.exe \(registry_query, last_write 2004-08-19T22:37:33Z\). The mechanism&#39;s existence is tool-backed; execution of the target is NOT</code></li>
-<li>Caveats: Visual exhibit supports the cited finding but does not
-replace parsed tool output.</li>
-</ul>
 <h3 id="hypothesis-5">hypothesis</h3>
 <ul>
-<li>Card: <code>evidence-card-008</code></li>
+<li>Card: <code>evidence-card-006</code></li>
 <li>Linked findings: <code>f-A-sam-mr-evil</code></li>
-<li>Tool call: <code>tc-103</code></li>
+<li>Tool call: <code>tc-206</code></li>
 <li>Source records:
-<code>registry_query:360, registry_query:361, registry_query:366</code></li>
+<code>registry_query:360, registry_query:361, registry_query:367</code></li>
 <li>Confidence: <code>HYPOTHESIS</code></li>
 <li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
 <li>Why suspicious/relevant: This observable is relevant because finding
-‘f-A-sam-mr-evil’ is backed by parsed tool output ‘tc-103’ and should be
+‘f-A-sam-mr-evil’ is backed by parsed tool output ‘tc-206’ and should be
 interpreted with the cited artifact and source caveats.</li>
 <li>Snippet:
 <code>hypothesis: User account &#39;Mr. Evil&#39; with suspicious naming was created on this system: it is recorded in the SAM \(Security Account Manager\) hive \(SAM\\Domains\\Account\\Users\\Names\\Mr. Evil; the Names subkey last_write 2004-08-19T23:03:54Z app</code></li>
@@ -2691,10 +2972,10 @@ artifact corroboration.</li>
 <h3 id="cain.exe-executed-on-this-host">cain.exe executed on this
 host</h3>
 <ul>
-<li>Card: <code>evidence-card-009</code></li>
+<li>Card: <code>evidence-card-007</code></li>
 <li>Linked findings: <code>f-B-prefetch-cain-exe</code></li>
 <li>Tool call: <code>tc-010</code></li>
-<li>Source records: <code>prefetch_parse:614</code></li>
+<li>Source records: <code>prefetch_parse:615</code></li>
 <li>Confidence: <code>CONFIRMED</code></li>
 <li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
 <li>Why suspicious/relevant: This observable is relevant because finding
@@ -2708,10 +2989,10 @@ replace parsed tool output.</li>
 <h3 id="cain25b45.exe-executed-on-this-host">cain25b45.exe executed on
 this host</h3>
 <ul>
-<li>Card: <code>evidence-card-010</code></li>
+<li>Card: <code>evidence-card-008</code></li>
 <li>Linked findings: <code>f-B-prefetch-cain25b45-exe</code></li>
 <li>Tool call: <code>tc-011</code></li>
-<li>Source records: <code>prefetch_parse:520</code></li>
+<li>Source records: <code>prefetch_parse:521</code></li>
 <li>Confidence: <code>CONFIRMED</code></li>
 <li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
 <li>Why suspicious/relevant: This observable is relevant because finding
@@ -2720,6 +3001,42 @@ and should be interpreted with the cited artifact and source
 caveats.</li>
 <li>Snippet:
 <code>cain25b45.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.</code></li>
+<li>Caveats: Visual exhibit supports the cited finding but does not
+replace parsed tool output.</li>
+</ul>
+<h3 id="ethereal-setup-0.10.6.exe-executed-on-this-host">ethereal-setup-0.10.6.exe
+executed on this host</h3>
+<ul>
+<li>Card: <code>evidence-card-009</code></li>
+<li>Linked findings:
+<code>f-B-prefetch-ethereal-setup-0-10-6-exe</code></li>
+<li>Tool call: <code>tc-020</code></li>
+<li>Source records: <code>prefetch_parse:612</code></li>
+<li>Confidence: <code>CONFIRMED</code></li>
+<li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
+<li>Why suspicious/relevant: This observable is relevant because finding
+‘f-B-prefetch-ethereal-setup-0-10-6-exe’ is backed by parsed tool output
+‘tc-020’ and should be interpreted with the cited artifact and source
+caveats.</li>
+<li>Snippet:
+<code>ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate e</code></li>
+<li>Caveats: Visual exhibit supports the cited finding but does not
+replace parsed tool output.</li>
+</ul>
+<h3 id="ethereal.exe-executed-on-this-host">ethereal.exe executed on
+this host</h3>
+<ul>
+<li>Card: <code>evidence-card-010</code></li>
+<li>Linked findings: <code>f-B-prefetch-ethereal-exe</code></li>
+<li>Tool call: <code>tc-021</code></li>
+<li>Source records: <code>prefetch_parse:616</code></li>
+<li>Confidence: <code>CONFIRMED</code></li>
+<li>Citations: <code>CITE-MITRE-ATTACK-DATASOURCES</code></li>
+<li>Why suspicious/relevant: This observable is relevant because finding
+‘f-B-prefetch-ethereal-exe’ is backed by parsed tool output ‘tc-021’ and
+should be interpreted with the cited artifact and source caveats.</li>
+<li>Snippet:
+<code>ethereal.exe executed on this host: Windows Prefetch records its execution and the UserAssist key \(per-user GUI execution\) records the same binary. Two independent artifact classes \(prefetch + registry/UserAssist\) corroborate execution.</code></li>
 <li>Caveats: Visual exhibit supports the cited finding but does not
 replace parsed tool output.</li>
 </ul>
@@ -2951,22 +3268,6 @@ policy.</p>
 <td><code>2c1a21bddeea</code></td>
 </tr>
 <tr class="even">
-<td>f-A-reg-persist-srfirstrun</td>
-<td><code>registry_query</code></td>
-<td><code>exact_match</code></td>
-<td style="text-align: center;">yes</td>
-<td><code>b87dad9463d3</code></td>
-<td><code>b87dad9463d3</code></td>
-</tr>
-<tr class="odd">
-<td>f-A-reg-persist-schedulingagent</td>
-<td><code>registry_query</code></td>
-<td><code>exact_match</code></td>
-<td style="text-align: center;">yes</td>
-<td><code>b87dad9463d3</code></td>
-<td><code>b87dad9463d3</code></td>
-</tr>
-<tr class="even">
 <td>f-A-sam-mr-evil</td>
 <td><code>registry_query</code></td>
 <td><code>exact_match</code></td>
@@ -3047,15 +3348,95 @@ policy.</p>
 <td><code>80850ecc397c</code></td>
 </tr>
 <tr class="even">
-<td>f-B-shellbag</td>
+<td>f-B-lnk-removable-media-7e41075f</td>
+<td><code>ez_parse</code></td>
+<td><code>exact_match</code></td>
+<td style="text-align: center;">yes</td>
+<td><code>cd5f7a5e5216</code></td>
+<td><code>cd5f7a5e5216</code></td>
+</tr>
+<tr class="odd">
+<td>f-B-lnk-removable-media-424a9a13</td>
+<td><code>ez_parse</code></td>
+<td><code>exact_match</code></td>
+<td style="text-align: center;">yes</td>
+<td><code>ae577890c3bc</code></td>
+<td><code>ae577890c3bc</code></td>
+</tr>
+<tr class="even">
+<td>f-B-lnk-removable-media-9eddb58a</td>
+<td><code>ez_parse</code></td>
+<td><code>exact_match</code></td>
+<td style="text-align: center;">yes</td>
+<td><code>5e8cd9339136</code></td>
+<td><code>5e8cd9339136</code></td>
+</tr>
+<tr class="odd">
+<td>f-B-lnk-removable-media-ee34c604</td>
+<td><code>ez_parse</code></td>
+<td><code>exact_match</code></td>
+<td style="text-align: center;">yes</td>
+<td><code>21330f99dddb</code></td>
+<td><code>21330f99dddb</code></td>
+</tr>
+<tr class="even">
+<td>f-B-lnk-removable-media-dd676bb7</td>
+<td><code>ez_parse</code></td>
+<td><code>exact_match</code></td>
+<td style="text-align: center;">yes</td>
+<td><code>d33d24d6da95</code></td>
+<td><code>d33d24d6da95</code></td>
+</tr>
+<tr class="odd">
+<td>f-B-lnk-removable-media-191ee7e5</td>
+<td><code>ez_parse</code></td>
+<td><code>exact_match</code></td>
+<td style="text-align: center;">yes</td>
+<td><code>c94d3626c65f</code></td>
+<td><code>c94d3626c65f</code></td>
+</tr>
+<tr class="even">
+<td>f-B-lnk-removable-media-9710644c</td>
+<td><code>ez_parse</code></td>
+<td><code>exact_match</code></td>
+<td style="text-align: center;">yes</td>
+<td><code>eda83e9a9f9b</code></td>
+<td><code>eda83e9a9f9b</code></td>
+</tr>
+<tr class="odd">
+<td>f-B-lnk-removable-media-00082918</td>
+<td><code>ez_parse</code></td>
+<td><code>exact_match</code></td>
+<td style="text-align: center;">yes</td>
+<td><code>410b85dabb71</code></td>
+<td><code>410b85dabb71</code></td>
+</tr>
+<tr class="even">
+<td>f-B-lnk-removable-media-c9f8b23e</td>
+<td><code>ez_parse</code></td>
+<td><code>exact_match</code></td>
+<td style="text-align: center;">yes</td>
+<td><code>72c228fde4e5</code></td>
+<td><code>72c228fde4e5</code></td>
+</tr>
+<tr class="odd">
+<td>f-B-recyclebin-staging</td>
+<td><code>plaso_parse</code></td>
+<td><code>exact_match</code></td>
+<td style="text-align: center;">yes</td>
+<td><code>4fa78692829f</code></td>
+<td><code>4fa78692829f</code></td>
+</tr>
+<tr class="even">
+<td>f-B-shellbag-06b9e73e</td>
 <td><code>registry_query</code></td>
 <td><code>exact_match</code></td>
 <td style="text-align: center;">yes</td>
-<td><code>456cb1bf6660</code></td>
-<td><code>456cb1bf6660</code></td>
+<td><code>acfb334a3954</code></td>
+<td><code>acfb334a3954</code></td>
 </tr>
 <tr class="odd">
-<td>f-B-shellbag</td>
+<td>f-B-shellbag-3c13f240</td>
 <td><code>registry_query</code></td>
 <td><code>exact_match</code></td>
 <td style="text-align: center;">yes</td>
@@ -3078,13 +3459,14 @@ manifest verification library or the <code>manifest_verify</code> MCP
 tool. There is no standalone <code>manifest_verify</code> shell command
 in this repo.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">uv</span> run <span class="at">--directory</span> services/agent python <span class="at">-c</span> <span class="st">&quot;from pathlib import Path; from findevil_agent.crypto.manifest import verify_manifest; print(verify_manifest(Path(&#39;PATH/TO/run.manifest.json&#39;), audit_log_path=Path(&#39;PATH/TO/audit.jsonl&#39;)))&quot;</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># returns overall=True if the audit chain and Merkle root validate and signature metadata is present</span></span></code></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># returns overall=True if the audit chain, Merkle root, leaf count, and signature presence validate</span></span></code></pre></div>
 <p>The verifier rebuilds: 1. The audit chain by walking
 <code>prev_hash</code> SHA-256 links (catches backdated edits). 2. The
 Merkle tree from the manifest’s <code>leaves[]</code> array (catches
-selective redaction). 3. The signature bundle metadata recorded in the
-manifest. Full signature and transparency-log validation must be
-performed separately when a production signer is used.</p>
+selective redaction). 3. The signature bundle recorded in the manifest.
+Ed25519 signatures verify offline in <code>manifest_verify</code>;
+Sigstore bundles are recorded for identity-policy-aware verification by
+a party that supplies the expected signer identity.</p>
 <p>A tamper test against this manifest’s <code>merkle_root_hex</code>
 was not run automatically. To execute it, copy the manifest, overwrite
 <code>merkle_root_hex</code> with <code>ff</code> repeated 32 times,

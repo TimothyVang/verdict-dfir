@@ -18,6 +18,7 @@
 //! We then parse the JSON-line events. Binary discovery: `$PLASO_DIR` first,
 //! then PATH for `log2timeline.py` / `psort.py`.
 
+use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -169,10 +170,13 @@ pub fn plaso_parse(input: &PlasoParseInput) -> Result<PlasoParseOutput, PlasoPar
             input.artifact_path.clone(),
         ));
     }
+    let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
+    if input.parser == "recycle_bin_info2" {
+        return native_recycle_bin_info2_parse(&input.artifact_path, limit);
+    }
 
     let l2t = resolve_binary("log2timeline.py")?;
     let psort = resolve_binary("psort.py")?;
-    let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
 
     let tag = format!("{}-{}", std::process::id(), nanosecond_tag());
     let storage = std::env::temp_dir().join(format!("plaso-{}-{tag}.plaso", input.parser));
@@ -204,6 +208,96 @@ pub fn plaso_parse(input: &PlasoParseInput) -> Result<PlasoParseOutput, PlasoPar
     let result = read_json_lines(&out_file, &input.parser, limit, stderr_tail);
     cleanup(&[&storage, &out_file]);
     result
+}
+
+fn native_recycle_bin_info2_parse(
+    artifact: &Path,
+    limit: usize,
+) -> Result<PlasoParseOutput, PlasoParseError> {
+    let raw = std::fs::read(artifact)
+        .map_err(|e| PlasoParseError::OutputRead(format!("read {}: {e}", artifact.display())))?;
+    let paths = extract_windows_paths(&raw);
+    let events_seen = paths.len();
+    let events = paths
+        .into_iter()
+        .take(limit)
+        .map(|path| {
+            let mut event = serde_json::Map::new();
+            event.insert(
+                "data_type".to_string(),
+                serde_json::Value::String("windows:metadata:deleted_item".to_string()),
+            );
+            event.insert(
+                "parser".to_string(),
+                serde_json::Value::String("recycle_bin_info2".to_string()),
+            );
+            event.insert("filename".to_string(), serde_json::Value::String(path));
+            event.insert(
+                "fallback_basis".to_string(),
+                serde_json::Value::String("info2_path_string".to_string()),
+            );
+            event
+        })
+        .collect();
+    Ok(PlasoParseOutput {
+        parser: "recycle_bin_info2".to_string(),
+        events,
+        events_seen,
+        stderr_tail: "native INFO2 path-string fallback; deletion timestamps unavailable"
+            .to_string(),
+    })
+}
+
+fn extract_windows_paths(raw: &[u8]) -> Vec<String> {
+    let mut paths = BTreeSet::new();
+    collect_path_strings(&printable_ascii_runs(raw), &mut paths);
+
+    let utf16ish: Vec<u8> = raw
+        .chunks_exact(2)
+        .map(|pair| if pair[1] == 0 { pair[0] } else { 0 })
+        .collect();
+    collect_path_strings(&printable_ascii_runs(&utf16ish), &mut paths);
+    paths.into_iter().collect()
+}
+
+fn printable_ascii_runs(raw: &[u8]) -> Vec<String> {
+    let mut runs = Vec::new();
+    let mut cur = Vec::new();
+    for &byte in raw {
+        if (32..=126).contains(&byte) {
+            cur.push(byte);
+        } else {
+            if cur.len() >= 4 {
+                runs.push(String::from_utf8_lossy(&cur).into_owned());
+            }
+            cur.clear();
+        }
+    }
+    if cur.len() >= 4 {
+        runs.push(String::from_utf8_lossy(&cur).into_owned());
+    }
+    runs
+}
+
+fn collect_path_strings(runs: &[String], paths: &mut BTreeSet<String>) {
+    for run in runs {
+        let candidate = run.trim();
+        if !candidate.contains(":\\") {
+            continue;
+        }
+        let has_relevant_extension = Path::new(candidate)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| {
+                ["exe", "dll", "zip", "txt", "doc", "jpg", "gif"]
+                    .iter()
+                    .any(|wanted| ext.eq_ignore_ascii_case(wanted))
+            });
+        if !has_relevant_extension {
+            continue;
+        }
+        paths.insert(candidate.to_string());
+    }
 }
 
 /// Run one plaso stage with fixed argv; return its stderr tail or a typed error.
@@ -420,5 +514,15 @@ mod tests {
         let out = parse_json_lines("syslog", body, 2, String::new());
         assert_eq!(out.events_seen, 3);
         assert_eq!(out.events.len(), 2);
+    }
+
+    #[test]
+    fn native_info2_path_fallback_extracts_deleted_paths() {
+        let raw = b"\0\0C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup.exe\0junk";
+        let paths = extract_windows_paths(raw);
+        assert_eq!(
+            paths,
+            vec!["C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup.exe"]
+        );
     }
 }

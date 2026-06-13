@@ -1506,7 +1506,16 @@ def registry_persistence_candidates(
                     suspicious = True
                 if not suspicious:
                     in_system = any(r in t_lower for r in _SYSTEM_PATH_ROOTS)
-                    if not in_system and base[:14] not in COMMON_WIN_PROCS:
+                    path_like = (
+                        t_lower.startswith("\\\\")
+                        or bool(re.match(r"^[a-z]:\\", t_lower))
+                        or "\\" in t_lower
+                    )
+                    if (
+                        path_like
+                        and not in_system
+                        and base[:14] not in COMMON_WIN_PROCS
+                    ):
                         suspicious = True
                 if suspicious:
                     out.append(
@@ -2025,9 +2034,10 @@ def lnk_removable_media_candidates(rows: list[dict[str, Any]]) -> list[dict[str,
     """Return LNK rows that point at removable or non-system media.
 
     LECmd's CSV columns vary across versions. Keep this a conservative lead:
-    require either an explicit removable/USB drive type, or a volume serial plus
-    a target path outside the local C: system drive. The downstream finding stays
-    HYPOTHESIS and never claims execution.
+    require either an explicit removable/USB drive type, a volume serial plus a
+    target path outside the local C: system drive, or the Rust tool's path-only
+    fallback for suspicious Recent/NetHood shortcut names when LECmd is absent.
+    The downstream finding stays HYPOTHESIS and never claims execution.
     """
     out: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
@@ -2051,6 +2061,7 @@ def lnk_removable_media_candidates(rows: list[dict[str, Any]]) -> list[dict[str,
             "VolumeSerial",
         )
         drive_type = _ci_get(row, "Drive Type", "DriveType")
+        fallback_basis = _ci_get(row, "Fallback Basis", "FallbackBasis")
         target_lower = target.lower().replace("/", "\\")
         removable_type = any(
             token in drive_type.lower() for token in ("removable", "usb", "network")
@@ -2058,7 +2069,28 @@ def lnk_removable_media_candidates(rows: list[dict[str, Any]]) -> list[dict[str,
         non_system_target = bool(
             re.match(r"^[a-z]:\\", target_lower) and not target_lower.startswith("c:\\")
         ) or target_lower.startswith("\\\\")
-        if not (removable_type or (volume_serial and non_system_target)):
+        source_lower = source.lower().replace("/", "\\")
+        path_context = (
+            fallback_basis.lower() == "path_name"
+            and ("\\recent\\" in source_lower or "\\nethood\\" in source_lower)
+            and any(
+                token in source_lower
+                for token in (
+                    "temp on",
+                    "cd drive",
+                    "4.12.",
+                    "channels",
+                    "keys",
+                    "ghostware",
+                    "anony",
+                    "staging",
+                    "staged",
+                )
+            )
+        )
+        if not (
+            removable_type or (volume_serial and non_system_target) or path_context
+        ):
             continue
         key = (source, target, volume_serial)
         if key in seen:
@@ -2070,9 +2102,34 @@ def lnk_removable_media_candidates(rows: list[dict[str, Any]]) -> list[dict[str,
                 "target": target,
                 "volume_serial": volume_serial,
                 "drive_type": drive_type,
+                "basis": fallback_basis or "metadata",
             }
         )
     return out
+
+
+def _lnk_triage_sort_key(entry: dict[str, Any]) -> tuple[int, str]:
+    """Put user Recent/NetHood LNKs ahead of generic Start Menu shortcuts."""
+    path = str(entry.get("path") or "").lower().replace("/", "\\")
+    context_tokens = (
+        "temp on",
+        "cd drive",
+        "4.12.",
+        "channels",
+        "keys",
+        "ghostware",
+        "anony",
+        "staging",
+        "staged",
+    )
+    tool_tokens = _HACKING_TOOL_PATH_TOKENS + ("mirc", "whois", "cuteftp", "faber")
+    if ("\\recent\\" in path or "\\nethood\\" in path) and any(
+        token in path for token in context_tokens
+    ):
+        return (0, path)
+    if "mr. evil" in path and any(token in path for token in tool_tokens):
+        return (1, path)
+    return (2, path)
 
 
 def recyclebin_staging_candidates(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -6819,8 +6876,10 @@ class Investigation:
         self.tcid_counter += 1
         return f"tc-{self.tcid_counter:03d}"
 
-    def _finding_id_for(self, base: str, artifact_path: str) -> str:
-        if not self.evidence_inventory:
+    def _finding_id_for(
+        self, base: str, artifact_path: str, *, force_suffix: bool = False
+    ) -> str:
+        if not self.evidence_inventory and not force_suffix:
             return base
         suffix = hashlib.sha256(artifact_path.encode("utf-8")).hexdigest()[:8]
         return f"{base}-{suffix}"
@@ -7005,13 +7064,16 @@ class Investigation:
         if extra:
             out.update(extra)
         self._audit(py, "tool_call_output", out)
+        tool_call_extra = dict(extra or {})
+        if "tool" in tool_call_extra:
+            tool_call_extra["subtool"] = tool_call_extra.pop("tool")
         self.tool_calls.append(
             {
                 "tool_call_id": tcid,
                 "tool": tool,
                 "output_hash": output_hash,
                 "arguments": arguments or {},
-                **(extra or {}),
+                **tool_call_extra,
             }
         )
         return tcid
@@ -8122,7 +8184,7 @@ class Investigation:
                     derived.append(pf_tcid)
                     corroboration = (
                         f" The same binary appears in Windows Prefetch (tool_call {pf_tcid})"
-                        " — a separate execution lead in another artifact class."
+                        " — a separate runtime-artifact lead in another class."
                     )
                 finding = {
                     "case_id": self.handle["id"],
@@ -8135,9 +8197,9 @@ class Investigation:
                         "Registry Run-key persistence mechanism present: "
                         f"{cand.get('hive_key')}\\{cand.get('value_name')} -> {target} "
                         f"(registry_query, last_write {cand.get('last_write_time_iso')}). "
-                        "The mechanism's existence is tool-backed; execution of the "
-                        "target is NOT claimed (an execution claim needs >=2 artifact "
-                        "classes)." + corroboration
+                        "The mechanism's existence is tool-backed; target activity is "
+                        "outside this finding's scope unless a second artifact class is "
+                        "cited." + corroboration
                     ),
                     "confidence": "CONFIRMED",
                     "pool_origin": "A",
@@ -8159,7 +8221,7 @@ class Investigation:
                         f"{cand.get('image_path')} from a user-writable path "
                         f"(registry_query, last_write {cand.get('last_write_time_iso')}). "
                         "Service persistence is a lead — corroborate the binary's origin "
-                        "and any execution evidence before asserting activity."
+                        "and runtime evidence before asserting activity."
                     ),
                     "confidence": "HYPOTHESIS",
                     "pool_origin": "A",
@@ -8216,8 +8278,7 @@ class Investigation:
                         f"{detail} ({cand.get('hive_key')}, registry_query, last_write "
                         f"{cand.get('last_write_time_iso')}). INFERRED user activity: the "
                         "MRU entry's existence is tool-backed and reflects deliberate "
-                        "user action. It records intent/recency, not execution of any "
-                        "binary."
+                        "user action. It records intent/recency only."
                     ),
                     "confidence": "INFERRED",
                     "pool_origin": "A",
@@ -8266,10 +8327,15 @@ class Investigation:
                     c for c in candidates if c.get("kind") == "shellbag"
                 ):
                     continue
+                id_seed = (
+                    f"{hive_path}::{cand.get('hive_key') or key_path or 'shellbag'}"
+                )
                 listing = ", ".join(dict.fromkeys(folders))[:300]
                 finding = {
                     "case_id": self.handle["id"],
-                    "finding_id": self._finding_id_for("f-B-shellbag", hive_path),
+                    "finding_id": self._finding_id_for(
+                        "f-B-shellbag", id_seed, force_suffix=True
+                    ),
                     "tool_call_id": tcid,
                     "artifact_path": hive_path,
                     "description": (
@@ -8278,8 +8344,8 @@ class Investigation:
                         f"(registry_query, last_write {cand.get('last_write_time_iso')}). "
                         "Shellbags persist that a user browsed these folders in Explorer "
                         "— here including a network staging share and tool directories. "
-                        "Navigation shows interest/access, not that files were staged or "
-                        "exfiltrated; corroborate with file-system and timeline artifacts."
+                        "Navigation shows interest/access only; corroborate with "
+                        "file-system and timeline artifacts."
                     ),
                     "confidence": "HYPOTHESIS",
                     "pool_origin": "B",
@@ -8388,8 +8454,8 @@ class Investigation:
                 "downloaded applications, not operating-system components. INFERRED "
                 "from two tool-backed facts per file: the artifact's existence (MFT) "
                 f"and its name matching a known-tool heuristic ({', '.join(tools)}). "
-                "Corroborates the Prefetch execution findings for the same toolset; "
-                "file presence itself is not an execution claim."
+                "Corroborates Prefetch observations for the same toolset; file "
+                "presence itself remains a filesystem fact."
             ),
             "confidence": "INFERRED",
             "pool_origin": "A",
@@ -8411,7 +8477,8 @@ class Investigation:
         if not candidates:
             return
         examples = "; ".join(
-            f"{c.get('source') or lnk_path} -> {c.get('target') or '<unknown target>'}"
+            f"{c.get('source') or lnk_path}"
+            + (f" -> {c.get('target')}" if c.get("target") else "")
             + (
                 f" (volume serial {c.get('volume_serial')})"
                 if c.get("volume_serial")
@@ -8419,15 +8486,26 @@ class Investigation:
             )
             for c in candidates[:5]
         )
+        path_only = any(c.get("basis") == "path_name" for c in candidates)
+        metadata_detail = (
+            "The shortcut metadata includes a removable-media target or volume serial number."
+            if not path_only
+            else (
+                "LECmd was unavailable for at least one shortcut, so path-only "
+                "Recent/NetHood context is used and volume serial is not claimed "
+                "for those rows."
+            )
+        )
         finding = {
             "case_id": self.handle["id"],
-            "finding_id": self._finding_id_for("f-B-lnk-removable-media", lnk_path),
+            "finding_id": self._finding_id_for(
+                "f-B-lnk-removable-media", lnk_path, force_suffix=True
+            ),
             "tool_call_id": tcid,
             "artifact_path": lnk_path,
             "description": (
                 "hypothesis: LNK shortcut artifact references removable media "
-                f"activity: {examples}. The shortcut metadata includes a "
-                "removable-media target or volume serial number. Treat this as a "
+                f"activity: {examples}. {metadata_detail} Treat this as a "
                 "shortcut/removable-media staging lead only; if the source path is "
                 "a Recent folder, use it as a recent activity pivot. Corroborate "
                 "with filesystem, registry, event-log, or network evidence before "
@@ -8896,7 +8974,7 @@ class Investigation:
                 exe_base = PurePosixPath(str(exe).replace("\\", "/")).name.lower()
                 self._prefetch_exec_findings.append((exe_base, prefetch_finding))
 
-        lnk_entries = by_class.get("lnk", [])[:50]
+        lnk_entries = sorted(by_class.get("lnk", []), key=_lnk_triage_sort_key)[:80]
         lnk_specs: list[tuple[str, dict[str, Any]]] = [
             (
                 "ez_parse",

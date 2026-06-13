@@ -3,8 +3,8 @@
   "case_dir": "docs/sample-run/nist-hacking-case",
   "golden": "goldens/nist-hacking-case/expected-findings.json",
   "expected_n": 14,
-  "recalled_n": 5,
-  "recall_percent": 36,
+  "recalled_n": 7,
+  "recall_percent": 50,
   "min_recall_percent": 71,
   "run_verdict": "SUSPICIOUS",
   "golden_verdict": "CONFIRMED_EVIL",
@@ -21,13 +21,25 @@
       "finding_id": "nhc-005",
       "description": "Prefetch evidence of hacking tool execution",
       "mitre_technique": null,
-      "matched_run_finding_id": "f-A-mru-netstumblerinstaller-0-4-0-exe"
+      "matched_run_finding_id": "f-B-prefetch-cain-exe"
     },
     {
       "finding_id": "nhc-007",
       "description": "Shellbag entries show navigation to removable media holding staged files",
       "mitre_technique": null,
-      "matched_run_finding_id": "f-B-shellbag"
+      "matched_run_finding_id": "f-B-shellbag-06b9e73e"
+    },
+    {
+      "finding_id": "nhc-008",
+      "description": "LNK (shortcut) files referencing removable media volume serial numbers",
+      "mitre_technique": null,
+      "matched_run_finding_id": "f-B-lnk-removable-media-7e41075f"
+    },
+    {
+      "finding_id": "nhc-009",
+      "description": "Recycle bin contains deleted staging artifacts",
+      "mitre_technique": "T1070.004",
+      "matched_run_finding_id": "f-B-recyclebin-staging"
     },
     {
       "finding_id": "nhc-010",
@@ -62,16 +74,6 @@
       "finding_id": "nhc-006",
       "description": "Internet history indicating downloads of illicit content",
       "mitre_technique": "T1071.001"
-    },
-    {
-      "finding_id": "nhc-008",
-      "description": "LNK (shortcut) files referencing removable media volume serial numbers",
-      "mitre_technique": null
-    },
-    {
-      "finding_id": "nhc-009",
-      "description": "Recycle bin contains deleted staging artifacts",
-      "mitre_technique": "T1070.004"
     },
     {
       "finding_id": "nhc-012",
