@@ -1108,12 +1108,20 @@ def _inventory_summary(entries: list[dict[str, Any]]) -> dict[str, Any]:
         for entry in entries
         if str(entry.get("custody_status", "")).startswith("rejected")
     )
+    unsupported_samples = [
+        str(entry.get("path"))
+        for entry in entries
+        if str(entry.get("artifact_class") or "unknown") == "unknown"
+        and not str(entry.get("custody_status", "")).startswith("rejected")
+        and entry.get("path")
+    ][:20]
     return {
         "entry_count": len(entries),
         "class_counts": dict(sorted(class_counts.items())),
         "evidence_type_counts": dict(sorted(type_counts.items())),
         "duplicate_names": duplicate_names,
         "rejected_count": rejected,
+        "unsupported_samples": unsupported_samples,
         "raw_disk_count": class_counts.get("raw_disk", 0),
         "extracted_disk_count": sum(
             class_counts.get(name, 0) for name in EXTRACTED_DISK_CLASSES
@@ -2968,6 +2976,7 @@ def build_coverage_manifest(
     tool_calls: list[dict[str, Any]],
     evidence_inventory: dict[str, Any] | None,
     analysis_limitations: list[str],
+    velociraptor_zip_extractions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build the explicit "what did we process?" sidecar.
 
@@ -2990,9 +2999,26 @@ def build_coverage_manifest(
     inventory_summary = (evidence_inventory or {}).get("summary", {})
     inventory_class_counts = inventory_summary.get("class_counts", {}) or {}
     unsupported_count = _int_metric(inventory_class_counts.get("unknown"))
+    unsupported_samples = [
+        str(sample)
+        for sample in (inventory_summary.get("unsupported_samples") or [])
+        if sample
+    ][:20]
+    for extraction in velociraptor_zip_extractions or []:
+        if not isinstance(extraction, dict):
+            continue
+        unsupported_count += _int_metric(extraction.get("unsupported_count"))
+        zip_path = str(extraction.get("zip_path") or "velociraptor_zip")
+        for sample in extraction.get("unsupported_samples") or []:
+            if len(unsupported_samples) >= 20:
+                break
+            if sample:
+                unsupported_samples.append(f"{zip_path}::{sample}")
     evidence_type = str(case_completeness.get("evidence_type") or "")
     if evidence_type == "unknown" and not evidence_inventory:
         unsupported_count = max(unsupported_count, 1)
+        if not unsupported_samples and evidence_path:
+            unsupported_samples.append(str(evidence_path))
 
     artifact_classes = sorted(set(checks_by_class) | set(calls_by_class))
     rows = []
@@ -3071,6 +3097,7 @@ def build_coverage_manifest(
                 "parse_errors": 0,
                 "records_seen": unsupported_count,
                 "rows_returned": 0,
+                "sample_paths": unsupported_samples,
                 "confidence_impact": (
                     "Unsupported artifact(s) were recorded as custody or scope "
                     "limitations; VERDICT cannot reason over evidence no typed "
@@ -3096,6 +3123,7 @@ def build_coverage_manifest(
             "failed": sum(1 for row in rows if row["failed"]),
             "unsupported": sum(1 for row in rows if row["unsupported"]),
             "not_supplied": sum(1 for row in rows if row["not_supplied"]),
+            "unsupported_sample_count": len(unsupported_samples),
             "status_counts": dict(sorted(status_counts.items())),
             "attack_blind_spot_count": attack_coverage.get("blind_spot_count", 0),
             "analysis_limitation_count": len(analysis_limitations),
@@ -10024,6 +10052,7 @@ class Investigation:
                 "zip_path": evidence_path,
                 "entry_count": len(entries),
                 "unsupported_count": extraction.get("unsupported_count", 0),
+                "unsupported_samples": extraction.get("unsupported_samples", []),
                 "skipped_unsafe": extraction.get("skipped_unsafe", 0),
                 "skipped_oversize": extraction.get("skipped_oversize", 0),
                 "truncated": extraction.get("truncated", False),
@@ -11022,6 +11051,7 @@ class Investigation:
             attack_coverage=attack_coverage,
             tool_calls=self.tool_calls,
             evidence_inventory=self.evidence_inventory,
+            velociraptor_zip_extractions=self.velociraptor_zip_extractions,
             analysis_limitations=self.analysis_limitations,
         )
         self.coverage_manifest = coverage_manifest

@@ -411,6 +411,24 @@ def main() -> int:
                         "rows_returned": 0,
                         "tools_attempted": [],
                     },
+                    {
+                        "artifact_class": "unsupported",
+                        "status": "unsupported",
+                        "available": True,
+                        "attempted": False,
+                        "parsed": False,
+                        "failed": False,
+                        "unsupported": True,
+                        "not_supplied": False,
+                        "parse_errors": 0,
+                        "records_seen": 2,
+                        "rows_returned": 0,
+                        "tools_attempted": [],
+                        "sample_paths": [
+                            "unsupported/evil.bin",
+                            "collection.zip::Uploads/odd-artifact.bin",
+                        ],
+                    },
                 ],
             },
             timeline=entity_timeline,
@@ -577,6 +595,11 @@ def main() -> int:
         (
             "coverage manifest renders not-supplied scope",
             "`not_supplied`" in text and "network" in text,
+        ),
+        (
+            "coverage manifest names unsupported samples",
+            "unsupported/evil.bin" in text
+            and "collection.zip::Uploads/odd-artifact.bin" in text,
         ),
         (
             "no narrative leftovers (story/cast/beats)",

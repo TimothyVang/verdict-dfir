@@ -560,6 +560,16 @@ def main() -> int:
                 True,
             ),
             (
+                "directory inventory names unsupported samples",
+                any(
+                    str(sample).endswith("notes.txt")
+                    for sample in inventory.get("summary", {}).get(
+                        "unsupported_samples", []
+                    )
+                ),
+                True,
+            ),
+            (
                 "directory inventory records truncation",
                 truncated_inventory.get("summary", {}).get("truncated"),
                 True,
@@ -1133,7 +1143,19 @@ def main() -> int:
                 "parse_errors": 3,
             },
         ],
-        evidence_inventory={"summary": {"class_counts": {"unknown": 2}}},
+        evidence_inventory={
+            "summary": {
+                "class_counts": {"unknown": 2},
+                "unsupported_samples": ["notes.txt", "unknown/payload.weird"],
+            }
+        },
+        velociraptor_zip_extractions=[
+            {
+                "zip_path": "collection.zip",
+                "unsupported_count": 1,
+                "unsupported_samples": ["Uploads/odd-artifact.bin"],
+            }
+        ],
         analysis_limitations=["evtx_query failed: parser failure"],
     )
     manifest_by_class = {
@@ -1159,7 +1181,16 @@ def main() -> int:
         (
             "coverage manifest records unsupported artifacts",
             manifest_by_class["unsupported"].get("records_seen"),
-            2,
+            3,
+        ),
+        (
+            "coverage manifest names unsupported samples",
+            manifest_by_class["unsupported"].get("sample_paths"),
+            [
+                "notes.txt",
+                "unknown/payload.weird",
+                "collection.zip::Uploads/odd-artifact.bin",
+            ],
         ),
         (
             "coverage manifest records not-supplied classes",

@@ -853,6 +853,24 @@ def build_coverage_manifest_section(coverage_manifest: dict[str, Any] | None) ->
             )
         )
     status_counts = summary.get("status_counts", {})
+    unsupported_samples: list[str] = []
+    for row in coverage_manifest.get("artifact_classes", []):
+        if not isinstance(row, dict) or not row.get("unsupported"):
+            continue
+        for sample in row.get("sample_paths") or []:
+            if len(unsupported_samples) >= 20:
+                break
+            if sample:
+                unsupported_samples.append(str(sample))
+    unsupported_samples_section = ""
+    if unsupported_samples:
+        unsupported_samples_section = (
+            "\n### Unsupported Artifact Samples\n\n"
+            "These paths were inventoried or observed but no typed parser processed "
+            "them in this run.\n\n"
+            + "\n".join(f"* `{md_cell(sample)}`" for sample in unsupported_samples)
+            + "\n\n"
+        )
     return (
         "\n## Coverage Manifest\n\n"
         f"{md_cell(coverage_manifest.get('truth_boundary', ''))}\n\n"
@@ -862,7 +880,10 @@ def build_coverage_manifest_section(coverage_manifest: dict[str, Any] | None) ->
         f"* Attempted: `{summary.get('attempted', 0)}`; parsed: `{summary.get('parsed', 0)}`; failed: `{summary.get('failed', 0)}`\n"
         f"* Unsupported: `{summary.get('unsupported', 0)}`; not supplied: `{summary.get('not_supplied', 0)}`\n"
         f"* ATT&CK blind spots: `{summary.get('attack_blind_spot_count', 0)}`\n"
-        f"* Status counts: `{md_cell(status_counts)}`\n\n" + "\n".join(rows) + "\n\n"
+        f"* Status counts: `{md_cell(status_counts)}`\n\n"
+        + "\n".join(rows)
+        + "\n\n"
+        + unsupported_samples_section
     )
 
 
