@@ -72,8 +72,8 @@ A Cryptographically-Verifiable DFIR Agent"*.
 > dwell time is now measured in hours, not days. The SANS Find Evil!
 > hackathon asks one question: can an agent reproduce a forensic
 > investigator's work, fast enough to keep up — and prove what it
-> did. Our submission says yes, and gives the analyst a sigstore-
-> backed signature on every finding, verifiable offline.
+> did. Our submission says yes, and gives the analyst a signed
+> manifest for every run, verifiable offline.
 
 **Notes:**
 - Deliver this dry, not breathless. The cryptographic-attestation
@@ -185,13 +185,13 @@ the field that diverged.
 
 > Every audit record, every tool output, every Finding — all
 > hash-chained. At investigation end, we Merkle-tree the chain
-> and sign the root with sigstore, whose Rekor transparency log
-> records the signature as an independent third party. This
-> supports a FRE 902(14) self-authenticating-evidence claim.
-> A judge — a literal judge in a literal court — can verify
-> this submission's integrity from the manifest alone, three
-> years from now, without trusting us. Tamper a single byte and
-> the verifier names the byte that moved.
+> and seal it in a signed manifest. The default Ed25519 tier
+> verifies offline; when Sigstore is configured, Rekor adds public
+> identity and transparency-log timing. This supports a FRE 902(14)
+> self-authenticating-evidence claim. A judge — a literal judge in
+> a literal court — can replay the audit chain and signature without
+> trusting us. Tamper a single byte and the verifier names the byte
+> that moved.
 
 **Notes:**
 - "FRE 902(14)" is the legal cite for self-authenticating

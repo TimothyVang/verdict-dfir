@@ -51,6 +51,9 @@ pub enum ArtifactKind {
     Recyclebin,
     RegTxlog,
     BrowserDb,
+    LegacyEvt,
+    IeHistory,
+    Thumbnail,
     LinuxAccount,
     LinuxLog,
     LinuxShellHistory,
@@ -947,16 +950,19 @@ fn class_priority(class: &str) -> u8 {
         "recyclebin" => 10,
         "reg_txlog" => 11,
         "browser_db" => 12,
+        "legacy_evt" => 13,
+        "ie_history" => 14,
+        "thumbnail" => 15,
         // Linux + macOS auto-extracted classes.
-        "linux_account" => 13,
-        "linux_log" => 14,
-        "linux_shell_history" => 15,
-        "linux_ssh" => 16,
-        "linux_cron" => 17,
-        "macos_unifiedlog" => 18,
-        "macos_activity" => 19,
-        "macos_launchd" => 20,
-        "macos_fsevents" => 21,
+        "linux_account" => 16,
+        "linux_log" => 17,
+        "linux_shell_history" => 18,
+        "linux_ssh" => 19,
+        "linux_cron" => 20,
+        "macos_unifiedlog" => 21,
+        "macos_activity" => 22,
+        "macos_launchd" => 23,
+        "macos_fsevents" => 24,
         // Generic content sweep is always last.
         "yara_target" => 50,
         _ => 99,
@@ -1160,8 +1166,18 @@ fn classify_windows_specific(name: &str, rel: &str) -> Option<&'static str> {
         || name.ends_with(".customdestinations-ms")
     {
         Some("jumplist")
-    } else if name.starts_with("$i") && rel.contains("$recycle.bin") {
+    } else if (name.starts_with("$i") && rel.contains("$recycle.bin"))
+        || (name == "info2" && (rel.starts_with("recycler/") || rel.contains("/recycler/")))
+    {
         Some("recyclebin")
+    } else if has_extension(name, "evt") {
+        Some("legacy_evt")
+    } else if name == "index.dat"
+        && (rel.contains("/history.ie5/") || rel.contains("/temporary internet files/"))
+    {
+        Some("ie_history")
+    } else if name == "thumbs.db" || name.ends_with(".thumbcache") {
+        Some("thumbnail")
     } else if rel.contains("/system32/tasks/") || rel.starts_with("windows/system32/tasks/") {
         Some("scheduled_task")
     } else if matches!(
@@ -1251,6 +1267,9 @@ fn wanted_kinds(kinds: &[ArtifactKind]) -> BTreeMap<&'static str, bool> {
             "recyclebin",
             "reg_txlog",
             "browser_db",
+            "legacy_evt",
+            "ie_history",
+            "thumbnail",
             "linux_account",
             "linux_log",
             "linux_shell_history",
@@ -1279,6 +1298,9 @@ fn wanted_kinds(kinds: &[ArtifactKind]) -> BTreeMap<&'static str, bool> {
                 ArtifactKind::Recyclebin => "recyclebin",
                 ArtifactKind::RegTxlog => "reg_txlog",
                 ArtifactKind::BrowserDb => "browser_db",
+                ArtifactKind::LegacyEvt => "legacy_evt",
+                ArtifactKind::IeHistory => "ie_history",
+                ArtifactKind::Thumbnail => "thumbnail",
                 ArtifactKind::LinuxAccount => "linux_account",
                 ArtifactKind::LinuxLog => "linux_log",
                 ArtifactKind::LinuxShellHistory => "linux_shell_history",
@@ -1522,6 +1544,30 @@ mod tests {
             Some("lnk")
         );
         assert_eq!(
+            classify_artifact_path("RECYCLER/S-1-5-21-1000/INFO2"),
+            Some("recyclebin")
+        );
+        assert_eq!(
+            classify_artifact_path("Windows/System32/config/SecEvent.Evt"),
+            Some("legacy_evt")
+        );
+        assert_eq!(
+            classify_artifact_path(
+                "Documents and Settings/Mr. Evil/Local Settings/History/History.IE5/index.dat"
+            ),
+            Some("ie_history")
+        );
+        assert_eq!(
+            classify_artifact_path("Documents and Settings/Mr. Evil/My Documents/Thumbs.db"),
+            Some("thumbnail")
+        );
+        assert_eq!(
+            classify_artifact_path(
+                "Users/bob/AppData/Local/Microsoft/Windows/Explorer/thumbcache_256.thumbcache"
+            ),
+            Some("thumbnail")
+        );
+        assert_eq!(
             classify_artifact_path(
                 "Users/bob/AppData/Roaming/Microsoft/Windows/Recent/\
                  AutomaticDestinations/1b4dd67f29cb1962.automaticDestinations-ms"
@@ -1607,6 +1653,9 @@ mod tests {
             "recyclebin",
             "reg_txlog",
             "browser_db",
+            "legacy_evt",
+            "ie_history",
+            "thumbnail",
             "linux_log",
             "macos_unifiedlog",
         ] {

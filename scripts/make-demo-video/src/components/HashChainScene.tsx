@@ -8,8 +8,9 @@ import { ExhibitVideo } from "./shared/ExhibitVideo";
 // Beat 5 — "Admissible." The hash chain rendered as a provenance LEDGER of
 // record: each audit record is a ledger row (kind in Fraunces, prev→hash in
 // mono, a tier tag) separated by hairline rules. To the side, the rs_merkle
-// root, the sigstore seal, the FRE 902(14) line as a legal-exhibit pull-quote,
-// and a small mono manifest_verify exhibit. Real hashes preserved from prior.
+// root, the signed-manifest seal, the FRE 902(14) line as a legal-exhibit
+// pull-quote, and a small mono manifest_verify exhibit. Real hashes preserved
+// from prior.
 
 interface Record {
   kind: string;
@@ -146,7 +147,7 @@ export function HashChainScene() {
         </div>
         <RuleLine frame={frame} delay={310} color={C.hairline} />
 
-        {/* Tier ledger: prev_hash → merkle → sigstore */}
+        {/* Tier ledger: prev_hash → merkle → signed manifest */}
         <div style={{ paddingTop: 18 }}>
           {[
             { n: "I", name: "audit prev_hash", note: "append-only hash chain" },
@@ -175,7 +176,7 @@ export function HashChainScene() {
 
         {/* The seal */}
         <div style={{ marginTop: 30, display: "flex", alignItems: "center", gap: 24 }}>
-          <Stamp label="Signed · sigstore" frame={frame} delay={460} color={C.confirmed} rotate={-6} size={24} />
+          <Stamp label="Signed · manifest" frame={frame} delay={460} color={C.confirmed} rotate={-6} size={24} />
           <div
             style={{
               fontFamily: MONO,
@@ -195,8 +196,8 @@ export function HashChainScene() {
         <div style={{ marginTop: 34 }}>
           <RuleLine frame={frame} delay={520} width={80} color={C.accent} thickness={2} />
           <PullQuote frame={frame} delay={540} size={27} color={C.ink} style={{ marginTop: 16, maxWidth: 520 }}>
-            Self-authenticating under <span style={{ fontStyle: "italic" }}>FRE&nbsp;902(14)</span> — a court
-            verifies this manifest from its own hash chain and signature, no expert witness required.
+            Built for <span style={{ fontStyle: "italic" }}>FRE&nbsp;902(14)</span> self-authentication — a court
+            can test the manifest against its hash chain and signature.
           </PullQuote>
         </div>
       </div>

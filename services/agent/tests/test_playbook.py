@@ -78,6 +78,23 @@ class TestClassifyArtifactPath:
             ("NTUSER.DAT", "registry", "registry_query"),
             ("amcache.hve", "registry", "registry_query"),
             ("$UsnJrnl", "usnjrnl", "usnjrnl_query"),
+            (
+                "Documents and Settings/Mr. Evil/Recent/staged-files.lnk",
+                "lnk",
+                "ez_parse",
+            ),
+            (
+                "RECYCLER/S-1-5-21-1000/INFO2",
+                "recyclebin",
+                "plaso_parse",
+            ),
+            ("Windows/System32/config/SecEvent.Evt", "legacy_evt", "plaso_parse"),
+            (
+                "Documents and Settings/Mr. Evil/Local Settings/History/History.IE5/index.dat",
+                "ie_history",
+                "plaso_parse",
+            ),
+            ("Documents and Settings/Mr. Evil/My Documents/Thumbs.db", "thumbnail", None),
             ("malware.exe", "yara_target", "yara_scan"),
             ("collection.zip", "velociraptor", "vel_collect"),
             ("History", "browser_history", "browser_history"),

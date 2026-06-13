@@ -119,7 +119,7 @@ Use when: decoding a carved Windows artifact. `tool` ∈ `{lecmd, jlecmd, amcach
 ### plaso_parse
 Args: `{case_id, parser: str, artifact_path, limit?}`
 Returns: `{parser, events[]: normalized plaso event objects, events_seen, stderr_tail}`
-Use when: a cross-OS log plaso normalizes (`syslog`, `bash_history`, `zsh_extended_history`, `utmp`, `dpkg`, `selinux`, legacy `winevt`/`winjob`, `recycle_bin`, `viminfo`, macOS `asl_log`/`macwifi`). `parser` validated against the allow-list before argv. Two-stage fixed-argv run (`log2timeline.py` → `psort.py json_line`); `$PLASO_DIR` then PATH. For modern Windows `.evtx`, prefer the in-process `evtx_query`.
+Use when: a cross-OS log plaso normalizes (`syslog`, `bash_history`, `zsh_extended_history`, `utmp`, `dpkg`, `selinux`, legacy `winevt`/`msiecf`/`winjob`, `recycle_bin`, `viminfo`, macOS `asl_log`/`macwifi`). `parser` validated against the allow-list before argv. Two-stage fixed-argv run (`log2timeline.py` → `psort.py json_line`); `$PLASO_DIR` then PATH. For modern Windows `.evtx`, prefer the in-process `evtx_query`.
 
 ### mac_triage
 Args: `{case_id, module: str, image_path, limit?}`

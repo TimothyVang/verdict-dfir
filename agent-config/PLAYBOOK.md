@@ -122,10 +122,13 @@ Note: `scripts/find-evil-auto` intentionally deviates today for raw disk images:
 | 6 | `usnjrnl_query` | Filesystem mutation log — corroborates MFT, surfaces deletes | both |
 | 7 | `registry_query` | Run / RunOnce / IFEO / Services / WMI consumers / Scheduled Tasks | A |
 | 8 | `evtx_query` | Security.evtx (4624/4625/4688/7045), System.evtx, Application.evtx | A |
-| 9 | `hayabusa_scan` | Sigma rules over the **extracted EVTX directory** (dir-based) | A |
-| 10 | `yara_scan` | YARA over extracted yara-target files — **skipped when extraction yields no yara-targets** (see gap note) | B |
-| 11 | `vel_collect` (optional) | Additional OS-level artifacts the wrappers don't cover | both |
-| 12 | `disk_unmount` | Release the mount (finally-block) | both |
+| 9 | `browser_history` | Extracted Chrome/Edge/Firefox browser DBs | B |
+| 10 | `ez_parse` | LNK, JumpLists, Amcache, and modern Recycle Bin decoders | both |
+| 11 | `plaso_parse` | Legacy EVT, IE index.dat, task, and Recycle Bin timelines | both |
+| 12 | `hayabusa_scan` | Sigma rules over the **extracted EVTX directory** (dir-based) | A |
+| 13 | `yara_scan` | YARA over extracted yara-target files — **skipped when extraction yields no yara-targets** (see gap note) | B |
+| 14 | `vel_collect` (optional) | Additional OS-level artifacts the wrappers don't cover | both |
+| 15 | `disk_unmount` | Release the mount (finally-block) | both |
 
 The headless engine runs steps 4-7 **in parallel** across a pool of `findevil-mcp` connections
 (`--parallel`, default on; `--workers 2`); records stay serial so the verdict is identical to serial.

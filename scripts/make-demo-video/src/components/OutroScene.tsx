@@ -151,7 +151,7 @@ export function OutroScene() {
               lineHeight: 1.8,
             }}
           >
-            Signed · sigstore · merkle d1e4bc7a906f2c38
+            Signed · manifest · merkle d1e4bc7a906f2c38
             <br />
             <span style={{ color: C.confirmed }}>chain OK</span> — verifiable offline, years from now
           </div>

@@ -739,13 +739,14 @@ fn build_registry() -> Vec<ToolEntry> {
                  dozens of log formats, so this ONE verb covers a wide cross-OS swath of \
                  text/binary logs: Linux syslog / auth.log, bash/zsh history, utmp/wtmp, dpkg, \
                  selinux; legacy Windows .evt (winevt — use evtx_query for modern .evtx), \
-                 scheduled-task jobs (winjob), Recycle Bin, winfirewall; viminfo; macOS asl, \
-                 appfirewall, wifi. \
+                 IE index.dat (msiecf), scheduled-task jobs (winjob), Recycle Bin, \
+                 winfirewall; viminfo; macOS asl, appfirewall, wifi. \
                  parser MUST be an allow-listed plaso parser name (see below); any other value \
                  is rejected with ParserNotAllowed BEFORE a subprocess runs — the no-shell \
                  guarantee for a parameterized verb. Allow-list: syslog, bash_history, \
-                 zsh_extended_history, utmp, dpkg, selinux, winevt, winjob, recycle_bin, \
-                 recycle_bin_info2, winfirewall, viminfo, asl_log, mac_appfirewall_log, macwifi. \
+                 zsh_extended_history, utmp, dpkg, selinux, winevt, msiecf, winjob, \
+                 recycle_bin, recycle_bin_info2, winfirewall, viminfo, asl_log, \
+                 mac_appfirewall_log, macwifi. \
                  Use AFTER case_open / disk_extract_artifacts. artifact_path is the log file, a \
                  directory, or a mounted image root. Default limit 10000. \
                  Two-stage run (plaso's design): log2timeline.py builds a .plaso store, psort.py \

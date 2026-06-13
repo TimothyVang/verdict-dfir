@@ -578,7 +578,24 @@ RAW_DISK_EXTS = (
     if _PLAYBOOK_AVAILABLE
     else (".e01", ".dd", ".aff", ".aff4", ".001")
 )
-EXTRACTED_DISK_CLASSES = {"mft", "prefetch", "registry", "usnjrnl", "browser_history"}
+EXTRACTED_DISK_CLASSES = {
+    "mft",
+    "prefetch",
+    "registry",
+    "usnjrnl",
+    "browser_history",
+    "browser_db",
+    "amcache",
+    "srum",
+    "lnk",
+    "jumplist",
+    "scheduled_task",
+    "recyclebin",
+    "reg_txlog",
+    "legacy_evt",
+    "ie_history",
+    "thumbnail",
+}
 YARA_TARGET_EXTS = (
     ".bat",
     ".cmd",
@@ -749,6 +766,12 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "registry_query",
         }
+    if lower_name == "srudb.dat":
+        return {
+            "artifact_class": "srum",
+            "evidence_type": "extracted_disk",
+            "parser_tool": None,
+        }
     if (
         lower_name in {"$j", "$usnjrnl", "usnjrnl", "usnjrnl.j"}
         or lower_name.endswith(".usnjrnl")
@@ -760,9 +783,53 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "usnjrnl_query",
         }
-    if lower_name in {"history", "places.sqlite"} or lower_name.endswith(".sqlite"):
+    if lower_name.endswith(".evt"):
         return {
-            "artifact_class": "browser_history",
+            "artifact_class": "legacy_evt",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "plaso_parse",
+        }
+    if lower_name.endswith(".lnk"):
+        return {
+            "artifact_class": "lnk",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
+    if lower_name.endswith((".automaticdestinations-ms", ".customdestinations-ms")):
+        return {
+            "artifact_class": "jumplist",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
+    if lower_name == "info2" or (
+        lower_name.startswith("$i") and "$recycle.bin" in lower_path
+    ):
+        return {
+            "artifact_class": "recyclebin",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "plaso_parse",
+        }
+    if lower_name == "index.dat" and "history.ie5" in lower_path:
+        return {
+            "artifact_class": "ie_history",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "plaso_parse",
+        }
+    if lower_name == "thumbs.db" or lower_name.endswith(".thumbcache"):
+        return {
+            "artifact_class": "thumbnail",
+            "evidence_type": "extracted_disk",
+            "parser_tool": None,
+        }
+    if lower_name in {
+        "history",
+        "places.sqlite",
+        "web data",
+        "cookies",
+        "login data",
+    } or lower_name.endswith(".sqlite"):
+        return {
+            "artifact_class": "browser_db",
             "evidence_type": "extracted_disk",
             "parser_tool": "browser_history",
         }
@@ -840,7 +907,11 @@ max_member_bytes = int(sys.argv[4])
 
 MEMORY_EXTS = (".mem", ".raw", ".vmem", ".dmp", ".img", ".lime")
 RAW_DISK_EXTS = (".e01", ".dd", ".aff", ".aff4", ".001")
-EXTRACTED_DISK_CLASSES = {"mft", "prefetch", "registry", "usnjrnl"}
+EXTRACTED_DISK_CLASSES = {
+    "mft", "prefetch", "registry", "usnjrnl", "browser_history",
+    "browser_db", "amcache", "srum", "lnk", "jumplist", "scheduled_task",
+    "recyclebin", "reg_txlog", "legacy_evt", "ie_history", "thumbnail",
+}
 NETWORK_CLASSES = {"pcap", "zeek", "sysmon_network"}
 YARA_TARGET_EXTS = (
     ".bat", ".cmd", ".dll", ".doc", ".docm", ".docx", ".exe",
@@ -885,8 +956,24 @@ def classify_artifact_path(path):
         return {"artifact_class": "prefetch", "evidence_type": "extracted_disk", "parser_tool": "prefetch_parse"}
     if lower_name in REGISTRY_HIVE_NAMES:
         return {"artifact_class": "registry", "evidence_type": "extracted_disk", "parser_tool": "registry_query"}
+    if lower_name == "srudb.dat":
+        return {"artifact_class": "srum", "evidence_type": "extracted_disk", "parser_tool": None}
     if lower_name in {"$j", "$usnjrnl", "usnjrnl", "usnjrnl.j"} or lower_name.endswith(".usnjrnl") or lower_name.endswith(".j") or "$extend/$usnjrnl" in lower_path:
         return {"artifact_class": "usnjrnl", "evidence_type": "extracted_disk", "parser_tool": "usnjrnl_query"}
+    if lower_name.endswith(".evt"):
+        return {"artifact_class": "legacy_evt", "evidence_type": "extracted_disk", "parser_tool": "plaso_parse"}
+    if lower_name.endswith(".lnk"):
+        return {"artifact_class": "lnk", "evidence_type": "extracted_disk", "parser_tool": "ez_parse"}
+    if lower_name.endswith(".automaticdestinations-ms") or lower_name.endswith(".customdestinations-ms"):
+        return {"artifact_class": "jumplist", "evidence_type": "extracted_disk", "parser_tool": "ez_parse"}
+    if lower_name == "info2" or (lower_name.startswith("$i") and "$recycle.bin" in lower_path):
+        return {"artifact_class": "recyclebin", "evidence_type": "extracted_disk", "parser_tool": "plaso_parse"}
+    if lower_name == "index.dat" and "history.ie5" in lower_path:
+        return {"artifact_class": "ie_history", "evidence_type": "extracted_disk", "parser_tool": "plaso_parse"}
+    if lower_name == "thumbs.db" or lower_name.endswith(".thumbcache"):
+        return {"artifact_class": "thumbnail", "evidence_type": "extracted_disk", "parser_tool": None}
+    if lower_name in {"history", "places.sqlite", "web data", "cookies", "login data"} or lower_name.endswith(".sqlite"):
+        return {"artifact_class": "browser_db", "evidence_type": "extracted_disk", "parser_tool": "browser_history"}
     if lower_name.endswith(YARA_TARGET_EXTS):
         return {"artifact_class": "yara_target", "evidence_type": "extracted_disk", "parser_tool": "yara_scan"}
     return {"artifact_class": "unknown", "evidence_type": "unknown", "parser_tool": None}
@@ -1900,6 +1987,163 @@ def mft_hacking_tool_candidates(rows: list[dict[str, Any]]) -> list[dict[str, An
                 )
                 break
     return out
+
+
+def _ci_get(row: dict[str, Any], *names: str) -> str:
+    """Case-insensitive lookup for third-party parser column drift."""
+    lowered = {str(k).lower(): v for k, v in row.items()}
+    for name in names:
+        value = lowered.get(name.lower())
+        if value not in (None, ""):
+            return str(value)
+    return ""
+
+
+def lnk_removable_media_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return LNK rows that point at removable or non-system media.
+
+    LECmd's CSV columns vary across versions. Keep this a conservative lead:
+    require either an explicit removable/USB drive type, or a volume serial plus
+    a target path outside the local C: system drive. The downstream finding stays
+    HYPOTHESIS and never claims execution.
+    """
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        source = _ci_get(row, "Source File", "SourceFile", "Source", "Path")
+        target = _ci_get(
+            row,
+            "Target Path",
+            "TargetPath",
+            "Local Path",
+            "LocalPath",
+            "Relative Path",
+        )
+        volume_serial = _ci_get(
+            row,
+            "Volume Serial Number",
+            "VolumeSerialNumber",
+            "Volume Serial",
+            "VolumeSerial",
+        )
+        drive_type = _ci_get(row, "Drive Type", "DriveType")
+        target_lower = target.lower().replace("/", "\\")
+        removable_type = any(
+            token in drive_type.lower() for token in ("removable", "usb", "network")
+        )
+        non_system_target = bool(
+            re.match(r"^[a-z]:\\", target_lower) and not target_lower.startswith("c:\\")
+        ) or target_lower.startswith("\\\\")
+        if not (removable_type or (volume_serial and non_system_target)):
+            continue
+        key = (source, target, volume_serial)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {
+                "source": source,
+                "target": target,
+                "volume_serial": volume_serial,
+                "drive_type": drive_type,
+            }
+        )
+    return out
+
+
+def recyclebin_staging_candidates(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return Recycle Bin deleted-item rows carrying staging/tooling tells."""
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for event in events or []:
+        if not isinstance(event, dict):
+            continue
+        parser = _ci_get(event, "parser") or "recycle_bin"
+        path = _ci_get(
+            event,
+            "filename",
+            "file_name",
+            "original_filename",
+            "original file name",
+            "original path",
+            "path",
+            "display_name",
+        )
+        if not path:
+            continue
+        low = path.lower().replace("/", "\\")
+        base = low.rsplit("\\", 1)[-1]
+        has_tool_tell = any(token in low for token in _HACKING_TOOL_PATH_TOKENS)
+        has_staging_tell = any(
+            token in low
+            for token in (
+                "\\desktop\\",
+                "\\downloads\\",
+                "\\temp\\",
+                "\\tmp\\",
+                "staging",
+                "staged",
+            )
+        ) and base.endswith(_SUSPICIOUS_OPEN_EXT)
+        if not (has_tool_tell or has_staging_tell):
+            continue
+        if path in seen:
+            continue
+        seen.add(path)
+        out.append(
+            {
+                "path": path,
+                "parser": parser,
+                "timestamp": _ci_get(
+                    event,
+                    "timestamp",
+                    "date_time",
+                    "deletion_time",
+                    "deleted time",
+                    "deletion date",
+                ),
+            }
+        )
+    return out
+
+
+def _decoded_row_timestamp(row: dict[str, Any]) -> str:
+    """Best-effort timestamp extraction across third-party parser schemas."""
+    return _ci_get(
+        row,
+        "timestamp",
+        "date_time",
+        "datetime",
+        "time created",
+        "created",
+        "source created",
+        "target created",
+        "last modified",
+        "lastmodified",
+        "target modified",
+        "last access time",
+        "last accessed",
+    )
+
+
+def _decoded_row_label(row: dict[str, Any]) -> str:
+    """Best-effort human label for decoded artifact timeline context."""
+    return _ci_get(
+        row,
+        "target path",
+        "targetpath",
+        "local path",
+        "path",
+        "filename",
+        "file_name",
+        "original filename",
+        "original path",
+        "message",
+        "description",
+        "source",
+    )
 
 
 CONFIDENCE_RANK = {"HYPOTHESIS": 1, "INFERRED": 2, "CONFIRMED": 3}
@@ -5514,13 +5758,7 @@ def _disk_summary_template() -> dict[str, Any]:
         "version": 1,
         "scope": "extracted_disk_artifacts_only",
         "artifact_counts": {
-            "mft": 0,
-            "usnjrnl": 0,
-            "prefetch": 0,
-            "registry": 0,
-            "browser_history": 0,
-            "evtx": 0,
-            "yara_target": 0,
+            name: 0 for name in sorted(EXTRACTED_DISK_CLASSES | {"evtx", "yara_target"})
         },
         "tool_summaries": {},
         "timeline_event_count": 0,
@@ -8117,6 +8355,80 @@ class Investigation:
             f"  pool-A finding: {finding['finding_id']} (INFERRED, {len(candidates)} tool(s))"
         )
 
+    def _emit_lnk_removable_media_finding(
+        self,
+        candidates: list[dict[str, Any]],
+        lnk_path: str,
+        tcid: str,
+    ) -> None:
+        """Emit one Pool B lead for Recent/LNK removable-media references."""
+        if not candidates:
+            return
+        examples = "; ".join(
+            f"{c.get('source') or lnk_path} -> {c.get('target') or '<unknown target>'}"
+            + (
+                f" (volume serial {c.get('volume_serial')})"
+                if c.get("volume_serial")
+                else ""
+            )
+            for c in candidates[:5]
+        )
+        finding = {
+            "case_id": self.handle["id"],
+            "finding_id": self._finding_id_for("f-B-lnk-removable-media", lnk_path),
+            "tool_call_id": tcid,
+            "artifact_path": lnk_path,
+            "description": (
+                "hypothesis: LNK shortcut artifact in the user's Recent items "
+                "references removable media activity: "
+                f"{examples}. The shortcut metadata includes a removable-media "
+                "target or volume serial number. Treat this as a Recent shortcut "
+                "staging lead only; corroborate with filesystem, registry, event-log, "
+                "or network evidence before asserting user activity."
+            ),
+            "confidence": "HYPOTHESIS",
+            "pool_origin": "B",
+            "mitre_technique": "T1074",
+            "derived_from": [tcid],
+        }
+        self.findings_pool_b.append(finding)
+        print(f"  pool-B LNK finding: {finding['finding_id']} (HYPOTHESIS)")
+
+    def _emit_recyclebin_staging_finding(
+        self,
+        candidates: list[dict[str, Any]],
+        recycle_path: str,
+        tcid: str,
+    ) -> None:
+        """Emit one Pool B lead for deleted staging/tool artifacts."""
+        if not candidates:
+            return
+        examples = "; ".join(
+            f"{c.get('path')}"
+            + (f" (deleted {c.get('timestamp')})" if c.get("timestamp") else "")
+            for c in candidates[:5]
+        )
+        parsers = sorted({str(c.get("parser") or "recycle_bin") for c in candidates})
+        parser_text = ", ".join(parsers)
+        finding = {
+            "case_id": self.handle["id"],
+            "finding_id": self._finding_id_for("f-B-recyclebin-staging", recycle_path),
+            "tool_call_id": tcid,
+            "artifact_path": recycle_path,
+            "description": (
+                f"hypothesis: Recycle Bin {parser_text} deleted-item artifact "
+                f"records a deleted staging/tool artifact: {examples}. This is a "
+                "deletion and staging lead only; corroborate with filesystem, "
+                "registry, event-log, or network evidence before asserting broader activity."
+            ),
+            "confidence": "HYPOTHESIS",
+            "pool_origin": "B",
+            "mitre_technique": "T1070.004",
+            "derived_from": [tcid],
+        }
+        self.findings_pool_b.append(finding)
+        print(f"  pool-B Recycle Bin finding: {finding['finding_id']} (HYPOTHESIS)")
+
     def _corroborate_execution_with_userassist(
         self,
         rust: SshMcpClient,
@@ -8537,7 +8849,382 @@ class Investigation:
                 exe_base = PurePosixPath(str(exe).replace("\\", "/")).name.lower()
                 self._prefetch_exec_findings.append((exe_base, prefetch_finding))
 
-        browser_entries = by_class["browser_history"][:20]
+        lnk_entries = by_class.get("lnk", [])[:50]
+        lnk_specs: list[tuple[str, dict[str, Any]]] = [
+            (
+                "ez_parse",
+                {
+                    "case_id": self.handle["id"],
+                    "tool": "lecmd",
+                    "artifact_path": str(e["path"]),
+                    "limit": 200,
+                },
+            )
+            for e in lnk_entries
+        ]
+        lnk_outs = self._parallel_tool_calls(rust, lnk_specs, timeout=600.0)
+        for entry, (_name, args), out in zip(
+            lnk_entries, lnk_specs, lnk_outs, strict=True
+        ):
+            path = str(entry["path"])
+            error = out.get("_error", {}).get("message") if "_error" in out else None
+            if error:
+                self.analysis_limitations.append(
+                    f"ez_parse/lecmd failed for {path}: {error}"
+                )
+                out = {
+                    "_error": {"message": error},
+                    "tool": "lecmd",
+                    "rows": [],
+                    "rows_seen": 0,
+                }
+            rows = out.get("rows", []) or []
+            tcid = self._record_tool(
+                py,
+                "ez_parse",
+                self._output_hash(out),
+                {
+                    "artifact_path": path,
+                    "tool": "lecmd",
+                    "rows_seen": out.get("rows_seen", len(rows)),
+                    **({"error": error} if error else {}),
+                },
+                arguments=args,
+            )
+            _merge_disk_tool_summary(
+                disk_summary,
+                "ez_parse",
+                tcid,
+                {
+                    "artifact_path": path,
+                    "tool": "lecmd",
+                    "rows_seen": out.get("rows_seen", len(rows)),
+                    "sample_targets": [
+                        _ci_get(row, "Target Path", "TargetPath", "Local Path")
+                        for row in rows[:5]
+                        if isinstance(row, dict)
+                    ],
+                    **({"error": error} if error else {}),
+                },
+            )
+            for row in rows[:50]:
+                if not isinstance(row, dict):
+                    continue
+                label = _decoded_row_label(row) or path
+                self._timeline_add(
+                    _decoded_row_timestamp(row),
+                    "ez_parse",
+                    "lnk",
+                    f"lnk shortcut: {label[:100]}",
+                    tcid,
+                    {"artifact_path": path, "tool": "lecmd"},
+                )
+            candidates = lnk_removable_media_candidates(rows)
+            if candidates:
+                self._emit_lnk_removable_media_finding(candidates, path, tcid)
+            print(f"  ez_parse/lecmd: {path} rows={len(rows)}")
+
+        for artifact_class, tool_name, limit in (
+            ("amcache", "amcacheparser", 500),
+            ("jumplist", "jlecmd", 500),
+        ):
+            entries_for_tool = by_class.get(artifact_class, [])[:20]
+            specs: list[tuple[str, dict[str, Any]]] = [
+                (
+                    "ez_parse",
+                    {
+                        "case_id": self.handle["id"],
+                        "tool": tool_name,
+                        "artifact_path": str(e["path"]),
+                        "limit": limit,
+                    },
+                )
+                for e in entries_for_tool
+            ]
+            outs = self._parallel_tool_calls(rust, specs, timeout=900.0)
+            for entry, (_name, args), out in zip(
+                entries_for_tool, specs, outs, strict=True
+            ):
+                path = str(entry["path"])
+                error = (
+                    out.get("_error", {}).get("message") if "_error" in out else None
+                )
+                if error:
+                    self.analysis_limitations.append(
+                        f"ez_parse/{tool_name} failed for {path}: {error}"
+                    )
+                    out = {
+                        "_error": {"message": error},
+                        "tool": tool_name,
+                        "rows": [],
+                        "rows_seen": 0,
+                    }
+                rows = out.get("rows", []) or []
+                tcid = self._record_tool(
+                    py,
+                    "ez_parse",
+                    self._output_hash(out),
+                    {
+                        "artifact_path": path,
+                        "artifact_class": artifact_class,
+                        "tool": tool_name,
+                        "rows_seen": out.get("rows_seen", len(rows)),
+                        **({"error": error} if error else {}),
+                    },
+                    arguments=args,
+                )
+                _merge_disk_tool_summary(
+                    disk_summary,
+                    "ez_parse",
+                    tcid,
+                    {
+                        "artifact_path": path,
+                        "artifact_class": artifact_class,
+                        "tool": tool_name,
+                        "rows_seen": out.get("rows_seen", len(rows)),
+                        "sample_paths": [
+                            _decoded_row_label(row)
+                            for row in rows[:5]
+                            if isinstance(row, dict)
+                        ],
+                        **({"error": error} if error else {}),
+                    },
+                )
+                for row in rows[:50]:
+                    if not isinstance(row, dict):
+                        continue
+                    label = _decoded_row_label(row) or path
+                    self._timeline_add(
+                        _decoded_row_timestamp(row),
+                        "ez_parse",
+                        artifact_class,
+                        f"{artifact_class} decoded row: {label[:100]}",
+                        tcid,
+                        {"artifact_path": path, "tool": tool_name},
+                    )
+                print(f"  ez_parse/{tool_name}: {path} rows={len(rows)}")
+
+        for entry in by_class.get("recyclebin", [])[:20]:
+            path = str(entry["path"])
+            leaf = PurePosixPath(path.replace("\\", "/")).name.lower()
+            if leaf == "info2":
+                args = {
+                    "case_id": self.handle["id"],
+                    "parser": "recycle_bin_info2",
+                    "artifact_path": path,
+                    "limit": 500,
+                }
+                out = rust.call_tool("plaso_parse", args, timeout=1200.0)
+                error = (
+                    out.get("_error", {}).get("message") if "_error" in out else None
+                )
+                if error:
+                    self.analysis_limitations.append(
+                        f"plaso_parse/recycle_bin_info2 failed for {path}: {error}"
+                    )
+                    out = {
+                        "_error": {"message": error},
+                        "parser": "recycle_bin_info2",
+                        "events": [],
+                        "events_seen": 0,
+                    }
+                events = out.get("events", []) or []
+                tcid = self._record_tool(
+                    py,
+                    "plaso_parse",
+                    self._output_hash(out),
+                    {
+                        "artifact_path": path,
+                        "parser": "recycle_bin_info2",
+                        "events_seen": out.get("events_seen", len(events)),
+                        **({"error": error} if error else {}),
+                    },
+                    arguments=args,
+                )
+                parser_events = [
+                    {**event, "parser": "recycle_bin_info2"}
+                    for event in events
+                    if isinstance(event, dict)
+                ]
+                _merge_disk_tool_summary(
+                    disk_summary,
+                    "plaso_parse",
+                    tcid,
+                    {
+                        "artifact_path": path,
+                        "parser": "recycle_bin_info2",
+                        "events_seen": out.get("events_seen", len(events)),
+                        "sample_paths": [
+                            _ci_get(event, "filename", "original path", "path")
+                            for event in parser_events[:5]
+                        ],
+                        **({"error": error} if error else {}),
+                    },
+                )
+                for event in parser_events[:100]:
+                    label = _decoded_row_label(event) or path
+                    self._timeline_add(
+                        _decoded_row_timestamp(event),
+                        "plaso_parse",
+                        "recyclebin",
+                        f"recycle bin deleted item: {label[:100]}",
+                        tcid,
+                        {"artifact_path": path, "parser": "recycle_bin_info2"},
+                    )
+                candidates = recyclebin_staging_candidates(parser_events)
+                if candidates:
+                    self._emit_recyclebin_staging_finding(candidates, path, tcid)
+                print(f"  plaso_parse/recycle_bin_info2: {path} events={len(events)}")
+            else:
+                args = {
+                    "case_id": self.handle["id"],
+                    "tool": "rbcmd",
+                    "artifact_path": path,
+                    "limit": 500,
+                }
+                out = rust.call_tool("ez_parse", args, timeout=600.0)
+                error = (
+                    out.get("_error", {}).get("message") if "_error" in out else None
+                )
+                if error:
+                    self.analysis_limitations.append(
+                        f"ez_parse/rbcmd failed for {path}: {error}"
+                    )
+                    out = {
+                        "_error": {"message": error},
+                        "tool": "rbcmd",
+                        "rows": [],
+                        "rows_seen": 0,
+                    }
+                rows = out.get("rows", []) or []
+                tcid = self._record_tool(
+                    py,
+                    "ez_parse",
+                    self._output_hash(out),
+                    {
+                        "artifact_path": path,
+                        "tool": "rbcmd",
+                        "rows_seen": out.get("rows_seen", len(rows)),
+                        **({"error": error} if error else {}),
+                    },
+                    arguments=args,
+                )
+                parser_rows = [
+                    {**row, "parser": "rbcmd"} for row in rows if isinstance(row, dict)
+                ]
+                _merge_disk_tool_summary(
+                    disk_summary,
+                    "ez_parse",
+                    tcid,
+                    {
+                        "artifact_path": path,
+                        "tool": "rbcmd",
+                        "rows_seen": out.get("rows_seen", len(rows)),
+                        "sample_paths": [
+                            _ci_get(row, "Original File Name", "Original Path", "Path")
+                            for row in parser_rows[:5]
+                        ],
+                        **({"error": error} if error else {}),
+                    },
+                )
+                for row in parser_rows[:100]:
+                    label = _decoded_row_label(row) or path
+                    self._timeline_add(
+                        _decoded_row_timestamp(row),
+                        "ez_parse",
+                        "recyclebin",
+                        f"recycle bin decoded row: {label[:100]}",
+                        tcid,
+                        {"artifact_path": path, "tool": "rbcmd"},
+                    )
+                candidates = recyclebin_staging_candidates(parser_rows)
+                if candidates:
+                    self._emit_recyclebin_staging_finding(candidates, path, tcid)
+                print(f"  ez_parse/rbcmd: {path} rows={len(rows)}")
+
+        for artifact_class, parser_name, limit in (
+            ("legacy_evt", "winevt", 1000),
+            ("ie_history", "msiecf", 500),
+            ("scheduled_task", "winjob", 500),
+        ):
+            entries_for_parser = by_class.get(artifact_class, [])[:20]
+            specs: list[tuple[str, dict[str, Any]]] = [
+                (
+                    "plaso_parse",
+                    {
+                        "case_id": self.handle["id"],
+                        "parser": parser_name,
+                        "artifact_path": str(e["path"]),
+                        "limit": limit,
+                    },
+                )
+                for e in entries_for_parser
+            ]
+            outs = self._parallel_tool_calls(rust, specs, timeout=1200.0)
+            for entry, (_name, args), out in zip(
+                entries_for_parser, specs, outs, strict=True
+            ):
+                path = str(entry["path"])
+                error = (
+                    out.get("_error", {}).get("message") if "_error" in out else None
+                )
+                if error:
+                    self.analysis_limitations.append(
+                        f"plaso_parse/{parser_name} failed for {path}: {error}"
+                    )
+                    out = {
+                        "_error": {"message": error},
+                        "parser": parser_name,
+                        "events": [],
+                        "events_seen": 0,
+                    }
+                events = out.get("events", []) or []
+                tcid = self._record_tool(
+                    py,
+                    "plaso_parse",
+                    self._output_hash(out),
+                    {
+                        "artifact_path": path,
+                        "artifact_class": artifact_class,
+                        "parser": parser_name,
+                        "events_seen": out.get("events_seen", len(events)),
+                        **({"error": error} if error else {}),
+                    },
+                    arguments=args,
+                )
+                parser_events = [
+                    {**event, "parser": parser_name}
+                    for event in events
+                    if isinstance(event, dict)
+                ]
+                _merge_disk_tool_summary(
+                    disk_summary,
+                    "plaso_parse",
+                    tcid,
+                    {
+                        "artifact_path": path,
+                        "artifact_class": artifact_class,
+                        "parser": parser_name,
+                        "events_seen": out.get("events_seen", len(events)),
+                        "sample_labels": [
+                            _decoded_row_label(event) for event in parser_events[:5]
+                        ],
+                        **({"error": error} if error else {}),
+                    },
+                )
+                for event in parser_events[:200]:
+                    label = _decoded_row_label(event) or parser_name
+                    self._timeline_add(
+                        _decoded_row_timestamp(event),
+                        "plaso_parse",
+                        artifact_class,
+                        f"{artifact_class} event: {label[:100]}",
+                        tcid,
+                        {"artifact_path": path, "parser": parser_name},
+                    )
+                print(f"  plaso_parse/{parser_name}: {path} events={len(events)}")
+
+        browser_entries = (by_class["browser_history"] + by_class["browser_db"])[:20]
         browser_specs: list[tuple[str, dict[str, Any]]] = [
             (
                 "browser_history",
@@ -8781,7 +9468,22 @@ class Investigation:
                 event
                 for event in self.timeline_events
                 if event.get("artifact_class")
-                in {"disk/filesystem", "mft", "usnjrnl", "prefetch", "registry", "evtx"}
+                in {
+                    "disk/filesystem",
+                    "mft",
+                    "usnjrnl",
+                    "prefetch",
+                    "registry",
+                    "evtx",
+                    "browser_history",
+                    "lnk",
+                    "amcache",
+                    "jumplist",
+                    "recyclebin",
+                    "legacy_evt",
+                    "ie_history",
+                    "scheduled_task",
+                }
             ]
         )
         self.disk_artifact_summary = _finalize_disk_artifact_summary(disk_summary)

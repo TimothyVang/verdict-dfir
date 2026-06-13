@@ -5,8 +5,8 @@
 //! the agent names a plaso parser from an **allow-list** and an artifact path,
 //! and gets back the normalized timeline rows. This covers a wide cross-OS swath
 //! of text/binary logs — Linux `syslog`/`auth.log`, `bash`/`zsh` history,
-//! `utmp`/`wtmp`, `dpkg`, legacy Windows `.evt`, scheduled-task jobs, Recycle
-//! Bin, `viminfo`, macOS `asl` — in a single audited verb.
+//! `utmp`/`wtmp`, `dpkg`, legacy Windows `.evt`, IE index.dat, scheduled-task
+//! jobs, Recycle Bin, `viminfo`, macOS `asl` — in a single audited verb.
 //!
 //! The allow-list is the security boundary: a parameterized verb is only safe if
 //! the parameter can never become an arbitrary command, so any parser name not
@@ -45,6 +45,7 @@ const ALLOWED_PARSERS: &[&str] = &[
     "winjob",
     "recycle_bin",
     "recycle_bin_info2",
+    "msiecf",
     "winfirewall",
     // Editor / app MRU
     "viminfo",
@@ -344,6 +345,7 @@ mod tests {
         assert!(is_allowed_parser("syslog"));
         assert!(is_allowed_parser("bash_history"));
         assert!(is_allowed_parser("utmp"));
+        assert!(is_allowed_parser("msiecf"));
         assert!(!is_allowed_parser("not_a_parser"));
         assert!(!is_allowed_parser("syslog; rm -rf /"));
         assert!(!is_allowed_parser("$(reboot)"));

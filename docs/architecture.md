@@ -74,7 +74,7 @@ flowchart TB
     end
 
     subgraph Trust4["**TRUST BOUNDARY 4** — Crypto Custody (M2)"]
-        Sigstore["sigstore 3.x<br/>keyless Fulcio signing<br/>Rekor transparency log"]
+        SignerTier["Signer tier<br/>Ed25519 default<br/>Sigstore identity tier<br/>stub blocks release"]
         AuditJSONL["audit.jsonl<br/>hash-chained, append-only<br/>prev_hash per line"]
         Manifest["run.manifest.json<br/>signs Merkle root +<br/>audit-log final hash"]
     end
@@ -107,11 +107,13 @@ flowchart TB
     Verifier --> Correlator
     Correlator --> Trust4
 
-    Trust3 --> Sigstore
+    Trust3 --> SignerTier
     RustMcp -.->|tool output digest<br/>becomes Merkle leaf| Merkle
+    AgentMcp -->|audit_append| AuditJSONL
     AgentMcp -->|manifest_finalize| Manifest
+    AuditJSONL -->|leaves + final hash| Manifest
     Merkle --> Manifest
-    Sigstore --> AuditJSONL
+    SignerTier --> Manifest
 
     Human -->|approve / reject<br/>plan + contradictions| Trust3
 
