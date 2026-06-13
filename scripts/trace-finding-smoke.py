@@ -66,6 +66,16 @@ def _write_semantically_malformed_manifest(run_dir: Path) -> None:
     )
 
 
+def _write_non_list_manifest_leaves(run_dir: Path) -> None:
+    manifest_path = run_dir / "run.manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["leaves"] = "not-list"
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="trace-finding-smoke-") as tmp:
         run_dir = Path(tmp) / "run"
@@ -135,6 +145,30 @@ def main() -> int:
             )
             print(semantic_manifest.stdout, file=sys.stderr)
             print(semantic_manifest.stderr, file=sys.stderr)
+            return 1
+
+        non_list_leaves_run = Path(tmp) / "non-list-leaves-run"
+        shutil.copytree(SAMPLE, non_list_leaves_run)
+        _write_non_list_manifest_leaves(non_list_leaves_run)
+        non_list_leaves = _run_trace(non_list_leaves_run)
+        if non_list_leaves.returncode == 0:
+            print(
+                "non-list manifest leaves unexpectedly traced successfully",
+                file=sys.stderr,
+            )
+            print(non_list_leaves.stdout, file=sys.stderr)
+            print(non_list_leaves.stderr, file=sys.stderr)
+            return 1
+        if (
+            "manifest:    BROKEN -- manifest leaves is not a list"
+            not in non_list_leaves.stdout
+        ):
+            print(
+                "non-list manifest leaves failed without leaves diagnostic",
+                file=sys.stderr,
+            )
+            print(non_list_leaves.stdout, file=sys.stderr)
+            print(non_list_leaves.stderr, file=sys.stderr)
             return 1
 
         _tamper_verdict(run_dir)
