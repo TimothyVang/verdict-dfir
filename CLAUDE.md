@@ -116,8 +116,9 @@ Violating any of these breaks the judging story or an integration contract.
 
 ## 4. Tool surface
 
-Two MCP servers registered in `.mcp.json`, auto-spawned on session start. Full per-tool list
-in `agent-config/TOOLS.md`.
+Two product MCP servers are registered in `.mcp.json`, auto-spawned on session start,
+and counted in the audit-chained product surface. Full per-tool list in
+`agent-config/TOOLS.md`.
 
 | Server | Lang | Count | Scope |
 |---|---|---|---|

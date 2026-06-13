@@ -24,8 +24,8 @@ When the user requests a continuous timed run, such as 8 hours:
 
 ## Architecture Boundaries
 
-- `.mcp.json` is the canonical local MCP config: `findevil-mcp` via `cargo run --release -p findevil-mcp --quiet`, and `findevil-agent-mcp` via `uv run --directory services/agent_mcp python -m findevil_agent_mcp.server`.
-- Expected MCP surface is 43 product tools: 31 Rust DFIR tools in `services/mcp/`, 12 Python crypto/ACH/memory/ACP/expert-feedback tools in `services/agent_mcp/`.
+- `.mcp.json` is the canonical local MCP config. It registers 6 servers total: the 2 audit-chained product servers (`findevil-mcp` via `bash scripts/run-mcp-rust.sh`, `findevil-agent-mcp` via `bash scripts/run-mcp-python.sh`) plus 4 non-product operator conveniences (`n8n-mcp`, `playwright`, `puppeteer`, `qmd`).
+- Expected MCP product surface is 43 tools: 31 Rust DFIR tools in `services/mcp/`, 12 Python crypto/ACH/memory/ACP/expert-feedback tools in `services/agent_mcp/`. The 4 non-product servers are not in the audit chain and never emit Findings.
 - Do not add product-default MCPs for filesystem, git, browser, Docker, Kubernetes, GitHub, fetch, shell, or any raw-command passthrough.
 - SIFT mode is encoded in `.mcp.json.sift` and launched by `bash scripts/find-evil-sift`; do not rewrite user-level Claude/Codex config unless explicitly asked.
 - `services/agent/` is a library (`findevil_agent`) imported by `services/agent_mcp/`; A2 forbids restoring `graph.py`, `api.py`, `cli.py`, `supervisor.py`, `specialists/`, FastAPI, or LangGraph Product orchestrator code there.

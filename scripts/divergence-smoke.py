@@ -346,6 +346,13 @@ _MCP_JSON_REQUIRED_SERVERS = frozenset({"findevil-mcp", "findevil-agent-mcp"})
 _MCP_JSON_ALLOWED_NONPRODUCT_SERVERS = frozenset(
     {"n8n-mcp", "playwright", "puppeteer", "qmd"}
 )
+_MCP_DOC_FORBIDDEN_PHRASES = (
+    (Path("CLAUDE.md"), "Two MCP servers registered in `.mcp.json`"),
+    (
+        Path("AGENTS.md"),
+        ".mcp.json` is the canonical local MCP config: `findevil-mcp` via `cargo run",
+    ),
+)
 
 
 def _check_mcp_json_surface() -> list[str]:
@@ -396,6 +403,20 @@ def _check_mcp_json_surface() -> list[str]:
                     f".mcp.json server '{name}' contains forbidden token '{token}' "
                     f"in command/args — gateway/shell pass-through is not permitted"
                 )
+    return issues
+
+
+def _check_mcp_json_doc_wording() -> list[str]:
+    issues = []
+    for rel_path, phrase in _MCP_DOC_FORBIDDEN_PHRASES:
+        path = REPO / rel_path
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if phrase in text:
+            issues.append(
+                f"{rel_path.as_posix()} still uses stale .mcp.json wording: {phrase!r}"
+            )
     return issues
 
 
@@ -450,19 +471,42 @@ def main() -> int:
     mcp_issues = _check_mcp_json_surface()
     if mcp_issues:
         print(
-            "[FAIL] #10  .mcp.json locked to two typed servers, no gateway/shell drift"
+            "[FAIL] #10  .mcp.json locks product servers plus documented non-product servers"
         )
         for issue in mcp_issues:
             print(f"         {issue}")
         print(
-            "         remediation: .mcp.json must contain exactly findevil-mcp and "
-            "findevil-agent-mcp with no protocol-sift, sift-gateway, execute_shell, "
-            "bash -c, fetch, or browser tokens in command/args."
+            "         remediation: .mcp.json must contain findevil-mcp, "
+            "findevil-agent-mcp, and only the documented non-product servers; product "
+            "server command/args must not contain protocol-sift, sift-gateway, "
+            "execute_shell, bash -c, fetch, or browser tokens."
         )
         failed += 1
     else:
         print(
-            "[OK  ] #10  .mcp.json locked to two typed servers, no gateway/shell drift"
+            "[OK  ] #10  .mcp.json locks product servers plus documented non-product servers"
+        )
+
+    # Documentation check: active guidance must not imply .mcp.json has only
+    # the two product servers. That stale wording obscures the product vs.
+    # non-product boundary and causes avoidable judge-review confusion.
+    total_checks += 1
+    mcp_doc_issues = _check_mcp_json_doc_wording()
+    if mcp_doc_issues:
+        print(
+            "[FAIL] #11  active docs distinguish registered servers from product tools"
+        )
+        for issue in mcp_doc_issues:
+            print(f"         {issue}")
+        print(
+            "         remediation: active guidance must say .mcp.json has 6 registered "
+            "servers total, with only findevil-mcp and findevil-agent-mcp in the "
+            "audit-chained product surface."
+        )
+        failed += 1
+    else:
+        print(
+            "[OK  ] #11  active docs distinguish registered servers from product tools"
         )
 
     print()
