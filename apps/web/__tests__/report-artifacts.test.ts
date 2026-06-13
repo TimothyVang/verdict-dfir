@@ -13,7 +13,9 @@ describe("report artifact registry", () => {
     expect(REPORT_ARTIFACT_NAMES.has("coverage_manifest.json")).toBe(true);
     expect(REPORT_ARTIFACT_NAMES.has("evidence_inventory.json")).toBe(true);
     expect(REPORT_ARTIFACT_NAMES.has("audit.jsonl")).toBe(true);
+    expect(REPORT_ARTIFACT_NAMES.has("REPORT.new.pdf")).toBe(true);
     expect(REPORT_ARTIFACT_NAMES.has("REPORT-internal.md")).toBe(true);
+    expect(REPORT_ARTIFACT_NAMES.has("REPORT-internal.new.pdf")).toBe(true);
     expect(REPORT_ARTIFACT_NAMES.has("expert_signoff.json")).toBe(true);
     expect(REPORT_ARTIFACT_NAMES.has("expert_signoff_manifest_link.json")).toBe(
       true,
@@ -50,6 +52,10 @@ describe("report artifact registry", () => {
     expect(REPORT_ARTIFACT_LABELS["audit.jsonl"]).toBe("audit chain");
     expect(REPORT_ARTIFACT_LABELS["REPORT-internal.md"]).toBe(
       "internal QA packet",
+    );
+    expect(REPORT_ARTIFACT_LABELS["REPORT.new.pdf"]).toBe("PDF report (new)");
+    expect(REPORT_ARTIFACT_LABELS["REPORT-internal.new.pdf"]).toBe(
+      "internal QA PDF (new)",
     );
     expect(REPORT_ARTIFACT_LABELS["expert_signoff.json"]).toBe(
       "expert signoff",

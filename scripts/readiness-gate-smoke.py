@@ -153,6 +153,10 @@ def make_run(
         "# Internal QA packet\n\nSynthetic smoke packet.\n",
         encoding="utf-8",
     )
+    (run / "REPORT.new.pdf").write_bytes(b"%PDF-1.7\n% synthetic fallback\n")
+    (run / "REPORT-internal.new.pdf").write_bytes(
+        b"%PDF-1.7\n% synthetic internal fallback\n"
+    )
     return run
 
 
@@ -269,7 +273,9 @@ def main() -> int:
             "recall-score.json",
             "grounding.json",
             "REPORT.html",
+            "REPORT.new.pdf",
             "REPORT-internal.md",
+            "REPORT-internal.new.pdf",
             "readiness-summary.json",
             "expert_signoff.json",
             "customer_release_gate.final.json",

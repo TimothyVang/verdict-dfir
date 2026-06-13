@@ -1,8 +1,10 @@
 export const REPORT_ARTIFACTS = [
   { name: "REPORT.pdf", label: "PDF report" },
+  { name: "REPORT.new.pdf", label: "PDF report (new)" },
   { name: "REPORT.html", label: "HTML report" },
   { name: "REPORT.md", label: "Markdown report" },
   { name: "REPORT-internal.pdf", label: "internal QA PDF" },
+  { name: "REPORT-internal.new.pdf", label: "internal QA PDF (new)" },
   { name: "REPORT-internal.html", label: "internal QA HTML" },
   { name: "REPORT-internal.md", label: "internal QA packet" },
   { name: "verdict.json", label: "verdict.json" },

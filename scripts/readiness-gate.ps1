@@ -824,9 +824,11 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
     Copy-PacketFile -Source $reportMdPath -RelativePath "REPORT.md"
     Copy-PacketFile -Source $reportHtmlPath -RelativePath "REPORT.html"
     Copy-PacketFile -Source $reportPdfPath -RelativePath "REPORT.pdf"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT.new.pdf") -RelativePath "REPORT.new.pdf"
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.md") -RelativePath "REPORT-internal.md"
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.html") -RelativePath "REPORT-internal.html"
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.pdf") -RelativePath "REPORT-internal.pdf"
+    Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.new.pdf") -RelativePath "REPORT-internal.new.pdf"
     Copy-PacketDirectory -Source (Join-Path $resolvedRunDir "figures") -RelativePath "figures"
 }
 
