@@ -419,6 +419,22 @@ def main() -> int:
             indicators=indicators,
             event_narratives=event_narratives,
             practitioner_coverage=practitioner_coverage,
+            rejected_finding_leads=[
+                {
+                    "finding_id": "f-rejected",
+                    "tool_call_id": "tc-rejected",
+                    "confidence": "CONFIRMED",
+                    "pool_origin": "pool_a",
+                    "mitre_technique": "T1005",
+                    "artifact_path": "artifact.json",
+                    "description": "Rejected lead with a | pipe and `tick`.",
+                    "verifier_reason": "tool re-run failed",
+                    "verdict_effect": "excluded_from_final_findings",
+                    "analyst_action": (
+                        "Inspect this as a rejected lead; do not treat it as evidence until replay succeeds."
+                    ),
+                }
+            ],
             has_attack_story_fig=True,
             host_groups=host_groups,
         )
@@ -551,6 +567,11 @@ def main() -> int:
             "Administrator" in text and "DC01" in text,
         ),
         ("finding tool call preserved", "tc-psscan" in text),
+        ("verifier-rejected leads heading", "## Verifier-Rejected Leads" in text),
+        (
+            "rejected lead marked non-evidentiary",
+            "tc-rejected" in text and "excluded_from_final_findings" in text,
+        ),
         ("limitations section present", "## Limitations" in text),
         ("coverage manifest section present", "## Coverage Manifest" in text),
         (

@@ -1471,6 +1471,7 @@ def write_markdown(
     has_attack_story_fig: bool = False,
     has_process_view_fig: bool = False,
     has_entity_timeline_fig: bool = False,
+    rejected_finding_leads: list[dict[str, Any]] | None = None,
     host_groups: list[dict[str, Any]] | None = None,
 ) -> Path:
     md = case_dir / "REPORT.md"
@@ -1645,6 +1646,45 @@ def write_markdown(
             "the audited output hash. They do not change Track 3b severity policy.\n\n"
             + "\n".join(replay_rows)
             + "\n"
+        )
+
+    rejected_leads = [
+        lead for lead in (rejected_finding_leads or []) if isinstance(lead, dict)
+    ]
+    rejected_leads_section = ""
+    if rejected_leads:
+        rows = [
+            "| Finding | Tool Call | Confidence | MITRE | Description | Verifier Reason | Effect | Analyst Action |",
+            "|---|---|---|---|---|---|---|---|",
+        ]
+        for lead in rejected_leads[:20]:
+            rows.append(
+                "| {finding} | `{tool}` | `{confidence}` | `{mitre}` | {description} | "
+                "{reason} | `{effect}` | {action} |".format(
+                    finding=md_cell(lead.get("finding_id", "")),
+                    tool=md_cell(lead.get("tool_call_id", "")),
+                    confidence=md_cell(lead.get("confidence", "")),
+                    mitre=md_cell(lead.get("mitre_technique", "") or "n/a"),
+                    description=md_cell(lead.get("description", "")),
+                    reason=md_cell(lead.get("verifier_reason", "")),
+                    effect=md_cell(
+                        lead.get("verdict_effect", "excluded_from_final_findings")
+                    ),
+                    action=md_cell(lead.get("analyst_action", "")),
+                )
+            )
+        omitted = ""
+        if len(rejected_leads) > 20:
+            omitted = (
+                f"\n\n*{len(rejected_leads) - 20} additional rejected lead(s) are "
+                "recorded in `verdict.json`.*"
+            )
+        rejected_leads_section = (
+            "\n## Verifier-Rejected Leads\n\n"
+            "These entries failed verifier replay after re-dispatch and are preserved "
+            "for analyst review only. They are excluded from final Findings, do not "
+            "support the verdict, and must not be treated as evidence unless replay "
+            "succeeds in a later run.\n\n" + "\n".join(rows) + omitted + "\n\n"
         )
 
     psscan_fig_block = ""
@@ -1979,6 +2019,8 @@ chain-of-custody appendices.
 ## Detailed Findings
 
 {findings_section}
+
+{rejected_leads_section}
 
 {beats_section}
 
@@ -2469,6 +2511,7 @@ def render_report(
         has_attack_story_fig=has_attack_story_fig,
         has_process_view_fig=has_process_view_fig,
         has_entity_timeline_fig=has_entity_timeline_fig,
+        rejected_finding_leads=verdict_obj.get("rejected_finding_leads", []),
         host_groups=verdict_obj.get("host_groups", []),
     )
     html, pdf = render_html_pdf(md, figures=figures_html)
