@@ -38,6 +38,10 @@ pub use crate::tools::browser_history::{
     BrowserHistoryOutput, BrowserHistoryRow,
 };
 pub use crate::tools::case_open::{case_open, CaseHandle, CaseOpenError, CaseOpenInput};
+pub use crate::tools::cloud_audit::{
+    cloud_audit, is_allowed_provider, CloudAuditError, CloudAuditInput, CloudAuditOutput,
+    CloudEvent,
+};
 pub use crate::tools::disk::{
     disk_extract_artifacts, disk_mount, disk_unmount, DiskError, DiskExtractArtifactsInput,
     DiskExtractArtifactsOutput, DiskMode, DiskMountInput, DiskMountOutput, DiskUnmountInput,

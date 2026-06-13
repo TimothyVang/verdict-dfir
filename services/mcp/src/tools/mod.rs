@@ -18,6 +18,7 @@
 
 pub mod browser_history;
 pub mod case_open;
+pub mod cloud_audit;
 pub mod disk;
 pub mod evtx_query;
 pub mod ez_parse;
@@ -46,6 +47,10 @@ pub use browser_history::{
     BrowserHistoryOutput, BrowserHistoryRow,
 };
 pub use case_open::{case_open, CaseHandle, CaseOpenError, CaseOpenInput};
+pub use cloud_audit::{
+    cloud_audit, is_allowed_provider, CloudAuditError, CloudAuditInput, CloudAuditOutput,
+    CloudEvent,
+};
 pub use disk::{
     disk_extract_artifacts, disk_mount, disk_unmount, DiskError, DiskExtractArtifactsInput,
     DiskExtractArtifactsOutput, DiskMode, DiskMountInput, DiskMountOutput, DiskUnmountInput,

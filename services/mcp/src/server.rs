@@ -42,6 +42,7 @@ use sha2::{Digest, Sha256};
 use crate::tools::{
     browser_history::browser_history,
     case_open,
+    cloud_audit::cloud_audit,
     disk::{disk_extract_artifacts, disk_mount, disk_unmount},
     evtx_query::evtx_query,
     ez_parse::ez_parse,
@@ -62,7 +63,7 @@ use crate::tools::{
     vol_run::vol_run,
     yara_scan::yara_scan,
     zeek_summary::zeek_summary,
-    BrowserHistoryInput, CaseOpenInput, DiskExtractArtifactsInput, DiskMountInput,
+    BrowserHistoryInput, CaseOpenInput, CloudAuditInput, DiskExtractArtifactsInput, DiskMountInput,
     DiskUnmountInput, EvtxQueryInput, EzParseInput, HayabusaInput, MacTriageInput, MftInput,
     PcapTriageInput, PlasoParseInput, PrefetchInput, RegistryInput, SysmonNetworkInput,
     UsnJrnlInput, VelCollectInput, VolMalfindInput, VolPslistInput, VolPsscanInput,
@@ -797,6 +798,38 @@ fn build_registry() -> Vec<ToolEntry> {
             handler: |args| dispatch_mac_triage(args),
         },
         ToolEntry {
+            name: "cloud_audit",
+            description: "Parse ONE allow-listed cloud/identity audit log into normalized events. \
+                 The attacker center of gravity has shifted to identity and control-plane abuse \
+                 (rogue IAM, OAuth consent, MFA fatigue, inbox-rule exfil, console takeover), and \
+                 no SIFT binary parses cloud logs — this is pure-Rust new code, no subprocess. \
+                 provider MUST be one of: cloudtrail (AWS API calls — rogue IAM, AssumeRole abuse, \
+                 S3 exfil, CloudTrail disable), entra_signin (Azure AD sign-ins — impossible \
+                 travel, MFA fatigue, new SP consent), entra_audit (Entra directory audit — role \
+                 grants, app consent), m365_ual (M365 Unified Audit Log — BEC, inbox rules, \
+                 mail-forwarding, mass download), gcp_audit, workspace, k8s_audit (exec-into-pod, \
+                 privileged pod, RBAC escalation), vpc_flow (AWS flow logs — exfil volume, C2). \
+                 Any other value is rejected with ProviderNotAllowed. \
+                 Accepts a top-level JSON array, {Records:[...]} / {value:[...]} containers, JSONL \
+                 (one object per line), or space-delimited VPC flow text. Use AFTER case_open. \
+                 log_path is the exported log file. Default limit 10000. \
+                 Returns provider + events[] — each a normalized envelope {timestamp, actor, \
+                 source_ip, action, resource, outcome, raw} so the agent can reason across \
+                 providers — plus events_seen. \
+                 ERRORS: ProviderNotAllowed (use an allow-listed provider), LogNotFound (verify \
+                 the path), ReadFailed (IO error), ParseFailed (content not the expected format \
+                 for that provider).",
+            annotations: ToolAnnotations {
+                title: "Parse Cloud/Identity Audit Log",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<CloudAuditInput>(),
+            handler: |args| dispatch_cloud_audit(args),
+        },
+        ToolEntry {
             name: "vel_collect",
             description: "Run a Velociraptor artifact via `velociraptor artifacts collect` and \
                  stream the resulting rows. Generic trampoline over Velociraptor's 200+ \
@@ -1346,6 +1379,21 @@ fn dispatch_mac_triage(args: Value) -> Result<Value, ToolError> {
     }
 }
 
+fn dispatch_cloud_audit(args: Value) -> Result<Value, ToolError> {
+    let input: CloudAuditInput = parse_args(args)?;
+    // ProviderNotAllowed / LogNotFound are user-input errors; surface as -32602.
+    match cloud_audit(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::CloudAuditError::ProviderNotAllowed(_)
+            | crate::tools::CloudAuditError::LogNotFound(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("cloud_audit: {e}"))),
+    }
+}
+
 fn dispatch_vel_collect(args: Value) -> Result<Value, ToolError> {
     let input: VelCollectInput = parse_args(args)?;
     // InvalidArtifactName / InvalidArgName are user-input issues; surface as -32602.
@@ -1486,6 +1534,7 @@ mod tests {
             "ez_parse",
             "plaso_parse",
             "mac_triage",
+            "cloud_audit",
             "vel_collect",
             "browser_history",
         ];
