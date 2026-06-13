@@ -238,6 +238,12 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "prefetch_parse",
         }
+    if name == "amcache.hve":
+        return {
+            "artifact_class": "amcache",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
     if name in REGISTRY_HIVE_NAMES:
         return {
             "artifact_class": "registry",
@@ -279,11 +285,17 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "ez_parse",
         }
-    if name == "info2" or (name.startswith("$i") and "$recycle.bin" in lower_path):
+    if name == "info2":
         return {
             "artifact_class": "recyclebin",
             "evidence_type": "extracted_disk",
             "parser_tool": "plaso_parse",
+        }
+    if name.startswith("$i") and "$recycle.bin" in lower_path:
+        return {
+            "artifact_class": "recyclebin",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
         }
     if name == "index.dat" and "history.ie5" in lower_path:
         return {
@@ -297,9 +309,15 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": None,
         }
-    if name in {"history", "places.sqlite"} or name.endswith(".sqlite"):
+    if name in {
+        "history",
+        "places.sqlite",
+        "web data",
+        "cookies",
+        "login data",
+    } or name.endswith(".sqlite"):
         return {
-            "artifact_class": "browser_history",
+            "artifact_class": "browser_db",
             "evidence_type": "extracted_disk",
             "parser_tool": "browser_history",
         }

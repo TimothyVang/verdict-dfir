@@ -95,6 +95,7 @@ class TestDecodedDiskArtifactEmitters:
         desc = f["description"].lower()
         for token in ("lnk", "shortcut", "removable", "volume serial", "recent"):
             assert token in desc
+        assert "user's recent items" not in desc
         assert "execution" not in desc
         assert "exfiltrat" not in desc
 

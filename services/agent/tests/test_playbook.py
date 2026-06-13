@@ -76,7 +76,7 @@ class TestClassifyArtifactPath:
             ("$MFT", "mft", "mft_timeline"),
             ("SVCHOST.EXE-ABCDEF12.pf", "prefetch", "prefetch_parse"),
             ("NTUSER.DAT", "registry", "registry_query"),
-            ("amcache.hve", "registry", "registry_query"),
+            ("amcache.hve", "amcache", "ez_parse"),
             ("$UsnJrnl", "usnjrnl", "usnjrnl_query"),
             (
                 "Documents and Settings/Mr. Evil/Recent/staged-files.lnk",
@@ -88,6 +88,11 @@ class TestClassifyArtifactPath:
                 "recyclebin",
                 "plaso_parse",
             ),
+            (
+                "$Recycle.Bin/S-1-5-21-1004/$IABC123.txt",
+                "recyclebin",
+                "ez_parse",
+            ),
             ("Windows/System32/config/SecEvent.Evt", "legacy_evt", "plaso_parse"),
             (
                 "Documents and Settings/Mr. Evil/Local Settings/History/History.IE5/index.dat",
@@ -97,9 +102,9 @@ class TestClassifyArtifactPath:
             ("Documents and Settings/Mr. Evil/My Documents/Thumbs.db", "thumbnail", None),
             ("malware.exe", "yara_target", "yara_scan"),
             ("collection.zip", "velociraptor", "vel_collect"),
-            ("History", "browser_history", "browser_history"),
-            ("places.sqlite", "browser_history", "browser_history"),
-            ("Archived History.sqlite", "browser_history", "browser_history"),
+            ("History", "browser_db", "browser_history"),
+            ("places.sqlite", "browser_db", "browser_history"),
+            ("Archived History.sqlite", "browser_db", "browser_history"),
             ("readme.txt", "unknown", None),
         ],
     )

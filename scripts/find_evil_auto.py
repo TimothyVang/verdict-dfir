@@ -760,6 +760,12 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "prefetch_parse",
         }
+    if lower_name == "amcache.hve":
+        return {
+            "artifact_class": "amcache",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
+        }
     if lower_name in REGISTRY_HIVE_NAMES:
         return {
             "artifact_class": "registry",
@@ -801,13 +807,17 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
             "evidence_type": "extracted_disk",
             "parser_tool": "ez_parse",
         }
-    if lower_name == "info2" or (
-        lower_name.startswith("$i") and "$recycle.bin" in lower_path
-    ):
+    if lower_name == "info2":
         return {
             "artifact_class": "recyclebin",
             "evidence_type": "extracted_disk",
             "parser_tool": "plaso_parse",
+        }
+    if lower_name.startswith("$i") and "$recycle.bin" in lower_path:
+        return {
+            "artifact_class": "recyclebin",
+            "evidence_type": "extracted_disk",
+            "parser_tool": "ez_parse",
         }
     if lower_name == "index.dat" and "history.ie5" in lower_path:
         return {
@@ -954,6 +964,8 @@ def classify_artifact_path(path):
         return {"artifact_class": "mft", "evidence_type": "extracted_disk", "parser_tool": "mft_timeline"}
     if lower_name.endswith(".pf"):
         return {"artifact_class": "prefetch", "evidence_type": "extracted_disk", "parser_tool": "prefetch_parse"}
+    if lower_name == "amcache.hve":
+        return {"artifact_class": "amcache", "evidence_type": "extracted_disk", "parser_tool": "ez_parse"}
     if lower_name in REGISTRY_HIVE_NAMES:
         return {"artifact_class": "registry", "evidence_type": "extracted_disk", "parser_tool": "registry_query"}
     if lower_name == "srudb.dat":
@@ -966,8 +978,10 @@ def classify_artifact_path(path):
         return {"artifact_class": "lnk", "evidence_type": "extracted_disk", "parser_tool": "ez_parse"}
     if lower_name.endswith(".automaticdestinations-ms") or lower_name.endswith(".customdestinations-ms"):
         return {"artifact_class": "jumplist", "evidence_type": "extracted_disk", "parser_tool": "ez_parse"}
-    if lower_name == "info2" or (lower_name.startswith("$i") and "$recycle.bin" in lower_path):
+    if lower_name == "info2":
         return {"artifact_class": "recyclebin", "evidence_type": "extracted_disk", "parser_tool": "plaso_parse"}
+    if lower_name.startswith("$i") and "$recycle.bin" in lower_path:
+        return {"artifact_class": "recyclebin", "evidence_type": "extracted_disk", "parser_tool": "ez_parse"}
     if lower_name == "index.dat" and "history.ie5" in lower_path:
         return {"artifact_class": "ie_history", "evidence_type": "extracted_disk", "parser_tool": "plaso_parse"}
     if lower_name == "thumbs.db" or lower_name.endswith(".thumbcache"):
@@ -8379,12 +8393,13 @@ class Investigation:
             "tool_call_id": tcid,
             "artifact_path": lnk_path,
             "description": (
-                "hypothesis: LNK shortcut artifact in the user's Recent items "
-                "references removable media activity: "
-                f"{examples}. The shortcut metadata includes a removable-media "
-                "target or volume serial number. Treat this as a Recent shortcut "
-                "staging lead only; corroborate with filesystem, registry, event-log, "
-                "or network evidence before asserting user activity."
+                "hypothesis: LNK shortcut artifact references removable media "
+                f"activity: {examples}. The shortcut metadata includes a "
+                "removable-media target or volume serial number. Treat this as a "
+                "shortcut/removable-media staging lead only; if the source path is "
+                "a Recent folder, use it as a recent activity pivot. Corroborate "
+                "with filesystem, registry, event-log, or network evidence before "
+                "asserting user activity."
             ),
             "confidence": "HYPOTHESIS",
             "pool_origin": "B",
