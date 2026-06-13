@@ -25,9 +25,9 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use findevil_mcp::{
-    case_open, evtx_query, ez_parse, mft_timeline, prefetch_parse, vol_run, CaseOpenInput,
-    EvtxError, EvtxQueryInput, EzParseError, EzParseInput, MftError, MftInput, PrefetchError,
-    PrefetchInput, VolRunError, VolRunInput,
+    case_open, evtx_query, ez_parse, mft_timeline, plaso_parse, prefetch_parse, vol_run,
+    CaseOpenInput, EvtxError, EvtxQueryInput, EzParseError, EzParseInput, MftError, MftInput,
+    PlasoParseError, PlasoParseInput, PrefetchError, PrefetchInput, VolRunError, VolRunInput,
 };
 
 // A path string that would be catastrophic if any tool ever shelled out. Used as
@@ -185,6 +185,31 @@ fn ez_parse_rejects_shell_payload_tool_before_any_subprocess() {
 
     assert!(
         matches!(err, EzParseError::ToolNotAllowed(_)),
+        "got {err:?}"
+    );
+    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+}
+
+#[test]
+fn plaso_parse_rejects_shell_payload_parser_before_any_subprocess() {
+    // plaso_parse's `parser` parameter reaches argv. The allow-list is the
+    // injection boundary: a parser string shaped like a shell payload is not on
+    // the list, so it is rejected with ParserNotAllowed BEFORE any path check or
+    // subprocess — even pointing at a real file. No plaso stage ever runs.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let real = tmp.path().join("auth.log");
+    fs::write(&real, b"Jun 13 sshd login").expect("write");
+
+    let err = plaso_parse(&PlasoParseInput {
+        case_id: "c".to_string(),
+        parser: format!("syslog; {SHELL_PAYLOAD}"),
+        artifact_path: real,
+        limit: None,
+    })
+    .expect_err("a shell-payload parser string must be rejected, not executed");
+
+    assert!(
+        matches!(err, PlasoParseError::ParserNotAllowed(_)),
         "got {err:?}"
     );
     assert!(!tmp.path().join("HACKED").exists(), "no shell executed");

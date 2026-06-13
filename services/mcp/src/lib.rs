@@ -58,6 +58,9 @@ pub use crate::tools::mft_timeline::{
 pub use crate::tools::pcap_triage::{
     path_looks_like_pcap, pcap_triage, PcapTriageError, PcapTriageInput, PcapTriageOutput,
 };
+pub use crate::tools::plaso_parse::{
+    is_allowed_parser, plaso_parse, PlasoParseError, PlasoParseInput, PlasoParseOutput,
+};
 pub use crate::tools::prefetch_parse::{
     path_looks_like_prefetch, prefetch_parse, PrefetchError, PrefetchInput, PrefetchOutput,
 };

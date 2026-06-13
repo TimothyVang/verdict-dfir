@@ -24,6 +24,7 @@ pub mod ez_parse;
 pub mod hayabusa_scan;
 pub mod mft_timeline;
 pub mod pcap_triage;
+pub mod plaso_parse;
 pub mod prefetch_parse;
 pub mod regf;
 pub mod registry_query;
@@ -61,6 +62,9 @@ pub use mft_timeline::{
 };
 pub use pcap_triage::{
     path_looks_like_pcap, pcap_triage, PcapTriageError, PcapTriageInput, PcapTriageOutput,
+};
+pub use plaso_parse::{
+    is_allowed_parser, plaso_parse, PlasoParseError, PlasoParseInput, PlasoParseOutput,
 };
 pub use prefetch_parse::{
     path_looks_like_prefetch, prefetch_parse, PrefetchError, PrefetchInput, PrefetchOutput,

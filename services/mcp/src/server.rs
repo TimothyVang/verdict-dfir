@@ -48,6 +48,7 @@ use crate::tools::{
     hayabusa_scan::hayabusa_scan,
     mft_timeline::mft_timeline,
     pcap_triage::pcap_triage,
+    plaso_parse::plaso_parse,
     prefetch_parse::prefetch_parse,
     registry_query::registry_query,
     sysmon_network_query::sysmon_network_query,
@@ -62,9 +63,9 @@ use crate::tools::{
     zeek_summary::zeek_summary,
     BrowserHistoryInput, CaseOpenInput, DiskExtractArtifactsInput, DiskMountInput,
     DiskUnmountInput, EvtxQueryInput, EzParseInput, HayabusaInput, MftInput, PcapTriageInput,
-    PrefetchInput, RegistryInput, SysmonNetworkInput, UsnJrnlInput, VelCollectInput,
-    VolMalfindInput, VolPslistInput, VolPsscanInput, VolPsxviewInput, VolRunInput, YaraInput,
-    ZeekSummaryInput,
+    PlasoParseInput, PrefetchInput, RegistryInput, SysmonNetworkInput, UsnJrnlInput,
+    VelCollectInput, VolMalfindInput, VolPslistInput, VolPsscanInput, VolPsxviewInput, VolRunInput,
+    YaraInput, ZeekSummaryInput,
 };
 use crate::CRATE_VERSION;
 
@@ -723,6 +724,41 @@ fn build_registry() -> Vec<ToolEntry> {
             handler: |args| dispatch_ez_parse(args),
         },
         ToolEntry {
+            name: "plaso_parse",
+            description: "Run ONE allow-listed plaso (log2timeline) parser against an artifact \
+                 and return the normalized timeline events. plaso is itself a normalizer over \
+                 dozens of log formats, so this ONE verb covers a wide cross-OS swath of \
+                 text/binary logs: Linux syslog / auth.log, bash/zsh history, utmp/wtmp, dpkg, \
+                 selinux; legacy Windows .evt (winevt — use evtx_query for modern .evtx), \
+                 scheduled-task jobs (winjob), Recycle Bin, winfirewall; viminfo; macOS asl, \
+                 appfirewall, wifi. \
+                 parser MUST be an allow-listed plaso parser name (see below); any other value \
+                 is rejected with ParserNotAllowed BEFORE a subprocess runs — the no-shell \
+                 guarantee for a parameterized verb. Allow-list: syslog, bash_history, \
+                 zsh_extended_history, utmp, dpkg, selinux, winevt, winjob, recycle_bin, \
+                 recycle_bin_info2, winfirewall, viminfo, asl_log, mac_appfirewall_log, macwifi. \
+                 Use AFTER case_open / disk_extract_artifacts. artifact_path is the log file, a \
+                 directory, or a mounted image root. Default limit 10000. \
+                 Two-stage run (plaso's design): log2timeline.py builds a .plaso store, psort.py \
+                 exports json_line; both are fixed-argv. \
+                 Returns parser + events[] (normalized plaso event objects — schema varies by \
+                 parser) + events_seen + stderr_tail. \
+                 Binary discovery: $PLASO_DIR first, then PATH for log2timeline.py / psort.py \
+                 (plaso ships on the SIFT VM). \
+                 ERRORS: ParserNotAllowed (use an allow-listed name), ArtifactNotFound (verify \
+                 the path), BinaryNotFound (install plaso or use the SIFT VM), SubprocessFailed \
+                 (check stderr_tail — names the failing stage), OutputRead (rare IO error).",
+            annotations: ToolAnnotations {
+                title: "Normalize Logs to Timeline (plaso/log2timeline)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<PlasoParseInput>(),
+            handler: |args| dispatch_plaso_parse(args),
+        },
+        ToolEntry {
             name: "vel_collect",
             description: "Run a Velociraptor artifact via `velociraptor artifacts collect` and \
                  stream the resulting rows. Generic trampoline over Velociraptor's 200+ \
@@ -1242,6 +1278,21 @@ fn dispatch_ez_parse(args: Value) -> Result<Value, ToolError> {
     }
 }
 
+fn dispatch_plaso_parse(args: Value) -> Result<Value, ToolError> {
+    let input: PlasoParseInput = parse_args(args)?;
+    // ParserNotAllowed / ArtifactNotFound are user-input errors; surface as -32602.
+    match plaso_parse(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::PlasoParseError::ParserNotAllowed(_)
+            | crate::tools::PlasoParseError::ArtifactNotFound(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("plaso_parse: {e}"))),
+    }
+}
+
 fn dispatch_vel_collect(args: Value) -> Result<Value, ToolError> {
     let input: VelCollectInput = parse_args(args)?;
     // InvalidArtifactName / InvalidArgName are user-input issues; surface as -32602.
@@ -1380,6 +1431,7 @@ mod tests {
             "vol_psxview",
             "vol_run",
             "ez_parse",
+            "plaso_parse",
             "vel_collect",
             "browser_history",
         ];
