@@ -1,12 +1,12 @@
 """Run manifest assembly + verification.
 
-Spec #2 §7.1 + §7.2. Ties the four M2 layers together:
+Spec #2 §7.1 + §7.2. Ties the current custody layers together:
 
   * walks the hash-chained ``audit.jsonl``
   * extracts every ``tool_call_output_hash`` and every approved-
     finding hash into a Merkle tree
   * asks the ``Signer`` to sign the canonicalized manifest body
-  * writes ``run.manifest.json`` (used as the OTS stamp target)
+  * writes ``run.manifest.json``
 
 Verification is the symmetric operation:
 
@@ -14,11 +14,9 @@ Verification is the symmetric operation:
   * ``MerkleTree`` rebuilds from the leaves declared in the
     manifest, comparing the recomputed root to the manifest's
     ``merkle_root``
-  * The manifest's signature is validated against the manifest body
-    (signer-specific)
-  * Spec #2 §7.2 step 3 (OTS verify) is delegated to
-    ``crypto.ots.verify`` and not required here — verification
-    happens in tiers 1+2 offline; tier 3 is the OTS dance.
+  * the signature tier is reported honestly: Ed25519 is verified
+    cryptographically offline, Sigstore is recorded for an
+    identity-aware verifier, and stub remains a dev placeholder
 """
 
 from __future__ import annotations
@@ -75,7 +73,7 @@ class ManifestLeaf:
 
 @dataclass(frozen=True)
 class RunManifest:
-    """The single artifact ``ots stamp`` anchors to Bitcoin.
+    """The signed run manifest.
 
     Field ordering matters here for human readability of the
     written JSON — sort_keys still applies during canonicalization.
@@ -279,16 +277,18 @@ class ManifestVerification:
     leaf_count_ok: bool | str
     signature_present: bool
     signature_kind: str = "stub"
-    """Which signer sealed the run: ``"sigstore"`` or ``"stub"`` (default for
-    pre-``kind`` manifests)."""
+    """Which signer sealed the run: ``"ed25519"``, ``"sigstore"``, or
+    ``"stub"`` (default for pre-``kind`` manifests)."""
     signature_verified: bool | str = (
         "stub signature: deterministic dev/offline placeholder, not cryptographic proof"
     )
     """Honest cryptographic-verification status. ``True`` only when a real
-    sigstore bundle was cryptographically verified offline; otherwise a reason
-    string. A stub bundle is never ``True`` — this field stops the chain from
-    *implying* proof a placeholder can't provide. Does NOT gate ``overall``
-    (presence-based), so dev/offline stub runs still verify end-to-end."""
+    Ed25519 bundle verifies offline; otherwise a reason string. A stub bundle
+    is never ``True``, and a Sigstore bundle reports that identity-policy-aware
+    verification is required — this field stops the chain from *implying* proof
+    a placeholder or unbound identity bundle can't provide. Does NOT gate
+    ``overall`` (presence-based), so dev/offline stub runs still verify
+    end-to-end."""
     overall: bool = False
 
 
@@ -306,9 +306,9 @@ def verify_manifest(
         rebuild to the manifest's ``merkle_root_hex``, else a reason.
       * ``leaf_count_ok``: True if ``leaves`` length matches
         ``leaf_count``, else a reason.
-      * ``signature_present``: True if ``signature`` is non-empty —
-        signature *validity* is signer-specific and lives in the
-        signer module; here we only check presence.
+      * ``signature_present``: True if ``signature`` is non-empty.
+      * ``signature_verified``: True only for a cryptographically verified
+        Ed25519 manifest; Sigstore and stub return explicit reason strings.
       * ``overall``: AND of the above.
     """
     obj = json.loads(manifest_path.read_text(encoding="utf-8"))

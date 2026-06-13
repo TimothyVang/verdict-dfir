@@ -132,6 +132,12 @@ class TestEd25519Tier:
 
 
 class TestManifestVerify:
+    def test_tool_description_names_current_signature_tiers(self) -> None:
+        description = VERIFY_SPEC.description
+        assert "ed25519/sigstore/stub" in description
+        assert "offline-verified Ed25519 signature" in description
+        assert "sigstore/stub bundle" not in description
+
     async def test_clean_manifest_verifies(self, seeded_audit_log: Path, tmp_path: Path) -> None:
         out_path = tmp_path / "run.manifest.json"
         await FINALIZE_SPEC.handler(
