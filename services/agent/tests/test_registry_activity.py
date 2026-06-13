@@ -403,3 +403,158 @@ class TestPoolBShellbagEmitter:
         for tok in ("shellbag", "navigation", "ntuser", "staging"):
             assert tok in desc
         assert "4.220.254" in f["description"]
+
+
+WORDWHEEL_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\WordWheelQuery"
+
+
+def _utf16le_hex(term: str) -> str:
+    """Render a search term as the NUL-terminated UTF-16LE hex WordWheelQuery stores."""
+    return (term.encode("utf-16-le") + b"\x00\x00").hex()
+
+
+class TestWordWheelQueryCandidates:
+    def test_wordwheel_binary_search_terms_are_candidates(self) -> None:
+        # WordWheelQuery (Vista+) is the modern ACMru: UTF-16LE binary terms.
+        rows = [
+            _row(
+                WORDWHEEL_KEY,
+                [
+                    _val("0", _utf16le_hex("netcat"), value_type="REG_BINARY"),
+                    _val("1", _utf16le_hex("password dump"), value_type="REG_BINARY"),
+                    _val("MRUListEx", "00000000", value_type="REG_BINARY"),
+                ],
+                lw="2009-08-27T15:00:00Z",
+            )
+        ]
+        cands = fea.registry_mru_candidates(rows)
+        # MRUListEx ordering value is not an entry.
+        assert len(cands) == 2
+        assert {c["kind"] for c in cands} == {"search_term"}
+        assert {c["value"] for c in cands} == {"netcat", "password dump"}
+        assert cands[0]["last_write_time_iso"] == "2009-08-27T15:00:00Z"
+
+    def test_wordwheel_undecodable_blob_is_skipped(self) -> None:
+        rows = [_row(WORDWHEEL_KEY, [_val("0", "zz", value_type="REG_BINARY")])]
+        assert fea.registry_mru_candidates(rows) == []
+
+    def test_wordwheel_empty_term_is_skipped(self) -> None:
+        rows = [_row(WORDWHEEL_KEY, [_val("0", "0000", value_type="REG_BINARY")])]
+        assert fea.registry_mru_candidates(rows) == []
+
+    def test_wordwheel_term_emits_inferred_pool_a_finding(self) -> None:
+        inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+        inv.handle = {"id": "case-ww"}
+        cand = {
+            "kind": "search_term",
+            "value": "netcat",
+            "hive_key": WORDWHEEL_KEY,
+            "last_write_time_iso": "2009-08-27T15:00:00Z",
+        }
+        inv._emit_registry_activity_findings(
+            [cand], "/evidence/NTUSER.DAT", WORDWHEEL_KEY, "tc-ww-1"
+        )
+        assert len(inv.findings_pool_a) == 1
+        f = inv.findings_pool_a[0]
+        assert f["confidence"] == "INFERRED"
+        assert f["finding_id"].startswith("f-A-mru-")
+        assert "search" in f["description"].lower() and "netcat" in f["description"].lower()
+
+
+MOUNTEDDEV_KEY = "ROOT\\MountedDevices"
+
+
+def _usb_device_blob() -> str:
+    """A removable-mount MountedDevices value: the USBSTOR device path, UTF-16LE."""
+    path = "\\??\\USBSTOR#Disk&Ven_SanDisk&Prod_Cruzer&Rev_8.02#0774230FB1E0C2A2&0"
+    return path.encode("utf-16-le").hex()
+
+
+def _fixed_disk_blob() -> str:
+    """A fixed-disk MountedDevices value: 8-byte MBR signature + offset, no ASCII run."""
+    return "f8a1b2c30000000000007e0000000000"
+
+
+class TestMountedDevicesCandidates:
+    def test_removable_drive_letter_mapping_is_a_candidate(self) -> None:
+        rows = [
+            _row(
+                MOUNTEDDEV_KEY,
+                [_val("\\DosDevices\\F:", _usb_device_blob(), value_type="REG_BINARY")],
+                lw="2004-08-27T15:00:00Z",
+            )
+        ]
+        cands = fea.registry_mounteddevices_candidates(rows)
+        assert len(cands) == 1
+        c = cands[0]
+        assert c["kind"] == "mounted_device"
+        assert c["mount_point"] == "F:"
+        assert c["last_write_time_iso"] == "2004-08-27T15:00:00Z"
+
+    def test_fixed_disk_mapping_is_filtered(self) -> None:
+        # Fixed-disk volume mappings exist on every machine — only removable/USB
+        # mounts are a lead (FP safety; a benign disk must stay quiet).
+        rows = [
+            _row(
+                MOUNTEDDEV_KEY,
+                [_val("\\DosDevices\\C:", _fixed_disk_blob(), value_type="REG_BINARY")],
+            )
+        ]
+        assert fea.registry_mounteddevices_candidates(rows) == []
+
+    def test_volume_guid_mapping_to_usb_is_a_candidate(self) -> None:
+        rows = [
+            _row(
+                MOUNTEDDEV_KEY,
+                [
+                    _val(
+                        "\\??\\Volume{53f56307-b6bf-11d0-94f2-00a0c91efb8b}",
+                        _usb_device_blob(),
+                        value_type="REG_BINARY",
+                    )
+                ],
+            )
+        ]
+        cands = fea.registry_mounteddevices_candidates(rows)
+        assert len(cands) == 1
+        # No DosDevices drive letter — the value name is kept as the mount point.
+        assert cands[0]["mount_point"].startswith("\\??\\Volume")
+
+    def test_non_mounteddevices_rows_yield_nothing(self) -> None:
+        assert fea.registry_mounteddevices_candidates([_row(USBSTOR_KEY)]) == []
+
+    def test_empty_rows_yield_nothing(self) -> None:
+        assert fea.registry_mounteddevices_candidates([]) == []
+
+
+class TestPoolBMountedDevicesEmitter:
+    def _inv(self):
+        inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+        inv.handle = {"id": "case-mounted"}
+        return inv
+
+    def test_mounted_device_becomes_hypothesis_pool_b_finding(self) -> None:
+        inv = self._inv()
+        cand = {
+            "kind": "mounted_device",
+            "mount_point": "F:",
+            "value_name": "\\DosDevices\\F:",
+            "hive_key": MOUNTEDDEV_KEY,
+            "last_write_time_iso": "2004-08-27T15:00:00Z",
+        }
+        inv._emit_registry_activity_findings(
+            [cand], "/evidence/SYSTEM", MOUNTEDDEV_KEY, "tc-mounted-1"
+        )
+        assert len(inv.findings_pool_b) == 1
+        f = inv.findings_pool_b[0]
+        assert f["pool_origin"] == "B"
+        assert f["tool_call_id"] == "tc-mounted-1"
+        assert f["confidence"] == "HYPOTHESIS"
+        assert f["description"].startswith("hypothesis: ")
+        assert f["mitre_technique"] == "T1052.001"
+        assert f["finding_id"].startswith("f-B-mounted-")
+        desc = f["description"].lower()
+        # The claim is a drive-letter<->device mapping that corroborates USB
+        # insertion — never that data left on the volume.
+        assert "mounteddevices" in desc and "f:" in desc
+        assert "removable" in desc or "usb" in desc

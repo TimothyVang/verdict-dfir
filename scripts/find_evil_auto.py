@@ -1490,6 +1490,78 @@ def registry_usb_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+_MOUNTEDDEVICES_KEY_RE = re.compile(r"(^|\\)mounteddevices$", re.IGNORECASE)
+# DosDevices\X: => the drive letter; \??\Volume{GUID} => a mounted volume.
+_DOSDEVICE_RE = re.compile(r"\\dosdevices\\(?P<letter>[a-z]):", re.IGNORECASE)
+# Tells in the decoded device blob that mark a removable/USB-backed mount —
+# fixed-disk volume mappings exist on every machine and must not flood.
+_REMOVABLE_DEVICE_TELLS = ("usbstor", "ven_", "prod_", "\\??\\usb")
+
+
+def _mounteddevice_blob_text(hex_data: str) -> str:
+    """Recover the printable ASCII run from a MountedDevices binary value.
+
+    USB-backed mappings store an ASCII device path (``\\??\\USBSTOR#Disk&Ven_...``)
+    as the value data; fixed disks store an 8-byte MBR signature + offset with no
+    such run. Returns the lowercased ASCII (every other byte for the UTF-16-ish
+    device path, plus the raw ASCII run) so the removable-tell check can fire;
+    empty string when the blob is unparseable.
+    """
+    try:
+        raw = bytes.fromhex(hex_data)
+    except ValueError:
+        return ""
+    ascii_run = "".join(chr(b) if 32 <= b < 127 else " " for b in raw)
+    # Device paths are stored UTF-16LE; collapsing the NUL bytes recovers them.
+    utf16 = raw.decode("utf-16-le", errors="ignore")
+    return (ascii_run + " " + utf16).lower()
+
+
+def registry_mounteddevices_candidates(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Classify SYSTEM MountedDevices rows into drive-letter<->device mappings.
+
+    Pure function. MountedDevices maps a drive letter (``\\DosDevices\\X:``) or a
+    volume GUID to the underlying device. Only removable/USB-backed mappings are
+    candidates — they corroborate USBSTOR insertion history (which drive letter
+    the staged volume was mounted as, nhc-002). Fixed-disk mappings are on every
+    machine and are filtered so a benign disk produces no lead. The mapping is a
+    HYPOTHESIS corroborator downstream, never a verdict-flipping fact.
+    """
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        row_key = str(row.get("key_path") or "").replace("/", "\\")
+        if not _MOUNTEDDEVICES_KEY_RE.search(row_key):
+            continue
+        lw = row.get("last_write_time_iso")
+        for v in row.get("values") or []:
+            if not isinstance(v, dict):
+                continue
+            name = str(v.get("name") or "")
+            blob = _mounteddevice_blob_text(str(v.get("data_str") or ""))
+            if not any(tok in blob for tok in _REMOVABLE_DEVICE_TELLS):
+                continue
+            m = _DOSDEVICE_RE.search(name)
+            mount_point = f"{m.group('letter').upper()}:" if m else name
+            if mount_point in seen:
+                continue
+            seen.add(mount_point)
+            out.append(
+                {
+                    "kind": "mounted_device",
+                    "mount_point": mount_point,
+                    "value_name": name,
+                    "hive_key": row_key,
+                    "last_write_time_iso": lw,
+                }
+            )
+    return out
+
+
 _SAM_BUILTIN_ACCOUNTS: frozenset[str] = frozenset(
     {
         "administrator",
@@ -1552,8 +1624,26 @@ def registry_sam_account_candidates(rows: list[dict[str, Any]]) -> list[dict[str
 
 _ACMRU_KEY_RE = re.compile(r"\\search assistant\\acmru", re.IGNORECASE)
 _OPENSAVE_KEY_RE = re.compile(r"\\comdlg32\\(opensave|lastvisited)", re.IGNORECASE)
+# Vista+ Explorer search-box history (the modern successor to XP's ACMru).
+_WORDWHEEL_KEY_RE = re.compile(r"\\explorer\\wordwheelquery", re.IGNORECASE)
 # MRU ordering values, not entries.
 _MRU_ORDER_VALUES = frozenset({"mrulist", "mrulistex"})
+
+
+def _utf16le_term(hex_data: str) -> str | None:
+    """Decode a WordWheelQuery binary value (UTF-16LE search term) to text.
+
+    WordWheelQuery stores each typed search term as a NUL-terminated UTF-16LE
+    string the registry tool renders as hex (REG_BINARY). We decode and trim the
+    trailing NUL run; non-decodable or empty blobs return None so they are
+    skipped. Best-effort, like the shellbag PIDL recovery above.
+    """
+    try:
+        raw = bytes.fromhex(hex_data)
+    except ValueError:
+        return None
+    term = raw.decode("utf-16-le", errors="ignore").split("\x00", 1)[0].strip()
+    return term or None
 
 
 def _is_string_regtype(value_type: str | None) -> bool:
@@ -1602,15 +1692,17 @@ def _is_suspicious_opened_file(path: str) -> bool:
 def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Classify NTUSER MRU rows into recent-activity candidates.
 
-    Pure function. Two text-form MRUs the NIST golden cares about: XP Search
-    Assistant ACMru (recent search terms -> nhc-001) and ComDlg32 OpenSave/
-    LastVisited MRU (recently opened file paths -> nhc-011).
+    Pure function. Three text-form search/open MRUs the NIST golden cares about:
+    XP Search Assistant ACMru and the Vista+ Explorer WordWheelQuery (recent
+    search terms -> nhc-001), plus ComDlg32 OpenSave/LastVisited MRU (recently
+    opened file paths -> nhc-011).
 
-    Only REG_SZ/REG_EXPAND_SZ values count: LastVisitedMRU and RecentDocs store
-    binary blobs the registry tool renders as hex, and those must NOT be taken
-    for text entries. Values are deduped (OpenSaveMRU\\* and \\exe carry the same
-    paths within one recursive query). MRUList/MRUListEx ordering values are not
-    entries.
+    ACMru/ComDlg32 entries are REG_SZ/REG_EXPAND_SZ text; LastVisitedMRU and
+    RecentDocs store binary blobs the registry tool renders as hex, and those
+    must NOT be taken for text entries. WordWheelQuery is the one exception: its
+    search terms are UTF-16LE *binary* values we decode explicitly. Values are
+    deduped (OpenSaveMRU\\* and \\exe carry the same paths within one recursive
+    query). MRUList/MRUListEx ordering values are not entries.
     """
     out: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
@@ -1618,10 +1710,12 @@ def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not isinstance(row, dict):
             continue
         row_key = str(row.get("key_path") or "").replace("/", "\\")
-        if _ACMRU_KEY_RE.search(row_key):
+        if _ACMRU_KEY_RE.search(row_key) or _WORDWHEEL_KEY_RE.search(row_key):
             kind = "search_term"
+            wordwheel = bool(_WORDWHEEL_KEY_RE.search(row_key))
         elif _OPENSAVE_KEY_RE.search(row_key):
             kind = "opened_file"
+            wordwheel = False
         else:
             continue
         lw = row.get("last_write_time_iso")
@@ -1630,9 +1724,14 @@ def registry_mru_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 continue
             if str(v.get("name") or "").lower() in _MRU_ORDER_VALUES:
                 continue
-            if not _is_string_regtype(v.get("value_type")):
-                continue
-            data = str(v.get("data_str") or "").strip()
+            if wordwheel:
+                # WordWheelQuery search terms are UTF-16LE binary, not REG_SZ.
+                data = _utf16le_term(str(v.get("data_str") or "")) or ""
+                data = data.strip()
+            else:
+                if not _is_string_regtype(v.get("value_type")):
+                    continue
+                data = str(v.get("data_str") or "").strip()
             if not data:
                 continue
             if kind == "opened_file" and not _is_suspicious_opened_file(data):
@@ -7483,7 +7582,11 @@ class Investigation:
                 r"Microsoft\Windows NT\CurrentVersion\Image File Execution Options",
             ]
         if name == "system":
-            return [r"ControlSet001\Services", r"ControlSet001\Enum\USBSTOR"]
+            return [
+                r"ControlSet001\Services",
+                r"ControlSet001\Enum\USBSTOR",
+                r"MountedDevices",
+            ]
         if name == "sam":
             return [r"SAM\Domains\Account\Users\Names"]
         if name == "ntuser.dat":
@@ -7491,6 +7594,7 @@ class Investigation:
                 r"Software\Microsoft\Windows\CurrentVersion\Run",
                 r"Software\Microsoft\Windows\CurrentVersion\RunOnce",
                 r"Software\Microsoft\Search Assistant\ACMru",
+                r"Software\Microsoft\Windows\CurrentVersion\Explorer\WordWheelQuery",
                 r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSaveMRU",
                 r"Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\LastVisitedMRU",
                 r"Software\Microsoft\Windows\Shell\BagMRU",
@@ -7699,6 +7803,36 @@ class Investigation:
                     "confidence": "HYPOTHESIS",
                     "pool_origin": "B",
                     "mitre_technique": "T1074.001",
+                    "derived_from": [tcid],
+                }
+                self.findings_pool_b.append(finding)
+                print(
+                    f"  pool-B activity finding: {finding['finding_id']} (HYPOTHESIS)"
+                )
+                continue
+            if kind == "mounted_device":
+                mount = str(cand.get("mount_point") or "device")
+                safe = re.sub(r"[^a-z0-9]+", "-", mount.lower()).strip("-") or "device"
+                finding = {
+                    "case_id": self.handle["id"],
+                    "finding_id": self._finding_id_for(
+                        f"f-B-mounted-{safe}", hive_path
+                    ),
+                    "tool_call_id": tcid,
+                    "artifact_path": hive_path,
+                    "description": (
+                        "hypothesis: SYSTEM MountedDevices maps drive letter "
+                        f"{mount} to a removable/USB-backed device "
+                        f"({cand.get('hive_key')}\\{cand.get('value_name')}, "
+                        f"registry_query, last_write {cand.get('last_write_time_iso')}). "
+                        "The drive-letter<->device mapping corroborates external USB "
+                        "storage insertion history — it shows which letter a staged "
+                        "removable volume was mounted as. The mapping records a mount, "
+                        "never that data was transferred."
+                    ),
+                    "confidence": "HYPOTHESIS",
+                    "pool_origin": "B",
+                    "mitre_technique": "T1052.001",
                     "derived_from": [tcid],
                 }
                 self.findings_pool_b.append(finding)
@@ -8367,6 +8501,7 @@ class Investigation:
                 # a HYPOTHESIS exfil/staging lead citing this registry_query.
                 activity_candidates = (
                     registry_usb_candidates(rows)
+                    + registry_mounteddevices_candidates(rows)
                     + registry_sam_account_candidates(rows)
                     + registry_mru_candidates(rows)
                     + registry_shellbag_candidates(rows)
