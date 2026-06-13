@@ -715,9 +715,11 @@ def main() -> int:
             "clean, cleared" not in text and "clean/cleared" not in text,
         ),
         (
-            "public copy frames disk-only as custody registration",
-            "disk-content conclusions require mounted or extracted artifacts"
-            in public_text,
+            "public copy frames supported local disk parsing honestly",
+            "Supported disk images can be parsed locally through Sleuth Kit direct-read when prerequisites are present"
+            in public_text
+            and "`case_open` alone remains custody-only" in public_text
+            and "unsupported artifact classes stay as named limitations" in public_text,
         ),
         (
             "public copy names expert signoff packet",

@@ -207,6 +207,14 @@ jobs:
           done
           echo "All required docs present."
 
+  tool-count-guard:
+    name: tool count matches docs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: verify MCP registry count matches docs
+        run: python3 scripts/tool-count-guard.py
+
   amendment-a2-guard:
     name: Amendment A2 invariants (custom orchestrator dropped)
     runs-on: ubuntu-24.04

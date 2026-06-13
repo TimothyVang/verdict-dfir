@@ -149,10 +149,12 @@ without changing the top-line verdict policy:
   auto mode registering a disk image without mounting or parsing
   filesystem artifacts.
 
-Auto disk mode is deliberately custody-only today. A disk-only auto
-run that only performs `case_open` cannot support `NO_EVIL`; it should
-return `INDETERMINATE` with an analysis limitation instead of a
-placeholder Finding.
+Auto disk mode is content-scoped. A disk-only auto run that only
+performs `case_open` remains custody-only and cannot support `NO_EVIL`;
+it should return `INDETERMINATE` with an analysis limitation instead of
+a placeholder Finding. Disk-content Findings require supported parsed
+artifacts from `disk_mount` / `disk_extract_artifacts`, either locally
+through Sleuth Kit/libewf or under SIFT.
 
 ## Triage flow
 

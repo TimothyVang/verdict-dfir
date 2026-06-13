@@ -53,12 +53,12 @@ as of this report:
 |---|---|---|---|---|---|---|
 | 1 | `nitroba` | network (pcap) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 80% | **5/5 = 100%** · run `INDETERMINATE` | **PASS** (committed: `docs/sample-run/nitroba`) |
 | 2 | `nist-hacking-case` | disk (XP) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 71% | **5/14 = 36%** · run `SUSPICIOUS` | **FAIL** — narrowed gap, up from 7% (committed: `docs/sample-run/nist-hacking-case`) |
-| 3 | `nist-data-leakage` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (SIFT) |
-| 4 | `alihadi-09-encrypt` | disk (FP control) | **INDETERMINATE** | 50% | — | staged, scheduled (SIFT) |
-| 5 | `alihadi-01-webserver` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (SIFT) |
+| 3 | `nist-data-leakage` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
+| 4 | `alihadi-09-encrypt` | disk (FP control) | **INDETERMINATE** | 50% | — | staged, scheduled (local TSK / SIFT parity) |
+| 5 | `alihadi-01-webserver` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
 | 6 | `dfrws-2008-linux` | memory | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled |
-| 7 | `m57-jean` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (SIFT) |
-| 8 | `alihadi-07-sysinternals` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled (SIFT) |
+| 7 | `m57-jean` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
+| 8 | `alihadi-07-sysinternals` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled (local TSK / SIFT parity) |
 | 9 | `volatility-cridex` | memory | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled |
 | 10 | `synthetic-benign` | negative control | **NO_EVIL** (0 findings) | 100% | — | staged, scheduled |
 
@@ -72,7 +72,7 @@ LNK, recycle-bin, event-log, thumbcache, USB-history, and named-pipe artifacts t
 expects, so it honestly scopes to `SUSPICIOUS` rather than overstate coverage (verdict polarity maps
 to the legacy golden's `CONFIRMED_EVIL` label). The number is reproducible:
 `scripts/score-recall.py docs/sample-run/nist-hacking-case --golden goldens/nist-hacking-case`. The
-remaining 8 goldens are fixture-staged and pending a SIFT-VM batch — **scheduled, not yet run.** We
+remaining 8 goldens are fixture-staged and pending batch execution — **scheduled, not yet run.** We
 publish the gap, and the progress, rather than hide either. The adversarial posture is tracked in
 [`red-team-challenge.md`](red-team-challenge.md): unsupported artifact evil, benign admin activity,
 single-source execution traps, log clearing, DKOM-vs-smear, exfil-without-network, and parser-failure
@@ -244,9 +244,11 @@ modify the evidence"; there is no code path that *can*:
 
 ## 7. Honest limits
 
-- **Disk classes need the SIFT VM.** A local-mode disk run without SIFT degrades to custody-only and
-  returns a scoped verdict (e.g. NIST 5/14 = 36%) — honest, but below the recall bar. Full disk recall
-  requires `scripts/verdict --sift`. This is why 8 goldens are pending.
+- **Disk classes are parser-bounded, not SIFT-bounded.** Local mode can extract supported disk
+  artifacts via Sleuth Kit direct-read when host prerequisites are present, and the committed local
+  NIST SCHARDT result matches the SIFT-mode result exactly (5/14 = 36%). If extraction prerequisites
+  are absent or unsupported artifact classes are needed, those gaps stay as named limitations, not
+  clean findings.
 - **Single-source claims floor at HYPOTHESIS.** The ≥2-artifact-class rule is conservative by design;
   it will hold a real-but-uncorroborated execution claim below CONFIRMED. That trades some recall for
   a far lower false-positive rate — the right trade for a forensics tool.
@@ -264,7 +266,7 @@ modify the evidence"; there is no code path that *can*:
 
 ```bash
 scripts/fetch-fixtures.sh                       # stage the scoreable fixtures
-scripts/verdict --sift fixtures/<case>          # run a case (disk classes need SIFT)
+scripts/verdict fixtures/<case>                 # run a case; --sift provides VM parity for disk images
 python scripts/score-recall.py tmp/auto-runs/<case-id>   # recall vs golden -> recall-score.json
 scripts/trace-finding docs/sample-run/nist-hacking-case  # verify a committed run offline, zero deps
 ```

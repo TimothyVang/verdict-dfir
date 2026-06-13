@@ -29,8 +29,8 @@ the supported pipeline with no flags:
    missing, optionally brings up n8n when enabled or already available, and prepares the SANS SIFT VM
    when the gated OVA and implemented VMware path are available.
 2. **Auto-selects `--sift`** when the VM is reachable, so supported disk images can mount/extract
-   inside the SIFT environment. Local mode cannot parse inner disk content by itself; it falls back
-   with a clear custody-only warning when there is no VM or extracted artifact set.
+   inside the SIFT environment. Local mode can parse supported disk artifacts when Sleuth Kit/libewf
+   prerequisites are present; otherwise it falls back with a clear custody-only warning.
 3. **Runs the parallel investigation** to a signed Verdict, then attempts optional n8n
    finding-to-action + grounding workflows (host-side, post-verdict — never in the audit chain), and
    opens the dashboard + report.
@@ -59,7 +59,7 @@ Every flag the launcher actually parses:
 | Flag | Effect |
 |---|---|
 | `<evidence>` (positional) | Path to the Observable. Omit it to use the newest non-placeholder entry already in `evidence/`. |
-| `--sift` | Run the DFIR tools inside the SANS SIFT VM over SSH (default: tools on the local host). This is the supported path for raw disk image content extraction; local mode can register custody and may mount the EWF container, but does not by itself parse the inner NTFS volume. The post-verdict n8n automation + grounding can run in `--sift` mode too (host-side, after the case dir syncs back). Requires a one-time `bash scripts/sift-vm-bootstrap.sh`; set `FIND_EVIL_GUEST_IP` if the VM's IP changed. |
+| `--sift` | Run the DFIR tools inside the SANS SIFT VM over SSH (default: tools on the local host). This is the recommended parity path for raw disk image content extraction; local mode can also parse supported disk artifacts when Sleuth Kit/libewf prerequisites are present, but otherwise records custody-only limitations. The post-verdict n8n automation + grounding can run in `--sift` mode too (host-side, after the case dir syncs back). Requires a one-time `bash scripts/sift-vm-bootstrap.sh`; set `FIND_EVIL_GUEST_IP` if the VM's IP changed. |
 | `--fleet` | Whole multi-host case in ONE command: per-host investigations → cross-host correlation → `FLEET_REPORT`. **Auto-detected** when `<evidence>` is a folder with `hosts/` or `disks/` (the whole-case layout). Resumable: re-run the same command and completed hosts are skipped. Combine with `--sift` to run the per-host stage inside the SIFT VM (`fleet_investigate.py`). See `docs/using/fleet-analysis.md`. |
 | `--watch` | No path? Block until a file **or** a case folder is dropped into `evidence/`, debounced until the copy finishes, then go. |
 | `--no-dashboard` | Do not auto-open the web dashboard. |

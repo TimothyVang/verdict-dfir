@@ -54,7 +54,7 @@ bash scripts/doctor.sh --json
 bash scripts/install.sh
 ```
 
-SIFT VM mode is recommended for full disk-image extraction. Local mode can handle memory, EVTX, PCAP, Velociraptor collections, and extracted artifacts. Raw disk images such as `.E01`, `.dd`, `.raw`, and `.aff` without SIFT or supplied extracted artifacts are custody-only and must not produce broad disk-content claims.
+SIFT VM mode is recommended for full disk-image parity. Local mode can handle memory, EVTX, PCAP, Velociraptor collections, extracted artifacts, and supported disk artifacts when Sleuth Kit/libewf prerequisites are present. Raw disk images such as `.E01`, `.dd`, `.raw`, and `.aff` remain custody-only whenever `disk_mount` / `disk_extract_artifacts` fail or produce no supported parsed artifacts; never turn `case_open` alone into broad disk-content claims.
 
 ## Investigation Read Order
 

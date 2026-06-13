@@ -125,7 +125,7 @@ scripts/verdict --sift /mnt/hgfs/evidence/extracted/base-dc/base-dc-memory.img -
 # Single EVTX:
 scripts/verdict --sift /home/sansforensics/find-evil/fixtures/single-evtx/Security.evtx --unattended
 
-# Disk image (read-only mount/extract where SIFT supports it; otherwise custody-only):
+# Disk image (read-only mount/extract where prerequisites support it; otherwise custody-only):
 scripts/verdict --sift /mnt/hgfs/evidence/disk-images/base-dc-cdrive.E01 --unattended
 
 # Mixed case directory (memory, EVTX, disk artifacts, network logs, Velociraptor zips):
@@ -142,7 +142,7 @@ What it does in one command (no interactive prompts):
 
 1. Detects evidence type from the file extension or inventories a mixed case directory
 2. Opens both MCP servers inside the SIFT VM via SSH stdio
-3. case_open or case inventory → tool sequence per type → audit chain → judge → correlator → manifest_finalize. Raw disk image support is bounded: auto mode attempts read-only mount/extract where SIFT supports it, otherwise it records custody-only limitations and next actions.
+3. case_open or case inventory -> tool sequence per type -> audit chain -> judge -> correlator -> manifest_finalize. Raw disk image support is bounded: auto mode attempts read-only mount/extract through local Sleuth Kit/libewf or SIFT, otherwise it records custody-only limitations and next actions.
 4. Synthesizes Pool A (persistence-biased) and Pool B (exfil-biased) findings deterministically from tool outputs
 5. Writes `verdict.json` with the verdict (`SUSPICIOUS` / `NO_EVIL` / `INDETERMINATE` — see [`docs/verdict-semantics.md`](docs/verdict-semantics.md)), case completeness, ATT&CK/practitioner coverage, normalized timeline data, evidence-card data, source bibliography, and next analyst actions
 6. Generates a fully-templated PDF investigation report (figures + findings + ATT&CK/practitioner coverage + timeline + visual evidence cards + source bibliography + chain-of-custody attestation)

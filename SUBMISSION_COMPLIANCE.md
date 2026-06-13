@@ -209,6 +209,11 @@ of your Project.
 >   `goldens/nist-hacking-case/expected-findings.json`)
 >
 > Key findings — **SRL-2018 DC** (the showcase report, a different dataset):
+> - **Live memory self-correction first:** [`docs/sample-run/memory-dc/`](docs/sample-run/memory-dc/)
+>   records the current engine seeing `vol_pslist`=0 vs `vol_psscan`=124, re-sequencing to
+>   `vol_psxview`, and holding the divergence at **HYPOTHESIS** (acquisition smear) on first pass.
+>   The run is Ed25519-signed and offline-verifiable; this is the in-run catch judges should read
+>   before the older SRL post-run correction below.
 > - **Process-enumeration divergence** (`vol_pslist`=0 vs `vol_psscan`=124) stands as a
 >   **HYPOTHESIS** (acquisition smear / kernel-global read failure: `KeNumberProcessors`=0, core
 >   OS singletons recovered only by `psscan`, duplicate `System` EPROCESS), not confirmed DKOM.

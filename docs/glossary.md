@@ -69,8 +69,9 @@ The narrow, typed tool surface is the security pitch — it bounds what the agen
 and keeps every action in the audit chain. Adding shell pass-through would forfeit that.
 
 **Do I need the SIFT VM?**
-Only for disk-image inner-volume extraction (`.E01`/`.dd`). Memory, EVTX, PCAP, and Velociraptor
-evidence run fully in local-host mode. Without SIFT, disk evidence is custody-only.
+Only for disk-image parity and for hosts without local Sleuth Kit/libewf. Memory, EVTX, PCAP, and
+Velociraptor evidence run fully in local-host mode. Disk evidence is custody-only whenever
+`disk_mount` / `disk_extract_artifacts` cannot produce supported parsed artifacts.
 
 **Is a Claude credential required?**
 Yes for the investigating agent (one of three modes — see [CLAUDE.md "Required Setup"](../CLAUDE.md)).

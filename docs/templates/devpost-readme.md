@@ -4,7 +4,7 @@
 
 **Demo video:** ${DEMO_VIDEO_URL}
 
-**Accuracy on NIST CFReDS Hacking Case:** ${ACCURACY}%
+**Accuracy story:** in-run memory self-correction, ${ACCURACY}% NIST CFReDS Hacking Case recall
 
 **Release date:** ${DATE}
 
@@ -14,7 +14,7 @@
 
 ## What it does
 
-Find Evil! automates repeatable Windows host DFIR mechanics for memory captures, EVTX logs, mounted/extracted disk artifacts, and raw disk-image custody registration. It produces an evidence-bound verdict (`SUSPICIOUS` / `INDETERMINATE` / `NO_EVIL`) plus an expert-signoff packet with four load-bearing properties. Raw disk images supplied alone are custody-registered today; disk-content conclusions require mounted or extracted artifacts.
+Find Evil! automates repeatable Windows host DFIR mechanics for memory captures, EVTX logs, mounted/extracted disk artifacts, and raw disk-image custody registration. It produces an evidence-bound verdict (`SUSPICIOUS` / `INDETERMINATE` / `NO_EVIL`) plus an expert-signoff packet with four load-bearing properties. Supported disk images can be parsed locally through Sleuth Kit direct-read when prerequisites are present, or under SIFT for VM parity; `case_open` alone remains custody-only, and unsupported artifact classes stay as named limitations, never a clean bill of health.
 
 1. **A typed MCP tool surface, no `execute_shell`.** 43 narrow schema-validated product tools — 31 Rust DFIR (`case_open`, `disk_mount`/`disk_extract_artifacts`/`disk_unmount`, `evtx_query`, `vol_pslist`/`vol_psscan`/`vol_psxview`, `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`, `cloud_audit`, `mft_timeline`, `hayabusa_scan`, `yara_scan`, `usnjrnl_query`, `registry_query`, `prefetch_parse`, `vel_collect`, `browser_history`, `sysmon_network_query`, `zeek_summary`, `pcap_triage`, and the Linux/network/NTFS single-purpose wraps) plus 12 Python crypto/ACH/memory/handoff/expert-feedback tools. EVTX parsed in-process via the omerbenamram/evtx Rust crate (~1600× faster than python-evtx); AGPL/GPL tools (Hayabusa, Volatility3, Velociraptor) invoked through subprocess boundaries only — Apache-2.0 submission tree stays clean.
 
@@ -92,6 +92,10 @@ For expert-review packaging on native Windows, run `powershell -NoProfile -Execu
 
 Self-reported per SANS rules, from the L3 nightly goldens CI workflow:
 
+- **In-run calibration:** the committed `memory-dc` run saw `vol_pslist` = 0 vs `vol_psscan` = 124,
+  re-sequenced to `vol_psxview`, and held the result at **HYPOTHESIS (acquisition smear)** instead
+  of claiming a rootkit. That reasoning is in `docs/sample-run/memory-dc/audit.jsonl` and verifies
+  offline via `manifest_verify.json`.
 - **NIST CFReDS Hacking Case:** ${ACCURACY}% recall on 14 canonical findings
 - **Synthetic benign baseline:** 0 findings (correct — negative control passes)
 - **Hallucination rate:** tracked per run via verifier-rejected-finding count

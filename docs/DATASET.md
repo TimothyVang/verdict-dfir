@@ -230,10 +230,11 @@ decision it is NOT a scoring gate (training-data contamination is not modeled). 
   to a verified mirror (a SANS-hosted copy with published hashes was requested in the
   thread). The IOCs themselves are canonical (`reader_sl.exe` ← `explorer.exe`, malfind
   injection, C2).
-- **Disk classes need `--sift`.** Locally, raw `.dd/.E01` runs return `INDETERMINATE`
-  (custody-only) because host-side disk-content tooling is a known gap; real disk verdicts
-  come from `scripts/verdict --sift`. `INDETERMINATE` is an honest PASS of the live-test
-  gate but will score below the recall target until run under SIFT.
+- **Disk classes need mount/extract prerequisites.** Local raw `.dd/.E01` runs can parse supported
+  artifacts when Sleuth Kit/libewf are present; otherwise they return `INDETERMINATE`
+  (custody-only). SIFT remains the recommended parity path. `INDETERMINATE` is an honest PASS of
+  the live-test gate when coverage is limited, but it will score below the recall target until
+  supported artifacts are parsed.
 
 ### Run results (recall against golden)
 

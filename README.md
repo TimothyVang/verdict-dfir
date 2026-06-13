@@ -48,8 +48,9 @@ bash scripts/verdict <evidence>     # the same pipeline, headless from a shell
 when the implemented VMware path is available, resolve its IP (VMware Tools or the DHCP lease), and
 route supported forensic tools into it over SSH so disk images can mount/extract. No reachable VM?
 It falls back to host-local tools with the same hash-chained, offline-verifiable audit trail; local
-raw disk without mounted/extracted content stays custody-only, so the SIFT VM is the recommended
-path for disk images.
+disk parsing requires Sleuth Kit/libewf and supported extracted artifacts, while raw disk with no
+mounted/extracted content stays custody-only. The SIFT VM remains the recommended parity path for
+disk images.
 
 ## What VERDICT can miss
 
@@ -181,11 +182,11 @@ claims require at least two artifact classes. Evidence is opened read-only.
 
 Beyond the three ideas above, a single case run also:
 
-- **Works disk *and* memory when the required evidence access exists.** In SIFT mode or with
-  mounted/extracted artifacts, it mounts raw/E01 images read-only and extracts `$MFT`, registry
-  hives, EVTX, and Prefetch (`disk_mount` / `disk_extract_artifacts` / `disk_unmount`), then
-  analyzes memory in the same case. Local raw disk with no mountable content remains custody-only
-  and honestly `INDETERMINATE`. ([tool inventory](docs/reference/mcp-and-tools.md))
+- **Works disk *and* memory when the required evidence access exists.** With local Sleuth Kit/libewf
+  support or in SIFT mode, it opens raw/E01 images read-only and extracts `$MFT`, registry hives,
+  EVTX, and Prefetch (`disk_mount` / `disk_extract_artifacts` / `disk_unmount`), then analyzes memory
+  in the same case. Raw disk with no supported mounted/extracted content remains custody-only and
+  honestly `INDETERMINATE`. ([tool inventory](docs/reference/mcp-and-tools.md))
 - **Re-verifies its own findings.** `verify_finding` re-runs each cited tool call and confirms the
   output SHA-256 still matches, and `detect_contradictions` raises Pool A vs Pool B conflicts as
   first-class records before the judge merges — so a third party can independently replay the chain.

@@ -348,7 +348,8 @@ fi
 if (cd services/agent_mcp && uv run --frozen python -c "import findevil_agent_mcp" >/dev/null 2>&1); then
     ok "findevil-agent-mcp (Python, 12 crypto/ACH/memory tools) imports cleanly."
 else
-    warn "findevil-agent-mcp import check failed — the Python MCP server may not start; re-run: uv sync --directory services/agent_mcp"
+    fail "findevil-agent-mcp import check failed — the Python MCP server will not start; re-run: uv sync --directory services/agent_mcp"
+    exit 1
 fi
 
 if [ -f scripts/run-mcp-rust.sh ] && [ -f scripts/run-mcp-python.sh ]; then

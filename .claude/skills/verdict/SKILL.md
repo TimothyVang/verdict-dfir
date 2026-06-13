@@ -16,7 +16,7 @@ Use this skill to run the public VERDICT workflow from Claude Code. It is a guid
 - Optional n8n, grounding, browser, dashboard, and memory sidecars are operator aids only. They are never evidence and never create Findings.
 - Do not assert attribution, actor identity, legal breach status, or business impact.
 - Do not inflate limited coverage to `NO_EVIL`, clean, cleared, no compromise, or proof of no evil.
-- Disk images are custody-only unless SIFT or supplied extracted artifacts provide mounted/parsed content.
+- Disk images are content-scoped: local Sleuth Kit/libewf or SIFT can extract supported artifacts for parsing; if mount/extract produces no supported artifacts, the raw image remains custody-only.
 - If the pipeline stops before `case_open`, no Verdict exists. Report the failing line instead of summarizing evidence.
 
 ## Steps
@@ -58,7 +58,7 @@ If `SIFT_OK=0`, run local mode:
 bash scripts/verdict <evidence>
 ```
 
-In local mode, state the scope honestly: memory, EVTX, PCAP, Velociraptor collections, and extracted artifacts can still be useful; raw disk images without mounted or extracted artifacts remain custody-only.
+In local mode, state the scope honestly: memory, EVTX, PCAP, Velociraptor collections, and extracted artifacts can still be useful; raw disk images need local Sleuth Kit/libewf support to produce parsed artifacts, and remain custody-only if mount/extract fails or yields no supported artifacts.
 
 Use default parallel execution. Pass `--no-dashboard` only when the operator explicitly does not want browser/dashboard behavior.
 

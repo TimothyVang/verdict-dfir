@@ -31,7 +31,7 @@ Verdict words are scoped:
 - Do not call limited coverage clean, cleared, disproven, absent, no compromise, or proof of no evil.
 - Execution claims require at least two current-case artifact classes; Amcache, ShimCache, memory-only process evidence, YARA, Hayabusa, or malfind alone is not enough.
 - Exfiltration claims require collection/staging evidence plus network, tool, or data-movement evidence.
-- Disk auto mode is custody-only unless mounted or extracted artifacts are supplied.
+- Disk auto mode is custody-only unless `disk_mount` / `disk_extract_artifacts` produce supported parsed artifacts, either locally through Sleuth Kit/libewf or under SIFT.
 - Keep `vol_pslist`, `vol_psscan`, and `vol_psxview` separate; divergence is a signal, not automatic proof.
 - Optional automation, grounding, browser tools, dashboard views, and memory sidecars are not evidence and never create Findings.
 - Keep timestamps UTC ISO-8601 with trailing `Z`; prefer SHA-256.

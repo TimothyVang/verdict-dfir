@@ -29,6 +29,8 @@ import importlib.util
 import os
 import re
 import sys
+import tempfile
+import textwrap
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -593,6 +595,82 @@ def _run_sample_run_doc_cases() -> list[tuple[str, str]]:
     return failures
 
 
+def _run_tool_count_guard_cases(tool_count_guard) -> list[tuple[str, str]]:
+    failures = []
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        root = Path(tmp_dir)
+        (root / "services/mcp/src").mkdir(parents=True)
+        (root / "services/agent_mcp/findevil_agent_mcp/tools").mkdir(parents=True)
+        (root / "docs").mkdir()
+        (root / "scripts/make-demo-video/src/components").mkdir(parents=True)
+
+        (root / "services/mcp/src/server.rs").write_text(
+            textwrap.dedent(
+                """
+                fn build_registry() -> Vec<ToolEntry> {
+                    vec![
+                        ToolEntry { name: "case_open", handler: |args| dispatch_case_open(args) },
+                        ToolEntry { name: "evtx_query", handler: |args| dispatch_evtx_query(args) },
+                    ]
+                }
+                """
+            ),
+            encoding="utf-8",
+        )
+        (root / "services/agent_mcp/findevil_agent_mcp/tools/__init__.py").write_text(
+            textwrap.dedent(
+                """
+                _MODULES: tuple[str, ...] = (
+                    "audit_append",
+                )
+                """
+            ),
+            encoding="utf-8",
+        )
+        good_docs = {
+            "CLAUDE.md": "MCP servers are narrow and typed.\n",
+            "README.md": "3 product tools: 2 Rust DFIR + 1 Python.\n",
+            "INSTALL.md": "Builds findevil-mcp with 2 DFIR tools.\n",
+            "docs/architecture.md": "Tool count: 3 (2 Rust DFIR + 1 Python).\n",
+            "scripts/make-demo-video/src/components/ArchPoster.tsx": "const total = 3; const rust = 2; const python = 1;\n",
+        }
+        for rel, text in good_docs.items():
+            path = root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+        errors = tool_count_guard.validate_counts(
+            root,
+            expected_rust=2,
+            expected_python=1,
+        )
+        if errors:
+            failures.append(
+                (
+                    "tool-count guard accepts matching code and docs",
+                    "; ".join(errors),
+                )
+            )
+
+        (root / "README.md").write_text(
+            "4 product tools: 2 Rust DFIR + 2 Python.\n",
+            encoding="utf-8",
+        )
+        errors = tool_count_guard.validate_counts(
+            root,
+            expected_rust=2,
+            expected_python=1,
+        )
+        if not any("README.md" in error for error in errors):
+            failures.append(
+                (
+                    "tool-count guard rejects stale README count",
+                    f"expected README.md mismatch, got {errors!r}",
+                )
+            )
+    return failures
+
+
 def main() -> int:
     print("=" * 60)
     print("Find Evil! - smoke-regex-tests")
@@ -601,6 +679,7 @@ def main() -> int:
     div_smoke = _load("div_smoke", "scripts/divergence-smoke.py")
     launch_smoke = _load("launch_smoke", "scripts/launcher-smoke.py")
     pes_smoke = _load("pes_smoke", "scripts/path-existence-smoke.py")
+    tool_count_guard = _load("tool_count_guard", "scripts/tool-count-guard.py")
 
     all_failures: list[tuple[str, str, str]] = []
 
@@ -670,6 +749,15 @@ def main() -> int:
     for label, err in sample_doc_failures:
         all_failures.append(("sample-run doc policies", label, err))
 
+    tool_count_failures = _run_tool_count_guard_cases(tool_count_guard)
+    tool_count_total = 2
+    print(
+        f"tool-count guard policies:   "
+        f"{tool_count_total - len(tool_count_failures)} / {tool_count_total} passed"
+    )
+    for label, err in tool_count_failures:
+        all_failures.append(("tool-count guard", label, err))
+
     print()
     if all_failures:
         print(f"FAIL - {len(all_failures)} regex test case(s) failed:")
@@ -689,6 +777,7 @@ def main() -> int:
         + len(PATH_EXISTENCE_ALLOW_CASES)
         + readiness_total
         + sample_total
+        + tool_count_total
     )
     print("=" * 60)
     print(f"OK - all {total} regex test cases pass.")
