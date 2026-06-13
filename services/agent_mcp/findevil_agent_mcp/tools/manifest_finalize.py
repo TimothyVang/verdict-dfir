@@ -1,18 +1,19 @@
 """``manifest_finalize`` tool — build, sign, and write run.manifest.json.
 
 Wraps :func:`findevil_agent.crypto.manifest.build_manifest` plus
-:func:`write_manifest`. Two signer modes are exposed:
+:func:`write_manifest`. Three signer modes are exposed:
 
+* ``signer="ed25519"`` — default real local-keypair signature; verifies
+  offline from the public key embedded in the manifest bundle.
+* ``signer="sigstore"`` — keyless sigstore signing via Fulcio + Rekor;
+  the customer-release identity + transparency-log tier.
 * ``signer="stub"`` — deterministic ``StubSigner``; used by tests
-  and the offline demo path. Requires no network and produces a
-  deterministic bundle keyed on the ``run_id`` for replay.
-* ``signer="sigstore"`` — keyless sigstore signing via Fulcio +
-  Rekor (Spec #2 §7.1 first tier). Requires interactive browser
-  auth on first run; in CI we use a cached identity token.
+  and explicit dry-runs. Requires no network and produces a deterministic
+  bundle keyed on the ``run_id`` for replay, but is never cryptographic proof.
 
 The choice is exposed at the tool boundary because the agent often
-wants to dry-run with the stub before committing to a real
-sigstore round-trip.
+wants to distinguish local integrity proof, customer-release identity proof,
+and test-only placeholders.
 """
 
 from __future__ import annotations
@@ -64,7 +65,10 @@ class ManifestFinalizeOutput(BaseModel):
     )
     signature_cert_fingerprint: str | None = Field(
         default=None,
-        description="Fulcio cert fingerprint when signer=sigstore; null for stub.",
+        description=(
+            "SHA-256 fingerprint of the Sigstore certificate or Ed25519 public key; "
+            "null only when the signer produced no fingerprint."
+        ),
     )
     signer_effective: str = Field(
         default="stub",

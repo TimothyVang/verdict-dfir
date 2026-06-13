@@ -565,7 +565,7 @@ flow</figcaption>
 <p>Every box in the diagram corresponds to a real MCP tool invocation.
 The audit log captured each invocation; the Merkle leaves were generated
 from the SHA-256 of each <code>tool_call_output</code> payload; the
-manifest was sigstore-signed at finalization.</p>
+manifest was signed at finalization.</p>
 <hr />
 <h2 id="cryptographic-chain-of-custody">6. Cryptographic chain of
 custody</h2>
@@ -593,19 +593,19 @@ detectable in linear time at verify.</p></li>
 <code>tool_call_output</code> adds a SHA-256 leaf; the manifest commits
 to the root. Selectively redacting a single Finding (without redacting
 its underlying tool output) produces a Merkle root mismatch.</p></li>
-<li><p><strong>Sigstore-keyless signature</strong> (Fulcio + Rekor) over
-the canonicalized manifest body. The signature is independently
-verifiable against the Rekor transparency log. (For this run, the
-<code>StubSigner</code> produced a deterministic signature — the
-production submission uses real Fulcio sigstore.)</p></li>
+<li><p><strong>Manifest signature</strong> over the canonicalized
+manifest body. Ed25519 is the offline-verifiable default, Sigstore/Rekor
+is the identity + transparency-log tier, and the stub signer is an
+explicit development placeholder. (For this run, the
+<code>StubSigner</code> produced a deterministic signature.)</p></li>
 </ol>
-<p>The Sigstore signature’s Rekor inclusion proof serves as the
-independent third-party time attestation supporting an FRE 902(14) <a href="#fn13" class="footnote-ref" id="fnref13" role="doc-noteref"><sup>13</sup></a> self-authenticating-evidence claim
-that any third party can verify without trusting the agent’s host
-environment. (An earlier design also tail-anchored the manifest to
-Bitcoin via OpenTimestamps; that tier was removed under Amendment A5 —
-see <code>docs/cryptographic-attestation.md</code> for the
-trade-off.)</p>
+<p>The manifest signature seals the audit chain and Merkle root for
+offline replay. When the Sigstore tier is configured, its Rekor
+inclusion proof adds public identity and transparency-log timing to the
+FRE 902(14) <a href="#fn13" class="footnote-ref" id="fnref13" role="doc-noteref"><sup>13</sup></a> self-authenticating-evidence framing.
+(An earlier design also tail-anchored the manifest to Bitcoin via
+OpenTimestamps; that tier was removed under Amendment A5 — see
+<code>docs/cryptographic-attestation.md</code> for the trade-off.)</p>
 <hr />
 <h2 id="tamper-detection-live-demonstration">7. Tamper detection — live
 demonstration</h2>

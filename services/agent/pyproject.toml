@@ -34,8 +34,9 @@ dependencies = [
   # path; harmless under A2.
   "pydantic-to-typescript>=2.0",
 
-  # M2 cryptographic chain-of-custody stack per
-  # project_crypto_custody_stack.md. Pinned per Spec #2 §16.
+  # M2 cryptographic chain-of-custody stack. Pinned per Spec #2 §16.
+  # Sigstore is the opt-in identity/transparency tier; the default
+  # manifest signer is local Ed25519 and verifies offline.
   # opentimestamps-client was removed in Amendment A5 along with
   # the OpenTimestamps + Bitcoin tier of the custody chain.
   "sigstore==3.*",

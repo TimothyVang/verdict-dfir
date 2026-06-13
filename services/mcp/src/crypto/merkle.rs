@@ -10,7 +10,7 @@
 //! * Leaf order = insertion order.
 //! * Internal hash = ``SHA-256(left || right)`` over raw 32-byte
 //!   digests.
-//! * Odd tier size: duplicate the last node (Bitcoin-style).
+//! * Odd tier size: duplicate the last node.
 //! * Empty tree root: 32 zero bytes.
 //!
 //! Pure stdlib + ``sha2`` (already a Spec #2 §16 dependency).

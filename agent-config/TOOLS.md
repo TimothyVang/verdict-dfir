@@ -183,7 +183,7 @@ Use when: closing a case. Builds the rs_merkle tree over every audit-log leaf, s
 ### manifest_verify
 Args: `{manifest_path, audit_log_path?}`
 Returns: `{overall: bool, audit_chain_ok, merkle_root_ok, signature_present, ...}`
-Use when: any third party wants offline verification. Replays the audit chain → recomputes the Merkle root from `leaves[]` → checks signature presence. Tampering with `merkle_root_hex` produces a precise diagnostic naming both the declared and rebuilt roots.
+Use when: any third party wants offline verification. Replays the audit chain → recomputes the Merkle root from `leaves[]` → checks signature presence and reports `signature_kind` / `signature_verified`. Ed25519 signatures verify cryptographically offline; Sigstore bundles are recorded for identity-policy-aware verification; stub bundles are explicit placeholders. Tampering with `merkle_root_hex` produces a precise diagnostic naming both the declared and rebuilt roots.
 
 ### verify_finding
 Args: `{finding, tool_call_index, findevil_mcp_command: list[str]}`

@@ -36,7 +36,7 @@ Evidence vault (read-only .e01)
       • findevil-agent-mcp (Python) — 12 crypto/ACH/memory/ACP/expert-feedback tools
   → Claude Code agent loop (supervisor + forked Pool A/B subagents
     + verifier + judge + correlator + contradiction surface)
-  → Crypto chain-of-custody (audit hash chain + rs_merkle + sigstore)
+  → Crypto chain-of-custody (audit hash chain + rs_merkle + signed manifest)
 ```
 
 **Architectural approach per SANS rules:** **Direct Agent Extension (§1) + Custom MCP Server (§2).** Claude Code IS the agent; the typed MCP surface is the only verb set it has. There is no `execute_shell`, anywhere.

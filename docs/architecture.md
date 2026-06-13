@@ -213,7 +213,7 @@ All three modes are **judge-valid**. Judges pick whichever they already have —
 7. Supervisor calls `verify_finding` (Python MCP) for each candidate Finding — the wrapper spawns its own short-lived `findevil-mcp` subprocess and re-runs the cited tool call. Drift downgrades the Finding by one tier.
 8. Supervisor calls `judge_findings` (Python MCP) — credibility-weighted merge per Estornell ICML 2025.
 9. Supervisor calls `correlate_findings` (Python MCP) — SOUL.md cross-artifact rule downgrades execution claims that lack ≥2 artifact-class corroboration; Amcache-only execution gets the hard-coded downgrade.
-10. Supervisor calls `manifest_finalize` (Python MCP) — builds Merkle root, signs the canonicalized body via sigstore (or StubSigner for offline demo), writes `run.manifest.json`, and finalizes the audit chain. This is the terminal custody step under A5.
+10. Supervisor calls `manifest_finalize` (Python MCP) — builds the Merkle root, signs the canonicalized body via the selected signer tier (Ed25519 by default, Sigstore for identity/transparency, or explicit stub for tests), writes `run.manifest.json`, and finalizes the audit chain. This is the terminal custody step under A5.
 11. Supervisor renders the `RunVerdict` to the terminal with paths to the manifest and report.
 12. Offline replay: `manifest_verify` reproduces the proof end-to-end, citing FRE 902(14) with the post-A5 Rekor timestamp trade-off.
 

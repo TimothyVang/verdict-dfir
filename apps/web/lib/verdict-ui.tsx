@@ -761,7 +761,7 @@ export function CaseFurnitureFooter() {
       <div style={{ maxWidth: 1600, margin: "0 auto 10px", height: 1, background: VERDICT.border }} />
       <div style={{ display: "flex", justifyContent: "space-between", maxWidth: 1600, margin: "0 auto", ...label }}>
         <span>VERDICT · DFIR at machine speed</span>
-        <span>Apache-2.0 · sigstore-signed</span>
+        <span>Apache-2.0 · signed manifest</span>
       </div>
     </div>
   );

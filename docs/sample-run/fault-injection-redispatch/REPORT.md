@@ -2,7 +2,7 @@
 
 # VERDICT — Forensic Investigation Report
 
-[DFIR at machine speed · sigstore-signed chain of custody]{.tagline}
+[DFIR at machine speed · signed, replayable chain of custody]{.tagline}
 
 **Case ID:** `4243612d-b14c-42de-ae58-941b59a19ab0`
 **Run ID:** `auto-1781068107`

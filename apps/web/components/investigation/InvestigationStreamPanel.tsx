@@ -31,8 +31,8 @@
 // morph. A true promotion animation would need a `finding_draft` event carrying
 // the pre-verification tier (named in sprite-state.ts but NOT emitted headless).
 //
-// Also vestigial post-A5 and ignored here: ChainUpdate.ots_pending,
-// RunVerdict.ots_receipt_path (OpenTimestamps/Bitcoin tier removed).
+// The post-A5 stream carries signed-manifest state only; the old
+// OpenTimestamps/Bitcoin receipt fields were removed from the generated schema.
 
 "use client";
 

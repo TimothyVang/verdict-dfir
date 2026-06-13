@@ -106,7 +106,7 @@ Violating any of these breaks the judging story or an integration contract.
 - **Epistemic hierarchy is strict.** `CONFIRMED` (backed by tool output) > `INFERRED` (≥2 confirmed facts, labeled) > `HYPOTHESIS` (prefixed "hypothesis:"). Nothing else is legal.
 - **Execution claims need ≥2 artifact classes** (Prefetch + Amcache+ShimCache, or EDR telemetry). Amcache alone is insufficient — it's catalog-registration time, not execution.
 - **Evidence is read-only.** Original `.e01` opened via libewf; write-only working dir elsewhere. No tool mutates evidence. SHA-256 verified at `case_open`.
-- **Hash-chained audit JSONL is append-only.** Each line has `prev_hash`. Chain is **3 tiers** post-A5 (audit prev_hash → rs_merkle → sigstore); the 4th OpenTimestamps/Bitcoin tier was removed. See `docs/cryptographic-attestation.md`.
+- **Hash-chained audit JSONL is append-only.** Each line has `prev_hash`. Chain is **3 tiers** post-A5 (audit prev_hash → rs_merkle → manifest signature: Ed25519 default, Sigstore identity tier when configured); the 4th OpenTimestamps/Bitcoin tier was removed. See `docs/cryptographic-attestation.md`.
 - **AGPL/GPL tools (Hayabusa, Chainsaw, Volatility3, Velociraptor, YARA) are subprocess-only — never linked.** Linking contaminates the submission license (must be MIT or Apache-2.0).
 - **All timestamps UTC, ISO-8601, trailing `Z`.** SHA-256 preferred over MD5. Never assert attribution.
 - **Judge narrative:** "orchestrator that reduces friction," never "autonomous responder" (Rob Lee's explicit preference).

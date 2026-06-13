@@ -2,9 +2,8 @@
 
 Spec #2 §7.1 "Finding + manifest Merkle root". Every tool call's
 output hash + every approved finding's hash is a leaf. ``root()``
-gives the single value we pass to OpenTimestamps for the Bitcoin
-anchor. ``inclusion_proof(i)`` yields the O(log n) sibling path the
-verifier replays offline.
+gives the single value sealed in ``run.manifest.json``. ``inclusion_proof(i)``
+yields the O(log n) sibling path the verifier replays offline.
 
 Matches the Rust-side `rs_merkle` semantics so a manifest built by
 the Python agent is bit-for-bit reproducible from the Rust MCP
@@ -16,8 +15,8 @@ Conventions (same as `rs_merkle` default):
 * Internal nodes: ``H(left || right)`` where ``||`` is raw-byte
   concatenation of the two child digests.
 * When the current tier has an odd number of nodes, the last node
-  is duplicated to form the pair (the standard "Bitcoin-style"
-  rule; matches ``rs_merkle`` when used with an empty-leaf policy).
+  is duplicated to form the pair (the duplicate-last rule; matches
+  ``rs_merkle`` when used with an empty-leaf policy).
 * Empty tree: root is 32 bytes of zero.
 
 Pure stdlib — no external crypto dep.
@@ -97,7 +96,7 @@ class MerkleTree:
         tier = list(self._leaves)
         while len(tier) > 1:
             if len(tier) % 2:
-                tier.append(tier[-1])  # Bitcoin-style duplication
+                tier.append(tier[-1])  # duplicate-last compatibility rule
             tier = [_sha256(tier[i] + tier[i + 1]) for i in range(0, len(tier), 2)]
         return tier[0]
 

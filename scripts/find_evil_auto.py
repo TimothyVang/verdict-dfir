@@ -14,7 +14,7 @@ What it does:
        (Pool A = persistence-biased framing; Pool B = exfil/general-malware framing)
     6. detect_contradictions surfaces disagreements
     7. judge_findings + correlate_findings (SOUL.md ≥2 rule)
-    8. manifest_finalize: Merkle tree + sigstore signature
+    8. manifest_finalize: Merkle tree + signed manifest
     9. Writes verdict.json + (optional) PDF report (the report
        surfaces the findings, ATT&CK coverage, and audit chain).
 

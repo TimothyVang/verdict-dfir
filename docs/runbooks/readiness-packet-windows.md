@@ -130,7 +130,7 @@ readiness-packet.zip            ← ZIP of packet/ contents
 | `-EvidencePath` | `$env:EVIDENCE_PATH` | Path to evidence file/dir inside SIFT VM (Full mode) |
 | `-ExistingRunDir` | `$env:EVIDENCE_RUN_DIR` | Skip evidence run; validate existing run directory |
 | `-RunId` | auto-generated | Fix the run ID for reruns; gate refreshes packet contents |
-| `-Signer` | `stub` | `stub` (offline, no sigstore) or `sigstore` (real Rekor signature) |
+| `-Signer` | `ed25519` | `ed25519` (real local signature, verifies offline), `sigstore` (identity + Rekor transparency log), or `stub` (explicit test placeholder) |
 | `-ForceFreshReplay` | off | Force replay even if a cached run exists |
 | `-RunL1Docker` | off | Also run L1 Docker gate during Full mode |
 | `-SkipBuild` | off | Skip `cargo build` (use pre-built binary) |

@@ -112,7 +112,7 @@ spec amendment.
 
 Crypto stack (in `services/agent/`): `sigstore` (manifest signing), `rs_merkle`-style Merkle
 tree. **`opentimestamps-client` was REMOVED under Amendment A5** — the OTS/Bitcoin 4th tier is
-gone; the chain is 3 tiers (audit `prev_hash` → Merkle root → sigstore).
+gone; the chain is 3 tiers (audit `prev_hash` → Merkle root → manifest signature).
 
 Host pip tooling (`requirements.txt`, host-mode only): `volatility3==2.27.0`, `matplotlib`
 (report figures).

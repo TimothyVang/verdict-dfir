@@ -261,7 +261,7 @@ table; highlight `rubyw.exe` on 4 hosts.
 **On-screen:** Split-screen. Left: terminal showing the tail end of
 the `scripts/verdict <evidence>` run — the signed `verdict.json`
 landing in the case dir, with its `verdict`, `confidence`, and the
-sigstore-signed `run.manifest.json` written alongside. Right:
+signed `run.manifest.json` written alongside. Right:
 terminal driving `manifest_verify` against that same case dir,
 output `overall=True, audit_chain_ok=True, merkle_root_ok=True,
 signature_present=True`. The cursor highlights the `verdict` and
@@ -272,7 +272,7 @@ signature_present=True`. The cursor highlights the `verdict` and
 > Cut evidence in, get a signed verdict out — one command. The
 > `verdict` command runs the whole pipeline and seals the result:
 > a `verdict.json` carrying the call and its confidence, rooted in
-> the same Merkle tree and covered by the same sigstore signature
+> the same Merkle tree and covered by the same manifest signature
 > as every Finding behind it. Anyone can re-run `manifest_verify`
 > offline and confirm nothing moved. The verdict isn't a claim you
 > have to trust — it's a sealed artifact you can check.

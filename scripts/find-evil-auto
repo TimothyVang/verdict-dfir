@@ -25,7 +25,7 @@
 #       Velociraptor zip: safe extract + per-artifact dispatch)
 #   3. Synthesize Pool A/B Findings deterministically from tool outputs
 #   4. detect_contradictions → judge_findings → correlate_findings
-#   5. manifest_finalize (Merkle + sigstore)
+#   5. manifest_finalize (Merkle + signed manifest)
 #   6. Write verdict.json
 #   7. Generate PDF report (matplotlib + pandoc + Chrome headless)
 #

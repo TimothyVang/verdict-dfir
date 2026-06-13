@@ -122,7 +122,7 @@ Status-banner-prefixed within each file. Read in CLAUDE.md "Document hierarchy" 
 | `2026-04-23-amendment-option-b-claude-code-mode.md` (**A1**) | **SHIPPED** (swarm specifics superseded by A6) | Was subscription-mode credentials for the build swarm; LiteLLM proxy never built. Swarm removed under A6; Product still uses the three credential modes. |
 | `2026-04-25-amendment-a2-claude-code-primary-interface.md` (**A2**) | **SHIPPED** | Drops the custom Python orchestrator; Claude Code IS the orchestrator. |
 | `2026-04-26-amendment-a3-agent-army-and-dashboard.md` (**A3**) | **SHIPPED** (Phases 1-4 + role-state dashboard) / **RESEARCH** (pixel-art/chrome polish) | Memory + ACP MCP tools + SSE dashboard with role-state sprite containers; pixel-art and bead/chip chrome remain parked. |
-| `2026-04-30-amendment-a5-ots-removal.md` (**A5**) | **SHIPPED** | Removes the OpenTimestamps/Bitcoin fourth tier; chain collapses to 3 tiers (audit prev_hash → rs_merkle → sigstore). |
+| `2026-04-30-amendment-a5-ots-removal.md` (**A5**) | **SHIPPED** | Removes the OpenTimestamps/Bitcoin fourth tier; chain collapses to 3 tiers (audit prev_hash → rs_merkle → manifest signature; Ed25519 default, Sigstore identity tier when configured). |
 | `2026-04-23-layered-test-sandbox-design.md` (**Spec #3**) | **SHIPPED** | L0/L1/L2/L3 sandbox stack. L2 advisory only. |
 | `2026-04-25-the-product-design.md` (**Spec #2**) | **SHIPPED** (with A2 + A5 amendments) | The DFIR tool the judges run. |
 | `2026-04-26-orchestration-glue-design.md` (**Spec #4**) | **SHIPPED** | Thin GHA CI pipeline. |

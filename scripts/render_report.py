@@ -206,12 +206,13 @@ def fig_audit_chain(
     )
 
     sig_sha = manifest["signature"]["payload_sha256"]
+    sig_kind = str(manifest["signature"].get("kind") or "stub")
     box(
         2,
         0.2,
         6,
         0.7,
-        f"run.manifest.json (signed via sigstore StubSigner)\n"
+        f"run.manifest.json (signature tier: {sig_kind})\n"
         f"signature_payload_sha256: {sig_sha[:32]}…",
         color="#e8f5e9",
         border="#7fae6e",
@@ -1931,7 +1932,7 @@ def write_markdown(
 
 # VERDICT — Forensic Investigation Report
 
-[DFIR at machine speed · sigstore-signed chain of custody]{{.tagline}}
+[DFIR at machine speed · signed, replayable chain of custody]{{.tagline}}
 
 **Case ID:** `{manifest["case_id"]}`
 **Run ID:** `{manifest["run_id"]}`
@@ -2026,15 +2027,16 @@ library or the `manifest_verify` MCP tool. There is no standalone
 
 ```bash
 uv run --directory services/agent python -c "from pathlib import Path; from findevil_agent.crypto.manifest import verify_manifest; print(verify_manifest(Path('PATH/TO/run.manifest.json'), audit_log_path=Path('PATH/TO/audit.jsonl')))"
-# returns overall=True if the audit chain and Merkle root validate and signature metadata is present
+# returns overall=True if the audit chain, Merkle root, leaf count, and signature presence validate
 ```
 
 The verifier rebuilds:
 1. The audit chain by walking `prev_hash` SHA-256 links (catches backdated edits).
 2. The Merkle tree from the manifest's `leaves[]` array (catches selective redaction).
-3. The signature bundle metadata recorded in the manifest. Full signature and
-   transparency-log validation must be performed separately when a production
-   signer is used.
+3. The signature bundle recorded in the manifest. Ed25519 signatures verify
+   offline in `manifest_verify`; Sigstore bundles are recorded for
+   identity-policy-aware verification by a party that supplies the expected
+   signer identity.
 
 A tamper test against this manifest's `merkle_root_hex` was not run automatically.
 To execute it, copy the manifest, overwrite `merkle_root_hex` with `ff` repeated

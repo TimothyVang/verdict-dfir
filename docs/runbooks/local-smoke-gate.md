@@ -49,7 +49,7 @@ Exit code 0 = all smokes passed (or skipped); non-zero = at least one failed.
 | # | Smoke | Covers |
 |---|---|---|
 | 1 | `rust-mcp-smoke` | 31-tool JSON-RPC catalog + core error paths for the Rust MCP server |
-| 2 | `agent-mcp-smoke` | Synthetic Findings through the full M2 crypto chain (audit → Merkle → sigstore) |
+| 2 | `agent-mcp-smoke` | Synthetic Findings through the full M2 crypto chain (audit → Merkle → signed manifest) |
 | 3 | `verdict-policy-smoke` | `compute_verdict` + `detect_evidence_type` policy lock |
 | 4 | `fleet-policy-smoke` | `fleet_correlate` normalize/filter/cluster/density/uniqueness/aggregate |
 | 4b | `report-policy-smoke` | Report QA + expert signoff + visual evidence policy |

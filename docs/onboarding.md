@@ -16,7 +16,7 @@ of the triggers above, greet them with:
 > You can do two things here:
 >
 > 1. **Investigate evidence** — paste a path to your evidence file and say `investigate <path>`. Example: `investigate /cases/nist-hacking-case.E01`
->    VERDICT will open the case, fork two analysis pools, run DFIR tools, and produce a sigstore-signed report. Or run it hands-free: `scripts/verdict <path>` (or `scripts/verdict --watch` and drop a file into `evidence/`).
+>    VERDICT will open the case, fork two analysis pools, run DFIR tools, and produce a signed, replayable report. Or run it hands-free: `scripts/verdict <path>` (or `scripts/verdict --watch` and drop a file into `evidence/`).
 >
 > 2. **Develop the tool** — ask me to read/write code, fix bugs, or run a live test (the demo video has its own pipeline).
 >

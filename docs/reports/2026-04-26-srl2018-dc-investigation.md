@@ -185,7 +185,7 @@ The end-to-end flow with the actual values produced by this run:
 
 ![Find Evil! end-to-end investigation flow](figures-2026-04-26/06_investigation_flow.png)
 
-Every box in the diagram corresponds to a real MCP tool invocation. The audit log captured each invocation; the Merkle leaves were generated from the SHA-256 of each `tool_call_output` payload; the manifest was sigstore-signed at finalization.
+Every box in the diagram corresponds to a real MCP tool invocation. The audit log captured each invocation; the Merkle leaves were generated from the SHA-256 of each `tool_call_output` payload; the manifest was signed at finalization.
 
 ---
 
@@ -201,9 +201,9 @@ The cryptographic attestation is the differentiator that places Find Evil! ahead
 
 2. **Merkle tree over tool outputs** (`rs_merkle 1.4`). Every successful `tool_call_output` adds a SHA-256 leaf; the manifest commits to the root. Selectively redacting a single Finding (without redacting its underlying tool output) produces a Merkle root mismatch.
 
-3. **Sigstore-keyless signature** (Fulcio + Rekor) over the canonicalized manifest body. The signature is independently verifiable against the Rekor transparency log. (For this run, the `StubSigner` produced a deterministic signature — the production submission uses real Fulcio sigstore.)
+3. **Manifest signature** over the canonicalized manifest body. Ed25519 is the offline-verifiable default, Sigstore/Rekor is the identity + transparency-log tier, and the stub signer is an explicit development placeholder. (For this run, the `StubSigner` produced a deterministic signature.)
 
-The Sigstore signature's Rekor inclusion proof serves as the independent third-party time attestation supporting an FRE 902(14) [^fre-902-14] self-authenticating-evidence claim that any third party can verify without trusting the agent's host environment. (An earlier design also tail-anchored the manifest to Bitcoin via OpenTimestamps; that tier was removed under Amendment A5 — see `docs/cryptographic-attestation.md` for the trade-off.)
+The manifest signature seals the audit chain and Merkle root for offline replay. When the Sigstore tier is configured, its Rekor inclusion proof adds public identity and transparency-log timing to the FRE 902(14) [^fre-902-14] self-authenticating-evidence framing. (An earlier design also tail-anchored the manifest to Bitcoin via OpenTimestamps; that tier was removed under Amendment A5 — see `docs/cryptographic-attestation.md` for the trade-off.)
 
 ---
 

@@ -109,7 +109,7 @@ const BOUNDARIES: Boundary[] = [
     body: (
       <Mono color={C.ink}>
         hash-chained audit&nbsp;<span style={{ color: C.inkFaint }}>(prev_hash)</span>&nbsp; →&nbsp;
-        Merkle root&nbsp; →&nbsp; sigstore signature
+        Merkle root&nbsp; →&nbsp; signed manifest
       </Mono>
     ),
     note: "tamper one byte and verify fails · supports FRE 902(14) · checks offline",

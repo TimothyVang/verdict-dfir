@@ -44,7 +44,7 @@ When the user requests a continuous timed run, such as 8 hours:
 - Auto disk mode in `scripts/find-evil-auto` is custody-only unless mounted/extracted artifacts are supplied; `case_open` alone is not a disk-content Finding or `NO_EVIL` support.
 - Do not say limited coverage is clean, cleared, disproven, absent, or proof of no evil. Use `NO_EVIL` only per `docs/verdict-semantics.md` and state scope limits.
 - `attack_story`, `report_evidence_cards`, visual timelines, and practitioner coverage are report aids only; they never create Findings or raise confidence.
-- A5 removed `ots_stamp`, `ots_verify`, OpenTimestamps, and Bitcoin attestation runtime behavior; custody is audit `prev_hash` links -> Merkle root -> sigstore.
+- A5 removed `ots_stamp`, `ots_verify`, OpenTimestamps, and Bitcoin attestation runtime behavior; custody is audit `prev_hash` links -> Merkle root -> manifest signature (Ed25519 default, Sigstore identity tier when configured).
 - Never assert attribution. Keep timestamps UTC ISO-8601 with trailing `Z`; prefer SHA-256.
 
 ## Live Tests

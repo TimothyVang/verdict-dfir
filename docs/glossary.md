@@ -53,7 +53,7 @@ Full semantics in [verdict-semantics.md](verdict-semantics.md). None of them mea
 | **`tool_call_id`** | A SHA-256 over a tool's raw output. Every Finding cites one or it is vetoed. |
 | **audit chain / `audit.jsonl`** | Append-only, hash-chained log (each record carries `prev_hash`) of every tool call and finding. |
 | **Merkle root / `run.manifest.json`** | A Merkle tree over canonical tool outputs, recorded in the run manifest. |
-| **manifest / `manifest_verify`** | The signed seal over the run; `manifest_verify` re-checks the chain + Merkle root **offline**. Post-A5 the chain is 3 tiers (audit `prev_hash` → `rs_merkle` → sigstore). |
+| **manifest / `manifest_verify`** | The signed seal over the run; `manifest_verify` re-checks the chain + Merkle root **offline**. Post-A5 the chain is audit `prev_hash` → `rs_merkle` → manifest signature, with Ed25519 as the offline-verifiable default and Sigstore as the identity/transparency tier. |
 | **SIFT VM** | The SANS SIFT Workstation VM (a gated ~9.3 GB download) that supplies the full disk-forensics toolchain. Needed only for disk-image inner-volume extraction. |
 | **Live test** | The dev "done" gate: a real investigation producing a real Verdict + `manifest_verify overall:true` — not a smoke run. |
 

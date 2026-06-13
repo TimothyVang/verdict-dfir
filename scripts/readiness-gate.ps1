@@ -15,8 +15,8 @@ param(
     [string]$OutputRoot = $env:READINESS_OUTPUT_ROOT,
     [string]$RunId = $env:READINESS_RUN_ID,
 
-    [ValidateSet("stub", "sigstore")]
-    [string]$Signer = $(if ($env:READINESS_SIGNER) { $env:READINESS_SIGNER } else { "stub" }),
+    [ValidateSet("stub", "ed25519", "sigstore")]
+    [string]$Signer = $(if ($env:READINESS_SIGNER) { $env:READINESS_SIGNER } else { "ed25519" }),
 
     [switch]$ForceFreshReplay,
     [switch]$RunL1Docker,

@@ -139,8 +139,8 @@ class StubSigner:
     Produces a bundle that's structurally similar to a real Sigstore
     bundle (so downstream parsing code exercises the same shape) but
     contains no real cryptographic signature. ``audit.jsonl`` rows
-    written under StubSigner declare ``"sigstore_bundle_kind":
-    "stub"`` so verifiers refuse to accept them as production proof.
+    written under StubSigner declare ``kind="stub"`` in the manifest
+    signature bundle so verifiers refuse to accept them as production proof.
     """
 
     def __init__(self, *, run_id: str = "stub-run") -> None:

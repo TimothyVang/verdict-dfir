@@ -59,7 +59,7 @@ class ToolCallOutput(_BaseEvent):
     tool_call_id: str
     output_hash: str  # SHA-256 hex of raw output bytes
     row_count: int | None = None
-    sigstore_bundle: str | None = None  # base64; set after async Rekor round-trip
+    signature_bundle: str | None = None  # base64 signer bundle when emitted
     merkle_leaf_index: int | None = None
 
 
@@ -149,7 +149,7 @@ class ChainUpdate(_BaseEvent):
     event_type: Literal["ChainUpdate"] = "ChainUpdate"
     merkle_root: str  # hex SHA-256
     leaf_count: int
-    ots_pending: bool  # True until Bitcoin confirmation
+    signature_pending: bool  # True until manifest_finalize writes a signature bundle
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +163,7 @@ class RunVerdict(_BaseEvent):
     confidence_score: float  # 0.0 to 1.0
     finding_count: int
     manifest_path: str
-    ots_receipt_path: str
+    manifest_verify_path: str | None = None
 
 
 # ---------------------------------------------------------------------------
