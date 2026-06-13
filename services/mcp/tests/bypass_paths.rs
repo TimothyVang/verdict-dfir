@@ -25,10 +25,12 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use findevil_mcp::{
-    case_open, evtx_query, ez_parse, mac_triage, mft_timeline, plaso_parse, prefetch_parse,
-    vol_run, CaseOpenInput, EvtxError, EvtxQueryInput, EzParseError, EzParseInput, MacTriageError,
-    MacTriageInput, MftError, MftInput, PlasoParseError, PlasoParseInput, PrefetchError,
-    PrefetchInput, VolRunError, VolRunInput,
+    ausearch, case_open, evtx_query, ez_parse, journalctl_query, login_accounting, mac_triage,
+    mft_timeline, plaso_parse, prefetch_parse, vol_run, AusearchError, AusearchInput, CaseOpenInput,
+    EvtxError, EvtxQueryInput, EzParseError, EzParseInput, JournalctlQueryError,
+    JournalctlQueryInput, LoginAccountingError, LoginAccountingInput, MacTriageError, MacTriageInput,
+    MftError, MftInput, PlasoParseError, PlasoParseInput, PrefetchError, PrefetchInput, VolRunError,
+    VolRunInput,
 };
 
 // A path string that would be catastrophic if any tool ever shelled out. Used as
@@ -256,4 +258,65 @@ fn mft_timeline_treats_flag_looking_path_as_a_literal_path() {
     .expect_err("flag-looking missing path must be a clean typed error");
 
     assert!(matches!(err, MftError::MftNotFound(_)));
+}
+
+#[test]
+fn journalctl_query_treats_shell_payload_path_as_missing_file() {
+    // The journal_path becomes a single `--file` argv element, never a shell
+    // fragment — a hostile path to a missing file is a clean typed NotFound,
+    // and journalctl is never even spawned (the existence check fails first).
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let missing = tmp.path().join(format!("{SHELL_PAYLOAD}.journal"));
+
+    let err = journalctl_query(&JournalctlQueryInput {
+        case_id: "c".to_string(),
+        journal_path: missing,
+        since: None,
+        until: None,
+        limit: None,
+    })
+    .expect_err("a non-existent hostile path must error, not execute");
+
+    assert!(matches!(err, JournalctlQueryError::NotFound(_)));
+    assert!(!tmp.path().join("HACKED").exists());
+}
+
+#[test]
+fn login_accounting_treats_flag_looking_path_as_a_literal_path() {
+    // A path that looks like a CLI flag is a path, not a flag — it becomes a
+    // single `-f` argv element and a missing one is a clean typed NotFound.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let flaggy = tmp.path().join("--output=__rooted__ -rf wtmp");
+
+    let err = login_accounting(&LoginAccountingInput {
+        case_id: "c".to_string(),
+        accounting_path: flaggy,
+        limit: None,
+    })
+    .expect_err("flag-looking missing path must be a clean typed error");
+
+    assert!(matches!(err, LoginAccountingError::NotFound(_)));
+    assert!(!tmp.path().join("HACKED").exists());
+}
+
+#[test]
+fn ausearch_treats_traversal_path_as_missing_file() {
+    // A `..` traversal to a non-existent audit.log resolves cleanly to NotFound —
+    // no panic, no jail to escape, and ausearch is never spawned.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let traversal: PathBuf = tmp
+        .path()
+        .join("..")
+        .join("..")
+        .join("..")
+        .join("nonexistent-EVIL-audit.log");
+
+    let err = ausearch(&AusearchInput {
+        case_id: "c".to_string(),
+        audit_log_path: traversal,
+        limit: None,
+    })
+    .expect_err("traversal to a missing file must be a clean typed error");
+
+    assert!(matches!(err, AusearchError::NotFound(_)));
 }

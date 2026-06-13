@@ -40,6 +40,7 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 use crate::tools::{
+    ausearch::ausearch,
     browser_history::browser_history,
     case_open,
     cloud_audit::cloud_audit,
@@ -47,6 +48,8 @@ use crate::tools::{
     evtx_query::evtx_query,
     ez_parse::ez_parse,
     hayabusa_scan::hayabusa_scan,
+    journalctl_query::journalctl_query,
+    login_accounting::login_accounting,
     mac_triage::mac_triage,
     mft_timeline::mft_timeline,
     pcap_triage::pcap_triage,
@@ -63,11 +66,12 @@ use crate::tools::{
     vol_run::vol_run,
     yara_scan::yara_scan,
     zeek_summary::zeek_summary,
-    BrowserHistoryInput, CaseOpenInput, CloudAuditInput, DiskExtractArtifactsInput, DiskMountInput,
-    DiskUnmountInput, EvtxQueryInput, EzParseInput, HayabusaInput, MacTriageInput, MftInput,
-    PcapTriageInput, PlasoParseInput, PrefetchInput, RegistryInput, SysmonNetworkInput,
-    UsnJrnlInput, VelCollectInput, VolMalfindInput, VolPslistInput, VolPsscanInput,
-    VolPsxviewInput, VolRunInput, YaraInput, ZeekSummaryInput,
+    AusearchInput, BrowserHistoryInput, CaseOpenInput, CloudAuditInput, DiskExtractArtifactsInput,
+    DiskMountInput, DiskUnmountInput, EvtxQueryInput, EzParseInput, HayabusaInput,
+    JournalctlQueryInput, LoginAccountingInput, MacTriageInput, MftInput, PcapTriageInput,
+    PlasoParseInput, PrefetchInput, RegistryInput, SysmonNetworkInput, UsnJrnlInput,
+    VelCollectInput, VolMalfindInput, VolPslistInput, VolPsscanInput, VolPsxviewInput, VolRunInput,
+    YaraInput, ZeekSummaryInput,
 };
 use crate::CRATE_VERSION;
 
@@ -830,6 +834,99 @@ fn build_registry() -> Vec<ToolEntry> {
             handler: |args| dispatch_cloud_audit(args),
         },
         ToolEntry {
+            name: "journalctl_query",
+            description: "Read a binary systemd journal file via a fixed `journalctl --file \
+                 <journal_path> -o json` subprocess and return its entries as generic rows. \
+                 LINUX-HOST triage surface: systemd journals \
+                 (/var/log/journal/<machine-id>/*.journal) are opaque binary blobs — journalctl \
+                 is the only first-party reader. GPL — invoked as a SUBPROCESS only per the \
+                 Spec #2 invariant, never linked. Use AFTER case_open on a journal extracted \
+                 from the mounted image. Optional `since` / `until` bound the time window \
+                 (passed to journalctl --since/--until; supply a UTC ISO-8601 timestamp). \
+                 Default limit 10000 rows. \
+                 journalctl binary discovery: $JOURNALCTL_BIN env var first, then PATH lookup. \
+                 Returns rows[] (one free-form key/value map per journal entry — systemd field \
+                 names like MESSAGE, _PID, _SYSTEMD_UNIT, __REALTIME_TIMESTAMP) + rows_seen + \
+                 stderr_tail. The row shape is intentionally unstructured: systemd's field set \
+                 varies per unit and per version, and pinning a typed shape would drop fields. \
+                 ERRORS: NotFound / NotRegular (verify the journal path inside the mounted \
+                 image), BinaryNotFound (install systemd or set $JOURNALCTL_BIN), \
+                 SubprocessFailed (journalctl returned non-zero — check stderr_tail; common \
+                 causes: not a journal file, incompatible journal version), OutputParse (a \
+                 stdout line was not valid JSON; rare, indicates a journalctl version mismatch).",
+            annotations: ToolAnnotations {
+                title: "Query systemd Journal (journalctl)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<JournalctlQueryInput>(),
+            handler: |args| dispatch_journalctl_query(args),
+        },
+        ToolEntry {
+            name: "login_accounting",
+            description: "Parse a Linux login-accounting database (wtmp / btmp) via a fixed \
+                 `last -f <accounting_path> -F -w -R` subprocess and return typed login records. \
+                 LINUX-HOST triage surface: wtmp records successful logins/logouts/reboots, \
+                 btmp records FAILED attempts — both are opaque binary utmp-format files that \
+                 `last` (util-linux) reads. GPL — invoked as a SUBPROCESS only per the Spec #2 \
+                 invariant, never linked. An interactive login from an unexpected host, an \
+                 off-hours root session, or a burst of btmp failures are classic \
+                 lateral-movement / brute-force signals (pair with journalctl_query / ausearch \
+                 for corroboration). Use AFTER case_open on a wtmp/btmp extracted from the \
+                 mounted image. Default limit 10000 rows. \
+                 last binary discovery: $LAST_BIN env var first, then PATH lookup. \
+                 Returns rows[] (user, line, host, login_iso?, logout_iso?, raw) + rows_seen + \
+                 stderr_tail. The flags force full absolute times (-F), wide untruncated columns \
+                 (-w), and suppress the DNS column (-R) so the table stays positional. Each \
+                 row keeps the verbatim `last` line under `raw`. \
+                 ERRORS: NotFound / NotRegular (verify the wtmp/btmp path inside the mounted \
+                 image), BinaryNotFound (install util-linux or set $LAST_BIN), SubprocessFailed \
+                 (last returned non-zero — check stderr_tail; common cause: not a utmp-format \
+                 file).",
+            annotations: ToolAnnotations {
+                title: "Parse Login Accounting (wtmp/btmp)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<LoginAccountingInput>(),
+            handler: |args| dispatch_login_accounting(args),
+        },
+        ToolEntry {
+            name: "ausearch",
+            description: "Read a Linux audit log (auditd's audit.log) via a fixed \
+                 `ausearch -i -if <audit_log_path>` subprocess and return its records as \
+                 generic rows. LINUX-HOST triage surface: auditd is the authoritative \
+                 syscall-level record (execve, connect, file access, USER_LOGIN) on a hardened \
+                 host; ausearch (audit / audit-libs package) is the canonical reader and -i \
+                 interprets numeric uids/syscalls into names. GPL — invoked as a SUBPROCESS \
+                 only per the Spec #2 invariant, never linked. INSTALL-FIRST: ausearch is NOT \
+                 present on the stock SANS SIFT VM, so a missing binary is an honest \
+                 BinaryNotFound limitation, not a crash. Use AFTER case_open on an audit.log \
+                 extracted from the mounted image. Default limit 10000 records. \
+                 ausearch binary discovery: $AUSEARCH_BIN env var first, then PATH lookup. \
+                 Returns rows[] (one free-form key/value map per type=... record — fields vary \
+                 by record type: SYSCALL / EXECVE / PATH / USER_LOGIN; the verbatim line is kept \
+                 under `raw`) + rows_seen + stderr_tail. A zero-match search is returned as an \
+                 empty row set, not an error. \
+                 ERRORS: NotFound / NotRegular (verify the audit.log path inside the mounted \
+                 image), BinaryNotFound (install auditd / set $AUSEARCH_BIN — absent on the \
+                 SIFT VM by default), SubprocessFailed (ausearch returned a real error — check \
+                 stderr_tail; common cause: not an audit.log file).",
+            annotations: ToolAnnotations {
+                title: "Search Linux Audit Log (ausearch)",
+                read_only: true,
+                destructive: false,
+                idempotent: true,
+                open_world: false,
+            },
+            schema: || schema_for::<AusearchInput>(),
+            handler: |args| dispatch_ausearch(args),
+        },
+        ToolEntry {
             name: "vel_collect",
             description: "Run a Velociraptor artifact via `velociraptor artifacts collect` and \
                  stream the resulting rows. Generic trampoline over Velociraptor's 200+ \
@@ -1394,6 +1491,53 @@ fn dispatch_cloud_audit(args: Value) -> Result<Value, ToolError> {
     }
 }
 
+fn dispatch_journalctl_query(args: Value) -> Result<Value, ToolError> {
+    let input: JournalctlQueryInput = parse_args(args)?;
+    // NotFound / NotRegular are user-input territory (wrong path); surface
+    // as -32602 so the agent corrects the path rather than treating the tool
+    // as crashed.
+    match journalctl_query(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::JournalctlQueryError::NotFound(_)
+            | crate::tools::JournalctlQueryError::NotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("journalctl_query: {e}"))),
+    }
+}
+
+fn dispatch_login_accounting(args: Value) -> Result<Value, ToolError> {
+    let input: LoginAccountingInput = parse_args(args)?;
+    // NotFound / NotRegular are user-input territory; surface as -32602.
+    match login_accounting(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::LoginAccountingError::NotFound(_)
+            | crate::tools::LoginAccountingError::NotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("login_accounting: {e}"))),
+    }
+}
+
+fn dispatch_ausearch(args: Value) -> Result<Value, ToolError> {
+    let input: AusearchInput = parse_args(args)?;
+    // NotFound / NotRegular are user-input territory; surface as -32602.
+    match ausearch(&input) {
+        Ok(output) => {
+            serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
+        }
+        Err(
+            e @ (crate::tools::AusearchError::NotFound(_)
+            | crate::tools::AusearchError::NotRegular(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
+        Err(e) => Err(ToolError::Internal(format!("ausearch: {e}"))),
+    }
+}
+
 fn dispatch_vel_collect(args: Value) -> Result<Value, ToolError> {
     let input: VelCollectInput = parse_args(args)?;
     // InvalidArtifactName / InvalidArgName are user-input issues; surface as -32602.
@@ -1535,6 +1679,9 @@ mod tests {
             "plaso_parse",
             "mac_triage",
             "cloud_audit",
+            "journalctl_query",
+            "login_accounting",
+            "ausearch",
             "vel_collect",
             "browser_history",
         ];

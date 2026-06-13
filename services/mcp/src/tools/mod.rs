@@ -16,6 +16,7 @@
 //!   * Every tool is testable in isolation via integration tests
 //!     under `services/mcp/tests/`.
 
+pub mod ausearch;
 pub mod browser_history;
 pub mod case_open;
 pub mod cloud_audit;
@@ -23,6 +24,8 @@ pub mod disk;
 pub mod evtx_query;
 pub mod ez_parse;
 pub mod hayabusa_scan;
+pub mod journalctl_query;
+pub mod login_accounting;
 pub mod mac_triage;
 pub mod mft_timeline;
 pub mod pcap_triage;
@@ -42,6 +45,9 @@ pub mod yara_scan;
 pub mod zeek_summary;
 
 /// Convenience re-exports.
+pub use ausearch::{
+    ausearch, path_looks_like_audit_log, AuditRow, AusearchError, AusearchInput, AusearchOutput,
+};
 pub use browser_history::{
     browser_history, path_looks_like_browser_history, BrowserHistoryError, BrowserHistoryInput,
     BrowserHistoryOutput, BrowserHistoryRow,
@@ -62,6 +68,14 @@ pub use evtx_query::{
 pub use ez_parse::{ez_parse, is_allowed_ez_tool, EzParseError, EzParseInput, EzParseOutput};
 pub use hayabusa_scan::{
     hayabusa_scan, HayabusaAlert, HayabusaError, HayabusaInput, HayabusaOutput,
+};
+pub use journalctl_query::{
+    journalctl_query, path_looks_like_journal, JournalRow, JournalctlQueryError,
+    JournalctlQueryInput, JournalctlQueryOutput,
+};
+pub use login_accounting::{
+    login_accounting, path_looks_like_accounting, LoginAccountingError, LoginAccountingInput,
+    LoginAccountingOutput, LoginRecord,
 };
 pub use mac_triage::{
     is_allowed_module, mac_triage, MacTriageError, MacTriageInput, MacTriageOutput,

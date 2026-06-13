@@ -37,6 +37,9 @@ pub use crate::tools::browser_history::{
     browser_history, path_looks_like_browser_history, BrowserHistoryError, BrowserHistoryInput,
     BrowserHistoryOutput, BrowserHistoryRow,
 };
+pub use crate::tools::ausearch::{
+    ausearch, path_looks_like_audit_log, AuditRow, AusearchError, AusearchInput, AusearchOutput,
+};
 pub use crate::tools::case_open::{case_open, CaseHandle, CaseOpenError, CaseOpenInput};
 pub use crate::tools::cloud_audit::{
     cloud_audit, is_allowed_provider, CloudAuditError, CloudAuditInput, CloudAuditOutput,
@@ -55,6 +58,14 @@ pub use crate::tools::ez_parse::{
 };
 pub use crate::tools::hayabusa_scan::{
     hayabusa_scan, HayabusaAlert, HayabusaError, HayabusaInput, HayabusaOutput,
+};
+pub use crate::tools::journalctl_query::{
+    journalctl_query, path_looks_like_journal, JournalRow, JournalctlQueryError,
+    JournalctlQueryInput, JournalctlQueryOutput,
+};
+pub use crate::tools::login_accounting::{
+    login_accounting, path_looks_like_accounting, LoginAccountingError, LoginAccountingInput,
+    LoginAccountingOutput, LoginRecord,
 };
 pub use crate::tools::mac_triage::{
     is_allowed_module, mac_triage, MacTriageError, MacTriageInput, MacTriageOutput,

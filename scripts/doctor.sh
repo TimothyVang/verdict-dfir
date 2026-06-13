@@ -256,6 +256,12 @@ dfir "plaso"        PLASO_DIR       "install plaso/log2timeline (ships on the SI
      -- log2timeline.py psort.py
 dfir "mac_apt"      MAC_APT         "install mac_apt (ships on the SIFT VM) and set \$MAC_APT to mac_apt.py or add it to PATH   (mac_triage: macOS image triage)" \
      -- mac_apt.py mac_apt
+dfir "journalctl"   JOURNALCTL_BIN  "install systemd or set \$JOURNALCTL_BIN   (journalctl_query: binary systemd journals)" \
+     -- journalctl
+dfir "last (wtmp)"  LAST_BIN        "install util-linux or set \$LAST_BIN   (login_accounting: wtmp/btmp)" \
+     -- last
+dfir "ausearch"     AUSEARCH_BIN    "sudo apt-get install -y auditd   (ausearch: Linux audit.log; INSTALL-FIRST, absent on stock SIFT)" \
+     -- ausearch
 
 # ---------------------------------------------------------------------------
 # Reporting + demo-recording helpers (warn-only).
