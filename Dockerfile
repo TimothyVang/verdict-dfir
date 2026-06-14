@@ -13,7 +13,7 @@
 # and friends) need edition-2024 stabilization (Rust ≥1.85).
 # A 1.83 base would either fail at cargo build or trigger a
 # rustup pull at build time.
-FROM rust:1.88-bookworm AS rust-build
+FROM rust:1.96-bookworm AS rust-build
 WORKDIR /build
 
 # Install libs needed for the MCP server's C deps (libewf, yara).
