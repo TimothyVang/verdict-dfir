@@ -380,6 +380,20 @@ if [[ "${SIFT}" == "0" ]]; then
   CASE_ID="auto-$(python3 -c 'import uuid;print(uuid.uuid4())')"
   CASE_DIR="${REPO_ROOT}/tmp/auto-runs/${CASE_ID}"
   mkdir -p "${CASE_DIR}"
+  # The dir is pinned (and mkdir'd) up front so the dashboard can open LIVE,
+  # but every artifact except audit.jsonl/status.json lands in one burst at
+  # finalize — so an interrupted run (Ctrl-C, timeout, crash before case_open)
+  # leaves an empty/audit-only "grave". Reclaim it on exit unless the run
+  # actually finalized; a finalized case always has verdict.json, so a kept
+  # dir is always a real case.
+  _reclaim_incomplete_case_dir() {
+    [[ -n "${CASE_DIR:-}" && -d "${CASE_DIR}" ]] || return 0
+    if [[ ! -f "${CASE_DIR}/verdict.json" ]]; then
+      rm -rf "${CASE_DIR}" 2>/dev/null || true
+      log "reclaimed incomplete case dir: ${CASE_DIR}"
+    fi
+  }
+  trap _reclaim_incomplete_case_dir EXIT INT TERM
   export FIND_EVIL_LOCAL=1
   export PYTHONPATH="${REPO_ROOT}/services/agent${PYTHONPATH:+:${PYTHONPATH}}"
   ENGINE+=(--local --case-id "${CASE_ID}")

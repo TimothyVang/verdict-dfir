@@ -6847,6 +6847,13 @@ class Investigation:
         self.post_finalize_verification: dict[str, Any] | None = None
         self.final_release_gate: dict[str, Any] | None = None
         self.local_run_dir: Path | None = None
+        # Liveness heartbeat: the run dir is created (by the launcher or here)
+        # before any artifact lands, and every artifact except audit.jsonl is
+        # written in one burst at finalize — so for the whole run (~30 min on a
+        # disk image) the dir looks empty/audit-only. status.json lets a watcher
+        # or scripts/verdict tell a live run from a dead one, and lets the
+        # launcher reclaim dirs that never reached a real stage.
+        self._stage = "starting"
         self.tcid_counter = 0
         self.handle: dict[str, Any] = {}
         # HEARTBEAT.md escalation: count consecutive tool failures. A successful
@@ -7037,6 +7044,44 @@ class Investigation:
             else rust.call_tool(tool, args)
         )
 
+    def _heartbeat(self, stage: str | None = None, **extra: Any) -> None:
+        """Best-effort liveness write to ``<case_dir>/status.json``.
+
+        Never raises: a status write must never break an investigation. Only
+        active in local mode, where ``self.case_dir`` is a real host path (in
+        SIFT mode it is an in-VM path the host cannot resolve). Passing a
+        ``stage`` advances the recorded stage; omitting it just refreshes the
+        timestamp and counters (used per tool call for fine-grained liveness).
+        """
+        if not LOCAL_MODE:
+            return
+        if stage is not None:
+            self._stage = stage
+        try:
+            case_dir = Path(self.case_dir)
+            case_dir.mkdir(parents=True, exist_ok=True)
+            status = {
+                "case_id": self.case_id,
+                "run_id": self.run_id,
+                "stage": self._stage,
+                "started_at": self.started_at,
+                "updated_at": datetime.now(timezone.utc).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                ),
+                "tool_calls": self.tcid_counter,
+                "findings_so_far": len(self.findings_pool_a)
+                + len(self.findings_pool_b),
+                **extra,
+            }
+            tmp = case_dir / ".status.json.tmp"
+            tmp.write_text(
+                json.dumps(status, indent=2, sort_keys=True), encoding="utf-8"
+            )
+            tmp.replace(case_dir / "status.json")
+        except Exception:
+            # Liveness is advisory; never let it interrupt the case.
+            pass
+
     def _record_tool(
         self,
         py: SshMcpClient,
@@ -7076,6 +7121,9 @@ class Investigation:
                 **tool_call_extra,
             }
         )
+        # Refresh liveness after each tool call so a long investigation phase
+        # (e.g. a multi-minute disk extract sweep) visibly advances.
+        self._heartbeat(last_tool=tool)
         return tcid
 
     def _output_hash(self, obj: dict[str, Any]) -> str:
@@ -11454,6 +11502,7 @@ class Investigation:
         self, py: SshMcpClient, packet_attestation: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         print("\n=== manifest finalize ===")
+        self._heartbeat("finalizing")
         extra = {
             "image_path": self.evidence,
             "model": "find-evil-auto",
@@ -12077,6 +12126,7 @@ class Investigation:
             return client
 
         self._rust_factory = _spawn_rust
+        self._heartbeat("starting", evidence_type=etype)
 
         try:
             # Initialize handshakes
@@ -12092,6 +12142,7 @@ class Investigation:
                 client.notify("notifications/initialized")
 
             # Phase 1: Investigation
+            self._heartbeat("investigating")
             if etype == "directory":
                 self.case_open_directory(py)
                 self.investigate_inventory(rust, py)
@@ -12129,6 +12180,7 @@ class Investigation:
             self._heartbeat_abort(py)
 
             # Phase 2: Reasoning
+            self._heartbeat("reasoning")
             merged, contras, kept, downgraded = self.reason(py)
             verdict = self.compute_verdict(merged)
             self._narrate(
@@ -12254,6 +12306,11 @@ class Investigation:
             if not LOCAL_MODE:
                 print(f"  Inside VM      : {self.case_dir}/")
             print(f"  On host (local): {local_dir}")
+            self._heartbeat(
+                "complete",
+                verdict=verdict,
+                manifest_verify_overall=manifest_verification.get("overall"),
+            )
             return {
                 "case_id": self.case_id,
                 "verdict": verdict,
