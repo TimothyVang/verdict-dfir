@@ -55,10 +55,10 @@ bash scripts/verdict <evidence>     # the same pipeline, headless from a shell
 **It can drive the SIFT VM dynamically.** `/verdict` attempts to discover the SANS SIFT VM, boot it
 when the implemented VMware path is available, resolve its IP (VMware Tools or the DHCP lease), and
 route supported forensic tools into it over SSH so disk images can mount/extract. No reachable VM?
-It falls back to host-local tools with the same hash-chained, offline-verifiable audit trail; local
-disk parsing requires Sleuth Kit/libewf and supported extracted artifacts, while raw disk with no
-mounted/extracted content stays custody-only. The SIFT VM remains the recommended parity path for
-disk images.
+It falls back to host-local tools with the same hash-chained, offline-verifiable audit trail.
+Supported disk images can be parsed locally through Sleuth Kit direct-read when prerequisites are present;
+`case_open` alone remains custody-only, and unsupported artifact classes stay as named limitations.
+The SIFT VM remains the recommended parity path for disk images.
 
 ## What VERDICT can miss
 
@@ -76,7 +76,7 @@ contradictions; it is not proof. Disputed or unsupported leads stay visible as c
 <p align="center">
   <img src="docs/showcase/sift-scenario/srl-basefile-sift.gif" alt="VERDICT investigating the SRL-2018 base-file host with the forensic tools running inside the SANS SIFT VM" width="760">
 </p>
-<p align="center"><sub>The hardest case — SANS <b>SRL-2018</b>, a 198&nbsp;GB / 22-host compromised enterprise — run host-by-host with the forensic toolchain executing inside the SANS SIFT VM over SSH. <a href="https://youtu.be/4RQnVden6L8">Watch the full walkthrough on YouTube (4:35) →</a> · <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">historical v-submit mp4 mirror</a></sub></p>
+<p align="center"><sub>The hardest case — SANS <b>SRL-2018</b>, a 198&nbsp;GB / 22-host compromised enterprise — run host-by-host with the forensic toolchain executing inside the SANS SIFT VM over SSH. <a href="https://youtu.be/4RQnVden6L8">Watch the product showcase on YouTube (4:35) →</a> · <a href="https://github.com/TimothyVang/verdict-dfir/releases/download/v-submit/find-evil-demo.mp4">historical v-submit mp4 mirror</a></sub></p>
 
 <p align="center">
   <img src="docs/showcase/sift-scenario/srl-fleet-report-hero.png" alt="Fleet rollup — 22 hosts investigated, 74 cross-host process correlations, 53 multi-host temporal clusters" width="380">
@@ -173,8 +173,9 @@ committed live runs:
 2. **A cryptographic chain of custody.** Hash-chained audit log → `rs_merkle` Merkle root over
    canonical-JSON tool outputs → a manifest signature. The default signer is a real local Ed25519
    key that verifies offline; Sigstore/Rekor is the identity + transparency-log tier; the stub
-   signer is explicit dev-only fallback. `manifest_verify` checks the chain + root offline. Framed
-   for FRE 902(14) self-authenticating evidence — see [`docs/cryptographic-attestation.md`](docs/cryptographic-attestation.md).
+   signer is explicit dev-only fallback. `manifest_verify` checks the chain + root offline, and
+   customer-release candidates include an expert-signoff packet. Framed for FRE 902(14)
+   self-authenticating evidence — see [`docs/cryptographic-attestation.md`](docs/cryptographic-attestation.md).
 
 3. **Analysis of Competing Hypotheses as agent topology.** Two pools investigate the same evidence
    with opposing priors (persistence-biased vs. exfil-biased). Their disagreements are emitted as
@@ -212,19 +213,11 @@ Beyond the three ideas above, a single case run also:
 
 ## Accuracy — measured, and honest about the gap
 
-VERDICT is graded against published answer keys, not vibes — and the numbers below are
-reproducible from committed runs, not asserted. On the **nitroba** network case it finds **5 of 5
-expected findings — 100% recall**, which you can re-run yourself:
-`scripts/score-recall.py docs/sample-run/nitroba --golden goldens/nitroba`. (Recall measures
-whether the golden *facts* were surfaced; the run verdict stays `INDETERMINATE` because network
-metadata attributes activity to a host, not a person — full recall and a scoped verdict are
-consistent, not a contradiction.) **Every finding across committed runs cites a `tool_call_id`.** On the **NIST hacking case** it reaches **50% recall (7 of
-14, up from 7%)**: it surfaces real hacking-tool execution, shellbag/MRU traces, removable-media
-LNKs, recycle-bin staging artifacts, and the suspicious SAM account, but not the ACMru search,
-USB-history, deleted-email, browser-history, XP `.evt`, thumbcache, and named-pipe artifacts the
-answer key also expects — so it scopes to `SUSPICIOUS` rather than overclaim, and we publish the gap
-rather than hide it. Full method, the recall table, the
-false-positive controls, and the honest limits: **[`docs/accuracy-report.md`](docs/accuracy-report.md)**.
+VERDICT is graded against published answer keys, not vibes. The public repo ships small answer keys
+under `goldens/`; large fixtures are staged locally with `scripts/fetch-fixtures.sh`, then scored
+with `scripts/score-recall.py tmp/auto-runs/<case-id> --golden goldens/<case-id>`. The method,
+corpus shape, false-positive controls, and honest limits live in
+**[`docs/accuracy-report.md`](docs/accuracy-report.md)**.
 The adversarial "break VERDICT" challenge is in
 [`docs/red-team-challenge.md`](docs/red-team-challenge.md).
 
@@ -275,13 +268,11 @@ bash scripts/setup --with-sift
 ```
 
 That fetches the gated 9.3 GB SIFT OVA headlessly via the Playwright it just installed, then builds
-the VM. (In a `claude` session, typing `setup` does the same and can adapt if the SANS page layout
-changes.) On any failure it falls back cleanly — and **local-host mode still works**: local is the
-fast, no-VM default, and it's what the committed sample runs (`docs/sample-run/`) were produced with.
+the VM. On any failure it falls back cleanly — and **local-host mode still works** for memory, EVTX,
+PCAP, Velociraptor collections, and supported disk artifacts when local prerequisites are present.
 
-Full step-by-step (prerequisites, the container path) is in **[INSTALL.md](INSTALL.md)**;
-per-environment detail (local vs. SIFT VM) is in **[QUICKSTART.md](QUICKSTART.md)**; what the
-in-agent `setup` trigger does is in [docs/onboarding.md](docs/onboarding.md).
+Full step-by-step prerequisites are in **[INSTALL.md](INSTALL.md)**; per-environment detail
+(local vs. SIFT VM) is in **[QUICKSTART.md](QUICKSTART.md)**.
 
 ## Quickstart
 
