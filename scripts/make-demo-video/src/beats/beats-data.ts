@@ -1,3 +1,25 @@
+// Which scene component renders a beat. The original FindEvilDemo beats omit
+// `scene` and are dispatched by `number` (see Beat.tsx). The additional videos
+// (explainer, deep-dives, quickstart, contributor call) set `scene` so they can
+// reuse the same data-driven scenes without colliding with beat numbers.
+export type SceneKind =
+  | "concept"
+  | "exhibit"
+  | "tools"
+  | "arch"
+  | "outro"
+  | "logo"
+  | "title";
+
+// A real captured clip framed as a forensic EXHIBIT (see ExhibitVideo.tsx).
+export interface Exhibit {
+  src: string;
+  label: string;
+  objectFit?: "cover" | "contain";
+  playbackRate?: number;
+  startFrom?: number;
+}
+
 export interface Beat {
   number: number;
   title: string;
@@ -6,6 +28,15 @@ export interface Beat {
   rubric: string;
   narration: string;
   accentColor: string;
+  // --- Optional, used only by the additional videos -----------------------
+  scene?: SceneKind;
+  kicker?: string;
+  headline?: string;
+  body?: string;
+  points?: string[];
+  command?: string;
+  exhibit?: Exhibit;
+  caption?: string;
 }
 
 // 10 beats — newcomer-first product walkthrough.

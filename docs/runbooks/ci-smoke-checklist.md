@@ -107,7 +107,7 @@ Fixed `-RunId` reruns refresh generated packet contents. If the original `<run-i
 - [ ] `docs/architecture.md` renders the Mermaid diagrams (paste into a Mermaid-capable viewer or check on GitHub).
 - [ ] `docs/DATASET.md` lists every fixture that `scripts/fetch-fixtures.sh` downloads.
 - [ ] `CLAUDE.md` references the Amendment A1 credential modes and Option B.
-- [ ] `README-submission.md` template placeholders all exist in `docs/templates/devpost-readme.md` and are declared in `scripts/package-devpost.sh` (`DEMO_VIDEO_URL`, `RELEASE_TAG`, `ACCURACY`, `DATE`).
+- [ ] Public release docs build locally and the release workflow inputs are declared in `scripts/package-devpost.sh` (`DEMO_VIDEO_URL`, `RELEASE_TAG`, `ACCURACY`, `DATE`).
 
 ---
 

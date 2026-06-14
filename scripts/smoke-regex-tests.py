@@ -271,12 +271,6 @@ READINESS_PACKET_FORBIDDEN_DOC_STRINGS = [
     "└── readiness-packet-manifest.json",
 ]
 
-SAMPLE_RUN_DOC_FORBIDDEN_STRINGS = [
-    "All six runs return `overall: true`",
-    "The heavy render artifacts (`REPORT.pdf`, `REPORT.html`, `figures/`, `timeline.*`) are omitted",
-    "their\n> `audit.jsonl`, `run.manifest.json`, `verdict.json`, `manifest_verify.json`, and `REPORT.md`",
-]
-
 
 def _run_divergence_cases(div_smoke) -> list[tuple[str, str]]:
     """Returns list of (label, error) for failing cases."""
@@ -562,39 +556,6 @@ def _run_readiness_packet_doc_cases() -> list[tuple[str, str]]:
     return failures
 
 
-def _run_sample_run_doc_cases() -> list[tuple[str, str]]:
-    failures = []
-    sample_readme = (REPO / "docs/sample-run/README.md").read_text(encoding="utf-8")
-    compliance = (REPO / "SUBMISSION_COMPLIANCE.md").read_text(encoding="utf-8")
-    combined = f"{sample_readme}\n{compliance}"
-    for needle in SAMPLE_RUN_DOC_FORBIDDEN_STRINGS:
-        if needle in combined:
-            failures.append(
-                (
-                    f"sample-run docs omit stale phrase {needle[:48]!r}",
-                    "expected sample-run inventory and report-presence wording to match committed artifacts",
-                )
-            )
-    if "All seven runs return `overall: true`" not in sample_readme:
-        failures.append(
-            (
-                "sample-run README uses seven-run verification count",
-                "expected all-seven wording for committed individual runs",
-            )
-        )
-    if (
-        "`REPORT.md`" not in compliance
-        or "partial runs can omit it by policy" not in compliance
-    ):
-        failures.append(
-            (
-                "submission compliance qualifies REPORT.md presence",
-                "expected committed layout to avoid claiming every run has REPORT.md",
-            )
-        )
-    return failures
-
-
 def _run_tool_count_guard_cases(tool_count_guard) -> list[tuple[str, str]]:
     failures = []
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -631,9 +592,7 @@ def _run_tool_count_guard_cases(tool_count_guard) -> list[tuple[str, str]]:
             "CLAUDE.md": "3 product tools: 2 Rust tools + 1 Python tool.\n",
             "README.md": "3 product tools: 2 Rust DFIR + 1 Python.\n",
             "INSTALL.md": "3 product tools: findevil-mcp has 2 DFIR tools; findevil-agent-mcp has 1 Python tool.\n",
-            "SUBMISSION_COMPLIANCE.md": "3 audit-chained product tools: 2 Rust DFIR tools + 1 Python tool.\n",
             "docs/architecture.md": "Tool count: 3 (2 Rust DFIR + 1 Python).\n",
-            "docs/templates/devpost-readme.md": "3 product tools: 2 Rust tools + 1 Python tool.\n",
             "scripts/make-demo-video/src/components/ArchPoster.tsx": "const total = 3; const rust = 2; const python = 1;\n",
         }
         for rel, text in good_docs.items():
@@ -758,15 +717,6 @@ def main() -> int:
     for label, err in readiness_doc_failures:
         all_failures.append(("readiness-packet docs", label, err))
 
-    sample_doc_failures = _run_sample_run_doc_cases()
-    sample_total = len(SAMPLE_RUN_DOC_FORBIDDEN_STRINGS) + 2
-    print(
-        f"sample-run doc policies:     "
-        f"{sample_total - len(sample_doc_failures)} / {sample_total} passed"
-    )
-    for label, err in sample_doc_failures:
-        all_failures.append(("sample-run doc policies", label, err))
-
     tool_count_failures = _run_tool_count_guard_cases(tool_count_guard)
     tool_count_total = 3
     print(
@@ -794,7 +744,6 @@ def main() -> int:
         + len(STALE_SMOKE_LABEL_PATTERNS)
         + len(PATH_EXISTENCE_ALLOW_CASES)
         + readiness_total
-        + sample_total
         + tool_count_total
     )
     print("=" * 60)

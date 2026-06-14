@@ -5,8 +5,8 @@ and the M4 ACH (Analysis of Competing Hypotheses) reasoning
 primitives that ship as the `findevil-agent-mcp` MCP tool surface
 under Amendment A2.
 
-**Authoritative design:** `docs/specs/2026-04-25-the-product-design.md`.
-**Active amendments:** `docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md` (A1 — credential modes), `docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md` (A2 — Claude Code IS the orchestrator).
+**Authoritative design:** `docs/architecture.md`.
+**Active invariants:** `CLAUDE.md` and `agent-config/` define credential modes and the Claude Code primary-interface model.
 **Invariants:** `CLAUDE.md` §"Non-negotiable invariants".
 
 > **Under Amendment A2 this package is a library, not a service.** The

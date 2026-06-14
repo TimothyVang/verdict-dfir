@@ -109,24 +109,18 @@ run_smoke \
     "uv run --directory services/agent python ../../scripts/readiness-gate-smoke.py" \
     "command -v uv && (command -v powershell || command -v pwsh)"
 
-# 5. demo-script-a2.md structural lock.
-run_smoke \
-    "demo-script-smoke (9 contiguous beats summing to 5:00)" \
-    "python3 scripts/demo-script-smoke.py" \
-    "[ -f docs/demo-script-a2.md ]"
-
-# 6. Launcher invariants lock.
+# 5. Launcher invariants lock.
 run_smoke \
     "launcher-smoke (bash -n + claude binary + no positional .)" \
     "python3 scripts/launcher-smoke.py"
 
-# 7. Spec/code divergence lock — asserts no active file has reintroduced
+# 6. Spec/code divergence lock — asserts no active file has reintroduced
 #    a bad-half pattern.
 run_smoke \
     "divergence-smoke (active divergences from CLAUDE.md downstream-clean)" \
     "python3 scripts/divergence-smoke.py"
 
-# 8. Path-existence audit — every backtick-quoted path discovered in
+# 7. Path-existence audit — every backtick-quoted path discovered in
 #    operator docs resolves to a real file/dir as new docs, agent config,
 #    and service README files are added.
 run_smoke \
@@ -166,6 +160,10 @@ run_smoke \
 run_smoke \
     "make-demo-video-smoke (TTS+ffmpeg video builder, --dry-run)" \
     "python3 scripts/make-demo-video-smoke.py"
+
+run_smoke \
+    "package-devpost-smoke (submission zip smoke mode)" \
+    "mkdir -p tmp && FINDEVIL_DEVPOST_MODE=smoke RELEASE_TAG=v-submit-smoke OUT_ZIP=tmp/package-devpost-smoke.zip RELEASE_ASSETS_DIR=tmp/package-devpost-assets BENCHMARK_CSV=tmp/package-devpost-benchmark.csv bash scripts/package-devpost.sh"
 
 # 11. Post-verdict grounding contract. Offline checks (claim extraction, bundle
 #     merge, never-evidence boundary) always run; the live anti-hallucination

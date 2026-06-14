@@ -75,6 +75,12 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+*.pkrvars.hcl
+*.pkrvars.json
+packer/*.auto.pkrvars.hcl
+packer/*.auto.pkrvars.json
+packer/*.pkrvars.hcl
+packer/*.pkrvars.json
 
 # Claude
 .claude-cache/

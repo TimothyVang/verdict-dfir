@@ -1,8 +1,7 @@
 """fleet_local.py — adapt a local whole-case run into a correlate-ready fleet.
 
-Gap 1 of docs/plans/2026-06-12-align-app-with-video-claims.md: the one-command
-fleet path runs run-whole-case-local.sh (results.jsonl) and then needs a
-fleet.json in the exact shape fleet_correlate.load_verdicts reads.
+The one-command fleet path runs run-whole-case-local.sh (results.jsonl) and
+then needs a fleet.json in the exact shape fleet_correlate.load_verdicts reads.
 """
 
 from __future__ import annotations

@@ -54,11 +54,10 @@ Exit code 0 = all smokes passed (or skipped); non-zero = at least one failed.
 | 4 | `fleet-policy-smoke` | `fleet_correlate` normalize/filter/cluster/density/uniqueness/aggregate |
 | 4b | `report-policy-smoke` | Report QA + expert signoff + visual evidence policy |
 | 4c | `readiness-gate-smoke` | PacketOnly packaging + fail-closed blockers (skips if no PowerShell) |
-| 5 | `demo-script-smoke` | 9 contiguous beats summing to 5:00 in `docs/demo-script-a2.md` |
-| 6 | `launcher-smoke` | `bash -n` syntax + `claude` binary on PATH + no positional-dot invocations |
-| 7 | `divergence-smoke` | Active CLAUDE.md divergences not reintroduced in live files |
-| 8 | `path-existence-smoke` | Every backtick-quoted path in operator docs resolves to a real file/dir |
-| 9 | `smoke-regex-tests` | Synthetic +/- cases against audit-smoke regex/helper policies |
+| 5 | `launcher-smoke` | `bash -n` syntax + `claude` binary on PATH + no positional-dot invocations |
+| 6 | `divergence-smoke` | Active CLAUDE.md divergences not reintroduced in live files |
+| 7 | `path-existence-smoke` | Every backtick-quoted path in operator docs resolves to a real file/dir |
+| 8 | `smoke-regex-tests` | Synthetic +/- cases against audit-smoke regex/helper policies |
 | L | `ruff check .` | Python lint clean (skips if ruff absent) |
 | L | `ruff format --check .` | Python formatter clean (skips if ruff absent) |
 | L | `cargo fmt --all --check` | Rust formatter clean (skips if cargo absent) |

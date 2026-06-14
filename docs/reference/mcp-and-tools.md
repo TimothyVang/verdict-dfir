@@ -12,7 +12,7 @@ Two numbers that look like a contradiction but aren't:
   audit-chained verb set the investigation runs on. It does not change lightly.
 - **6** = the number of **MCP servers actually registered in `.mcp.json`**. Only the first two
   are product-default and in the audit chain; the other four are non-product conveniences
-  (operator-runtime browser/automation + the `qmd` dev-memory recall server).
+  (operator-runtime browser/automation + the optional `qmd` memory sidecar).
 
 Neither number contradicts the other: 43 counts *product tools*, 6 counts *registered servers*.
 
@@ -27,18 +27,16 @@ Neither number contradicts the other: 43 counts *product tools*, 6 counts *regis
 | 3 | `n8n-mcp` | stdio · `npx -y n8n-mcp` (`MCP_MODE=stdio`) | Post-verdict finding-to-action automation (operator-local) | No | No |
 | 4 | `playwright` | stdio · `npx -y @playwright/mcp@latest` | Browser automation / dashboard verification | No | No |
 | 5 | `puppeteer` | stdio · `npx -y @modelcontextprotocol/server-puppeteer` | Gated-asset (SANS SIFT OVA) browser download during `setup` | No | No |
-| 6 | `qmd` | stdio · `bash scripts/run-mcp-qmd.sh` | obsidian-mind **dev-memory recall** (`mcp__qmd__query` over the `verdict-memory` vault) | No | No |
+| 6 | `qmd` | stdio · `bash scripts/run-mcp-qmd.sh` | Optional operator memory sidecar; inert unless `FINDEVIL_ENABLE_QMD=1` and a local `obsidian-mind/` vault are present | No | No |
 
 **Product-default (1–2)** are the only servers whose calls are hash-chained into `audit.jsonl`,
 Merkle-rooted, and signed. Every Finding cites a `tool_call_id` from one of these two.
 
 **Non-product (3–6)** are conveniences for the human operator — automation (`n8n-mcp`), browser
-tasks (`playwright`/`puppeteer`), and **`qmd` dev-memory recall** (see
-[`../runbooks/obsidian-mind-memory.md`](../runbooks/obsidian-mind-memory.md)). They **never touch
-evidence, never append to the audit chain, and never emit a Finding.** `qmd` is launched via
-`scripts/run-mcp-qmd.sh`, which resolves Node 22 via nvm and is **inert without Node 22 + QMD** —
-so a fresh clone / a judge without the toolchain simply doesn't get it. Seeing six entries in
-`.mcp.json` is correct, not malformed.
+tasks (`playwright`/`puppeteer`), and an optional `qmd` memory sidecar. They **never touch evidence,
+never append to the audit chain, and never emit a Finding.** `qmd` is launched via
+`scripts/run-mcp-qmd.sh` and exits cleanly when the optional local vault/toolchain is absent. Seeing
+six entries in `.mcp.json` is correct, not malformed.
 
 ### SIFT-transport variant — `.mcp.json.sift`
 
@@ -50,8 +48,8 @@ runtime from `SIFT_SSH_KEY` / `SIFT_VM_IP` / `GUEST_USER` / `GUEST_REPO_PATH`; d
 
 ### Globally-registered MCP (outside `.mcp.json`)
 
-Per the host `~/.claude/settings.json`, a `chrome-devtools` MCP server (`cloakbrowser`) is
-registered globally and auto-spawns via `npx -y chrome-devtools-mcp`. It is used for the
+If configured in the operator's global Claude Code setup, a `chrome-devtools` MCP server can
+auto-spawn via `npx -y chrome-devtools-mcp`. It is used for the
 session-start "offer to open the dashboard / GitHub / report" behavior. Like the
 operator-runtime servers, it is **not** part of the investigation surface.
 
@@ -130,9 +128,8 @@ USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` pat
 | `expert_miss_capture` | Record an expert's pre-release PDF edit into the miss ledger | `expert_miss_capture.py` |
 
 > The `memory_remember`/`memory_recall` pair is the **in-flow investigation memory** (Hermes
-> FTS5, audit-chained). It is distinct from the **obsidian-mind dev/operator memory vault** —
-> see [`../runbooks/obsidian-mind-memory.md`](../runbooks/obsidian-mind-memory.md). Don't
-> conflate them: Hermes lives inside cases and the audit chain; obsidian-mind never does.
+> FTS5, audit-chained). It is distinct from any optional operator-side memory sidecar such as
+> `qmd`: Hermes lives inside cases and the audit chain; operator memory never does.
 
 ---
 

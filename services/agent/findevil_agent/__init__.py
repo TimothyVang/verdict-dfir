@@ -1,10 +1,8 @@
-"""Find Evil! agent runtime — LangGraph ACH graph + FastAPI SSE.
+"""Find Evil! agent runtime library for ACH and event primitives.
 
 See:
-  - ``docs/specs/2026-04-25-the-product-design.md`` — Spec #2
-  - ``docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md``
-    — credential modes (CLAUDE_CODE_OAUTH_TOKEN, interactive session,
-    ANTHROPIC_API_KEY)
+  - ``docs/architecture.md`` — public architecture contract
+  - ``CLAUDE.md`` — credential modes and investigation guardrails
 """
 
 from findevil_agent.config import CredentialMode, resolve_credentials

@@ -5,8 +5,7 @@ actual error text the detector prints, and the fix column is the command that cl
 Run `bash scripts/doctor.sh` first: it executes most of these checks in one pass and prints
 per-check fixes.
 
-Related docs: `QUICKSTART.md` (3-step setup), `docs/onboarding.md` (pre-flight checklist),
-`docs/using/running-verdict.md` (every flag), `docs/reference/environment-variables.md`
+Related docs: `QUICKSTART.md` (3-step setup), `docs/using/running-verdict.md` (every flag), `docs/reference/environment-variables.md`
 (all `FIND_EVIL_*` / `FINDEVIL_*` vars).
 
 ---
@@ -83,11 +82,9 @@ re-dispatched.
 | `ERROR: cannot reach SIFT VM at <user>@<ip> or MCP server prerequisite missing` (lists the 3 prerequisites) | same preflight (10 s SSH probe) | Run `bash scripts/sift-vm-bootstrap.sh` once, then rerun `scripts/verdict <path> --sift`; check `ping $FIND_EVIL_GUEST_IP`, and verify all three listed paths exist on the guest |
 | SSH probe times out with the default IP | default `FIND_EVIL_GUEST_IP` may not match your VM's network | `export FIND_EVIL_GUEST_IP=<your VM's IP>` (NAT setups commonly land on `192.168.137.x`); also `FIND_EVIL_GUEST_USER` / `FIND_EVIL_GUEST_REPO` if non-default |
 
-**You do not need SIFT mode for full results.** Local mode parses disk artifacts
-(Prefetch + registry/UserAssist) via Sleuth Kit direct-read and produces the same 2-class
-CONFIRMED escalation — see `docs/sample-run/README.md` (the `nist-hacking-case/` local run and
-its `--sift` twin reach the identical verdict). The 9.3 GB gated SIFT OVA download is only
-needed to reproduce the VM-isolated judging environment.
+**You do not need SIFT mode for every case.** Local mode handles memory, EVTX, PCAP,
+Velociraptor collections, and supported disk artifacts when Sleuth Kit/libewf prerequisites are
+available. The 9.3 GB gated SIFT OVA is recommended when you need VM-isolated disk-image parity.
 
 ## 6. Dashboard
 
@@ -109,5 +106,5 @@ needed to reproduce the VM-isolated judging environment.
 
 | Symptom | Meaning | Fix |
 |---|---|---|
-| `manifest_verify` returns `overall: false` on a **copied** case dir | the manifest embeds the original run's `audit_log_path` | Pass the local log explicitly: `manifest_verify(manifest_path=..., audit_log_path=<copied audit.jsonl>)` — see `docs/sample-run/README.md` |
+| `manifest_verify` returns `overall: false` on a **copied** case dir | the manifest embeds the original run's `audit_log_path` | Pass the local log explicitly: `manifest_verify(manifest_path=..., audit_log_path=<copied audit.jsonl>)` |
 | `scripts/trace-finding <run-dir>` exits non-zero | a hash-chain link or Merkle leaf failed to resolve | That is the tool working: a single flipped bit anywhere in `audit.jsonl` breaks the chain. Diff against the original run dir |

@@ -62,6 +62,8 @@ In local mode, state the scope honestly: memory, EVTX, PCAP, Velociraptor collec
 
 Use default parallel execution. Pass `--no-dashboard` only when the operator explicitly does not want browser/dashboard behavior.
 
+SIFT mode copies host evidence into a current-run SIFT staging directory and removes that current-run SIFT staging after a successful run. Use `--keep-sift-staging` only when the operator needs the copied VM path retained for debugging. Do not ask the operator to manually remove current-run staging after a successful `scripts/verdict --sift` run; if disk pressure remains, distinguish automatic current-run cleanup from legacy root-level staging that predates this lifecycle and requires explicit approval before deletion.
+
 ### 4. Locate Case Outputs
 
 Read `tmp/verdict-last-run.json` if it exists, then inspect the referenced Case directory under:

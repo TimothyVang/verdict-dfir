@@ -2,8 +2,7 @@
 
 **Status:** Active local dashboard. `/` renders the SSE audit-tail role-state grid, `/debug` shows raw audit events, and `/codex` provides the Codex operator cockpit plus an opt-in local one-shot runner. Remaining A3 polish is the pixel-art sprite swap and the AuditBeadString + HashChainBadge + FindingChip chrome.
 
-**Spec:** `docs/specs/2026-04-26-amendment-a3-agent-army-and-dashboard.md` §2.2 (apps/web/).
-**Plan:** `docs/plans/2026-04-26-amendment-a3-plan.md` Phase 4.
+The dashboard is an operator aid only. It tails local case output and never creates Findings or evidence.
 
 ## Run locally
 

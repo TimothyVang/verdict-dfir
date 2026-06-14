@@ -19,9 +19,7 @@ The OpenTimestamps + Bitcoin anchoring tier was removed in
 Amendment A5; design rationale and the current trade-off live in
 ``docs/cryptographic-attestation.md``.
 
-See ``docs/specs/2026-04-25-the-product-design.md`` §7
-and ``memory/project_crypto_custody_stack.md`` for the original
-4-tier rationale.
+See ``docs/cryptographic-attestation.md`` for the public verification model.
 """
 
 from findevil_agent.crypto.audit_log import (

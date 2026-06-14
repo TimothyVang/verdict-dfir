@@ -531,9 +531,6 @@ def main() -> int:
         public_text = "\n".join(
             [
                 (REPO / "README.md").read_text(encoding="utf-8"),
-                (REPO / "docs" / "templates" / "devpost-readme.md").read_text(
-                    encoding="utf-8"
-                ),
                 (REPO / "QUICKSTART.md").read_text(encoding="utf-8"),
             ]
         )

@@ -2,7 +2,7 @@
 
 **Devpost Required Component #3** — architecture diagram with trust boundaries, distinguishing prompt-based guardrails from architectural guardrails.
 
-This document is the single-page visual summary judges reach first. Full detail lives in `docs/specs/2026-04-25-the-product-design.md` (seven-layer product), `docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md` (Amendment A1, three credential modes), and `docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md` (**Amendment A2, active**, Claude Code as primary interface).
+This document is the single-page visual summary operators reach first. It is the public architecture source for VERDICT's seven-layer product shape, credential modes, and Claude Code primary-interface model.
 
 ---
 
@@ -252,7 +252,6 @@ We match Valhuntir's architectural discipline and exceed it on three dimensions 
 
 ## References
 
-- `docs/specs/2026-04-23-find-evil-automation-master-design.md` — master design
-- `docs/specs/2026-04-25-the-product-design.md` — product spec (detailed 7-layer architecture)
-- `docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md` — credential modes
+- `README.md` + `INSTALL.md` + `QUICKSTART.md` — public install and operator contract
+- `docs/reference/mcp-and-tools.md` — registered MCP servers and product tool inventory
 - `agent-config/SOUL.md` + `AGENTS.md` + `TOOLS.md` + `MEMORY.md` + `HEARTBEAT.md` — runtime agent identity

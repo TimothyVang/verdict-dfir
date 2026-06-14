@@ -214,12 +214,17 @@ if $NODE_OK; then
     fi
 fi
 
-# edge-tts (optional — only needed for demo video TTS generation)
-if python3 -c "import edge_tts" 2>/dev/null; then
-    ok "edge-tts: present"
+# Piper + ffmpeg (optional — only needed for demo video TTS generation)
+if command -v piper >/dev/null 2>&1; then
+    ok "piper: $(command -v piper)"
 else
-    info "edge-tts not installed (optional — only needed for demo video TTS)."
-    info "  Install when ready: pip install edge-tts"
+    info "piper not installed (optional — only needed for demo video TTS)."
+    info "  Install when ready: pip install piper-tts"
+fi
+if command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1; then
+    ok "ffmpeg/ffprobe: present"
+else
+    info "ffmpeg/ffprobe not both on PATH (optional — only needed for demo video TTS)."
 fi
 
 # ---------------------------------------------------------------------------
@@ -524,8 +529,8 @@ fi
 # 7. Optional: visible launch-banner alias.
 # ---------------------------------------------------------------------------
 #
-# The SessionStart hook (.claude/settings.json -> scripts/session-suggest.sh)
-# already injects the onboarding suggestions into every session automatically.
+# A local Claude Code SessionStart hook can invoke scripts/session-suggest.sh to
+# inject onboarding suggestions into every session automatically.
 # Whether its banner is *visible at launch* depends on how the installed Claude
 # Code version surfaces hook stderr. scripts/claude is a thin wrapper that prints
 # the banner unconditionally, then forwards to the real CLI. Aliasing `claude` to
@@ -743,15 +748,13 @@ echo "  bash scripts/sift-vm-bootstrap.sh         # build the SIFT VM (VMware or
 echo "  bash scripts/find-evil-sift               # SIFT-VM mode (after bootstrap)"
 echo "  bash scripts/find-evil-auto <evidence>    # internal engine wrapper used by scripts/verdict"
 echo "  bash scripts/run-all-smokes.sh            # full smoke gate (pre-commit)"
-echo "  bash scripts/make-demo-video.sh           # generate demo video"
 echo "  pnpm --filter @findevil/web dev           # start live dashboard"
 echo ""
 echo "${c_blu}USEFUL DOCS${c_off}"
 echo ""
 echo "  QUICKSTART.md              — 3-step quick start for judges and new users"
-echo "  SUBMISSION_COMPLIANCE.md   — 10-item Devpost compliance checklist"
 echo "  docs/false-positives.md    — analyst checklists"
-echo "  docs/demo-script-a2.md    — walkthrough script for the demo video"
+echo "  docs/accuracy-report.md    — scoring and coverage method"
 echo ""
 echo "  To verify a signed manifest offline:"
 echo "    uv run --directory services/agent_mcp python -m findevil_agent_mcp.server"

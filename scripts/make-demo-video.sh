@@ -2,7 +2,7 @@
 # scripts/make-demo-video.sh — Generate docs/find-evil-demo.mp4 via Remotion.
 #
 # Stages:
-#   1. TTS prep  — scripts/make-demo-video-prep.py generates beat MP3 files
+#   1. TTS prep  — scripts/make-demo-video-tts.py generates beat MP3 files
 #   2. Remotion  — npx remotion render produces the final MP4
 #
 # Usage:
@@ -11,12 +11,12 @@
 # Options:
 #   --dry-run            Print beat plan without generating audio or video
 #   --skip-tts           Skip TTS generation (use existing MP3s in src/audio/)
-#   --voice NAME         edge-tts voice (default: en-US-AriaNeural)
+#   --voice NAME         reserved for legacy compatibility; Piper uses PIPER_VOICE
 #   --out PATH           Output MP4 path (default: docs/find-evil-demo.mp4)
 #   --preview            Render first 90 frames only to /tmp/find-evil-preview.mp4
 #
 # Prerequisites:
-#   pip install edge-tts          (TTS generation)
+#   pip install piper-tts         (TTS generation)
 #   pnpm install --prefix scripts/make-demo-video  (Remotion deps, first run only)
 #   # claude CLI on PATH → narration auto-enriched via `claude -p` (uses your session token)
 #

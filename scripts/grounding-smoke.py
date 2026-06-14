@@ -512,7 +512,7 @@ def offline_boundary_checks() -> None:
         p = ROOT / rel
         return p.read_text() if p.is_file() else ""
 
-    for doc in ("docs/architecture.md", "SUBMISSION_COMPLIANCE.md"):
+    for doc in ("docs/architecture.md",):
         text = read(doc).lower()
         check(
             "n8n" not in text and "grounding" not in text,

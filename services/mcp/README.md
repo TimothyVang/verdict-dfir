@@ -1,8 +1,8 @@
 # findevil-mcp
 
-Typed Rust MCP server for Find Evil! per Spec #2 §3 and §6.
+Typed Rust MCP server for Find Evil! per the public architecture contract.
 
-**Authoritative design:** `docs/specs/2026-04-25-the-product-design.md`.
+**Authoritative design:** `docs/architecture.md`.
 **Invariants:** `CLAUDE.md` §"Non-negotiable invariants".
 
 ## Status

@@ -6,32 +6,23 @@ repo_name: TimothyVang/verdict-dfir
 edit_uri: edit/master/docs/
 
 exclude_docs: |
-  DATASET.md
+  /README.md
   analyst/**
   artifact-semantics.md
   codex-compatibility.md
   competitive-analysis.md
-  demo-script-a2.md
   diagrams/**
-  divergences-resolved.md
   extending-the-tool-surface.md
   finding-to-action.md
   glossary.md
   investigation-phases.md
-  legacy/**
-  live-test-matrix.md
-  onboarding.md
   plans/**
   replay-determinism.md
   repo-guide.md
   references/**
   release-evidence/*.json
-  reports/**
   runbooks/**
-  sample-run/**
   showcase/**
-  specs/**
-  templates/**
   using/whole-case-local-run.md
 
 theme:
@@ -73,6 +64,8 @@ nav:
       - False Positives: false-positives.md
       - Red-Team Challenge: red-team-challenge.md
   - Reference:
+      - Dataset: DATASET.md
+      - Live Test Matrix: live-test-matrix.md
       - MCP Servers and Tools: reference/mcp-and-tools.md
       - Dependencies: reference/dependencies.md
       - Environment Variables: reference/environment-variables.md

@@ -1,9 +1,8 @@
 """Pool A disk-persistence emitters — registry Run/RunOnce + Services triage.
 
-Gap 3 of docs/plans/2026-06-12-align-app-with-video-claims.md: extracted-disk
-registry data must produce Pool A persistence Findings (it previously fed only
-the timeline), so the two-team debate and detect_contradictions can fire on
-disk-only cases.
+Extracted-disk registry data must produce Pool A persistence Findings (it
+previously fed only the timeline), so the two-team debate and
+detect_contradictions can fire on disk-only cases.
 """
 
 from __future__ import annotations

@@ -161,4 +161,5 @@ Every cross-host correlation and temporal cluster the fleet rollup emits carries
 * Not a complete list of FPs. Every DFIR investigation surfaces new edge cases.
 * Not a guarantee. The architecture *reduces* FP rates; it doesn't drive them to zero.
 
-The agent is honest about its limitations (see `docs/reports/2026-04-26-srl2018-dc-investigation.md` §8). When in doubt, downgrade and document.
+The agent is honest about its limitations by design: every completed run writes
+`coverage_manifest.json` and report limitations. When in doubt, downgrade and document.

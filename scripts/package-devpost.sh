@@ -11,7 +11,8 @@
 #   - BENCHMARK_CSV env var (defaults to benchmark-results.csv at cwd, produced by json-to-benchmark-csv.py)
 #   - optional READINESS_PACKET_ZIP env var (defaults to release-assets/readiness-packet.zip)
 #     containing the validated expert-review packet from scripts/readiness-gate.ps1
-#   - LICENSE + docs/templates/devpost-readme.md from the repo
+#   - LICENSE from the repo; README-submission.md is generated from current
+#     release metadata so deleted historical templates cannot break packaging.
 #
 # Strict mode is the default. Set FINDEVIL_DEVPOST_MODE=smoke only for
 # non-final workflow rehearsal; smoke mode is rejected for RELEASE_TAG=v-submit.
@@ -94,15 +95,29 @@ fi
 ACCURACY="${ACCURACY:-0}"
 
 # ---------------------------------------------------------------------
-# 1. README-submission.md via envsubst.
+# 1. README-submission.md from current release metadata.
 # ---------------------------------------------------------------------
-if [[ ! -f docs/templates/devpost-readme.md ]]; then
-  log "ERROR: docs/templates/devpost-readme.md missing"; exit 1
-fi
-export DEMO_VIDEO_URL RELEASE_TAG ACCURACY DATE
-envsubst '$DEMO_VIDEO_URL $RELEASE_TAG $ACCURACY $DATE' \
-  < docs/templates/devpost-readme.md \
-  > "${STAGE_DIR}/README-submission.md"
+cat > "${STAGE_DIR}/README-submission.md" <<EOF
+# VERDICT DFIR Submission
+
+- Release tag: ${RELEASE_TAG}
+- Demo video: ${DEMO_VIDEO_URL}
+- Reported recall score: ${ACCURACY}%
+- Package date (UTC): ${DATE}
+
+VERDICT is a read-only DFIR agent that opens a Case, drives typed forensic MCP
+tools, verifies Findings, and emits a signed Verdict plus report. The public
+repository README is the canonical product overview; this file records the
+release metadata bundled with the Devpost package.
+
+Contents:
+
+- \`report.html\` - sample/customer-facing report artifact
+- \`benchmark-results.csv\` - reproducible scoring export when available
+- \`demo-video-link.txt\` - demo video URL
+- \`readiness-packet.zip\` - optional expert-review packet when available
+- \`LICENSE\` - Apache-2.0 license
+EOF
 
 # Sanity: no unsubstituted placeholders.
 if grep -qE '\$\{[A-Z_]+\}' "${STAGE_DIR}/README-submission.md"; then
@@ -176,8 +191,8 @@ fi
 # (SUBMISSION_NOTES.md was a 7th required entry pre-Phase-3d; deleted
 # 2026-05-02 along with the file at repo root. The judge-facing Q&A
 # that was its only unique content lives at README.md "Anticipated
-# questions" — and README-submission.md is generated from
-# docs/templates/devpost-readme.md, which echoes the canonical pitch.)
+# questions" — and README-submission.md is generated from current release
+# metadata above.)
 # ---------------------------------------------------------------------
 required=(
   "README-submission.md"
@@ -221,6 +236,7 @@ fi
 # ---------------------------------------------------------------------
 # Zip.
 # ---------------------------------------------------------------------
+rm -f -- "${REPO_ROOT}/${OUT_ZIP}"
 if command -v zip >/dev/null 2>&1; then
   (cd "${STAGE_DIR}" && zip -q -r "${REPO_ROOT}/${OUT_ZIP}" .)
 else

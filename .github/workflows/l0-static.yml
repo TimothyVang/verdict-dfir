@@ -152,31 +152,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: verify spec->plan cross-references
+      - name: verify public release documentation surface
         run: |
-          # Every spec must have a matching plan; every plan must cite its spec.
-          # Per-subsystem specs (Spec #1-#4):
-          for spec in docs/specs/2026-04-23-layered-test-sandbox-design.md \
-                     docs/specs/2026-04-25-the-product-design.md \
-                     docs/specs/2026-04-26-orchestration-glue-design.md; do
-            test -f "$spec" || { echo "missing spec: $spec"; exit 1; }
-          done
-          # Master design + active amendments (CLAUDE.md "Document hierarchy"
-          # treats these as load-bearing; deletion would silently break the
-          # ordering rules).
-          for amend in docs/specs/2026-04-23-find-evil-automation-master-design.md \
-                       docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md \
-                       docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md; do
-            test -f "$amend" || { echo "missing master/amendment: $amend"; exit 1; }
-          done
-          for plan in docs/plans/2026-04-23-sandbox-plan.md \
-                     docs/plans/2026-04-23-product-plan.md \
-                     docs/plans/2026-04-23-orchestration-glue-plan.md; do
-            test -f "$plan" || { echo "missing plan: $plan"; exit 1; }
-          done
           # Root operator docs (README + INSTALL + QUICKSTART + CHANGELOG +
           # CLAUDE.md) - deleting any of these breaks the front-page
-          # contract for judges/contributors.
+          # contract for operators/contributors.
           for doc in CLAUDE.md README.md INSTALL.md CONTRIBUTING.md QUICKSTART.md CHANGELOG.md; do
             test -f "$doc" || { echo "missing root doc: $doc"; exit 1; }
           done
@@ -184,11 +164,12 @@ jobs:
           # CLAUDE.md, README.md, QUICKSTART.md as deep-dives).
           for doc in docs/architecture.md \
                      docs/DATASET.md \
-                     docs/cryptographic-attestation.md \
-                     docs/verdict-semantics.md \
-                     docs/false-positives.md \
-                     docs/glossary.md \
-                     docs/demo-script-a2.md; do
+                      docs/cryptographic-attestation.md \
+                      docs/verdict-semantics.md \
+                      docs/false-positives.md \
+                      docs/glossary.md \
+                      docs/release-surface.md \
+                      docs/accuracy-report.md; do
             test -f "$doc" || { echo "missing canonical doc: $doc"; exit 1; }
           done
           # agent-config/ files - the runtime DFIR agent identity
@@ -222,7 +203,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: dropped Python orchestrator files must not reappear
         run: |
-          # Amendment A2 (2026-04-25, active) replaces the custom Python
+          # VERDICT keeps the Amendment A2 invariant: the custom Python
           # orchestrator (graph.py / api.py / cli.py / supervisor.py /
           # specialists/) with Claude Code itself driving the typed MCP
           # surface. If a future contributor regenerates any of these
@@ -230,7 +211,7 @@ jobs:
           # claim "Direct Agent Extension §1 + Custom MCP Server §2"
           # silently becomes false. Catch it at L0.
           #
-          # See docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md
+          # See docs/architecture.md for the public architecture contract.
           banned=(
             services/agent/findevil_agent/graph.py
             services/agent/findevil_agent/api.py
@@ -248,8 +229,7 @@ jobs:
           if [ "$violation" -eq 1 ]; then
             echo
             echo "If you genuinely need to revive the custom orchestrator,"
-            echo "amend Spec #2 first and update the architecture diagram."
-            echo "Reference: docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md"
+            echo "update docs/architecture.md and the release contract first."
             exit 1
           fi
           echo "Amendment A2 compliance: path check OK (no resurrected orchestrator files)."
@@ -272,7 +252,7 @@ jobs:
               --include='*.py'; then
               echo "ERROR: Amendment A2 forbids LangGraph/FastAPI orchestrator code"
               echo "       in services/agent/findevil_agent/."
-              echo "       Reference: docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md"
+              echo "       Reference: docs/architecture.md"
               exit 1
             fi
             echo "Amendment A2 compliance: content check OK (no orchestrator imports)."

@@ -19,14 +19,13 @@ investigation in-process; the external DFIR binaries are needed for memory/disk/
 | `cargo` | with Rust 1.88 | build/test | rustup |
 | C toolchain (`cc`) | system | links Rust crates (rustup does not install it) | `build-essential` (Debian/Ubuntu) · `xcode-select --install` (macOS) |
 | `uv` + Python | **3.11** | `findevil-agent-mcp` venv | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| Node | **20** | `apps/web` dashboard + Remotion | nodejs.org / nvm |
+| Node | **20** | `apps/web` dashboard | nodejs.org / nvm |
 | `pnpm` | 9.x | workspace install | `corepack enable` |
 | `git`, `unzip` | any | clone, extract release zips | OS package |
 
 > **Node-version note:** the product/dashboard are pinned to **Node 20**. The optional
-> **obsidian-mind memory layer** (QMD + lifecycle hooks) needs **Node 22+** — installed
-> side-by-side via nvm and used only for that layer. See
-> [`../runbooks/obsidian-mind-memory.md`](../runbooks/obsidian-mind-memory.md).
+> `qmd` MCP launcher is inert unless `FINDEVIL_ENABLE_QMD=1` is set and an operator
+> supplies a local `obsidian-mind/` vault plus matching Node/QMD toolchain.
 
 ### Credential modes (Amendment A1 — one of three, detected by `install.sh`)
 

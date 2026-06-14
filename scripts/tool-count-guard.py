@@ -29,19 +29,7 @@ DOC_RULES = (
         "INSTALL.md", requires_total=True, requires_rust=True, requires_python=True
     ),
     DocRule(
-        "SUBMISSION_COMPLIANCE.md",
-        requires_total=True,
-        requires_rust=True,
-        requires_python=True,
-    ),
-    DocRule(
         "docs/architecture.md",
-        requires_total=True,
-        requires_rust=True,
-        requires_python=True,
-    ),
-    DocRule(
-        "docs/templates/devpost-readme.md",
         requires_total=True,
         requires_rust=True,
         requires_python=True,
