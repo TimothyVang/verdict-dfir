@@ -212,6 +212,20 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # GitHub Release (not committed, to keep the clone small). CHANGELOG/docs cite
     # its generator output path; README links the hosted copy.
     re.compile(r"^docs/find-evil-demo\.mp4$"),
+    # Historical release-support files removed from the source checkout in the
+    # reduced public surface. References are retained in older docs as historical
+    # context; current reproducibility lives in docs/release-evidence/ plus the
+    # scripts/goldens that rerun those cases.
+    re.compile(r"^(?:docs/)?sample-run(/|$)"),
+    re.compile(r"^(?:docs/)?reports(/|$)"),
+    re.compile(r"^reports/"),
+    re.compile(r"^docs/plans(/|$)"),
+    re.compile(r"^docs/specs(/|$)"),
+    re.compile(r"^docs/templates(/|$)"),
+    re.compile(r"^docs/legacy(/|$)"),
+    re.compile(r"^docs/(?:demo-script-a2|divergences-resolved|onboarding)\.md$"),
+    re.compile(r"^(?:docs/)?runbooks/obsidian-mind-memory\.md$"),
+    re.compile(r"^\.agents/"),
     # Research-only repo-root dir for external SDK / OpenClaw / Hermes
     # / Pixel-Agents reference clones (CLAUDE.md "External reference
     # clones" + Amendment A3 §1.3).  /git-hub-references/ is gitignored

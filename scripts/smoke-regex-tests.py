@@ -248,6 +248,11 @@ PATH_EXISTENCE_ALLOW_CASES = [
         True,
     ),
     (
+        "Reduced-source docs/plans/ is allow-listed",
+        "docs/plans/",
+        True,
+    ),
+    (
         "Lookalike ./output IS still checked (not allow-listed)",
         "./output/foo",
         False,
@@ -351,6 +356,7 @@ def _run_smoke_runner_policy_cases(launch_smoke) -> list[tuple[str, str]]:
     failures = []
     runner = (REPO / "scripts/run-all-smokes.ps1").read_text(encoding="utf-8")
     posix_runner = (REPO / "scripts/run-all-smokes.sh").read_text(encoding="utf-8")
+    l1_compose = (REPO / "docker/l1-compose.yml").read_text(encoding="utf-8")
     quickstart = (REPO / "QUICKSTART.md").read_text(encoding="utf-8")
     readiness_smoke = (REPO / "scripts/readiness-gate-smoke.py").read_text(
         encoding="utf-8"
@@ -449,6 +455,17 @@ def _run_smoke_runner_policy_cases(launch_smoke) -> list[tuple[str, str]]:
             (
                 "run-all-smokes.ps1 does not call retired smoke",
                 "expected Windows runner to use verdict-smoke.py, not find-evil-run-smoke.py",
+            )
+        )
+    if not re.search(
+        r"if\s+\[\s+-f\s+scripts/demo-script-smoke\.py\s+\]\s+&&\s+"
+        r"\[\s+-f\s+docs/demo-script-a2\.md\s+\];\s+then",
+        l1_compose,
+    ):
+        failures.append(
+            (
+                "docker l1 demo-script smoke requires demo script",
+                "expected L1 Docker to skip demo-script-smoke when docs/demo-script-a2.md is absent",
             )
         )
     windows_expected_smokes = [
@@ -593,6 +610,7 @@ def _run_tool_count_guard_cases(tool_count_guard) -> list[tuple[str, str]]:
             "README.md": "3 product tools: 2 Rust DFIR + 1 Python.\n",
             "INSTALL.md": "3 product tools: findevil-mcp has 2 DFIR tools; findevil-agent-mcp has 1 Python tool.\n",
             "docs/architecture.md": "Tool count: 3 (2 Rust DFIR + 1 Python).\n",
+            "docs/reference/mcp-and-tools.md": "3 product tools: 2 Rust tools + 1 Python tool.\n",
             "scripts/make-demo-video/src/components/ArchPoster.tsx": "const total = 3; const rust = 2; const python = 1;\n",
         }
         for rel, text in good_docs.items():
