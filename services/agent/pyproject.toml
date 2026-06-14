@@ -39,7 +39,7 @@ dependencies = [
   # manifest signer is local Ed25519 and verifies offline.
   # opentimestamps-client was removed in Amendment A5 along with
   # the OpenTimestamps + Bitcoin tier of the custody chain.
-  "sigstore==3.*",
+  "sigstore>=3,<5",
 
   # L1 DuckDB per case.
   "duckdb>=0.10",
