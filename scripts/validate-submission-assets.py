@@ -597,6 +597,21 @@ def is_valid_verifier_evidence_record(record: dict) -> bool:
     return False
 
 
+def verifier_record_replay_hash(record: dict) -> str | None:
+    payload = record.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    if record.get("kind") == "acp_handoff":
+        handoff_payload = payload.get("payload")
+        if isinstance(handoff_payload, dict):
+            value = handoff_payload.get("replay_record_sha256")
+        else:
+            value = None
+    else:
+        value = payload.get("replay_record_sha256")
+    return str(value) if isinstance(value, str) and value else None
+
+
 def validate_verifier_audit_evidence(
     verdict: dict, audit_records: list[dict], blockers: list[str]
 ) -> None:
@@ -626,6 +641,7 @@ def validate_verifier_audit_evidence(
     ids_by_kind: dict[str, set[str]] = {
         kind: set() for kind in READINESS_VERIFIER_AUDIT_KINDS
     }
+    replay_hashes_by_finding: dict[str, set[str]] = {}
     for record in audit_records:
         kind = record.get("kind")
         if not isinstance(kind, str) or kind not in ids_by_kind:
@@ -635,6 +651,9 @@ def validate_verifier_audit_evidence(
         finding_id = audit_record_finding_id(record)
         if finding_id is not None:
             ids_by_kind[kind].add(finding_id)
+            replay_hash = verifier_record_replay_hash(record)
+            if replay_hash is not None:
+                replay_hashes_by_finding.setdefault(finding_id, set()).add(replay_hash)
 
     missing_kinds = sorted(kind for kind, ids in ids_by_kind.items() if not ids)
     if missing_kinds:
@@ -650,6 +669,11 @@ def validate_verifier_audit_evidence(
             blockers.append(
                 f"audit.jsonl lacks verifier evidence for finding_id={finding_id}: "
                 + ", ".join(missing_for_finding)
+            )
+        replay_hashes = replay_hashes_by_finding.get(finding_id, set())
+        if len(replay_hashes) > 1:
+            blockers.append(
+                f"audit.jsonl has mismatched verifier replay hashes for finding_id={finding_id}"
             )
 
 

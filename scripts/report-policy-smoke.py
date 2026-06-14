@@ -648,6 +648,40 @@ def main() -> int:
             ),
             "packet with invalid verifier evidence",
         )
+        mismatched_replay_hash_audit = (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+            '{"kind":"verifier_action","payload":{"finding_id":"f-ready",'
+            '"action":"approved","reason":"replay matched",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}\n'
+            '{"kind":"replay","payload":{"finding_id":"f-ready",'
+            '"replay_matched":true,"replay_record_sha256":"' + ("d" * 64) + '"}}\n'
+            '{"kind":"acp_handoff","payload":{"from_role":"verifier",'
+            '"to_role":"judge","correlation_id":"f-ready",'
+            '"payload":{"finding_id":"f-ready","action":"approved",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}}\n'
+        )
+        mismatched_replay_hash_packet_result = validator.validate_readiness_packet_bytes(
+            build_readiness_packet_zip(
+                valid_html_text,
+                audit_jsonl=mismatched_replay_hash_audit,
+                verdict_overrides={
+                    "findings": [
+                        {
+                            "finding_id": "f-ready",
+                            "tool_call_id": "tc-ready",
+                            "confidence": "CONFIRMED",
+                            "description": "Replay-backed finding.",
+                        }
+                    ]
+                },
+            ),
+            "packet with mismatched verifier replay hashes",
+        )
         unsafe_path_packet = io.BytesIO()
         with zipfile.ZipFile(unsafe_path_packet, "w") as zf:
             zf.writestr("../audit.jsonl", "{}\n")
@@ -836,6 +870,10 @@ def main() -> int:
         (
             "readiness packet rejects invalid verifier audit evidence",
             not invalid_verifier_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects mismatched verifier replay hashes",
+            not mismatched_replay_hash_packet_result.ok,
         ),
         (
             "readiness packet rejects unsafe ZIP paths",
