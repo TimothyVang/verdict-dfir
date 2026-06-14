@@ -4167,9 +4167,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-parser"
-version = "1.12.0"
+version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c2a68e9dc86b29c7e7193f5cdc7c5ea8b3968977209c83442ca24bc71c96294"
+checksum = "0750e3c54507bd3bcf1e0e54419308371d32f20a3aee86ac6909a48420250a9c"
 dependencies = [
  "ascii_tree",
  "bitflags 2.11.1",
