@@ -36,7 +36,7 @@ RUN if [ -f Cargo.toml ]; then \
 # Stage 2 — Python agent build.
 # ============================================================
 # hadolint ignore=DL3007
-FROM python:3.11-slim-bookworm AS py-build
+FROM python:3.14-slim-bookworm AS py-build
 WORKDIR /build
 RUN pip install --no-cache-dir 'uv==0.5.8'
 COPY services/agent/pyproject.toml* services/agent/uv.lock* ./services/agent/
