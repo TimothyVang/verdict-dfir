@@ -248,6 +248,11 @@ PATH_EXISTENCE_ALLOW_CASES = [
         True,
     ),
     (
+        "Reduced-source docs/plans/ is allow-listed",
+        "docs/plans/",
+        True,
+    ),
+    (
         "Lookalike ./output IS still checked (not allow-listed)",
         "./output/foo",
         False,
