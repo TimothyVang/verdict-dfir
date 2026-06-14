@@ -45,7 +45,7 @@ dependencies = [
   "duckdb>=0.10",
 
   # MITRE ATT&CK technique lookup (official maintainer).
-  "mitreattack-python>=5.4,<6.0",
+  "mitreattack-python>=5.4,<7.0",
 
   # Structured logging.
   "structlog>=24.4",
