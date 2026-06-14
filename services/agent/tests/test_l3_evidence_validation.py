@@ -87,8 +87,6 @@ def test_l3_fallback_accepts_synthesized_passing_packet() -> None:
         "unmatched_ids": [],
     }
 
-    errors = validate_l3_evidence.validate_evidence(
-        evidence, expected_commit=expected_commit
-    )
+    errors = validate_l3_evidence.validate_evidence(evidence, expected_commit=expected_commit)
 
     assert errors == []

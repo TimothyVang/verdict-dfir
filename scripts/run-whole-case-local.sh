@@ -37,7 +37,10 @@ fi
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROOT="$1"
-ROOT="$(cd "$ROOT" && pwd)"
+if ! ROOT="$(cd "$ROOT" && pwd)"; then
+  echo "case root does not exist: $1" >&2
+  exit 2
+fi
 OUT="${2:-$REPO/tmp/whole-case-local/$(basename "$ROOT")}"
 ts() { date -u +%H:%M:%S; }
 
@@ -59,6 +62,7 @@ done < "$TARGETS_FILE"
 [ ${#TARGETS[@]} -eq 0 ] && { echo "no targets under $ROOT (expected hosts/, disks/, or base-file pair)"; exit 1; }
 echo "$(ts) whole-case local run — ${#TARGETS[@]} targets  (out: $OUT)"
 RESULTS="$OUT/results.jsonl"; : > "$RESULTS"
+failed=0
 
 i=0
 for entry in "${TARGETS[@]}"; do
@@ -70,22 +74,41 @@ for entry in "${TARGETS[@]}"; do
     echo "$(ts) [$i/${#TARGETS[@]}] SKIP $label (done)"
   else
     echo "$(ts) [$i/${#TARGETS[@]}] RUN  $label  ($path)"
-    bash "$REPO/scripts/verdict" "$path" --no-dashboard --unattended --skip-build \
-      --run-summary "$summ" > "$OUT/$safe.log" 2>&1
-    echo "$(ts)        exit=$? -> $summ"
+    if bash "$REPO/scripts/verdict" "$path" --no-dashboard --unattended --skip-build \
+      --run-summary "$summ" > "$OUT/$safe.log" 2>&1; then
+      run_status=0
+    else
+      run_status=$?
+      failed=1
+    fi
+    echo "$(ts)        exit=$run_status -> $summ"
   fi
-  [ -s "$summ" ] && python3 - "$label" "$summ" "$RESULTS" <<'PY'
+  if [ ! -s "$summ" ]; then
+    echo "$(ts)        missing run summary for $label" >&2
+    failed=1
+    continue
+  fi
+  if ! python3 - "$label" "$summ" "$RESULTS" <<'PY'
 import json, sys
 label, summ, res = sys.argv[1:4]
+status = 0
 try:
     r = json.load(open(summ)).get("result", {})
     row = {"host": label, "verdict": r.get("verdict"),
            "manifest_ok": r.get("manifest_verify_overall"),
            "packet": r.get("packet_state"), "case_dir": r.get("local_dir")}
+    if row.get("manifest_ok") is not True:
+        status = 3
 except Exception as e:
     row = {"host": label, "verdict": "ERROR", "error": str(e)}
+    status = 3
 open(res, "a").write(json.dumps(row) + "\n")
+sys.exit(status)
 PY
+  then
+    echo "$(ts)        manifest verification failed for $label" >&2
+    failed=1
+  fi
 done
 
 echo "$(ts) WHOLE-CASE RUN COMPLETE"
@@ -103,3 +126,14 @@ for r in sorted(rows, key=lambda x: x["host"]):
 print("\nverdict tally:", dict(Counter(r.get("verdict") for r in rows)))
 print("manifest_ok:", sum(1 for r in rows if r.get("manifest_ok") is True), "/", len(rows))
 PY
+
+rows=$(wc -l < "$RESULTS" | tr -d ' ')
+if [ "$rows" -ne "${#TARGETS[@]}" ]; then
+  echo "$(ts) whole-case local run incomplete: $rows/${#TARGETS[@]} result rows" >&2
+  failed=1
+fi
+
+if [ "$failed" -ne 0 ]; then
+  echo "$(ts) whole-case local run failed" >&2
+  exit 1
+fi
