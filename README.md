@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License"></a>
+  <a href="https://timothyvang.github.io/verdict-dfir/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue" alt="Documentation"></a>
   <img src="https://img.shields.io/badge/rust-1.88-orange.svg" alt="Rust 1.88">
   <img src="https://img.shields.io/badge/python-3.11-blue.svg" alt="Python 3.11">
   <img src="https://img.shields.io/badge/node-20-green.svg" alt="Node 20">
@@ -25,6 +26,13 @@ narrow, typed tool surface, so every conclusion cites the exact tool call that p
 > (or `claude`) in this repo and *this session* becomes the forensic analyst: it opens the case,
 > drives the 43 typed read-only product tools, runs the verifier, and signs the verdict. The product *is*
 > the agent loop — not a service it calls.
+
+The canonical public release repository is
+[`TimothyVang/verdict-dfir`](https://github.com/TimothyVang/verdict-dfir). The older
+[`TimothyVang/sans-hackathon`](https://github.com/TimothyVang/sans-hackathon) repository is the
+historical development remote for the SANS Find Evil! entry, not a second product release channel.
+Semver tags (`v0.1.0`, `v0.1.1`, ...) are the forward release line; `v-submit` is retained as the
+historical hackathon submission tag.
 
 ## Run it against supported evidence
 
@@ -345,6 +353,7 @@ Per-environment setup (local DFIR binaries vs. the SANS SIFT VM) and evidence pl
 
 ## Documentation
 
+- [Published docs](https://timothyvang.github.io/verdict-dfir/) — GitHub Pages documentation site
 - [docs/README.md](docs/README.md) — canonical documentation index
 - [docs/using/running-verdict.md](docs/using/running-verdict.md) — how to run it (every flag, run modes, output layout)
 - [docs/reference/mcp-and-tools.md](docs/reference/mcp-and-tools.md) — full MCP-server + tool inventory, and [dependencies.md](docs/reference/dependencies.md)
@@ -352,6 +361,7 @@ Per-environment setup (local DFIR binaries vs. the SANS SIFT VM) and evidence pl
 - [docs/cryptographic-attestation.md](docs/cryptographic-attestation.md) — the chain of custody + FRE 902(14)
 - [docs/verdict-semantics.md](docs/verdict-semantics.md) — what `SUSPICIOUS` / `INDETERMINATE` / `NO_EVIL` mean
 - [docs/false-positives.md](docs/false-positives.md) — how VERDICT avoids over-claiming
+- [docs/release-surface.md](docs/release-surface.md) — canonical release channel, archive exclusions, and public-source boundaries
 
 > **For coding agents:** read [CLAUDE.md](CLAUDE.md) first — it encodes the document hierarchy, the
 > non-negotiable invariants, and the coding principles for this repo.
@@ -363,4 +373,6 @@ research-only and gitignored — they do not ship.
 
 <sub>VERDICT began as an entry in the SANS <i>Find Evil!</i> 2026 hackathon; internal identifiers
 (<code>findevil-mcp</code>, <code>@findevil/web</code>, <code>scripts/find-evil</code>) retain that
-name, while the canonical one-shot operator command is <code>scripts/verdict</code>.</sub>
+name, while the canonical one-shot operator command is <code>scripts/verdict</code>. Public releases live
+at <code>TimothyVang/verdict-dfir</code>; the original <code>sans-hackathon</code> repository is historical
+development context.</sub>

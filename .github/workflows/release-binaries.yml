@@ -3,6 +3,8 @@ name: release-binaries
 # Prebuilt findevil-mcp binaries attached to the GitHub Release, so end users can
 # skip the 5-10 min source compile: scripts/install.sh fetches these (checksum-
 # verified) when FINDEVIL_MCP_PREBUILT=1 + FINDEVIL_MCP_VERSION=<tag> are set.
+# Semver tags (`vX.Y.Z`) are the forward release line; `v-submit` remains only
+# for historical SANS submission parity.
 # The triples below are exactly the ones scripts/install.sh host_triple() maps.
 #
 # Additive + isolated: this is a SEPARATE workflow from release.yml. It does NOT
@@ -24,10 +26,12 @@ on:
     tags: ['v[0-9]*', 'v-submit', 'v-smoke', 'v-submit-smoke']
 
 permissions:
-  contents: write # upload release assets
+  actions: read
+  contents: read
 
 jobs:
   build:
+    if: github.repository == 'TimothyVang/verdict-dfir'
     name: build ${{ matrix.triple }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -48,6 +52,18 @@ jobs:
             cross_pkgs: ""
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${GITHUB_REF_NAME}" in
+            v-submit|v-smoke|v-submit-smoke) exit 0 ;;
+          esac
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Release tags must be semver (vX.Y.Z) or an explicit historical/smoke exception."
+            exit 1
+          fi
 
       - name: Install Rust 1.88 (target ${{ matrix.triple }})
         uses: dtolnay/rust-toolchain@stable
@@ -84,10 +100,12 @@ jobs:
             findevil-mcp-${{ matrix.triple }}.tar.xz.sha256
 
   publish:
+    if: github.repository == 'TimothyVang/verdict-dfir' && !contains(github.ref_name, 'smoke')
     name: assemble + upload to release
     needs: build
     runs-on: ubuntu-24.04
     permissions:
+      actions: read
       contents: write
     steps:
       - uses: actions/download-artifact@v4
@@ -109,11 +127,34 @@ jobs:
           set -euo pipefail
           cd dist
           tag="${GITHUB_REF_NAME}"
-          # release.yml's publish job also creates this release; create-if-missing
-          # keeps the two workflows order-independent.
+          # release.yml is the only job allowed to create the public Release,
+          # because it is gated on L3 evidence. This workflow only attaches
+          # prebuilt binaries after that Release exists.
           repo="${GITHUB_REPOSITORY}"
+          for attempt in {1..30}; do
+            if gh release view "${tag}" --repo "${repo}" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 10
+          done
           if ! gh release view "${tag}" --repo "${repo}" >/dev/null 2>&1; then
-            gh release create "${tag}" --repo "${repo}" --title "${tag}" \
-              --notes "Prebuilt findevil-mcp binaries (checksummed)." || true
+            echo "::error::Release ${tag} does not exist; release.yml must create it after L3 succeeds."
+            exit 1
+          fi
+          for attempt in {1..30}; do
+            release_green=$(gh run list \
+              --workflow=release.yml \
+              --branch="${tag}" \
+              --limit=20 \
+              --json headSha,headBranch,status,conclusion \
+              --jq "[.[] | select(.headSha == \"${GITHUB_SHA}\" and .headBranch == \"${tag}\" and .status == \"completed\" and .conclusion == \"success\")] | length")
+            if [[ "${release_green:-0}" -gt 0 ]]; then
+              break
+            fi
+            sleep 10
+          done
+          if [[ "${release_green:-0}" -eq 0 ]]; then
+            echo "::error::No successful Release workflow found for ${GITHUB_SHA}; refusing to upload binaries."
+            exit 1
           fi
           gh release upload "${tag}" findevil-mcp-*.tar.xz SHA256SUMS --repo "${repo}" --clobber

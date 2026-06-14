@@ -1,6 +1,7 @@
 name: Release
 
-# Glue Spec #4 §4, post-A2 packaging. Triggered by git tag v<N> push.
+# Glue Spec #4 §4, post-A2 packaging. Triggered by semver tags (`vX.Y.Z`).
+# The historical `v-submit` tags remain supported for SANS submission evidence.
 # Verifies L3 green, builds offline report.html, uploads artifacts to GH
 # Release, pushes release=true score to the leaderboard, posts #releases
 # Slack. The GHCR image is best-effort so package permissions cannot block the
@@ -12,18 +13,27 @@ on:
 
 permissions:
   actions: read
-  contents: write
-  packages: write  # ghcr.io push
-  id-token: write  # OIDC for cosign (if we add image signing later)
+  contents: read
 
 jobs:
   l3-gate:
+    if: github.repository == 'TimothyVang/verdict-dfir'
     name: Verify L3 green on tagged commit
     runs-on: ubuntu-24.04
     outputs:
       l3_green: ${{ steps.verify.outputs.l3_green }}
     steps:
       - uses: actions/checkout@v4
+      - name: Validate release tag
+        run: |
+          set -euo pipefail
+          case "${GITHUB_REF_NAME}" in
+            v-submit|v-smoke|v-submit-smoke) exit 0 ;;
+          esac
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Release tags must be semver (vX.Y.Z) or an explicit historical/smoke exception."
+            exit 1
+          fi
       - name: Verify nightly L3 green on this SHA
         id: verify
         env:
@@ -59,10 +69,14 @@ jobs:
   # `scripts/install.sh` + `claude .` per A2 §2.4.
 
   build-docker:
+    if: github.repository == 'TimothyVang/verdict-dfir'
     name: Build + push Docker image
     needs: l3-gate
     runs-on: ubuntu-latest
     continue-on-error: true
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -98,9 +112,12 @@ jobs:
           provenance: false
 
   build-report:
+    if: github.repository == 'TimothyVang/verdict-dfir'
     name: Build offline report.html
     needs: l3-gate
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -124,9 +141,12 @@ jobs:
           retention-days: 30
 
   publish:
+    if: github.repository == 'TimothyVang/verdict-dfir' && !contains(github.ref_name, 'smoke')
     name: Publish GitHub Release
     needs: [l3-gate, build-report]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Download report.html
@@ -138,12 +158,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [[ "${GITHUB_REF_NAME}" == "v-submit" ]]; then
+            release_title="VERDICT — SANS Find Evil! 2026 submission"
+            release_notes="Historical hackathon submission release. Semver tags are the forward product release line."
+          else
+            release_title="VERDICT ${GITHUB_REF_NAME}"
+            release_notes="Auto-generated VERDICT release. See README.md, docs/architecture.md, and docs/release-surface.md."
+          fi
           if ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             gh release create "${GITHUB_REF_NAME}" \
-              --title "find-evil ${GITHUB_REF_NAME}" \
-              --notes "Auto-generated release. See docs/architecture.md + README.md for details." \
+              --title "${release_title}" \
+              --notes "${release_notes}" \
               --draft=false
           fi
+          gh release edit "${GITHUB_REF_NAME}" \
+            --title "${release_title}" \
+            --notes "${release_notes}"
           for f in dist/*; do
             gh release upload "${GITHUB_REF_NAME}" "$f" --clobber
           done

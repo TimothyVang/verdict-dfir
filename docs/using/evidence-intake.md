@@ -88,7 +88,7 @@ Fixtures live in `fixtures/`; to investigate one, point `verdict` at it directly
 ## 3. Supported evidence types and their PLAYBOOK path
 
 `case_open` inspects the path's extension and size, then the supervisor picks one of the
-[`agent-config/PLAYBOOK.md`](../../agent-config/PLAYBOOK.md) sequences below. The tool
+[`agent-config/PLAYBOOK.md`](https://github.com/TimothyVang/verdict-dfir/blob/master/agent-config/PLAYBOOK.md) sequences below. The tool
 names map to the typed product surface documented in
 [`docs/reference/mcp-and-tools.md`](../reference/mcp-and-tools.md).
 

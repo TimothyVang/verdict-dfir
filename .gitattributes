@@ -2,3 +2,43 @@
 .seeds/templates.jsonl merge=union
 .seeds/plans.jsonl merge=union
 *.pdf binary
+
+# Keep generated source archives focused on the public runtime/docs surface.
+/.agents/** export-ignore
+/.claude/** export-ignore
+/obsidian-mind/** export-ignore
+/evidence/** export-ignore
+/goldens/** export-ignore
+/packer/** export-ignore
+/docs/plans/** export-ignore
+/docs/specs/** export-ignore
+/docs/legacy/** export-ignore
+
+# Defense in depth: if private evidence or runtime state is ever force-added,
+# keep it out of generated source archives.
+/tmp/** export-ignore
+/fixtures/** export-ignore
+/test-forensics/** export-ignore
+*.E01 export-ignore
+*.e01 export-ignore
+*.dd export-ignore
+*.raw export-ignore
+*.mem export-ignore
+*.evtx export-ignore
+*.EVTX export-ignore
+*.pcap export-ignore
+*.pcapng export-ignore
+*.sqlite export-ignore
+*.sqlite-journal export-ignore
+.env export-ignore
+.env.* export-ignore
+.envrc export-ignore
+.npmrc export-ignore
+.pypirc export-ignore
+.netrc export-ignore
+*.pem export-ignore
+*.key export-ignore
+*.cookies export-ignore
+*.har export-ignore
+/browser-profiles/** export-ignore
+/profiles/** export-ignore

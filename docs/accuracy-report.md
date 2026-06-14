@@ -228,7 +228,7 @@ modify the evidence"; there is no code path that *can*:
   output SHA-256s; a drifted hash rejects the finding (`verify_finding`, with the
   sha256-drift-rejection path exercised by the `verifier_hash_mismatch_once` fault mode).
 - **The boundaries were tested for bypass, adversarially.**
-  [`services/mcp/tests/bypass_paths.rs`](../services/mcp/tests/bypass_paths.rs) feeds the tool
+  [`services/mcp/tests/bypass_paths.rs`](https://github.com/TimothyVang/verdict-dfir/blob/master/services/mcp/tests/bypass_paths.rs) feeds the tool
   surface a shell-injection payload as a *filename* (`evil; touch HACKED && $(rm -rf ~) | nc …`),
   `../../..` traversal paths, and flag-looking paths (`--output=… -rf`): the payload byte-string is
   hashed as a literal file, traversals resolve to typed `NotFound` errors, nothing shells out, and

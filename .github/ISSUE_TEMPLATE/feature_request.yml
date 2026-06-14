@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest a scoped VERDICT improvement.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What analyst/operator workflow is blocked or too manual today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed capability
+      description: Describe the smallest useful behavior change.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options:
+        - MCP tool surface
+        - verifier / audit chain
+        - reports
+        - dashboard
+        - install / setup
+        - documentation
+        - CI / release
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: guardrails
+    attributes:
+      label: Guardrail impact
+      description: Note any effect on read-only evidence handling, finding citations, or the no-`execute_shell` invariant.
+      placeholder: No expected guardrail change.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance evidence
+      description: What test, smoke, or live run would prove the change works?
+    validations:
+      required: true

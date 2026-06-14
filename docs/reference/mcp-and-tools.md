@@ -164,5 +164,5 @@ limitation reported as BinaryNotFound**, never evidence-absence.
 
 - [`dependencies.md`](dependencies.md) — version pins, licenses, expected-failure matrix.
 - [`environment-variables.md`](environment-variables.md) — the full env-var surface.
-- [`../../agent-config/TOOLS.md`](../../agent-config/TOOLS.md) — per-tool args/returns (agent read-order).
+- [`agent-config/TOOLS.md`](https://github.com/TimothyVang/verdict-dfir/blob/master/agent-config/TOOLS.md) — per-tool args/returns (agent read-order).
 - [`../architecture.md`](../architecture.md) — the trust boundaries and where the surface sits.
