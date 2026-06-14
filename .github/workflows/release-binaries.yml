@@ -145,6 +145,7 @@ jobs:
             release_green=$(gh run list \
               --workflow=release.yml \
               --branch="${tag}" \
+              --repo "${repo}" \
               --limit=20 \
               --json headSha,headBranch,status,conclusion \
               --jq "[.[] | select(.headSha == \"${GITHUB_SHA}\" and .headBranch == \"${tag}\" and .status == \"completed\" and .conclusion == \"success\")] | length")
