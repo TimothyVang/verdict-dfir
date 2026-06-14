@@ -185,6 +185,7 @@ scripts/make-demo-video/.tts-cache/
 # reach the public repo.
 /Juding Criteria/
 /docs/find-evil-demo.mp4
+/docs/verdict-*.mp4
 # Launch-session screenshots, now collected under launch-artifacts/ to keep the
 # repo root clean. Root-anchored *.png patterns below are kept for any stragglers
 # that land at the root during a future launch session.
