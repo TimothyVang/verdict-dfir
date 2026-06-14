@@ -16,7 +16,7 @@ name: L2 SIFT-lite (Advisory)
 
 on:
   push:
-    branches: ['**']
+    branches: [master]
   pull_request:
     branches: [master]
 
