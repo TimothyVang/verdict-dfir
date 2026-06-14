@@ -56,9 +56,9 @@ body:
       label: Reproduction steps
       description: Minimal commands or actions that reproduce the issue.
       value: |
-        1. 
-        2. 
-        3. 
+        1.
+        2.
+        3.
     validations:
       required: true
   - type: textarea
