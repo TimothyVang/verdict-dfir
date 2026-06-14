@@ -120,7 +120,9 @@ def main() -> int:
     audio_out.mkdir(parents=True, exist_ok=True)
     CACHE.mkdir(parents=True, exist_ok=True)
     narrations = extract_narrations(beats_ts)
-    print(f"piper: {piper}\nvoice: {model.name}\nbeats: {beats_ts.name} -> {audio_out}\n")
+    print(
+        f"piper: {piper}\nvoice: {model.name}\nbeats: {beats_ts.name} -> {audio_out}\n"
+    )
     # amy speaks a touch slower than the old cloud voice; 0.9 keeps every beat
     # within its on-screen time budget. Override with PIPER_LENGTH_SCALE.
     length_scale = os.environ.get("PIPER_LENGTH_SCALE", "0.9")
