@@ -6,11 +6,11 @@ This directory holds small, reviewable evidence summaries that explain what the 
 
 | File | Purpose |
 |---|---|
-| `l3-local-sift.json` | Local VMware/SIFT L3 fallback evidence for `v-submit`. It records the NIST Hacking Case image hash, run/readiness state, artifact hashes, and verification commands used when the GitHub KVM runner label had no capacity. |
+| `l3-local-sift.json` | Committed local NIST fallback evidence for `v-submit`. It records the NIST Hacking Case image hash, run/readiness state, artifact hashes, and verification commands used when the GitHub KVM runner label had no capacity. It is not SIFT/KVM parity evidence. |
 
 ## Why this exists
 
-The preferred L3 path is a full SIFT run on a KVM-capable GitHub runner. During final release, the `ubuntu-latest-4-core-kvm` label had no available jobs, so CI validated this explicit local SIFT evidence instead of treating a skipped L3 run as success.
+The preferred L3 path is a full SIFT run on a KVM-capable GitHub runner. During final release, the `ubuntu-latest-4-core-kvm` label had no available jobs, so CI validated this explicit committed local evidence instead of treating a skipped L3 run as success.
 
 This is intentionally narrow:
 

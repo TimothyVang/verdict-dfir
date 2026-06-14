@@ -7,6 +7,8 @@
 #
 # Build command (requires KVM on host):
 #   packer init packer/sift-microvm.pkr.hcl
+#   install -m 600 /dev/null packer/local.auto.pkrvars.hcl
+#   $EDITOR packer/local.auto.pkrvars.hcl   # add: ssh_password = "..."
 #   packer build packer/sift-microvm.pkr.hcl
 #
 # Output: packer/artifacts/sift-microvm-warm.qcow2.zst
@@ -44,8 +46,11 @@ variable "ssh_username" {
 
 variable "ssh_password" {
   type      = string
-  default   = "forensics"
   sensitive = true
+  validation {
+    condition     = length(var.ssh_password) > 0
+    error_message = "Set ssh_password explicitly with -var or a local var file; no default SIFT password is embedded in this public recipe."
+  }
 }
 
 variable "cpus" {
@@ -95,14 +100,14 @@ source "qemu" "sift_microvm" {
   machine_type = "q35"
   accelerator  = "kvm"
 
-  # Port-forward 2222 → 22 so we can provision over SSH.
+  # Port-forward localhost:2222 → guest:22 so provisioning is reachable only
+  # from the build host.
   qemuargs = [
-    ["-netdev", "user,id=net0,hostfwd=tcp::2222-:22"],
+    ["-netdev", "user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22"],
     ["-device", "virtio-net,netdev=net0"]
   ]
 
-  # SSH boot — OVA is assumed to ship with sshd running + the
-  # sansforensics/forensics credentials typical for SIFT builds.
+  # SSH boot — supply local OVA credentials explicitly at build time.
   ssh_username      = var.ssh_username
   ssh_password      = var.ssh_password
   ssh_port          = 22

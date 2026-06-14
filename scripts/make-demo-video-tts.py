@@ -19,6 +19,7 @@ Env overrides:
 
 from __future__ import annotations
 
+import argparse
 import os
 import re
 import shutil
@@ -28,8 +29,9 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-BEATS_TS = ROOT / "scripts/make-demo-video/src/beats/beats-data.ts"
-AUDIO_OUT = ROOT / "scripts/make-demo-video/public/audio"
+BEATS_DIR = ROOT / "scripts/make-demo-video/src/beats"
+BEATS_TS = BEATS_DIR / "beats-data.ts"
+AUDIO_ROOT = ROOT / "scripts/make-demo-video/public/audio"
 CACHE = ROOT / "scripts/make-demo-video/.tts-cache"
 HF_BASE = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US"
 VOICE_PATHS = {  # HF id -> repo sub-path
@@ -40,13 +42,43 @@ VOICE_PATHS = {  # HF id -> repo sub-path
 }
 
 
-def extract_narrations() -> list[str]:
-    """Pull every narration string from beats-data.ts in beat order."""
-    text = BEATS_TS.read_text(encoding="utf-8")
+def extract_narrations(beats_ts: Path) -> list[str]:
+    """Pull every narration string from a beats file in beat order."""
+    text = beats_ts.read_text(encoding="utf-8")
     narrs = re.findall(r'narration:\s*"((?:[^"\\]|\\.)*)"', text, re.DOTALL)
     if not narrs:
-        raise SystemExit(f"no narrations found in {BEATS_TS}")
+        raise SystemExit(f"no narrations found in {beats_ts}")
     return narrs
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Generate per-beat narration MP3s with Piper.",
+    )
+    parser.add_argument(
+        "--beats-file",
+        default=str(BEATS_TS),
+        help="TS beats file to read narration from (default: the showcase beats-data.ts). "
+        "Accepts an absolute path or a name relative to src/beats/.",
+    )
+    parser.add_argument(
+        "--audio-subdir",
+        default="",
+        help="Subdirectory under public/audio/ to write into (default: the showcase "
+        "root). Use one per additional video, e.g. 'explainer'.",
+    )
+    return parser.parse_args()
+
+
+def resolve_beats_file(value: str) -> Path:
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        # allow a bare filename relative to the beats directory
+        rel = BEATS_DIR / value
+        candidate = rel if rel.exists() else (ROOT / value)
+    if not candidate.exists():
+        raise SystemExit(f"beats file not found: {candidate}")
+    return candidate
 
 
 def resolve_piper() -> str:
@@ -80,12 +112,15 @@ def resolve_model() -> Path:
 
 
 def main() -> int:
+    args = parse_args()
+    beats_ts = resolve_beats_file(args.beats_file)
+    audio_out = AUDIO_ROOT / args.audio_subdir if args.audio_subdir else AUDIO_ROOT
     piper = resolve_piper()
     model = resolve_model()
-    AUDIO_OUT.mkdir(parents=True, exist_ok=True)
+    audio_out.mkdir(parents=True, exist_ok=True)
     CACHE.mkdir(parents=True, exist_ok=True)
-    narrations = extract_narrations()
-    print(f"piper: {piper}\nvoice: {model.name}\n")
+    narrations = extract_narrations(beats_ts)
+    print(f"piper: {piper}\nvoice: {model.name}\nbeats: {beats_ts.name} -> {audio_out}\n")
     # amy speaks a touch slower than the old cloud voice; 0.9 keeps every beat
     # within its on-screen time budget. Override with PIPER_LENGTH_SCALE.
     length_scale = os.environ.get("PIPER_LENGTH_SCALE", "0.9")
@@ -99,7 +134,7 @@ def main() -> int:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        mp3 = AUDIO_OUT / f"beat_{i:02d}.mp3"
+        mp3 = audio_out / f"beat_{i:02d}.mp3"
         subprocess.run(
             ["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), str(mp3)], check=True
         )

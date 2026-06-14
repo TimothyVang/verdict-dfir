@@ -23,6 +23,9 @@ are needed to build, operate, or audit VERDICT from a clone:
 | `scripts/` | Install, preflight, run, smoke, scoring, and release tooling. |
 | `apps/web/` | Local dashboard and offline report renderer. |
 | `docs/` | Operator, architecture, accuracy, and release evidence docs. |
+| `goldens/` | Small answer-key JSON files for recall scoring. |
+| `packer/` | SIFT warm-image build recipe used by L3 workflows. |
+| `.claude/skills/` | Claude Code slash-skill entrypoints such as `/verdict`. |
 | `.github/workflows/` | CI, release, docs, and reproducibility gates. |
 | `.mcp.json` / `.mcp.json.sift` | Claude Code MCP launch configuration for local and SIFT modes. |
 
@@ -34,15 +37,11 @@ work, but they are not part of a clean source archive or judge/customer bundle.
 
 | Path | Reason |
 |---|---|
-| `.agents/` | Harness compatibility and local agent skills, not runtime product code. |
-| `.claude/` | Claude Code project configuration; useful locally, noisy in release archives. |
-| `obsidian-mind/` | Development/operator memory framework; never evidence and never audit-chain input. |
+| local harness config | Local agent-harness commands, settings, and workflows are operator surfaces, not product runtime. |
+| operator memory vault | Optional local memory vaults are never evidence and never audit-chain input. |
 | `evidence/` | Placeholder only; real evidence is excluded by `.gitignore`. |
-| `goldens/` | Test scoring data, not required for end-user runtime. |
-| `packer/` | SIFT image build scaffolding, not required for normal install/run. |
-| `docs/plans/` | Historical implementation plans; useful for archaeology, not runtime docs. |
-| `docs/specs/` | Historical architecture specs; curated public pages link only current decisions. |
-| `docs/legacy/` | Retired material kept for git history context. |
+| historical planning archives | Not part of the public release tree; curated public pages link only current decisions. |
+| raw run outputs | Operators generate fresh case directories under `tmp/auto-runs/` instead of shipping bulky historical outputs. |
 | evidence extensions and runtime state | `*.E01`, `*.dd`, `*.mem`, `*.evtx`, `*.pcap*`, `.env*`, `tmp/`, `fixtures/`, and `test-forensics/` are archive-excluded as defense in depth. |
 
 Release ZIPs produced for submissions should remain small, deterministic, and

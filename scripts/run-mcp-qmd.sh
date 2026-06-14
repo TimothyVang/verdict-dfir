@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
-# run-mcp-qmd.sh — machine-independent launcher for the obsidian-mind QMD memory
-# MCP server, referenced from .mcp.json so memory recall (mcp__qmd__query) works
-# from a fresh clone without a per-machine `claude mcp add`.
+# run-mcp-qmd.sh — optional launcher for a local obsidian-mind QMD memory MCP
+# server. The public release does not ship the vault; if an operator has one at
+# ./obsidian-mind, this wrapper lets .mcp.json expose mcp__qmd__query without a
+# per-machine `claude mcp add`.
 #
 # It resolves Node 22 via nvm (the vault QMD machinery needs --experimental-strip-types
-# + the global @tobilu/qmd) and runs the vault's qmd-mcp.mjs, which scopes itself to the
-# `verdict-memory` index from obsidian-mind/vault-manifest.json.
+# + the global @tobilu/qmd) and runs the vault's qmd-mcp.mjs.
 #
-# If Node 22 / QMD isn't installed, the server simply doesn't start — the product is
-# unaffected. This is a DEV/OPERATOR memory server: NOT in the audit chain, never
-# touches evidence, emits no Findings. See docs/runbooks/obsidian-mind-memory.md.
+# Set FINDEVIL_ENABLE_QMD=1 to enable it. If Node 22 / QMD isn't installed, the
+# server simply doesn't start — the product is unaffected. This is an OPERATOR
+# memory server: NOT in the audit chain, never touches evidence, and emits no
+# Findings.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 QMD_MCP="$REPO/obsidian-mind/.claude/scripts/qmd-mcp.mjs"
+[ "${FINDEVIL_ENABLE_QMD:-0}" = "1" ] || { echo "qmd memory server: set FINDEVIL_ENABLE_QMD=1 to enable (skipping)" >&2; exit 0; }
+for qmd_path in "$REPO/obsidian-mind" "$REPO/obsidian-mind/.claude" "$REPO/obsidian-mind/.claude/scripts" "$QMD_MCP"; do
+  [ ! -L "$qmd_path" ] || { echo "qmd memory server: symlinked vault path rejected: $qmd_path" >&2; exit 0; }
+done
 [ -f "$QMD_MCP" ] || { echo "qmd memory server: vault not present (skipping)" >&2; exit 0; }
 
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"

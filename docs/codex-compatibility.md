@@ -133,7 +133,7 @@ ots_stamp
 ots_verify
 ```
 
-`execute_shell` breaks the typed-surface trust boundary. `ots_stamp` and `ots_verify` were removed under Amendment A5 when the chain collapsed to three tiers: audit `prev_hash` links, Merkle root, and sigstore.
+`execute_shell` breaks the typed-surface trust boundary. `ots_stamp` and `ots_verify` were removed under Amendment A5 when the chain collapsed to three tiers: audit `prev_hash` links, Merkle root, and a manifest signature tier: Ed25519 by default, Sigstore/Rekor when configured.
 
 ## Validation
 
@@ -220,7 +220,7 @@ Codex skill shortcut:
 dashboard
 ```
 
-Codex's built-in slash commands are fixed, but enabled skills appear in the skill/slash picker. This repo provides `.agents/skills/dashboard`, so asking for `/dashboard` or selecting the dashboard skill should start/open the local cockpit. Manual fallback:
+Codex's built-in slash commands are fixed, so use the manual dashboard launcher when you want the local cockpit:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/codex-dashboard.ps1

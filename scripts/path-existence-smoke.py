@@ -73,15 +73,8 @@ GLOB_PATTERNS: tuple[str, ...] = (
     "services/*/README.md",
 )
 
-# Specific files that match a GLOB but should be excluded - e.g.
-# templates that envsubst-substitute placeholders at v-submit time
-# and therefore have unresolved ${VAR} tokens that look path-shaped
-# but aren't real broken refs.
-GLOB_EXCLUDES: frozenset[str] = frozenset(
-    {
-        "docs/templates/devpost-readme.md",
-    }
-)
+# Specific files that match a GLOB but should be excluded.
+GLOB_EXCLUDES: frozenset[str] = frozenset()
 
 # Service README -> the package directory under it.  Used for the
 # "package-relative" resolution attempt on service READMEs (e.g.
@@ -204,9 +197,8 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # State files written at runtime, not committed.
     re.compile(r"^state/"),
     # Per-case run output dirs written at runtime by find-evil-auto
-    # / fleet_investigate.py - tmp/auto-runs/<ts>/, tmp/fleet-runs/<ts>/,
-    # quoted in README.md + docs/demo-script-a2.md as conventional
-    # locations.  tmp/ is gitignored.
+    # / fleet_investigate.py - tmp/auto-runs/<ts>/ and tmp/fleet-runs/<ts>/.
+    # tmp/ is gitignored.
     re.compile(r"^tmp/"),
     # Optional release asset downloaded by devpost-submit.yml.
     # readiness-packet.zip is produced by scripts/readiness-gate.ps1 when an
@@ -231,15 +223,13 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # the audit chain), so its paths exist on a developer's disk but not in the
     # CI checkout.  Same shape as the git-hub-references/ external-clone allowance.
     re.compile(r"^n8n-references(/|$)"),
-    # obsidian-mind dev/operator memory vault + local Claude settings.
+    # Optional operator memory vault.
     # /obsidian-mind/brain/ (Gotchas, Patterns, Key Decisions, North Star) is
     # gitignored BY DESIGN — .gitignore marks it "private and must NEVER be
-    # published" — and .claude/settings.local.json is a gitignored per-user file.
-    # CLAUDE.md / docs/onboarding.md / docs/runbooks/obsidian-mind-memory.md cite
-    # them but they never enter the CI checkout. Same shape as the
+    # published".
+    # These examples may appear in local-operator docs but never enter the CI checkout. Same shape as the
     # git-hub-references/ + n8n-references/ gitignored-clone allowances.
     re.compile(r"^obsidian-mind/brain/"),
-    re.compile(r"^\.claude/settings\.local\.json$"),
     # User-level Claude Code auto-memory dir.  CLAUDE.md references
     # `memory/project_autonomous_queue.md` which actually lives at
     # `~/.claude/projects/<project>/memory/...`, not at repo root.
@@ -270,14 +260,13 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # Disk-image file-extension examples written as a pair (e.g. `.dd/.E01`) in
     # docs/DATASET.md — extension shorthand, not a filesystem path.
     re.compile(r"^\.[A-Za-z0-9]+/\.[A-Za-z0-9]+$"),
-    # obsidian-mind external vault notes (`brain/Memories.md`, etc.) quoted in
-    # docs/runbooks/obsidian-mind-memory.md — paths inside the operator's separate
-    # Obsidian vault (`cd obsidian-mind && claude`), not this repo. Same shape as
+    # Operator memory-vault notes (`brain/Memories.md`, etc.) are paths inside
+    # the operator's separate vault, not this repo. Same shape as
     # the git-hub-references external-clone allowance above.
     re.compile(r"^brain/"),
     # Placeholder paths that carry a literal ellipsis (U+2026), e.g.
-    # `obsidian-mind/brain/…` in CLAUDE.md or `obsidian-mind/…` in the
-    # obsidian-mind runbook. The ellipsis means "and so on" — a real file
+    # Placeholder paths with an operator vault prefix and a literal ellipsis
+    # mean "and so on" — a real file
     # can never contain it, so any such token is illustrative, not a path.
     re.compile(r".*…"),
 )

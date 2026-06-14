@@ -19,6 +19,9 @@ import { HashChainScene } from "../components/HashChainScene";
 import { AutomationUI } from "../components/AutomationUI";
 import { FleetScene } from "../components/FleetScene";
 import { OutroScene } from "../components/OutroScene";
+import { ArchDiagram } from "../components/ArchDiagram";
+import { ConceptCard } from "../components/ConceptCard";
+import { ExhibitChapter } from "../components/ExhibitChapter";
 
 const CHAR_DELAY = 1.5; // frames per character for typewriter fallback
 
@@ -151,8 +154,23 @@ interface BeatProps {
   audioFile: string | null;
 }
 
-// Dispatch to purpose-built components by beat number
+// Dispatch to purpose-built components. The additional videos (explainer,
+// deep-dives, quickstart, contributor call) set `beat.scene` and are dispatched
+// by name. The original FindEvilDemo beats leave `scene` unset and fall through
+// to the number-based dispatch below — behaviour is unchanged for that film.
 function BeatContent({ beat, totalBeats }: { beat: Beat; totalBeats: number }) {
+  if (beat.scene) {
+    switch (beat.scene) {
+      case "concept": return <ConceptCard beat={beat} totalBeats={totalBeats} />;
+      case "exhibit": return <ExhibitChapter beat={beat} totalBeats={totalBeats} />;
+      case "tools": return <ToolGrid />;
+      case "arch": return <ArchDiagram />;
+      case "outro": return <OutroScene />;
+      case "logo": return <LogoIntro />;
+      case "title":
+      default: return <TitleCard beat={beat} totalBeats={totalBeats} />;
+    }
+  }
   switch (beat.number) {
     case 1: return <LogoIntro />;
     case 2: return <ClaudeCodeScene />;

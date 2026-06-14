@@ -1,7 +1,6 @@
 """scripts/verdict --fleet: one command for a multi-host case folder.
 
-Gap 1 of docs/plans/2026-06-12-align-app-with-video-claims.md. Offline and
-fast: --dry-run prints the stage plan without running anything.
+Offline and fast: --dry-run prints the stage plan without running anything.
 """
 
 from __future__ import annotations

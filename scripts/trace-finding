@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """trace-finding — standalone, offline "trace any finding to its tool execution".
 
-A judge can run this against any committed run directory (e.g. docs/sample-run/*)
+A judge can run this against any completed case directory (e.g. tmp/auto-runs/<case-id>)
 with NOTHING but a Python 3 interpreter — no MCP server, no venv, no network — and
 get, for every Finding:
 

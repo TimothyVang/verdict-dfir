@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import json
-import shutil
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -13,7 +13,84 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 TRACE = REPO / "scripts" / "trace-finding"
-SAMPLE = REPO / "docs" / "sample-run" / "attack-samples-evtx"
+
+
+def _canonicalize(obj: dict) -> bytes:
+    return json.dumps(
+        obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+    ).encode("ascii")
+
+
+def _sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _append_record(
+    audit_path: Path, seq: int, prev_hash: str, kind: str, payload: dict
+) -> str:
+    record = {"kind": kind, "payload": payload, "prev_hash": prev_hash, "seq": seq}
+    raw = _canonicalize(record)
+    with audit_path.open("ab") as handle:
+        handle.write(raw + b"\n")
+    return _sha256(raw)
+
+
+def _write_synthetic_run(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True)
+    audit_path = run_dir / "audit.jsonl"
+    finding = {
+        "confidence": "CONFIRMED",
+        "description": "Synthetic audited finding for trace smoke.",
+        "finding_id": "finding-1",
+        "mitre_technique": "T1059",
+        "tool_call_id": "tc-1",
+    }
+    verdict = {"findings": [finding], "verdict": "SUSPICIOUS"}
+    verdict_path = run_dir / "verdict.json"
+    verdict_path.write_text(
+        json.dumps(verdict, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    verdict_sha = _sha256(verdict_path.read_bytes())
+
+    prev = ""
+    prev = _append_record(
+        audit_path,
+        0,
+        prev,
+        "tool_call_start",
+        {"tool": "evtx_query", "tool_call_id": "tc-1"},
+    )
+    prev = _append_record(
+        audit_path,
+        1,
+        prev,
+        "tool_call_output",
+        {"output_hash": "a" * 64, "tool_call_id": "tc-1"},
+    )
+    prev = _append_record(
+        audit_path,
+        2,
+        prev,
+        "finding_approved",
+        {"finding": finding, "finding_id": "finding-1"},
+    )
+    prev = _append_record(
+        audit_path,
+        3,
+        prev,
+        "verdict_artifact",
+        {"path": "verdict.json", "sha256": verdict_sha},
+    )
+
+    manifest = {
+        "audit_log_final_hash": prev,
+        "audit_log_record_count": 4,
+        "leaves": [{"record_id": "tc-1"}, {"record_id": "finding-1"}],
+    }
+    (run_dir / "run.manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _run_trace(run_dir: Path) -> subprocess.CompletedProcess[str]:
@@ -79,7 +156,7 @@ def _write_non_list_manifest_leaves(run_dir: Path) -> None:
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="trace-finding-smoke-") as tmp:
         run_dir = Path(tmp) / "run"
-        shutil.copytree(SAMPLE, run_dir)
+        _write_synthetic_run(run_dir)
 
         baseline = _run_trace(run_dir)
         if baseline.returncode != 0:
@@ -89,7 +166,7 @@ def main() -> int:
             return 1
 
         manifest_run = Path(tmp) / "manifest-run"
-        shutil.copytree(SAMPLE, manifest_run)
+        _write_synthetic_run(manifest_run)
         _tamper_manifest_final_hash(manifest_run)
         manifest_tampered = _run_trace(manifest_run)
         if manifest_tampered.returncode == 0:
@@ -104,7 +181,7 @@ def main() -> int:
             return 1
 
         malformed_manifest_run = Path(tmp) / "malformed-manifest-run"
-        shutil.copytree(SAMPLE, malformed_manifest_run)
+        _write_synthetic_run(malformed_manifest_run)
         _write_malformed_manifest(malformed_manifest_run)
         malformed_manifest = _run_trace(malformed_manifest_run)
         if malformed_manifest.returncode == 0:
@@ -124,7 +201,7 @@ def main() -> int:
             return 1
 
         semantic_manifest_run = Path(tmp) / "semantic-manifest-run"
-        shutil.copytree(SAMPLE, semantic_manifest_run)
+        _write_synthetic_run(semantic_manifest_run)
         _write_semantically_malformed_manifest(semantic_manifest_run)
         semantic_manifest = _run_trace(semantic_manifest_run)
         if semantic_manifest.returncode == 0:
@@ -148,7 +225,7 @@ def main() -> int:
             return 1
 
         non_list_leaves_run = Path(tmp) / "non-list-leaves-run"
-        shutil.copytree(SAMPLE, non_list_leaves_run)
+        _write_synthetic_run(non_list_leaves_run)
         _write_non_list_manifest_leaves(non_list_leaves_run)
         non_list_leaves = _run_trace(non_list_leaves_run)
         if non_list_leaves.returncode == 0:

@@ -83,6 +83,7 @@ EXCLUDED_PATH_PARTS = (
     # can grep-match the wrong-pattern coincidentally).
     "graphify-out",
     "tmp",
+    "site",
     # Pre-Phase-2 (2026-05-02), the historical specs + plans lived
     # at docs/superpowers/{specs,plans}/ and were excluded via the
     # generic "superpowers" path-component match. Phase 2 moved them
@@ -113,35 +114,12 @@ ALLOWED_FILES = {
     # legitimately contain the bad-half patterns to verify the
     # regexes catch them.
     "scripts/smoke-regex-tests.py",
-    # Historical specs + plans (per CLAUDE.md "code wins" rule -
-    # they were written pre-divergence and have top-of-doc
-    # banner per commit 608f6b8).
-    "docs/legacy/BUILD_PLAN_v2.md",
     "Find_Evil_Research_and_Build_Plan.docx",
     # The autonomous-queue file describes the audit history.
     "memory/project_autonomous_queue.md",
     # Decision-helper runbooks deliberately quote both halves
     # of a divergence to lay out tradeoffs side by side.
     "docs/runbooks/dockerfile-a2-decision.md",
-    # Historical specs + plans per CLAUDE.md "code wins" rule.
-    # The pre-A2 plans contain the bad patterns by design (they
-    # were written assuming the now-dropped modules); each carries
-    # a top-of-doc status banner per Phase 1 of the doc reorg
-    # (commit d1d60d7) marking SHIPPED / RETIRED state. Pre-Phase-2
-    # these were excluded via the "superpowers" path-component
-    # match; Phase 2 moved them to docs/{specs,plans}/ and they're
-    # now listed individually here.
-    "docs/specs/2026-04-23-find-evil-automation-master-design.md",
-    "docs/specs/2026-04-23-amendment-option-b-claude-code-mode.md",
-    "docs/specs/2026-04-23-layered-test-sandbox-design.md",
-    "docs/specs/2026-04-25-amendment-a2-claude-code-primary-interface.md",
-    "docs/specs/2026-04-25-the-product-design.md",
-    "docs/specs/2026-04-26-amendment-a3-agent-army-and-dashboard.md",
-    "docs/specs/2026-04-26-orchestration-glue-design.md",
-    "docs/plans/2026-04-23-orchestration-glue-plan.md",
-    "docs/plans/2026-04-23-product-plan.md",
-    "docs/plans/2026-04-23-sandbox-plan.md",
-    "docs/plans/2026-04-26-amendment-a3-plan.md",
 }
 
 
@@ -272,8 +250,6 @@ DIVERGENCES = [
             "agent-config/AGENTS.md",
             "docs/architecture.md",
             "CLAUDE.md",
-            # Plan docs that document this task.
-            "docs/plans",
         ),
         "remediation": (
             "CLAUDE_CODE_FORK_SUBAGENT=1 is a build-time internal and "
@@ -366,10 +342,7 @@ _MCP_DOC_FORBIDDEN_REGEXES = (
         re.IGNORECASE,
     ),
 )
-_MCP_DOC_SCAN_EXCLUDED_PREFIXES = (
-    "docs/plans/",
-    "docs/specs/",
-)
+_MCP_DOC_SCAN_EXCLUDED_PREFIXES: tuple[str, ...] = ()
 
 
 def _check_mcp_json_surface() -> list[str]:

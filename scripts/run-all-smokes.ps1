@@ -105,7 +105,6 @@ Invoke-Smoke -Label "verdict-policy-smoke (compute_verdict + detect_evidence_typ
 Invoke-Smoke -Label "fleet-policy-smoke (normalize/filter/cluster/density/uniqueness/aggregate)" -Command { & $python scripts/fleet-policy-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "report-policy-smoke (report QA + expert signoff + visual evidence policy)" -Command { & $python scripts/report-policy-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "readiness-gate-smoke (PacketOnly packaging + fail-closed blockers)" -Command { uv run --directory services/agent python ../../scripts/readiness-gate-smoke.py } -Prereq { (Test-CommandAvailable "uv") -and ((Test-CommandAvailable "powershell") -or (Test-CommandAvailable "pwsh")) }
-Invoke-Smoke -Label "demo-script-smoke (9 contiguous beats summing to 5:00)" -Command { & $python scripts/demo-script-smoke.py } -Prereq { $python -and (Test-Path -LiteralPath "docs/demo-script-a2.md" -PathType Leaf) }
 Invoke-Smoke -Label "launcher-smoke (bash -n + claude binary + no positional .)" -Command {
     if (-not $env:FINDEVIL_LAUNCHER_SMOKE_BASH_TIMEOUT_SECONDS) {
         $env:FINDEVIL_LAUNCHER_SMOKE_BASH_TIMEOUT_SECONDS = "90"
@@ -121,6 +120,15 @@ Invoke-Smoke -Label "render-binary-smoke (pandoc/chrome resolve via PATH, gracef
 Invoke-Smoke -Label "starter-data-smoke (SANS_STARTER_URL contract + goldens stub)" -Command { & $python scripts/starter-data-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "verdict-smoke (the one command, --dry-run)" -Command { & $python scripts/verdict-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "make-demo-video-smoke (TTS+ffmpeg video builder, --dry-run)" -Command { & $python scripts/make-demo-video-smoke.py } -Prereq { $python }
+Invoke-Smoke -Label "package-devpost-smoke (submission zip smoke mode)" -Command {
+    New-Item -ItemType Directory -Force tmp | Out-Null
+    $env:FINDEVIL_DEVPOST_MODE = "smoke"
+    $env:RELEASE_TAG = "v-submit-smoke"
+    $env:OUT_ZIP = "tmp/package-devpost-smoke.zip"
+    $env:RELEASE_ASSETS_DIR = "tmp/package-devpost-assets"
+    $env:BENCHMARK_CSV = "tmp/package-devpost-benchmark.csv"
+    bash scripts/package-devpost.sh
+} -Prereq { Test-CommandAvailable "bash" }
 Invoke-Smoke -Label "grounding-smoke (claim extraction + boundary + anti-hallucination contract)" -Command { & $python scripts/grounding-smoke.py } -Prereq { $python -and (Test-Path -LiteralPath "scripts/ground_verdict.py" -PathType Leaf) }
 
 Invoke-Smoke -Label "ruff check . (lint clean across all Python services)" -Command { ruff check . } -Prereq { Test-CommandAvailable "ruff" }

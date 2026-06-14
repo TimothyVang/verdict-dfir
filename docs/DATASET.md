@@ -245,7 +245,7 @@ unfetchable-on-host datasets are marked "staged, run pending evidence".)*
 |---|---|---|---|---|
 | `nitroba` | yes (local, tshark) | INDETERMINATE | **5/5 (100%) — PASS** (bar=80%) | Network-playbook gaps fixed (see below). Surfaces all five: anonymous-email contact, source host (192.168.15.4), Gmail-cookie attribution, authenticated Facebook login, and the send-vs-browsing timeline correlation. |
 | `nist-data-leakage` | staged, run pending evidence | — | — | needs `--sift` (disk) |
-| `nist-hacking-case` | yes (committed run) | SUSPICIOUS | 7/14 (50%) | coverage gap (not custody). Up from 1/14 after disk-artifact emitters and native fallback triage: now matches nhc-004 (hacking-tool files in Program Files/Desktop, from the MFT), nhc-005 (prefetch execution), nhc-007 (NTUSER shellbag navigation to a `\\4.220.254\Temp` staging share + tool folders), nhc-008 (LNK removable-media traces), nhc-009 (Recycle Bin staging artifacts), nhc-010 (suspiciously-named SAM account "Mr. Evil"), and nhc-011 (OpenSaveMRU recently-opened installers). Still below the 71% bar — the remaining seven: nhc-001 (ACMru/search history), nhc-002 (USB history), nhc-003 (email carving), nhc-006 (IE index.dat/browser history), nhc-012 (XP `.evt`, not EVTX), nhc-013 (thumbcache), and nhc-014 (named-pipe enum) are not yet parsed. |
+| `nist-hacking-case` | yes (committed local summary) | SUSPICIOUS | 7/14 (50%) | coverage gap (not custody). Up from 1/14 after disk-artifact emitters and native fallback triage: now matches nhc-004 (hacking-tool files in Program Files/Desktop, from the MFT), nhc-005 (prefetch execution), nhc-007 (NTUSER shellbag navigation to a `\\4.220.254\Temp` staging share + tool folders), nhc-008 (LNK removable-media traces), nhc-009 (Recycle Bin staging artifacts), nhc-010 (suspiciously-named SAM account "Mr. Evil"), and nhc-011 (OpenSaveMRU recently-opened installers). Still below the 71% bar — the remaining seven: nhc-001 (ACMru/search history), nhc-002 (USB history), nhc-003 (email carving), nhc-006 (IE index.dat/browser history), nhc-012 (XP `.evt`, not EVTX), nhc-013 (thumbcache), and nhc-014 (named-pipe enum) are not yet parsed. |
 | `alihadi-09-encrypt` | staged, run pending evidence | — | — | false-positive control; expect INDETERMINATE |
 | `alihadi-01-webserver` | staged, run pending evidence | — | — | disk+memory correlation |
 | `dfrws-2008-linux` | staged, run pending evidence | — | — | Linux memory+disk+network |
@@ -293,26 +293,23 @@ over-confident FAIL, nist-hacking-case partial still below target).
 
 ## Findings corpus (what the agent found)
 
-*(Populated incrementally as Week 5 acceptance criteria (AC-01 through AC-10) are verified against each fixture. Each subdirectory contains the full agent run manifest and audit.jsonl (post-A5 signed manifest; no OTS receipt).)*
+*(Populated incrementally as fixtures are run + scored. The public release keeps only small answer keys and evidence summaries; raw case outputs stay local.)*
 
 ```
 goldens/
 ├── sans-starter/
-│   ├── expected-findings.json    (ground truth — populated from manual walkthrough)
-│   ├── run-manifest.json         (cryptographically-signed)
-│   ├── audit.jsonl               (hash-chained audit log)
-│   └── run.manifest.json         (post-A5 signed manifest; no OTS receipt)
+│   └── expected-findings.json    (ground truth / answer key)
 ├── nist-hacking-case/
-│   └── …same layout…
+│   └── expected-findings.json
 ├── otrf-apt3-mordor/
-│   └── …same layout…
+│   └── expected-findings.json
 ├── volatility-cridex/
-│   └── …same layout…
+│   └── expected-findings.json
 └── synthetic-benign/
-    └── …same layout (expected empty findings)…
+    └── expected-findings.json    (expected empty findings)
 ```
 
-Each `run.manifest.json` is verifiable offline by any third party — under Amendment A2 the entry points are the `verify_manifest` library function (`from findevil_agent.crypto.manifest import verify_manifest`) or the `manifest_verify` MCP tool. The pre-A2 `find-evil verify <manifest>` CLI was dropped along with `findevil_agent/cli.py`. See `docs/cryptographic-attestation.md` "How a third party verifies offline" for the working recipe.
+Completed case outputs are generated locally under `tmp/auto-runs/<case-id>/` and are intentionally not shipped. Each generated `run.manifest.json` is verifiable offline by any third party — the entry points are the `verify_manifest` library function (`from findevil_agent.crypto.manifest import verify_manifest`) or the `manifest_verify` MCP tool. The pre-A2 `find-evil verify <manifest>` CLI was dropped along with `findevil_agent/cli.py`. See `docs/cryptographic-attestation.md` "How a third party verifies offline" for the working recipe.
 
 ---
 
@@ -332,4 +329,4 @@ Each `run.manifest.json` is verifiable offline by any third party — under Amen
 | Ali Hadi challenges (#1/#7/#9) | Free for research/education (answers gated) | By URL reference |
 | DFRWS 2008/2011 | Public for research/education | By URL reference |
 
-None of these licenses contaminate our MIT-licensed submission repo because we redistribute only URLs and SHA-256 hashes, not the fixtures themselves.
+None of these licenses contaminate our Apache-2.0 licensed submission repo because we redistribute only URLs and SHA-256 hashes, not the fixtures themselves.

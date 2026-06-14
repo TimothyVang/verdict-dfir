@@ -3,7 +3,7 @@
 # project-specific suggestion block so Claude opens the session with the right next
 # prompts: setup prompts when no evidence is uploaded, run prompts when it is.
 #
-# Wired in .claude/settings.json under hooks.SessionStart. Writes nothing to the
+# Intended for a local Claude Code hooks.SessionStart entry. Writes nothing to the
 # evidence/audit trail — it only emits additionalContext on stdout. Always exit 0;
 # never block the session.
 

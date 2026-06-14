@@ -12,8 +12,7 @@
 //!   were unlinked from the active list but still exist in pool memory.
 //!
 //! **Divergence between the two outputs is itself the forensic
-//! finding** — see `docs/false-positives.md` and the SRL-2018 DC
-//! investigation report at `docs/reports/`. A pslist=0 + psscan>0
+//! finding** — see `docs/false-positives.md`. A pslist=0 + psscan>0
 //! result is the textbook MITRE ATT&CK T1014 (Rootkit) signature.
 //!
 //! Volatility invocation: `<vol> -f <memory> -r json -q windows.psscan`.

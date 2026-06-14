@@ -63,12 +63,10 @@ and the escalation rule is enforced in code (`scripts/find_evil_auto.py`
 not just documented.
 **Natural beats staged.** Judges are explicitly trained to discount
 "staged self-correction" — a contrived error with an instant clean fix.
-The committed exhibit is `docs/sample-run/natural-self-correction/`
-(six genuine truncated-hive failures → six logged `course_correction`
-records → HEARTBEAT escalation → honest partial verdict, zero
-`fault_injection` records). Keep `fault-injection-redispatch/` labeled
-as the on-demand harness demonstration it is; never present it as the
-organic evidence.
+Prefer current case audit evidence: real tool failures, named
+`course_correction` records, HEARTBEAT escalation when applicable, and an
+honest partial verdict. Keep `fault-injection-redispatch/` labeled as the
+on-demand harness demonstration it is; never present it as organic evidence.
 **Anti-pattern:** silent retry. Failures must be logged and named.
 
 ## 2. IR Accuracy

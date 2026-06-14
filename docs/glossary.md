@@ -77,9 +77,9 @@ Velociraptor evidence run fully in local-host mode. Disk evidence is custody-onl
 Yes for the investigating agent (one of three modes — see [CLAUDE.md "Required Setup"](../CLAUDE.md)).
 
 **Is VERDICT's memory part of the evidence?**
-No — never. Both memory systems (the obsidian-mind dev/operator vault and the in-flow Hermes recall)
-are outside the audit chain: never evidence, never a Finding, never a Merkle leaf. See
-[CLAUDE.md "Non-Negotiable Guardrails"](../CLAUDE.md) and [`runbooks/obsidian-mind-memory.md`](runbooks/obsidian-mind-memory.md).
+No. In-flow Hermes recall is an audit-chain aid, not evidence by itself, and optional
+operator-side memory sidecars are outside the audit chain entirely. Memory is never a Finding and
+never upgrades a claim without current-case artifacts. See [CLAUDE.md "Non-Negotiable Guardrails"](../CLAUDE.md).
 
 **Where does output go?**
 `tmp/auto-runs/<case-id>/` — `verdict.json`, `audit.jsonl`, `run.manifest.json`, `manifest_verify.json`,

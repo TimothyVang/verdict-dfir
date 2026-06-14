@@ -69,12 +69,13 @@
 | `MCP_MODE` | `stdio` | `n8n-mcp` | Required transport mode (set by `install.sh`) |
 | `DISABLE_CONSOLE_OUTPUT` | `true` | `n8n-mcp` | Quiets pre-fetch output |
 
-## obsidian-mind memory layer (dev/operator, optional)
+## QMD memory sidecar (operator-local, optional)
 
 | Var | Default | Read by | Purpose |
 |---|---|---|---|
-| `CLAUDE_PROJECT_DIR` | repo root | vault hook scripts | Resolves the vault hook script paths |
-| `INDEX_PATH` | `~/.cache/qmd/<index>.sqlite` | `qmd-mcp.mjs` | Forces the QMD SQLite store (works around a qmd 2.1.0 `--index` bug) |
+| `FINDEVIL_ENABLE_QMD` | `0` | `scripts/run-mcp-qmd.sh` | Explicit opt-in for the local operator memory sidecar. |
+| `INDEX_PATH` | `~/.cache/qmd/<index>.sqlite` | local `qmd-mcp.mjs` | Forces the QMD SQLite store when an operator supplies a local `obsidian-mind/` vault. |
 
-See [`../runbooks/obsidian-mind-memory.md`](../runbooks/obsidian-mind-memory.md) for the memory
-layer; the QMD index name lives in `obsidian-mind/vault-manifest.json` (`qmd_index`).
+The public release does not ship an operator memory vault. `scripts/run-mcp-qmd.sh`
+exits cleanly unless `FINDEVIL_ENABLE_QMD=1` is set and
+`obsidian-mind/.claude/scripts/qmd-mcp.mjs` is present as a real local file.

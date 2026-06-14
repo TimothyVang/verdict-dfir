@@ -135,8 +135,7 @@ Only cut or refresh release assets after confirming the workflow registrations a
   `git status --ignored` shows what would be committed.
 * **L0 or L1 fail on first push.**  Most likely cause: a
   toolchain mismatch with the GHA runner (Rust 1.88 / Python
-  3.11).  See `docs/divergences-resolved.md` for
-  pinning context.  The amendment-a2-guard job specifically
+  3.11). The amendment-a2-guard job specifically
   fails if the dropped pre-A2 modules are committed —
   `git ls-files services/agent/findevil_agent/{cli,graph,api,
   supervisor,specialists}.py` should return nothing.

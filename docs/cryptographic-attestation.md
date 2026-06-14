@@ -315,8 +315,7 @@ Honest disclosure (per `docs/false-positives.md` and SOUL.md):
   INFERRED > HYPOTHESIS)
 - `agent-config/JUDGING.md` (pre-submission self-assessment rubric;
   graded out-of-band by `scripts/self-score.py`, not part of the chain)
-- `docs/reports/2026-04-26-srl2018-dc-investigation.md` (real-
-  evidence end-to-end run, including §7 tamper detection live demo)
+- `scripts/trace-finding` (offline replay helper for completed case directories)
 - `scripts/agent-mcp-smoke.py` (the negative test runs in CI on
   every L1 build per `docker/l1-compose.yml`)
 - [Federal Rule of Evidence 902(14)](https://www.law.cornell.edu/rules/fre/rule_902)

@@ -12,7 +12,7 @@
     "size_bytes": 4871301120
   },
   "run": {
-    "host_run_dir": "docs/sample-run/nist-hacking-case",
+    "host_run_dir": "historical local run output; not shipped. Generate a fresh tmp/auto-runs/<case-id> with verification_commands[1].",
     "case_id": "bb2953cd-bdd9-4251-a493-70c97663f892",
     "run_id": "auto-1781370852",
     "verdict": "SUSPICIOUS",
@@ -85,6 +85,6 @@
   "verification_commands": [
     "PATH=\"$HOME/.cargo/bin:$PATH\" bash scripts/run-all-smokes.sh",
     "bash scripts/verdict evidence/SCHARDT.dd --skip-build --no-dashboard --run-summary tmp/schardt-final-summary.json --unattended",
-    "python3 scripts/score-recall.py docs/sample-run/nist-hacking-case --golden goldens/nist-hacking-case"
+    "python3 scripts/score-recall.py <fresh-run-dir-from-summary> --golden goldens/nist-hacking-case"
   ]
 }

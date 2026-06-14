@@ -21,7 +21,7 @@ Wall-clock: usually sub-second, dominated by bash startup. Native
 Windows Git Bash startup can be slower under load, so the per-file
 syntax timeout is configurable with
 ``FINDEVIL_LAUNCHER_SMOKE_BASH_TIMEOUT_SECONDS``. Wired into
-docker/l1-compose.yml after demo-script-smoke as the 6th L1 smoke.
+docker/l1-compose.yml after the policy smokes as an L1 smoke.
 """
 
 from __future__ import annotations

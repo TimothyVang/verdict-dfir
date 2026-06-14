@@ -232,7 +232,7 @@ For the full doc map (every file with status badge + one-line purpose), see [`do
 3. [ ] Contradictions resolved or explicitly flagged in the report
 4. [ ] Cross-host corroboration done (if multi-host case)
 5. [ ] Synthetic-benign baseline run produced zero findings
-6. [ ] Report rendered to PDF or HTML (see [`docs/reports/2026-04-26-srl2018-dc-investigation.pdf`](docs/reports/2026-04-26-srl2018-dc-investigation.pdf) for an example)
+6. [ ] Report rendered to PDF or HTML in the case output directory
 7. [ ] Readiness packet created and reviewed if this is a submission/customer-review candidate
 
 If all relevant checks are complete, you're done. If any are skipped, document the reason in the report's §8 (Limitations).

@@ -6,13 +6,17 @@
 # Keep generated source archives focused on the public runtime/docs surface.
 /.agents/** export-ignore
 /.claude/** export-ignore
+/.claude/skills/** -export-ignore
+/.claude/commands/** export-ignore
+/.claude/settings*.json export-ignore
+/.claude/workflows/** export-ignore
 /obsidian-mind/** export-ignore
 /evidence/** export-ignore
-/goldens/** export-ignore
-/packer/** export-ignore
 /docs/plans/** export-ignore
 /docs/specs/** export-ignore
 /docs/legacy/** export-ignore
+/docs/reports/** export-ignore
+/docs/sample-run/** export-ignore
 
 # Defense in depth: if private evidence or runtime state is ever force-added,
 # keep it out of generated source archives.
@@ -38,6 +42,8 @@
 .netrc export-ignore
 *.pem export-ignore
 *.key export-ignore
+*.pkrvars.hcl export-ignore
+*.pkrvars.json export-ignore
 *.cookies export-ignore
 *.har export-ignore
 /browser-profiles/** export-ignore

@@ -29,6 +29,9 @@
 #   --no-dashboard    don't auto-open the web dashboard
 #   --skip-build      assume target/release/findevil-mcp is already built
 #   --dry-run         print each stage without running anything
+#   --keep-sift-staging
+#                     keep the copied VM staging path after a successful --sift
+#                     run (default: remove current-run staging on success)
 #   --unattended      no interactive prompts (forwarded to the engine)
 # (parallel is the DEFAULT) independent tool calls (verify re-runs + disk-artifact
 #                     parses) run concurrently; the verdict + audit chain are
@@ -60,6 +63,10 @@ WATCH=0
 EVIDENCE=""
 RUN_SUMMARY=""
 PASSTHROUGH=()
+KEEP_SIFT_STAGING=0
+SIFT_STAGING_ROOT=""
+SIFT_STAGING_PARENT=""
+STAGED_REMOTE_PATH=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -68,6 +75,7 @@ while [[ $# -gt 0 ]]; do
     --no-dashboard)  NO_DASHBOARD=1; shift ;;
     --skip-build)    SKIP_BUILD=1; shift ;;
     --dry-run)       DRY=1; shift ;;
+    --keep-sift-staging) KEEP_SIFT_STAGING=1; shift ;;
     --watch)         WATCH=1; shift ;;
     --run-summary)   RUN_SUMMARY="$2"; shift 2 ;;
     --parallel)      PASSTHROUGH+=("--parallel"); shift ;;
@@ -143,6 +151,24 @@ safe_guest_dir() {
   printf '%s' "${value}"
 }
 
+sift_staging_cleanup_root_allowed() {
+  local gevdir="$1" root="$2" normalized_dir normalized_root prefix rest
+  normalized_dir="${gevdir%/}"
+  normalized_root="${root%/}"
+  prefix="${normalized_dir}/.verdict-staging/"
+
+  [[ -n "${normalized_dir}" && "${normalized_dir}" == /* ]] || return 1
+  [[ -n "${normalized_root}" && "${normalized_root}" == "${prefix}"* ]] || return 1
+  case "/${normalized_root#/}/" in
+    *"/../"*|*"/./"*) return 1 ;;
+  esac
+
+  rest="${normalized_root#${prefix}}"
+  [[ -n "${rest}" && "${rest}" != */* ]] || return 1
+  [[ "${rest}" != "." && "${rest}" != ".." && "${rest}" != -* ]] || return 1
+  [[ "${rest}" =~ ^[[:alnum:]_][[:alnum:]_.+-]*$ ]] || return 1
+}
+
 safe_guest_host() {
   local value="$1"
   if [[ -z "${value}" || "${value}" == -* || ! "${value}" =~ ^[[:alnum:]][[:alnum:].-]*$ || "${value}" == *..* || "${value}" == *[-.] ]]; then
@@ -170,10 +196,202 @@ verdict_selftest_sift_sanitizers() {
   printf 'sift sanitizer selftest OK\n'
 }
 
-if [[ "${FINDEVIL_VERDICT_SELFTEST:-}" == "sift-sanitizers" ]]; then
-  verdict_selftest_sift_sanitizers
-  exit 0
-fi
+local_evidence_type() {
+  local path="$1"
+  if [[ -L "${path}" ]]; then
+    printf 'unsupported'
+  elif [[ -d "${path}" ]]; then
+    printf 'dir'
+  elif [[ -f "${path}" ]]; then
+    printf 'file'
+  elif [[ -e "${path}" ]]; then
+    printf 'unsupported'
+  else
+    printf 'missing'
+  fi
+}
+
+local_evidence_size() {
+  local path="$1"
+  _evidence_size "${path}"
+}
+
+local_evidence_fingerprint() {
+  local path="$1" out
+  if ! out="$(python3 - "${path}" <<'PY'
+import hashlib
+import os
+import stat
+import sys
+
+root = sys.argv[1]
+
+
+def fail(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+def update_path(hasher, rel):
+    rel_bytes = os.fsencode(rel)
+    hasher.update(str(len(rel_bytes)).encode("ascii"))
+    hasher.update(b"\0")
+    hasher.update(rel_bytes)
+    hasher.update(b"\0")
+
+
+def update_file(hasher, path):
+    st = os.lstat(path)
+    if stat.S_ISLNK(st.st_mode):
+        fail("symlink evidence entries are unsupported")
+    if not stat.S_ISREG(st.st_mode):
+        fail("special evidence entries are unsupported")
+    hasher.update(str(st.st_size).encode("ascii"))
+    hasher.update(b"\0")
+    with open(path, "rb") as f:
+        while True:
+            chunk = f.read(1024 * 1024)
+            if not chunk:
+                break
+            hasher.update(chunk)
+
+
+def on_walk_error(error):
+    fail("cannot read evidence directory {}: {}".format(error.filename, error.strerror))
+
+
+if not os.path.exists(root) and not os.path.islink(root):
+    print("missing")
+    raise SystemExit(0)
+
+root_st = os.lstat(root)
+hasher = hashlib.sha256()
+if stat.S_ISLNK(root_st.st_mode):
+    fail("symlink evidence paths are unsupported")
+if stat.S_ISREG(root_st.st_mode):
+    hasher.update(b"file\0")
+    update_path(hasher, ".")
+    update_file(hasher, root)
+    print(hasher.hexdigest())
+    raise SystemExit(0)
+if not stat.S_ISDIR(root_st.st_mode):
+    fail("special evidence paths are unsupported")
+
+hasher.update(b"dir\0")
+hasher.update(b"D\0")
+update_path(hasher, ".")
+for current, dirs, files in os.walk(root, topdown=True, followlinks=False, onerror=on_walk_error):
+    dirs[:] = sorted(dirs, key=os.fsencode)
+    files = sorted(files, key=os.fsencode)
+    for dirname in dirs:
+        path = os.path.join(current, dirname)
+        st = os.lstat(path)
+        if stat.S_ISLNK(st.st_mode):
+            fail("symlink evidence entries are unsupported")
+        if not stat.S_ISDIR(st.st_mode):
+            fail("special evidence entries are unsupported")
+        hasher.update(b"D\0")
+        update_path(hasher, os.path.relpath(path, root))
+    for filename in files:
+        path = os.path.join(current, filename)
+        hasher.update(b"F\0")
+        update_path(hasher, os.path.relpath(path, root))
+        update_file(hasher, path)
+
+print(hasher.hexdigest())
+PY
+)"; then
+    fail "--sift: unsupported evidence path for staging fingerprint: ${path}"
+  fi
+  printf '%s' "${out}"
+}
+
+verdict_selftest_sift_staging() {
+  local tmp a b c f1 f2 symlink dangling type size fp_a fp_b fp_c fp_f1 fp_f2
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "${tmp}"' RETURN
+
+  mkdir -p "${tmp}/a/empty" "${tmp}/a/nested" "${tmp}/b/empty" "${tmp}/b/nested" "${tmp}/c/empty" "${tmp}/c/nested"
+  printf 'alpha\n' >"${tmp}/a/nested/file.txt"
+  printf 'alpha\n' >"${tmp}/b/nested/file.txt"
+  printf 'beta\n' >"${tmp}/c/nested/file.txt"
+  printf 'alpha\n' >"${tmp}/f1"
+  printf 'alpha\n' >"${tmp}/f2"
+  ln -s "${tmp}/a/nested/file.txt" "${tmp}/symlink" 2>/dev/null || true
+  ln -s "${tmp}/missing-target" "${tmp}/dangling" 2>/dev/null || true
+
+  a="${tmp}/a"
+  b="${tmp}/b"
+  c="${tmp}/c"
+  f1="${tmp}/f1"
+  f2="${tmp}/f2"
+  symlink="${tmp}/symlink"
+  dangling="${tmp}/dangling"
+
+  type="$(local_evidence_type "${a}")" && [[ "${type}" == "dir" ]] || fail "selftest staging type dir failed"
+  type="$(local_evidence_type "${f1}")" && [[ "${type}" == "file" ]] || fail "selftest staging type file failed"
+  type="$(local_evidence_type "${tmp}/missing")" && [[ "${type}" == "missing" ]] || fail "selftest staging type missing failed"
+  if [[ -L "${symlink}" ]]; then
+    type="$(local_evidence_type "${symlink}")" && [[ "${type}" == "unsupported" ]] || fail "selftest staging symlink type reject failed"
+    ( local_evidence_fingerprint "${symlink}" >/dev/null 2>&1 ) && fail "selftest staging symlink fingerprint reject failed"
+  fi
+  if [[ -L "${dangling}" ]]; then
+    type="$(local_evidence_type "${dangling}")" && [[ "${type}" == "unsupported" ]] || fail "selftest staging dangling symlink reject failed"
+  fi
+
+  size="$(local_evidence_size "${a}")" && [[ "${size:-0}" -gt 0 ]] || fail "selftest staging recursive size failed"
+
+  fp_a="$(local_evidence_fingerprint "${a}")"
+  fp_b="$(local_evidence_fingerprint "${b}")"
+  fp_c="$(local_evidence_fingerprint "${c}")"
+  fp_f1="$(local_evidence_fingerprint "${f1}")"
+  fp_f2="$(local_evidence_fingerprint "${f2}")"
+
+  [[ "${fp_a}" == "${fp_b}" ]] || fail "selftest staging identical directories mismatch"
+  [[ "${fp_a}" != "${fp_c}" ]] || fail "selftest staging changed directory not detected"
+  [[ "${fp_f1}" == "${fp_f2}" ]] || fail "selftest staging identical files mismatch"
+  [[ "${fp_a}" != "${fp_f1}" ]] || fail "selftest staging directory/file type collision"
+
+  printf 'sift staging selftest OK\n'
+}
+
+verdict_selftest_sift_cleanup_guard() {
+  local gevdir root
+  gevdir="/home/sansforensics/evidence"
+  root="${gevdir}/.verdict-staging/verdict-20260614T120000Z-123"
+
+  sift_staging_cleanup_root_allowed "${gevdir}" "${root}" \
+    || fail "selftest cleanup guard rejected owned staging root"
+  ( sift_staging_cleanup_root_allowed "${gevdir}" "${gevdir}/base-file-host" ) \
+    && fail "selftest cleanup guard accepted legacy root-level staging"
+  ( sift_staging_cleanup_root_allowed "${gevdir}" "${gevdir}/.verdict-staging" ) \
+    && fail "selftest cleanup guard accepted staging parent"
+  ( sift_staging_cleanup_root_allowed "${gevdir}" "${gevdir}/.verdict-staging/../base-file-host" ) \
+    && fail "selftest cleanup guard accepted traversal path"
+  ( sift_staging_cleanup_root_allowed "${gevdir}" "/tmp/.verdict-staging/verdict-20260614T120000Z-123" ) \
+    && fail "selftest cleanup guard accepted wrong evidence root"
+  ( sift_staging_cleanup_root_allowed "${gevdir}" "${gevdir}/.verdict-staging/-bad" ) \
+    && fail "selftest cleanup guard accepted option-like run id"
+  ( sift_staging_cleanup_root_allowed "${gevdir}" "${gevdir}/.verdict-staging/run/child" ) \
+    && fail "selftest cleanup guard accepted nested cleanup root"
+
+  printf 'sift cleanup guard selftest OK\n'
+}
+
+case "${FINDEVIL_VERDICT_SELFTEST:-}" in
+  sift-sanitizers)
+    verdict_selftest_sift_sanitizers
+    exit 0
+    ;;
+  sift-staging)
+    verdict_selftest_sift_staging
+    exit 0
+    ;;
+  sift-cleanup-guard)
+    verdict_selftest_sift_cleanup_guard
+    exit 0
+    ;;
+esac
 
 # newest non-placeholder entry (file OR case folder) in a dir; empty if none.
 # -d keeps a dropped directory as the entry itself rather than expanding it.
@@ -315,8 +533,8 @@ fi
 # 3b. SIFT evidence staging (automation: ONE command for ANY host path) -------
 # In --sift mode the typed tools run INSIDE the VM, so case_open needs a path the
 # guest can see. Resolve the guest IP (VMware Tools, else the DHCP lease), then:
-#   - a host path that exists  -> SCP it into the VM and rewrite EVIDENCE to the
-#     guest path (skip the copy if an identical-size file is already staged);
+#   - a host path that exists  -> SCP it into a run-owned VM staging directory,
+#     rewrite EVIDENCE to that guest path, and remove that staging on success;
 #   - a path not on this host   -> assume it is already an in-VM path; use as-is.
 # A whole multi-host case folder is refused here (it belongs in the fleet
 # pipeline, not one VM). Override the guest evidence dir with
@@ -338,29 +556,289 @@ if [[ "${SIFT}" == "1" && "${DRY}" != "1" ]]; then
   sed -i "s#192\.0\.2\.10#${FIND_EVIL_GUEST_IP}#g" .mcp.json 2>/dev/null || true
   GADDR="${GUSER}@${FIND_EVIL_GUEST_IP}"
   SSHB=(ssh -i "${GKEY}" -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8 --)
-  if [[ -e "${EVIDENCE}" ]]; then
+  remote_quote() {
+    python3 - "$1" <<'PY'
+import shlex
+import sys
+
+print(shlex.quote(sys.argv[1]))
+PY
+  }
+
+  prepare_sift_staging_parent() {
+    local qgevdir qparent
+    qgevdir="$(remote_quote "${GEVDIR}")"
+    qparent="$(remote_quote "${SIFT_STAGING_PARENT}")"
+    "${SSHB[@]}" "${GADDR}" "set -e
+mkdir -p -- ${qgevdir}
+if [ -L ${qparent} ]; then
+  echo 'SIFT staging parent is a symlink' >&2
+  exit 1
+fi
+if [ -e ${qparent} ] && [ ! -d ${qparent} ]; then
+  echo 'SIFT staging parent is not a directory' >&2
+  exit 1
+fi
+mkdir -p -- ${qparent}
+if [ -L ${qparent} ] || [ ! -d ${qparent} ]; then
+  echo 'SIFT staging parent is unsafe' >&2
+  exit 1
+fi
+gevdir_real=\$(realpath -e -- ${qgevdir})
+parent_real=\$(realpath -e -- ${qparent})
+if [ \"\${parent_real}\" != \"\${gevdir_real}/.verdict-staging\" ]; then
+  echo 'SIFT staging parent resolved outside guest evidence dir' >&2
+  exit 1
+fi" 2>/dev/null || fail "--sift: unsafe SIFT staging parent: ${SIFT_STAGING_PARENT}"
+  }
+
+  create_sift_staging_root() {
+    local qparent qroot
+    sift_staging_cleanup_root_allowed "${GEVDIR}" "${SIFT_STAGING_ROOT}" \
+      || fail "--sift: unsafe SIFT staging root: ${SIFT_STAGING_ROOT}"
+    qparent="$(remote_quote "${SIFT_STAGING_PARENT}")"
+    qroot="$(remote_quote "${SIFT_STAGING_ROOT}")"
+    "${SSHB[@]}" "${GADDR}" "set -e
+if [ -L ${qparent} ] || [ ! -d ${qparent} ]; then
+  echo 'SIFT staging parent is unsafe' >&2
+  exit 1
+fi
+parent_real=\$(realpath -e -- ${qparent})
+if [ -e ${qroot} ] || [ -L ${qroot} ]; then
+  echo 'run-owned SIFT staging root already exists' >&2
+  exit 1
+fi
+mkdir -- ${qroot}
+if [ -L ${qroot} ] || [ ! -d ${qroot} ]; then
+  echo 'run-owned SIFT staging root is unsafe' >&2
+  exit 1
+fi
+root_real=\$(realpath -e -- ${qroot})
+if [ \"\$(dirname -- \"\${root_real}\")\" != \"\${parent_real}\" ]; then
+  echo 'run-owned SIFT staging root resolved outside staging parent' >&2
+  exit 1
+fi" 2>/dev/null || fail "--sift: run-owned SIFT staging root already exists or is unsafe: ${SIFT_STAGING_ROOT}"
+  }
+
+  cleanup_current_sift_staging() {
+    local qparent qroot
+    [[ -n "${SIFT_STAGING_ROOT:-}" && -n "${STAGED_REMOTE_PATH:-}" ]] || return 0
+    if [[ "${KEEP_SIFT_STAGING}" == "1" ]]; then
+      warn "--sift: kept SIFT staging for debugging: ${STAGED_REMOTE_PATH}"
+      return 0
+    fi
+    if ! sift_staging_cleanup_root_allowed "${GEVDIR}" "${SIFT_STAGING_ROOT}"; then
+      warn "--sift: refusing to clean unsafe SIFT staging root: ${SIFT_STAGING_ROOT}"
+      return 0
+    fi
+    qparent="$(remote_quote "${SIFT_STAGING_PARENT}")"
+    qroot="$(remote_quote "${SIFT_STAGING_ROOT}")"
+    if "${SSHB[@]}" "${GADDR}" "set -e
+[ ! -L ${qparent} ] && [ -d ${qparent} ]
+[ ! -L ${qroot} ] && [ -d ${qroot} ]
+parent_real=\$(realpath -e -- ${qparent})
+root_real=\$(realpath -e -- ${qroot})
+[ \"\$(dirname -- \"\${root_real}\")\" = \"\${parent_real}\" ]
+rm -rf -- ${qroot}" 2>/dev/null; then
+      ok "--sift: cleaned SIFT staging: ${SIFT_STAGING_ROOT}"
+    else
+      warn "--sift: could not clean SIFT staging: ${SIFT_STAGING_ROOT}"
+    fi
+  }
+
+  remote_evidence_type() {
+    local path="$1" qpath out
+    qpath="$(remote_quote "${path}")"
+    if ! out="$("${SSHB[@]}" "${GADDR}" "if [ -L ${qpath} ]; then printf unsupported; elif [ -d ${qpath} ]; then printf dir; elif [ -f ${qpath} ]; then printf file; elif [ -e ${qpath} ]; then printf unsupported; else printf missing; fi" 2>/dev/null)"; then
+      fail "--sift: could not inspect staged evidence path in the SIFT VM (${path})"
+    fi
+    printf '%s' "${out}"
+  }
+
+  remote_evidence_fingerprint() {
+    local path="$1" out
+    if ! out="$("${SSHB[@]}" "${GADDR}" python3 - "${path}" <<'PY'
+import hashlib
+import os
+import stat
+import sys
+
+root = sys.argv[1]
+
+
+def fail(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+def update_path(hasher, rel):
+    rel_bytes = os.fsencode(rel)
+    hasher.update(str(len(rel_bytes)).encode("ascii"))
+    hasher.update(b"\0")
+    hasher.update(rel_bytes)
+    hasher.update(b"\0")
+
+
+def update_file(hasher, path):
+    st = os.lstat(path)
+    if stat.S_ISLNK(st.st_mode):
+        fail("symlink evidence entries are unsupported")
+    if not stat.S_ISREG(st.st_mode):
+        fail("special evidence entries are unsupported")
+    hasher.update(str(st.st_size).encode("ascii"))
+    hasher.update(b"\0")
+    with open(path, "rb") as f:
+        while True:
+            chunk = f.read(1024 * 1024)
+            if not chunk:
+                break
+            hasher.update(chunk)
+
+
+def on_walk_error(error):
+    fail("cannot read evidence directory {}: {}".format(error.filename, error.strerror))
+
+
+if not os.path.exists(root) and not os.path.islink(root):
+    print("missing")
+    raise SystemExit(0)
+
+root_st = os.lstat(root)
+hasher = hashlib.sha256()
+if stat.S_ISLNK(root_st.st_mode):
+    fail("symlink evidence paths are unsupported")
+if stat.S_ISREG(root_st.st_mode):
+    hasher.update(b"file\0")
+    update_path(hasher, ".")
+    update_file(hasher, root)
+    print(hasher.hexdigest())
+    raise SystemExit(0)
+if not stat.S_ISDIR(root_st.st_mode):
+    fail("special evidence paths are unsupported")
+
+hasher.update(b"dir\0")
+hasher.update(b"D\0")
+update_path(hasher, ".")
+for current, dirs, files in os.walk(root, topdown=True, followlinks=False, onerror=on_walk_error):
+    dirs[:] = sorted(dirs, key=os.fsencode)
+    files = sorted(files, key=os.fsencode)
+    for dirname in dirs:
+        path = os.path.join(current, dirname)
+        st = os.lstat(path)
+        if stat.S_ISLNK(st.st_mode):
+            fail("symlink evidence entries are unsupported")
+        if not stat.S_ISDIR(st.st_mode):
+            fail("special evidence entries are unsupported")
+        hasher.update(b"D\0")
+        update_path(hasher, os.path.relpath(path, root))
+    for filename in files:
+        path = os.path.join(current, filename)
+        hasher.update(b"F\0")
+        update_path(hasher, os.path.relpath(path, root))
+        update_file(hasher, path)
+
+print(hasher.hexdigest())
+PY
+)"; then
+      fail "--sift: could not fingerprint staged evidence path in the SIFT VM (${path})"
+    fi
+    printf '%s' "${out}"
+  }
+
+  promote_staged_directory() {
+    local tmp_remote="$1" final_remote="$2" old_remote qtmp qfinal qold
+    old_remote="${final_remote}.old-$(date +%s)-$$"
+    qtmp="$(remote_quote "${tmp_remote}")"
+    qfinal="$(remote_quote "${final_remote}")"
+    qold="$(remote_quote "${old_remote}")"
+    # Rollback preserves the previous staged directory if the final rename fails.
+    "${SSHB[@]}" "${GADDR}" "set -e
+if [ -e ${qold} ]; then
+  echo 'stale rollback path exists: ${old_remote}' >&2
+  exit 1
+fi
+if [ -e ${qfinal} ]; then
+  mv -T -- ${qfinal} ${qold}
+  if mv -T -- ${qtmp} ${qfinal}; then
+    rm -rf -- ${qold}
+  else
+    if [ ! -e ${qfinal} ] && [ -e ${qold} ]; then
+      mv -T -- ${qold} ${qfinal}
+    fi
+    exit 1
+  fi
+else
+  mv -T -- ${qtmp} ${qfinal}
+fi" 2>/dev/null || fail "--sift: could not promote staged directory into place (rollback attempted)"
+  }
+
+  if [[ -e "${EVIDENCE}" || -L "${EVIDENCE}" ]]; then
     if [[ -d "${EVIDENCE}" && ( -d "${EVIDENCE}/hosts" || -d "${EVIDENCE}/disks" ) ]]; then
       fail "--sift: '${EVIDENCE}' is a multi-host case folder — run: scripts/verdict ${EVIDENCE} --fleet (one command for all three fleet stages), or pass a single host's evidence."
     fi
     rbase="$(safe_guest_basename "$(basename "${EVIDENCE}")")"
-    remote="${GEVDIR}/${rbase}"
-    lsize="$(_evidence_size "${EVIDENCE}")"
-    rsize="$("${SSHB[@]}" "${GADDR}" "stat -c%s '${remote}' 2>/dev/null || echo 0" 2>/dev/null || echo 0)"
-    if [[ "${rsize}" == "${lsize}" && "${lsize:-0}" -gt 0 ]]; then
-      ok "--sift: evidence already staged in the VM (${remote}); skipping copy"
-    else
-      free="$("${SSHB[@]}" "${GADDR}" "df -PB1 '/home/${GUSER}' 2>/dev/null | awk 'NR==2{print \$4}'" 2>/dev/null || echo "")"
-      if [[ -n "${free}" && "${lsize:-0}" -gt 0 ]] && (( lsize + lsize/10 > free )); then
-        fail "--sift: '${rbase}' (${lsize} B) will not fit in the SIFT VM (free ${free} B). Free space in the guest, or run locally (drop --sift)."
-      fi
-      "${SSHB[@]}" "${GADDR}" "mkdir -p '${GEVDIR}'" 2>/dev/null \
-        || fail "--sift: could not reach the SIFT VM at ${FIND_EVIL_GUEST_IP} (ssh failed)"
-      log "--sift: staging ${rbase} into the VM (scp → ${GADDR}:${remote})…"
-      scpflag=(); [[ -d "${EVIDENCE}" ]] && scpflag=(-r)
-      scp -i "${GKEY}" -o StrictHostKeyChecking=accept-new "${scpflag[@]}" -- "${EVIDENCE}" "${GADDR}:${remote}" \
-        || fail "--sift: staging copy failed (scp to ${remote})"
-      ok "--sift: staged → ${remote}"
+    SIFT_STAGE_ID="${FINDEVIL_VERDICT_STAGE_ID:-verdict-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
+    SIFT_STAGE_ID="$(safe_guest_basename "${SIFT_STAGE_ID}")"
+    SIFT_STAGING_PARENT="${GEVDIR}/.verdict-staging"
+    SIFT_STAGING_ROOT="${GEVDIR}/.verdict-staging/${SIFT_STAGE_ID}"
+    remote="${SIFT_STAGING_ROOT}/${rbase}"
+    STAGED_REMOTE_PATH="${remote}"
+    ltype="$(local_evidence_type "${EVIDENCE}")"
+    [[ "${ltype}" == "file" || "${ltype}" == "dir" ]] || fail "--sift: unsupported evidence path type for staging: ${EVIDENCE}"
+    lsize="$(local_evidence_size "${EVIDENCE}")"
+    lfingerprint=""
+    prepare_sift_staging_parent
+    if [[ "$(remote_evidence_type "${SIFT_STAGING_ROOT}")" != "missing" ]]; then
+      fail "--sift: run-owned SIFT staging root already exists: ${SIFT_STAGING_ROOT}"
     fi
+    free="$("${SSHB[@]}" "${GADDR}" "df -PB1 $(remote_quote "${GEVDIR}") 2>/dev/null | awk 'NR==2{print \$4}'" 2>/dev/null || echo "")"
+    [[ -z "${free}" || "${free}" =~ ^[0-9]+$ ]] || fail "--sift: non-numeric free-space value for ${GEVDIR}: ${free}"
+    if [[ -n "${free}" && "${lsize:-0}" -gt 0 ]] && (( lsize + lsize/10 > free )); then
+      fail "--sift: '${rbase}' (${lsize} B) will not fit in the SIFT VM (free ${free} B). Free space in the guest, or run locally (drop --sift)."
+    fi
+    create_sift_staging_root
+    if [[ "${ltype}" == "file" ]]; then
+      lfingerprint="$(local_evidence_fingerprint "${EVIDENCE}")"
+      tmp_remote="${SIFT_STAGING_ROOT}/.${rbase}.tmp-$(date +%s)-$$"
+      log "--sift: staging ${rbase} into the VM temp file (scp → ${GADDR}:${tmp_remote})…"
+      if ! scp -i "${GKEY}" -o StrictHostKeyChecking=accept-new -- "${EVIDENCE}" "${GADDR}:${tmp_remote}"; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: staging copy failed (scp to ${tmp_remote})"
+      fi
+      postfingerprint="$(local_evidence_fingerprint "${EVIDENCE}")"
+      tfingerprint="$(remote_evidence_fingerprint "${tmp_remote}")"
+      if [[ "${postfingerprint}" != "${lfingerprint}" ]]; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: evidence changed during staging; wait for the copy to finish and rerun (${EVIDENCE})"
+      fi
+      if [[ "${tfingerprint}" != "${postfingerprint}" ]]; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: staged file verification failed (${tmp_remote})"
+      fi
+      promote_staged_directory "${tmp_remote}" "${remote}"
+    else
+      lfingerprint="$(local_evidence_fingerprint "${EVIDENCE}")"
+      tmp_remote="${SIFT_STAGING_ROOT}/.${rbase}.tmp-$(date +%s)-$$"
+      "${SSHB[@]}" "${GADDR}" "mkdir -p $(remote_quote "${tmp_remote}")" 2>/dev/null \
+        || fail "--sift: could not create remote staging temp dir (${tmp_remote})"
+      log "--sift: staging ${rbase} into the VM temp dir (scp → ${GADDR}:${tmp_remote})…"
+      if ! scp -i "${GKEY}" -o StrictHostKeyChecking=accept-new -r -- "${EVIDENCE}/." "${GADDR}:${tmp_remote}/"; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: staging copy failed (scp to ${tmp_remote})"
+      fi
+      postfingerprint="$(local_evidence_fingerprint "${EVIDENCE}")"
+      tfingerprint="$(remote_evidence_fingerprint "${tmp_remote}")"
+      if [[ "${postfingerprint}" != "${lfingerprint}" ]]; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: evidence changed during staging; wait for the copy to finish and rerun (${EVIDENCE})"
+      fi
+      if [[ "${tfingerprint}" != "${postfingerprint}" ]]; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: staged directory verification failed (${tmp_remote})"
+      fi
+      promote_staged_directory "${tmp_remote}" "${remote}"
+    fi
+    ok "--sift: staged → ${remote}"
     EVIDENCE="${remote}"
   else
     ok "--sift: '${EVIDENCE}' is not on this host — treating it as an in-VM path"
@@ -414,6 +892,10 @@ if [[ "${SIFT}" == "0" ]]; then
 fi
 
 "${ENGINE[@]}"
+
+if [[ "${SIFT}" == "1" ]]; then
+  cleanup_current_sift_staging
+fi
 
 # 5. Resolve + open the case dir, THEN fire automation (below). SIFT resolves the
 #    case dir here after the post-run sync; local pinned it up front. Automation

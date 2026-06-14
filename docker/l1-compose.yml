@@ -191,16 +191,6 @@ services:
           python3 scripts/report-policy-smoke.py
         fi
 
-        # docs/demo-script-a2.md has a hard 5:00 cap (Devpost rule)
-        # encoded as 9 beats with explicit start/end timestamps. The
-        # smoke parses the beat-map table and asserts the 9 beats
-        # sum to 300s and are contiguous — catches a contributor
-        # who edits one beat without adjusting adjacent ones.
-        if [ -f scripts/demo-script-smoke.py ]; then
-          echo "== scripts/demo-script-smoke.py (5:00 demo timing lock) =="
-          python3 scripts/demo-script-smoke.py
-        fi
-
         # Lock in the launcher invariants from the 6-iteration
         # prose-vs-code audit (commits 102c59e, ec85639, 43cdbdd,
         # c167aec, 6f22382, cc4e93e). bash -n on every shell launcher

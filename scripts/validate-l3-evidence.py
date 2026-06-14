@@ -157,7 +157,7 @@ def benchmark_verdict(data: dict[str, Any]) -> dict[str, Any]:
         "run_duration_seconds": data.get("run_duration_seconds", ""),
         "contradictions_found": data.get("contradictions_found", 0),
         "contradictions_auto_resolved": data.get("contradictions_auto_resolved", 0),
-        "source": "local-sift-vmware-l3-fallback",
+        "source": data.get("evidence_kind", "local-l3-fallback"),
         "local_l3_evidence": data,
     }
 
