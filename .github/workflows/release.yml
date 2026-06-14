@@ -73,7 +73,6 @@ jobs:
     name: Build + push Docker image
     needs: l3-gate
     runs-on: ubuntu-latest
-    continue-on-error: true
     permissions:
       contents: read
       packages: write
@@ -100,6 +99,8 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
       - name: Build + push
+        id: docker_build
+        continue-on-error: true
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -110,6 +111,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
+      - name: Report GHCR best-effort failure
+        if: steps.docker_build.outcome == 'failure'
+        run: |
+          echo "::warning::GHCR image publish failed; release artifacts continue through the GitHub Release path."
 
   build-report:
     if: github.repository == 'TimothyVang/verdict-dfir'
