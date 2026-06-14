@@ -8004,11 +8004,32 @@ class Investigation:
         # disk image as a real Rust case so the disk tools have a case work dir;
         # fall back to the parent id (custody-only behaviour) if it fails.
         disk_case_id = self.handle["id"]
-        if str(disk_case_id).startswith("dir-"):
-            opened = rust.call_tool(
-                "case_open",
-                {"image_path": evidence_path, "label": Path(evidence_path).name},
+        disk_inventory_entry: dict[str, Any] | None = None
+        if self.evidence_inventory:
+            try:
+                evidence_canonical = str(Path(evidence_path).resolve())
+            except OSError:
+                evidence_canonical = evidence_path
+            disk_inventory_entry = next(
+                (
+                    entry
+                    for entry in inventory_supported_entries(self.evidence_inventory)
+                    if entry.get("artifact_class") == "raw_disk"
+                    and (
+                        entry.get("path") == evidence_path
+                        or entry.get("canonical_path") == evidence_canonical
+                    )
+                ),
+                None,
             )
+        if str(disk_case_id).startswith("dir-"):
+            case_open_args = {
+                "image_path": evidence_path,
+                "label": Path(evidence_path).name,
+            }
+            if disk_inventory_entry and disk_inventory_entry.get("sha256"):
+                case_open_args["expected_sha256"] = str(disk_inventory_entry["sha256"])
+            opened = rust.call_tool("case_open", case_open_args)
             if isinstance(opened, dict) and "_error" not in opened and opened.get("id"):
                 disk_case_id = opened["id"]
                 self._record_tool(
@@ -8019,10 +8040,30 @@ class Investigation:
                         "case_id": disk_case_id,
                         "parent_case_id": self.handle["id"],
                         "evidence_type": "disk",
+                        "size_bytes": opened.get("image_size_bytes"),
                     },
-                    arguments={"image_path": evidence_path},
+                    arguments=case_open_args,
                 )
             else:
+                opened_output = (
+                    opened
+                    if isinstance(opened, dict)
+                    else {"_error": {"message": "invalid case_open response"}}
+                )
+                registration_error = (
+                    opened_output.get("_error", {}).get("message") or "case_open failed"
+                )
+                self._record_tool(
+                    py,
+                    "case_open",
+                    self._output_hash(opened_output),
+                    {
+                        "parent_case_id": self.handle["id"],
+                        "evidence_type": "disk",
+                        "error": registration_error,
+                    },
+                    arguments=case_open_args,
+                )
                 self.analysis_limitations.append(
                     "Disk case registration failed in directory mode; disk remains custody-only."
                 )

@@ -491,6 +491,54 @@ def main() -> int:
         fake_dispatch_audit = FakeInventoryAudit()
         dispatch_inv.investigate_inventory(fake_extracted_rust, fake_dispatch_audit)
         dispatched_tools = [name for name, _ in fake_extracted_rust.calls]
+        dispatched_call_args = {name: args for name, args in fake_extracted_rust.calls}
+        raw_disk_entry = next(
+            entry
+            for entry in dispatch_inventory.get("entries", [])
+            if entry.get("artifact_class") == "raw_disk"
+        )
+        disk_case_open_args = dispatched_call_args.get("case_open", {})
+        disk_case_open_audit_args = next(
+            (
+                record.get("payload", {}).get("arguments", {})
+                for record in fake_dispatch_audit.records
+                if record.get("kind") == "tool_call_start"
+                and record.get("payload", {}).get("tool") == "case_open"
+            ),
+            None,
+        )
+
+        class FakeRegistrationFailureRust:
+            def __init__(self) -> None:
+                self.calls: list[tuple[str, dict[str, Any]]] = []
+
+            def call_tool(
+                self, name: str, args: dict[str, Any], timeout: float | None = None
+            ) -> dict[str, Any]:
+                self.calls.append((name, args))
+                if name == "case_open":
+                    return {"_error": {"message": "hash mismatch"}}
+                if name == "disk_mount":
+                    return {"_error": {"message": "case not found: dir-fail"}}
+                raise AssertionError(f"unexpected failure tool {name}")
+
+        failed_registration_inv = fea.Investigation(
+            str(root), unattended=True, with_report=False
+        )
+        failed_registration_inv.evidence_inventory = dispatch_inventory
+        failed_registration_inv.handle = {"id": "dir-fail"}
+        failed_registration_audit = FakeInventoryAudit()
+        failed_registration_inv.investigate_disk(
+            FakeRegistrationFailureRust(),
+            failed_registration_audit,
+            str(root / "disk.E01"),
+        )
+        failed_case_open_outputs = [
+            record.get("payload", {})
+            for record in failed_registration_audit.records
+            if record.get("kind") == "tool_call_output"
+            and record.get("payload", {}).get("error") == "hash mismatch"
+        ]
 
         old_zip_extract = fea.extract_velociraptor_zip_artifacts
 
@@ -648,6 +696,36 @@ def main() -> int:
                 "disk_mount" in dispatched_tools
                 and "disk_extract_artifacts" in dispatched_tools
                 and "disk_unmount" in dispatched_tools,
+                True,
+            ),
+            (
+                "raw disk directory case_open is bound to inventory sha",
+                disk_case_open_args.get("expected_sha256"),
+                raw_disk_entry.get("sha256"),
+            ),
+            (
+                "raw disk directory case_open audit records exact arguments",
+                disk_case_open_audit_args,
+                disk_case_open_args,
+            ),
+            (
+                "raw disk mount uses registered Rust case id",
+                dispatched_call_args.get("disk_mount", {}).get("case_id"),
+                "disk-smoke-case",
+            ),
+            (
+                "raw disk extract uses registered Rust case id",
+                dispatched_call_args.get("disk_extract_artifacts", {}).get("case_id"),
+                "disk-smoke-case",
+            ),
+            (
+                "raw disk unmount uses registered Rust case id",
+                dispatched_call_args.get("disk_unmount", {}).get("case_id"),
+                "disk-smoke-case",
+            ),
+            (
+                "raw disk failed case registration is audit-chained",
+                bool(failed_case_open_outputs),
                 True,
             ),
             (
