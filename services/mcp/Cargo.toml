@@ -97,7 +97,7 @@ serde_json = "1"
 schemars = { version = "1", features = ["preserve_order"] }
 
 # thiserror for structured, documented error types.
-thiserror = "1"
+thiserror = "2"
 
 # Async runtime. Used by tool modules that benefit from async
 # subprocess management (vol_*, hayabusa_scan, vel_collect) and by
