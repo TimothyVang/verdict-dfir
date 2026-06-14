@@ -54,7 +54,7 @@ RUN if [ -f services/agent/pyproject.toml ]; then \
 # Stage 3 — Runtime. Ubuntu 22.04 matches SIFT's base.
 # ============================================================
 # hadolint ignore=DL3007
-FROM ubuntu:22.04
+FROM ubuntu:26.04
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
