@@ -392,6 +392,16 @@ def main() -> int:
                 self, name: str, args: dict[str, Any], timeout: float | None = None
             ) -> dict[str, Any]:
                 self.calls.append((name, args))
+                if name == "case_open":
+                    # Directory-mode disk lane registers the disk image as a real
+                    # Rust case so disk_mount/extract have a case work dir
+                    # ($FINDEVIL_HOME/cases/<id>/); see investigate_disk.
+                    return {
+                        "id": "disk-smoke-case",
+                        "image_hash": "0" * 64,
+                        "image_size_bytes": 1,
+                        "case_dir": str(root / "disk-smoke-case"),
+                    }
                 if name == "disk_mount":
                     fs_root = str(Path(str(args["image_path"])).parent)
                     return {

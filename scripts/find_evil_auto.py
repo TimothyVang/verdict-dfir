@@ -7949,8 +7949,37 @@ class Investigation:
     ) -> None:
         evidence_path = evidence_path or self.evidence
         print("\n=== disk image investigation (auto mount/extract) ===")
+        # Directory/inventory mode opens a Python-only parent case ("dir-<hash>")
+        # that the Rust disk tools cannot resolve: disk_mount -> case_dir() looks
+        # for $FINDEVIL_HOME/cases/<case_id>/ and fails "case not found" because
+        # only the Rust case_open (single-file mode) creates that dir. Register the
+        # disk image as a real Rust case so the disk tools have a case work dir;
+        # fall back to the parent id (custody-only behaviour) if it fails.
+        disk_case_id = self.handle["id"]
+        if str(disk_case_id).startswith("dir-"):
+            opened = rust.call_tool(
+                "case_open",
+                {"image_path": evidence_path, "label": Path(evidence_path).name},
+            )
+            if isinstance(opened, dict) and "_error" not in opened and opened.get("id"):
+                disk_case_id = opened["id"]
+                self._record_tool(
+                    py,
+                    "case_open",
+                    opened.get("image_hash", ""),
+                    {
+                        "case_id": disk_case_id,
+                        "parent_case_id": self.handle["id"],
+                        "evidence_type": "disk",
+                    },
+                    arguments={"image_path": evidence_path},
+                )
+            else:
+                self.analysis_limitations.append(
+                    "Disk case registration failed in directory mode; disk remains custody-only."
+                )
         mount_args = {
-            "case_id": self.handle["id"],
+            "case_id": disk_case_id,
             "image_path": evidence_path,
             "mode": "auto",
         }
@@ -7997,7 +8026,7 @@ class Investigation:
         extracted_entries: list[dict[str, Any]] = []
         try:
             extract_args = {
-                "case_id": self.handle["id"],
+                "case_id": disk_case_id,
                 "mount_id": mount_id,
                 "limit": 500,
             }
@@ -8090,7 +8119,7 @@ class Investigation:
                 )
         finally:
             unmount_args = {
-                "case_id": self.handle["id"],
+                "case_id": disk_case_id,
                 "mount_id": mount_id,
                 "mode": "auto",
             }
