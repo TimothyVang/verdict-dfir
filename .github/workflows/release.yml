@@ -139,7 +139,7 @@ jobs:
           python3 scripts/validate-submission-assets.py --report report.html
           ls -lh report.html
       - name: Upload report.html
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: report-${{ github.ref_name }}
           path: report.html

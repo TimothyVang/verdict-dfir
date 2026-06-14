@@ -49,7 +49,7 @@ jobs:
           uv run --with cyclonedx-bom cyclonedx-py environment .venv \
             -o sbom-agent-mcp.cdx.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: |
