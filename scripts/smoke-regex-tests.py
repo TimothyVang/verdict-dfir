@@ -225,11 +225,25 @@ STALE_RELEASE_DOC_PATTERNS = [
 ]
 
 RELEASE_DOC_POLICY_FILES = [
+    ".github/CODEOWNERS",
     "CHANGELOG.md",
     "docs/runbooks/ci-smoke-checklist.md",
     "docs/runbooks/github-remote-bootstrap.md",
     "docs/using/whole-case-local-run.md",
     "scripts/setup-branch-protection.sh",
+]
+
+RELEASE_POLICY_REQUIRED_STRINGS = [
+    (
+        "branch protection requires code owner reviews",
+        "scripts/setup-branch-protection.sh",
+        "required_pull_request_reviews[require_code_owner_reviews]=true",
+    ),
+    (
+        "CODEOWNERS protects workflow changes",
+        ".github/CODEOWNERS",
+        ".github/workflows/** @TimothyVang",
+    ),
 ]
 
 PATH_EXISTENCE_ALLOW_CASES = [
@@ -589,6 +603,15 @@ def _run_release_doc_policy_cases() -> list[tuple[str, str]]:
                     f"unexpected stale release-doc claim {needle!r} in {', '.join(matches)}",
                 )
             )
+    for label, rel, needle in RELEASE_POLICY_REQUIRED_STRINGS:
+        text = (REPO / rel).read_text(encoding="utf-8")
+        if needle not in text:
+            failures.append(
+                (
+                    label,
+                    f"expected release policy string {needle!r} in {rel}",
+                )
+            )
     return failures
 
 
@@ -775,8 +798,8 @@ def main() -> int:
     release_doc_failures = _run_release_doc_policy_cases()
     print(
         f"release-doc policies:    "
-        f"{len(STALE_RELEASE_DOC_PATTERNS) - len(release_doc_failures)}"
-        f" / {len(STALE_RELEASE_DOC_PATTERNS)} passed"
+        f"{len(STALE_RELEASE_DOC_PATTERNS) + len(RELEASE_POLICY_REQUIRED_STRINGS) - len(release_doc_failures)}"
+        f" / {len(STALE_RELEASE_DOC_PATTERNS) + len(RELEASE_POLICY_REQUIRED_STRINGS)} passed"
     )
     for label, err in release_doc_failures:
         all_failures.append(("release-doc policies", label, err))
@@ -827,6 +850,7 @@ def main() -> int:
         + n_launcher
         + len(STALE_SMOKE_LABEL_PATTERNS)
         + len(STALE_RELEASE_DOC_PATTERNS)
+        + len(RELEASE_POLICY_REQUIRED_STRINGS)
         + len(PATH_EXISTENCE_ALLOW_CASES)
         + readiness_total
         + tool_count_total

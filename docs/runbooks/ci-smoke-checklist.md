@@ -21,6 +21,7 @@ Every step declares its "green" condition. Stop at the first red; chase the root
 
 - [ ] `bash scripts/setup-branch-protection.sh` exits 0 (or confirms rules already in place).
 - [ ] `gh api repos/${OWNER}/${REPO}/branches/master/protection --jq '.required_status_checks.contexts'` returns `ci-required`. The component L0/L1 jobs should still be visible in Actions, but the aggregate check is the only required context.
+- [ ] `gh api repos/${OWNER}/${REPO}/branches/master/protection --jq '.required_pull_request_reviews.require_code_owner_reviews'` returns `true`, and `.github/CODEOWNERS` protects workflow changes.
 
 ## 2. PR → L0 → L1 happy path
 

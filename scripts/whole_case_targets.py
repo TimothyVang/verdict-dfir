@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-import os
+import hashlib
 import shutil
 import sys
 from dataclasses import dataclass
@@ -20,13 +20,38 @@ class Target:
     path: Path
 
 
-def _link_or_copy(source: Path, destination: Path) -> None:
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _same_content(source: Path, destination: Path) -> bool:
+    return source.stat().st_size == destination.stat().st_size and _sha256(
+        source
+    ) == _sha256(destination)
+
+
+def _make_read_only(path: Path) -> None:
+    path.chmod(path.stat().st_mode & ~0o222)
+
+
+def _copy_read_only(source: Path, destination: Path) -> None:
     if destination.exists():
+        if source.samefile(destination):
+            raise RuntimeError(
+                f"staged xartifact file must not hardlink source evidence: {destination}"
+            )
+        if not _same_content(source, destination):
+            raise RuntimeError(
+                f"staged xartifact file does not match source evidence: {destination}"
+            )
+        _make_read_only(destination)
         return
-    try:
-        os.link(source, destination)
-    except OSError:
-        shutil.copy2(source, destination)
+    shutil.copy2(source, destination)
+    _make_read_only(destination)
 
 
 def _add_target(targets: list[Target], seen: set[str], label: str, path: Path) -> None:
@@ -39,14 +64,16 @@ def _add_target(targets: list[Target], seen: set[str], label: str, path: Path) -
 def _stage_base_file_xartifact(disk: Path, memory: Path, out_dir: Path) -> Path:
     xartifact_dir = out_dir / "_xartifact" / "base-file"
     xartifact_dir.mkdir(parents=True, exist_ok=True)
-    _link_or_copy(disk, xartifact_dir / BASE_FILE_DISK)
-    _link_or_copy(memory, xartifact_dir / BASE_FILE_MEMORY)
+    _copy_read_only(disk, xartifact_dir / BASE_FILE_DISK)
+    _copy_read_only(memory, xartifact_dir / BASE_FILE_MEMORY)
     return xartifact_dir
 
 
 def enumerate_targets(root: Path, out_dir: Path) -> list[Target]:
     root = root.resolve(strict=True)
     out_dir = out_dir.resolve()
+    if out_dir == root or root in out_dir.parents:
+        raise ValueError("out_dir must not be inside the evidence root")
     targets: list[Target] = []
     seen: set[str] = set()
 
@@ -86,7 +113,12 @@ def main(argv: list[str]) -> int:
     parser.add_argument("out_dir", type=Path)
     args = parser.parse_args(argv)
 
-    for target in enumerate_targets(args.root, args.out_dir):
+    try:
+        targets = enumerate_targets(args.root, args.out_dir)
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"[whole-case-targets] ERROR: {exc}", file=sys.stderr)
+        return 1
+    for target in targets:
         print(f"{target.label}\t{target.path}")
     return 0
 

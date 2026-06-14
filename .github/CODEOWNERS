@@ -1,0 +1,3 @@
+# Require owner review before CI/release policy changes can alter required gates.
+.github/workflows/** @TimothyVang
+scripts/setup-branch-protection.sh @TimothyVang

@@ -20,8 +20,23 @@
 #   scripts/run-whole-case-local.sh evidence/cases/srl-2018
 set -uo pipefail
 
+usage() {
+  echo "Usage: scripts/run-whole-case-local.sh <case-root> [out-dir]"
+  echo "Example: scripts/run-whole-case-local.sh evidence/cases/srl-2018"
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+if [ $# -lt 1 ]; then
+  usage >&2
+  exit 2
+fi
+
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ROOT="${1:?usage: run-whole-case-local.sh <case-root> [out-dir]}"
+ROOT="$1"
 ROOT="$(cd "$ROOT" && pwd)"
 OUT="${2:-$REPO/tmp/whole-case-local/$(basename "$ROOT")}"
 mkdir -p "$OUT"

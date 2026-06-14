@@ -44,7 +44,7 @@ gh api \
   --field 'enforce_admins=true' \
   --field 'required_pull_request_reviews[required_approving_review_count]=1' \
   --field 'required_pull_request_reviews[dismiss_stale_reviews]=true' \
-  --field 'required_pull_request_reviews[require_code_owner_reviews]=false' \
+  --field 'required_pull_request_reviews[require_code_owner_reviews]=true' \
   --field 'restrictions=null' \
   --field 'allow_force_pushes=false' \
   --field 'allow_deletions=false'
