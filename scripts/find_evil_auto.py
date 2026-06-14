@@ -7065,9 +7065,7 @@ class Investigation:
                 "run_id": self.run_id,
                 "stage": self._stage,
                 "started_at": self.started_at,
-                "updated_at": datetime.now(timezone.utc).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
-                ),
+                "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "tool_calls": self.tcid_counter,
                 "findings_so_far": len(self.findings_pool_a)
                 + len(self.findings_pool_b),

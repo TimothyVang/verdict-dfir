@@ -1,7 +1,0 @@
-interface:
-  display_name: "Find Evil Dashboard"
-  short_description: "Open the local Find Evil dashboard and Codex investigation cockpit."
-  default_prompt: "Open the Find Evil dashboard at /codex."
-
-policy:
-  allow_implicit_invocation: true

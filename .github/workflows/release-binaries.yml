@@ -131,7 +131,7 @@ jobs:
           # because it is gated on L3 evidence. This workflow only attaches
           # prebuilt binaries after that Release exists.
           repo="${GITHUB_REPOSITORY}"
-          for attempt in {1..30}; do
+          for _ in {1..30}; do
             if gh release view "${tag}" --repo "${repo}" >/dev/null 2>&1; then
               break
             fi
@@ -141,7 +141,7 @@ jobs:
             echo "::error::Release ${tag} does not exist; release.yml must create it after L3 succeeds."
             exit 1
           fi
-          for attempt in {1..30}; do
+          for _ in {1..30}; do
             release_green=$(gh run list \
               --workflow=release.yml \
               --branch="${tag}" \
