@@ -40,8 +40,8 @@ work, but they are not part of a clean source archive or judge/customer bundle.
 | local harness config | Local agent-harness commands, settings, and workflows are operator surfaces, not product runtime. |
 | operator memory vault | Optional local memory vaults are never evidence and never audit-chain input. |
 | `evidence/` | Placeholder only; real evidence is excluded by `.gitignore`. |
-| historical planning archives | Not part of the public release tree; curated public pages link only current decisions. |
-| raw run outputs | Operators generate fresh case directories under `tmp/auto-runs/` instead of shipping bulky historical outputs. |
+| `docs/plans/`, `docs/specs/`, `docs/templates/`, `docs/legacy/` | Historical planning/spec/template archives; curated public pages link only current decisions. |
+| `docs/sample-run/`, `docs/reports/` | Generated historical run outputs; operators generate fresh case directories under `tmp/auto-runs/` instead. |
 | evidence extensions and runtime state | `*.E01`, `*.dd`, `*.mem`, `*.evtx`, `*.pcap*`, `.env*`, `tmp/`, `fixtures/`, and `test-forensics/` are archive-excluded as defense in depth. |
 
 Release ZIPs produced for submissions should remain small, deterministic, and
