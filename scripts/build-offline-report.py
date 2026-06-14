@@ -17,6 +17,57 @@ import re
 
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT_SOURCE = REPO / "docs" / "reports" / "2026-04-26-srl2018-dc-investigation.md"
+FALLBACK_SOURCE_LABEL = "embedded reduced-release summary"
+FALLBACK_SOURCE_TEXT = """\
+**Case ID:** reduced-public-release
+**Run ID:** release-artifact
+**Started:** 2026-06-14T00:00:00Z
+**Finalized:** 2026-06-14T00:00:00Z
+**Investigator:** VERDICT release automation
+**Evidence corpus:** public reduced source tree and release-validation metadata
+**Verdict:** Release summary only; no case Verdict is asserted by this artifact.
+
+## Executive summary
+
+This offline release report is a self-contained artifact for the public reduced
+VERDICT source tree. It documents the current release boundary and the operator
+workflow without bundling bulky historical case reports, raw evidence, disk
+images, memory captures, or generated run directories.
+
+Operators generate case-specific outputs with `scripts/verdict <evidence>`.
+Completed runs write `verdict.json`, `manifest_verify.json`, audit records,
+and `REPORT.html` or `REPORT.pdf` under `tmp/auto-runs/<case-id>/`. Those
+customer-facing reports are tied to the current case and cite the tool_call_id
+values that produced each Finding.
+
+The public release intentionally omits `docs/reports/` and `docs/sample-run/`.
+Those paths held historical generated outputs, not source required to run the
+product. The live product path remains the typed MCP investigation surface,
+report QA, manifest finalization, and offline manifest verification.
+
+Verdict words stay scoped. `SUSPICIOUS` means reportable evidence was found,
+`INDETERMINATE` means leads or limited coverage prevent a scoped clearance, and
+`NO_EVIL` means no reportable Finding in the artifacts actually examined. None
+of those words provide attribution, legal conclusions, business-impact claims,
+or a broad clean bill of health.
+
+## 2. Methodology
+
+The release workflow first checks that the tagged commit has matching green L3
+evidence on the canonical `master` branch. It then renders this standalone HTML
+artifact without network resources and validates it with
+`scripts/validate-submission-assets.py`.
+
+The release surface is intentionally narrow: product runtime code, typed DFIR
+tools, documentation required for installation and operation, small
+release-evidence metadata, and reproducible smoke checks. Operators fetch or
+stage supported evidence locally, run `scripts/verdict <evidence>`, and review
+fresh case artifacts from the generated case directory.
+
+Cryptographic attestation for an investigation belongs to the generated case
+manifest. This reduced-release summary describes that mechanism but does not
+replace a case-specific signed Verdict or analyst report.
+"""
 
 
 def parse_front_matter(text: str) -> dict[str, str]:
@@ -28,6 +79,7 @@ def parse_front_matter(text: str) -> dict[str, str]:
         "Finalized",
         "Investigator",
         "Evidence corpus",
+        "Verdict",
     ):
         match = re.search(rf"^\*\*{re.escape(key)}:\*\*\s*(.+)$", text, re.MULTILINE)
         if match:
@@ -82,8 +134,20 @@ def markdown_to_plain_blocks(markdown: str) -> list[str]:
     return [block for block in blocks if block]
 
 
+def load_source(source: Path) -> tuple[str, str]:
+    if source.is_file():
+        try:
+            label = source.relative_to(REPO).as_posix()
+        except ValueError:
+            label = str(source)
+        return source.read_text(encoding="utf-8"), label
+    if source.resolve() == DEFAULT_SOURCE.resolve():
+        return FALLBACK_SOURCE_TEXT, FALLBACK_SOURCE_LABEL
+    raise FileNotFoundError(source)
+
+
 def build_html(source: Path) -> str:
-    text = source.read_text(encoding="utf-8")
+    text, source_label = load_source(source)
     fields = parse_front_matter(text)
     summary = markdown_to_plain_blocks(extract_section(text, "Executive summary"))
     methodology = markdown_to_plain_blocks(
@@ -102,7 +166,10 @@ def build_html(source: Path) -> str:
         ("Evidence", fields.get("Evidence corpus", "SANS HACKATHON-2026 corpus")),
         (
             "Verdict",
-            "SUSPICIOUS / DKOM process-hiding lead corroborated by process-view divergence",
+            fields.get(
+                "Verdict",
+                "SUSPICIOUS / DKOM process-hiding lead corroborated by process-view divergence",
+            ),
         ),
     ]
     crypto = [
@@ -158,7 +225,7 @@ def build_html(source: Path) -> str:
   <main data-findevil-report="offline-release">
     <p class="eyebrow">Find Evil Offline Report</p>
     <h1>Cryptographically verifiable DFIR investigation</h1>
-    <p class="note">Generated {escape(generated_at)} from {escape(source.relative_to(REPO).as_posix())}. This artifact is self-contained and requires no network access.</p>
+    <p class="note">Generated {escape(generated_at)} from {escape(source_label)}. This artifact is self-contained and requires no network access.</p>
     <section aria-label="Verdict card" id="verdict-card">
       <h2>Verdict Card</h2>
       <div class="grid">{card_html}</div>
