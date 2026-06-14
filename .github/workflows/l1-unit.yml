@@ -6,7 +6,7 @@ name: L1 Unit + Build
 
 on:
   push:
-    branches: ['**']
+    branches: [master]
   pull_request:
     branches: [master]
 
