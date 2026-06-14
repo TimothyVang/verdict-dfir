@@ -59,7 +59,8 @@ The investigation agent reads `agent-config/` during operation:
 
 ## What Is Not Shipped
 
-Historical implementation plans, raw sample-run outputs, bulky forensic evidence,
-operator memory vaults, and submission-only material are intentionally omitted
-from the public source tree. See [`release-surface.md`](release-surface.md) for
-the release boundary.
+Historical implementation plans (`docs/plans/`), raw sample-run outputs
+(`docs/sample-run/`), generated reports (`docs/reports/`), historical specs,
+templates, legacy docs, bulky forensic evidence, operator memory vaults, and
+submission-only material are intentionally omitted from the public source tree.
+See [`release-surface.md`](release-surface.md) for the release boundary.
