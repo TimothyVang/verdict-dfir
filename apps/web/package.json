@@ -31,7 +31,7 @@
     "eslint-config-next": "^15.1.0",
     "json-schema-to-typescript": "^14.1.0",
     "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.0",
+    "typescript": "^6.0.3",
     "vitest": "^2.1.0"
   }
 }
