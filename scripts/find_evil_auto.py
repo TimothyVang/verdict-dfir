@@ -10826,24 +10826,13 @@ class Investigation:
         self, findings: list[dict[str, Any]], actions: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
         action_by_finding = {str(a.get("finding_id")): a for a in actions}
-        downgrade = {
-            "CONFIRMED": "INFERRED",
-            "INFERRED": "HYPOTHESIS",
-            "HYPOTHESIS": "HYPOTHESIS",
-        }
         verified: list[dict[str, Any]] = []
         for finding in findings:
             finding_id = str(finding.get("finding_id") or "")
             action = action_by_finding.get(finding_id)
-            if action and action.get("action") == "rejected":
+            if action and action.get("action") != "approved":
                 continue
-            next_finding = dict(finding)
-            if action and action.get("action") == "downgraded":
-                next_finding["confidence"] = downgrade.get(
-                    str(next_finding.get("confidence")),
-                    next_finding.get("confidence"),
-                )
-            verified.append(next_finding)
+            verified.append(dict(finding))
         return verified
 
     def _memory_store_path(self) -> str | None:
@@ -11086,8 +11075,8 @@ class Investigation:
         j = py.call_tool(
             "judge_findings",
             {
-                "pool_a_findings": self.findings_pool_a,
-                "pool_b_findings": self.findings_pool_b,
+                "pool_a_findings": pool_a_verified,
+                "pool_b_findings": pool_b_verified,
                 "pool_a_verifier_actions": pool_a_actions,
                 "pool_b_verifier_actions": pool_b_actions,
             },
