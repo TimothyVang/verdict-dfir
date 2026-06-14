@@ -17,6 +17,7 @@ Then render with:  bash scripts/make-demo-video.sh --skip-tts
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
@@ -27,8 +28,9 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-BEATS_TS = ROOT / "scripts/make-demo-video/src/beats/beats-data.ts"
-AUDIO_OUT = ROOT / "scripts/make-demo-video/public/audio"
+BEATS_DIR = ROOT / "scripts/make-demo-video/src/beats"
+BEATS_TS = BEATS_DIR / "beats-data.ts"
+AUDIO_ROOT = ROOT / "scripts/make-demo-video/public/audio"
 API = "https://api.elevenlabs.io/v1/text-to-speech"
 DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL"  # Sarah — mature, reassuring, confident
 DEFAULT_MODEL = (
@@ -38,15 +40,34 @@ FIT_MARGIN_S = 0.4  # leave a little headroom at the end of each beat slot
 MAX_SPEEDUP = 1.6  # never rush a line faster than this (atempo)
 
 
-def _beats() -> list[tuple[int, int, str]]:
-    """Return (startS, endS, narration) per beat, in order, from beats-data.ts."""
-    text = BEATS_TS.read_text(encoding="utf-8")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Generate per-beat narration MP3s with ElevenLabs.",
+    )
+    parser.add_argument("--beats-file", default=str(BEATS_TS))
+    parser.add_argument("--audio-subdir", default="")
+    return parser.parse_args()
+
+
+def resolve_beats_file(value: str) -> Path:
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        rel = BEATS_DIR / value
+        candidate = rel if rel.exists() else (ROOT / value)
+    if not candidate.exists():
+        raise SystemExit(f"beats file not found: {candidate}")
+    return candidate
+
+
+def _beats(beats_ts: Path) -> list[tuple[int, int, str]]:
+    """Return (startS, endS, narration) per beat, in order, from a beats file."""
+    text = beats_ts.read_text(encoding="utf-8")
     starts = [int(x) for x in re.findall(r"\bstartS:\s*(\d+)", text)]
     ends = [int(x) for x in re.findall(r"\bendS:\s*(\d+)", text)]
     narrs = re.findall(r'narration:\s*"((?:[^"\\]|\\.)*)"', text, re.DOTALL)
     if not (len(starts) == len(ends) == len(narrs)):
         raise SystemExit(
-            f"beat fields misaligned in {BEATS_TS}: "
+            f"beat fields misaligned in {beats_ts}: "
             f"{len(starts)} startS, {len(ends)} endS, {len(narrs)} narration"
         )
     clean = [re.sub(r"\s+", " ", n.replace('\\"', '"')).strip() for n in narrs]
@@ -139,13 +160,16 @@ def main() -> int:
         raise SystemExit(
             'ELEVENLABS_API_KEY not set — export ELEVENLABS_API_KEY="$(cat ~/.elevenlabs_key)"'
         )
+    args = parse_args()
+    beats_ts = resolve_beats_file(args.beats_file)
+    audio_out = AUDIO_ROOT / args.audio_subdir if args.audio_subdir else AUDIO_ROOT
     voice = os.environ.get("ELEVENLABS_VOICE_ID", DEFAULT_VOICE)
     model = os.environ.get("ELEVENLABS_MODEL_ID", DEFAULT_MODEL)
-    AUDIO_OUT.mkdir(parents=True, exist_ok=True)
-    beats = _beats()
+    audio_out.mkdir(parents=True, exist_ok=True)
+    beats = _beats(beats_ts)
     print(f"elevenlabs: voice={voice} model={model}  ({len(beats)} beats)\n")
     for i, (start, end, narr) in enumerate(beats, 1):
-        mp3 = AUDIO_OUT / f"beat_{i:02d}.mp3"
+        mp3 = audio_out / f"beat_{i:02d}.mp3"
         _synth(narr, voice, model, key, mp3)
         dur, tempo = _fit_to_budget(mp3, float(end - start))
         fit = f"  (fit ×{tempo:.2f} to {end - start}s slot)" if tempo else ""
