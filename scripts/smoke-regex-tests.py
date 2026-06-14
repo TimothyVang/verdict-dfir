@@ -359,6 +359,26 @@ READINESS_PACKET_FORBIDDEN_DOC_STRINGS = [
     "└── readiness-packet-manifest.json",
 ]
 
+ARCHITECTURE_REQUIRED_FLOW_STRINGS = [
+    "Contradiction --> Verifier",
+    "Verifier --> Judge",
+    "Judge --> Correlator",
+]
+
+ARCHITECTURE_FORBIDDEN_FLOW_STRINGS = [
+    "Contradiction --> Judge",
+    "Judge --> Verifier",
+]
+
+GLOSSARY_FORBIDDEN_STRINGS = [
+    "**`tool_call_id`** | A SHA-256 over a tool's raw output.",
+]
+
+GLOSSARY_REQUIRED_STRINGS = [
+    "**`tool_call_id`** | Opaque current-case tool execution identifier",
+    "**`output_hash` / `_meta.output_sha256`** | SHA-256 digest of the tool's raw output",
+]
+
 
 def _run_divergence_cases(div_smoke) -> list[tuple[str, str]]:
     """Returns list of (label, error) for failing cases."""
@@ -683,6 +703,50 @@ def _run_readiness_packet_doc_cases() -> list[tuple[str, str]]:
     return failures
 
 
+def _run_architecture_flow_policy_cases() -> list[tuple[str, str]]:
+    failures = []
+    architecture = (REPO / "docs/architecture.md").read_text(encoding="utf-8")
+    for needle in ARCHITECTURE_REQUIRED_FLOW_STRINGS:
+        if needle not in architecture:
+            failures.append(
+                (
+                    f"architecture diagram includes {needle}",
+                    "expected verifier to run before judge in the public trust-boundary diagram",
+                )
+            )
+    for needle in ARCHITECTURE_FORBIDDEN_FLOW_STRINGS:
+        if needle in architecture:
+            failures.append(
+                (
+                    f"architecture diagram omits stale {needle}",
+                    "expected diagram not to place judge before verifier",
+                )
+            )
+    return failures
+
+
+def _run_glossary_tool_call_id_policy_cases() -> list[tuple[str, str]]:
+    failures = []
+    glossary = (REPO / "docs/glossary.md").read_text(encoding="utf-8")
+    for needle in GLOSSARY_FORBIDDEN_STRINGS:
+        if needle in glossary:
+            failures.append(
+                (
+                    "glossary does not define tool_call_id as content hash",
+                    f"unexpected stale glossary definition {needle!r}",
+                )
+            )
+    for needle in GLOSSARY_REQUIRED_STRINGS:
+        if needle not in glossary:
+            failures.append(
+                (
+                    f"glossary includes {needle.split('|', 1)[0].strip()}",
+                    "expected separate opaque id and output hash definitions",
+                )
+            )
+    return failures
+
+
 def _run_tool_count_guard_cases(tool_count_guard) -> list[tuple[str, str]]:
     failures = []
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -854,6 +918,27 @@ def main() -> int:
     for label, err in readiness_doc_failures:
         all_failures.append(("readiness-packet docs", label, err))
 
+    architecture_flow_failures = _run_architecture_flow_policy_cases()
+    architecture_flow_total = len(ARCHITECTURE_REQUIRED_FLOW_STRINGS) + len(
+        ARCHITECTURE_FORBIDDEN_FLOW_STRINGS
+    )
+    print(
+        f"architecture verifier/judge flow: "
+        f"{architecture_flow_total - len(architecture_flow_failures)}"
+        f" / {architecture_flow_total} passed"
+    )
+    for label, err in architecture_flow_failures:
+        all_failures.append(("architecture verifier/judge flow", label, err))
+
+    glossary_failures = _run_glossary_tool_call_id_policy_cases()
+    glossary_total = len(GLOSSARY_FORBIDDEN_STRINGS) + len(GLOSSARY_REQUIRED_STRINGS)
+    print(
+        f"glossary tool_call_id policy: "
+        f"{glossary_total - len(glossary_failures)} / {glossary_total} passed"
+    )
+    for label, err in glossary_failures:
+        all_failures.append(("glossary tool_call_id policy", label, err))
+
     tool_count_failures = _run_tool_count_guard_cases(tool_count_guard)
     tool_count_total = 3
     print(
@@ -883,6 +968,8 @@ def main() -> int:
         + len(RELEASE_POLICY_REQUIRED_STRINGS)
         + len(PATH_EXISTENCE_ALLOW_CASES)
         + readiness_total
+        + architecture_flow_total
+        + glossary_total
         + tool_count_total
     )
     print("=" * 60)

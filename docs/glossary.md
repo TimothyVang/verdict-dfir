@@ -49,8 +49,9 @@ Full semantics in [verdict-semantics.md](verdict-semantics.md). None of them mea
 |---|---|
 | **Pool A / Pool B** | Two subagent pools that investigate the same evidence with opposing priors (persistence-biased vs. exfil-biased). |
 | **ACH** | Analysis of Competing Hypotheses — Heuer's intelligence method, here as live architecture: disagreements surface as `contradiction` records before a judge merges them. |
-| **judge / verifier / correlator** | The verifier re-runs each cited tool; the judge merges Pool A/B findings with credibility weighting; the correlator links findings across the case (and across hosts in fleet mode). |
-| **`tool_call_id`** | A SHA-256 over a tool's raw output. Every Finding cites one or it is vetoed. |
+| **verifier / judge / correlator** | The verifier re-runs each cited tool; the judge merges Pool A/B findings with credibility weighting; the correlator links findings across the case (and across hosts in fleet mode). |
+| **`tool_call_id`** | Opaque current-case tool execution identifier. Every Finding cites one or it is vetoed. |
+| **`output_hash` / `_meta.output_sha256`** | SHA-256 digest of the tool's raw output. This is separate from the opaque `tool_call_id`. |
 | **audit chain / `audit.jsonl`** | Append-only, hash-chained log (each record carries `prev_hash`) of every tool call and finding. |
 | **Merkle root / `run.manifest.json`** | A Merkle tree over canonical tool outputs, recorded in the run manifest. |
 | **manifest / `manifest_verify`** | The signed seal over the run; `manifest_verify` re-checks the chain + Merkle root **offline**. Post-A5 the chain is audit `prev_hash` → `rs_merkle` → manifest signature, with Ed25519 as the offline-verifiable default and Sigstore as the identity/transparency tier. |

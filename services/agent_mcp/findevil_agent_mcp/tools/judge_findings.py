@@ -13,7 +13,7 @@ from typing import Any
 
 from findevil_agent.events import Finding, VerifierAction
 from findevil_agent.judge import JudgeBudgetExceeded, PoolStats, judge_findings
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from findevil_agent_mcp.tools._base import ToolSpec
 
@@ -40,6 +40,44 @@ class JudgeFindingsInput(BaseModel):
         gt=0.0,
         description="Wall-clock budget for the merge (Spec #2 §8.1 default 120s).",
     )
+
+    @model_validator(mode="after")
+    def _require_verifier_actions(self) -> JudgeFindingsInput:
+        _validate_pool_verifier_actions(
+            "pool_a", self.pool_a_findings, self.pool_a_verifier_actions
+        )
+        _validate_pool_verifier_actions(
+            "pool_b", self.pool_b_findings, self.pool_b_verifier_actions
+        )
+        return self
+
+
+def _validate_pool_verifier_actions(
+    pool: str, findings: list[dict[str, Any]], actions: list[dict[str, Any]]
+) -> None:
+    if not findings:
+        return
+    if not actions:
+        raise ValueError(
+            f"{pool}_verifier_actions required when {pool}_findings is non-empty"
+        )
+    action_by_finding = {
+        str(action.get("finding_id")): action
+        for action in actions
+        if isinstance(action.get("finding_id"), str)
+    }
+    for finding in findings:
+        finding_id = str(finding.get("finding_id") or "")
+        action = action_by_finding.get(finding_id)
+        if action is None:
+            raise ValueError(
+                f"{pool}_verifier_actions missing verifier action for "
+                f"finding_id={finding_id!r}"
+            )
+        if action.get("action") == "rejected":
+            raise ValueError(
+                f"{pool}_findings includes verifier-rejected finding_id={finding_id!r}"
+            )
 
 
 class MergedFindingRecord(BaseModel):

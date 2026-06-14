@@ -24,7 +24,7 @@ sys.path.insert(0, str(REPO / "services" / "agent"))
 
 from findevil_agent.crypto.audit_log import AuditLog  # noqa: E402
 from findevil_agent.crypto.manifest import build_manifest, write_manifest  # noqa: E402
-from findevil_agent.crypto.signer import StubSigner  # noqa: E402
+from findevil_agent.crypto.signer import LocalEd25519Signer, StubSigner  # noqa: E402
 
 
 def powershell() -> str | None:
@@ -36,7 +36,11 @@ def write_json(path: Path, data: dict) -> None:
 
 
 def make_run(
-    root: Path, *, manifest_overall: bool = True, customer_releasable: bool = False
+    root: Path,
+    *,
+    manifest_overall: bool = True,
+    customer_releasable: bool = False,
+    cryptographic_signature: bool = True,
 ) -> Path:
     run = root / "case-ready"
     run.mkdir(parents=True)
@@ -54,7 +58,11 @@ def make_run(
         run_id="run-ready",
         started_at="2026-05-10T00:00:00Z",
         audit_log=audit,
-        signer=StubSigner(run_id="run-ready"),
+        signer=(
+            LocalEd25519Signer(root / "signing.key")
+            if cryptographic_signature
+            else StubSigner(run_id="run-ready")
+        ),
         extra={"image_path": "synthetic"},
     )
     manifest_path = write_manifest(manifest, run / "run.manifest.json")
@@ -304,6 +312,15 @@ def main() -> int:
         repeat_paths = {row["path"] for row in repeat_manifest["artifacts"]}
         if "REPORT.md" in repeat_paths:
             raise SystemExit("repeat RunId packet retained stale REPORT.md")
+
+        stub_signature_run = make_run(
+            tmp / "stub-signature",
+            manifest_overall=True,
+            cryptographic_signature=False,
+        )
+        stub_signature = run_gate(ps, stub_signature_run, out, "stub-signature")
+        if stub_signature.returncode == 0:
+            raise SystemExit("stub-signature readiness gate unexpectedly passed")
 
         blocked_run = make_run(tmp / "negative", manifest_overall=False)
         negative = run_gate(ps, blocked_run, out, "negative")

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from findevil_agent_mcp.tools.correlate_findings import (
     SPEC as CORRELATE_SPEC,
 )
@@ -41,6 +43,17 @@ def _finding(**overrides: Any) -> dict[str, Any]:
     }
     base.update(overrides)
     return base
+
+
+def _verifier_action(
+    finding_id: str = "f-1", action: str = "approved"
+) -> dict[str, Any]:
+    return {
+        "case_id": "case-001",
+        "finding_id": finding_id,
+        "action": action,
+        "reason": "tool re-run output_sha256 matches audit log",
+    }
 
 
 class TestDetectContradictions:
@@ -82,10 +95,26 @@ class TestDetectContradictions:
 
 
 class TestJudgeFindings:
+    async def test_rejects_findings_without_verifier_actions(self) -> None:
+        with pytest.raises(ValueError, match="verifier_actions"):
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A")],
+                pool_b_findings=[],
+            )
+
+    async def test_rejects_findings_without_matching_verifier_actions(self) -> None:
+        with pytest.raises(ValueError, match="missing verifier action"):
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A")],
+                pool_a_verifier_actions=[_verifier_action("f-other")],
+                pool_b_findings=[],
+            )
+
     async def test_pure_pool_a_yields_pool_a_only_results(self) -> None:
         result = await JUDGE_SPEC.handler(
             JudgeFindingsInput(
                 pool_a_findings=[_finding(pool_origin="A")],
+                pool_a_verifier_actions=[_verifier_action("f-1")],
                 pool_b_findings=[],
             )
         )
@@ -122,7 +151,12 @@ class TestJudgeFindings:
         result = await JUDGE_SPEC.handler(
             JudgeFindingsInput(
                 pool_a_findings=[a_main, a_other],
+                pool_a_verifier_actions=[
+                    _verifier_action("f-A-1"),
+                    _verifier_action("f-A-2"),
+                ],
                 pool_b_findings=[b_main],
+                pool_b_verifier_actions=[_verifier_action("f-B-1")],
             )
         )
         assert isinstance(result, JudgeFindingsOutput)

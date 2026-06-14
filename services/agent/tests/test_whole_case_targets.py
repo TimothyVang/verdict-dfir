@@ -111,6 +111,45 @@ def test_rejects_stale_existing_xartifact_copy(tmp_path: Path) -> None:
         whole_case_targets.enumerate_targets(root, out)
 
 
+def test_rejects_xartifact_destination_symlink_escape(tmp_path: Path) -> None:
+    root = tmp_path / "case"
+    out = tmp_path / "out"
+    escaped = tmp_path / "escaped" / "base-file-cdrive.E01"
+    _write(root / "base-file-cdrive.E01")
+    _write(root / "base-file-memory.img")
+    staged = out / "_xartifact" / "base-file" / "base-file-cdrive.E01"
+    staged.parent.mkdir(parents=True)
+    try:
+        staged.symlink_to(escaped)
+    except OSError:
+        pytest.skip("symlinks are not supported on this filesystem")
+
+    with pytest.raises(RuntimeError, match="symlink"):
+        whole_case_targets.enumerate_targets(root, out)
+
+    assert not escaped.exists()
+
+
+def test_rejects_xartifact_parent_symlink_escape(tmp_path: Path) -> None:
+    root = tmp_path / "case"
+    out = tmp_path / "out"
+    escaped_dir = tmp_path / "escaped"
+    escaped_dir.mkdir()
+    _write(root / "base-file-cdrive.E01")
+    _write(root / "base-file-memory.img")
+    xartifact_dir = out / "_xartifact"
+    xartifact_dir.parent.mkdir(parents=True)
+    try:
+        xartifact_dir.symlink_to(escaped_dir, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlinks are not supported on this filesystem")
+
+    with pytest.raises(RuntimeError, match="symlink|escapes output dir"):
+        whole_case_targets.enumerate_targets(root, out)
+
+    assert not (escaped_dir / "base-file" / "base-file-cdrive.E01").exists()
+
+
 def test_rejects_xartifact_symlink_without_writing_through_it(
     tmp_path: Path,
 ) -> None:

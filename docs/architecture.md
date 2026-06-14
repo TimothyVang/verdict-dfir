@@ -74,9 +74,9 @@ flowchart TB
         Supervisor["Claude Code main agent<br/>= supervisor<br/>reads agent-config/SOUL.md<br/>+ AGENTS.md + MEMORY.md"]
         PoolA["Pool A subagent<br/>(native Task mechanism)<br/>persistence-biased prompt:<br/>Tasks, Services, WMI,<br/>Run, IFEO, LOLBins"]
         PoolB["Pool B subagent<br/>(native Task mechanism)<br/>exfil-biased prompt:<br/>net connections, staging,<br/>certutil/bitsadmin, cloud sync,<br/>USB writes"]
-        Contradiction["detect_contradictions<br/>(MCP tool call into agent_mcp)<br/>FIRES BEFORE JUDGE"]
+        Contradiction["detect_contradictions<br/>(MCP tool call into agent_mcp)<br/>surfaces disagreements first"]
         Judge["judge_findings<br/>credibility-weighted<br/>Estornell ICML 2025"]
-        Verifier["verify_finding<br/>re-executes cited tool calls<br/>vetos uncited Findings"]
+        Verifier["verify_finding<br/>re-executes cited tool calls<br/>vetos uncited Findings<br/>runs before judge"]
         Correlator["correlate_findings<br/>≥2 artifact classes<br/>for execution claims"]
     end
 
@@ -114,9 +114,9 @@ flowchart TB
     PoolA --> Contradiction
     PoolB --> Contradiction
     Contradiction -->|ContradictionFound<br/>event surfaced FIRST| Terminal
-    Contradiction --> Judge
-    Judge --> Verifier
-    Verifier --> Correlator
+    Contradiction --> Verifier
+    Verifier --> Judge
+    Judge --> Correlator
     Correlator --> Trust4
 
     Trust3 --> SignerTier

@@ -45,31 +45,41 @@ def load_submission_validator():
     return mod
 
 
-def build_readiness_packet_zip(report_html: str) -> bytes:
+def build_readiness_packet_zip(
+    report_html: str,
+    *,
+    audit_jsonl: str | None = None,
+    manifest_verify: dict[str, object] | None = None,
+    verdict_overrides: dict[str, object] | None = None,
+) -> bytes:
+    audit_text = audit_jsonl or (
+        '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+        '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+        '{"kind":"verdict_artifact","payload":{"path":"verdict.json"}}\n'
+        '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+        + ("b" * 64)
+        + '"}}\n'
+    )
+    verdict_obj: dict[str, object] = {
+        "verdict": "INDETERMINATE",
+        "report_qa": {
+            "status": "PASS",
+            "ready_for_expert_signoff": True,
+            "customer_releasable": False,
+        },
+        "release_gate": {"customer_releasable": False},
+        "expert_signoff": {"customer_releasable": False},
+    }
+    if verdict_overrides:
+        verdict_obj.update(verdict_overrides)
     packet_files: dict[str, bytes] = {
-        "audit.jsonl": (
-            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
-            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
-            '{"kind":"verdict_artifact","payload":{"path":"verdict.json"}}\n'
-            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
-            + ("b" * 64)
-            + '"}}\n'
-        ).encode(),
+        "audit.jsonl": audit_text.encode(),
         "run.manifest.json": b'{"case_id":"case-ready"}\n',
-        "manifest_verify.json": b'{"overall":true}\n',
-        "verdict.json": json.dumps(
-            {
-                "verdict": "INDETERMINATE",
-                "report_qa": {
-                    "status": "PASS",
-                    "ready_for_expert_signoff": True,
-                    "customer_releasable": False,
-                },
-                "release_gate": {"customer_releasable": False},
-                "expert_signoff": {"customer_releasable": False},
-            },
+        "manifest_verify.json": json.dumps(
+            manifest_verify or {"overall": True, "signature_verified": True},
             sort_keys=True,
         ).encode(),
+        "verdict.json": json.dumps(verdict_obj, sort_keys=True).encode(),
         "expert_signoff.json": b'{"decision":"pending","customer_releasable":false}\n',
         "customer_release_gate.final.json": (
             b'{"customer_releasable":false,"expert_decision":"pending"}\n'
@@ -580,6 +590,42 @@ def main() -> int:
                 "readiness-packet.zip", build_readiness_packet_zip(valid_html_text)
             )
         valid_zip_result = validator.validate_zip(valid_zip)
+        finding_packet_audit = (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+        )
+        finding_packet = build_readiness_packet_zip(
+            valid_html_text,
+            audit_jsonl=finding_packet_audit,
+            verdict_overrides={
+                "findings": [
+                    {
+                        "finding_id": "f-ready",
+                        "tool_call_id": "tc-ready",
+                        "confidence": "CONFIRMED",
+                        "description": "Replay-backed finding.",
+                    }
+                ]
+            },
+        )
+        missing_verifier_packet_result = validator.validate_readiness_packet_bytes(
+            finding_packet, "finding packet missing verifier evidence"
+        )
+        unverifiable_signature_packet_result = validator.validate_readiness_packet_bytes(
+            build_readiness_packet_zip(
+                valid_html_text,
+                manifest_verify={
+                    "overall": True,
+                    "signature_present": True,
+                    "signature_verified": False,
+                },
+            ),
+            "packet with unverified manifest signature",
+        )
 
     checks = [
         (
@@ -741,6 +787,14 @@ def main() -> int:
         (
             "zip validator accepts policy-complete investigation report",
             valid_zip_result.ok,
+        ),
+        (
+            "readiness packet rejects findings without verifier audit evidence",
+            not missing_verifier_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects unverified manifest signature when reported",
+            not unverifiable_signature_packet_result.ok,
         ),
     ]
     print("=" * 60)

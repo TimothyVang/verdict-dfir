@@ -720,6 +720,7 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
         }
     }
 
+    $auditKinds = @()
     if (Test-Path -LiteralPath $auditPath -PathType Leaf) {
         $auditKinds = Read-AuditKinds -AuditPath $auditPath
         foreach ($kind in @("report_qa", "customer_release_gate", "verdict_artifact", "expert_signoff_packet")) {
@@ -759,8 +760,18 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
     if ($null -ne $manifestVerifyObj -and -not [bool]$manifestVerifyObj.overall) {
         Add-ReadinessBlocker "manifest_verify overall=false for $manifestVerifyPath"
     }
+    if ($null -ne $manifestVerifyObj -and $manifestVerifyObj.signature_verified -ne $true) {
+        Add-ReadinessBlocker "manifest_verify signature_verified is not true for $manifestVerifyPath"
+    }
 
     if ($null -ne $verdictObj) {
+        if ($null -ne $verdictObj.findings -and @($verdictObj.findings).Count -gt 0) {
+            foreach ($kind in @("verifier_action", "replay", "acp_handoff")) {
+                if (-not (Test-AuditKind -AuditKinds $auditKinds -Kind $kind)) {
+                    Add-ReadinessBlocker "audit log lacks verifier evidence $kind record for final findings: $auditPath"
+                }
+            }
+        }
         $reportQa = $verdictObj.report_qa
         if ($null -eq $reportQa) {
             Add-ReadinessBlocker "verdict.json lacks report_qa"

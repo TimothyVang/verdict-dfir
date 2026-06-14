@@ -55,6 +55,12 @@ READINESS_REQUIRED_AUDIT_KINDS = {
     "expert_signoff_packet",
 }
 
+READINESS_VERIFIER_AUDIT_KINDS = {
+    "verifier_action",
+    "replay",
+    "acp_handoff",
+}
+
 READINESS_REPORT_ARTIFACTS = {
     "report.html",
     "report.pdf",
@@ -407,8 +413,8 @@ def add_customer_ready_blockers(obj: object, label: str, blockers: list[str]) ->
             add_customer_ready_blockers(nested, f"{label}.{nested_key}", blockers)
 
 
-def validate_readiness_audit_text(text: str, blockers: list[str]) -> None:
-    kinds: set[str] = set()
+def parse_readiness_audit_text(text: str, blockers: list[str]) -> list[dict]:
+    records: list[dict] = []
     line_count = 0
     for line_number, line in enumerate(text.splitlines(), start=1):
         if not line.strip():
@@ -419,10 +425,24 @@ def validate_readiness_audit_text(text: str, blockers: list[str]) -> None:
         except json.JSONDecodeError as exc:
             blockers.append(f"audit.jsonl line {line_number} is not valid JSON: {exc}")
             continue
-        if isinstance(record, dict) and isinstance(record.get("kind"), str):
-            kinds.add(record["kind"])
+        if not isinstance(record, dict):
+            blockers.append(f"audit.jsonl line {line_number} is not a JSON object")
+            continue
+        records.append(record)
+        if not isinstance(record.get("kind"), str):
+            blockers.append(f"audit.jsonl line {line_number} lacks top-level kind")
     if line_count == 0:
         blockers.append("audit.jsonl has no audit records")
+    return records
+
+
+def validate_readiness_audit_records(
+    records: list[dict], blockers: list[str]
+) -> None:
+    kinds: set[str] = set()
+    for record in records:
+        if isinstance(record, dict) and isinstance(record.get("kind"), str):
+            kinds.add(record["kind"])
     missing = sorted(READINESS_REQUIRED_AUDIT_KINDS - kinds)
     if missing:
         blockers.append(
@@ -430,17 +450,103 @@ def validate_readiness_audit_text(text: str, blockers: list[str]) -> None:
         )
 
 
-def validate_readiness_audit(packet_dir: Path, blockers: list[str]) -> None:
+def validate_readiness_audit_text(text: str, blockers: list[str]) -> list[dict]:
+    records = parse_readiness_audit_text(text, blockers)
+    validate_readiness_audit_records(records, blockers)
+    return records
+
+
+def validate_readiness_audit(packet_dir: Path, blockers: list[str]) -> list[dict]:
     path = artifact_path(packet_dir, "audit.jsonl")
     if not path.is_file():
         blockers.append(f"audit.jsonl missing from packet dir: {path}")
-        return
+        return []
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
         blockers.append(f"audit.jsonl could not be read: {exc}")
+        return []
+    return validate_readiness_audit_text(text, blockers)
+
+
+def validate_manifest_verify_object(
+    manifest_verify: dict | None, blockers: list[str]
+) -> None:
+    if manifest_verify is None:
         return
-    validate_readiness_audit_text(text, blockers)
+    if manifest_verify.get("overall") is not True:
+        blockers.append("manifest_verify.json overall is not true")
+    if manifest_verify.get("signature_verified") is not True:
+        blockers.append("manifest_verify.json signature_verified is not true")
+
+
+def audit_record_finding_id(record: dict) -> str | None:
+    payload = record.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    if record.get("kind") == "acp_handoff":
+        handoff_payload = payload.get("payload")
+        if isinstance(handoff_payload, dict):
+            value = handoff_payload.get("finding_id") or payload.get("correlation_id")
+        else:
+            value = payload.get("correlation_id")
+    else:
+        value = payload.get("finding_id")
+    return str(value) if isinstance(value, str) and value else None
+
+
+def validate_verifier_audit_evidence(
+    verdict: dict, audit_records: list[dict], blockers: list[str]
+) -> None:
+    findings = verdict.get("findings")
+    if not isinstance(findings, list):
+        summary = verdict.get("findings_summary")
+        total = summary.get("total_merged") if isinstance(summary, dict) else None
+        if isinstance(total, int) and total > 0:
+            blockers.append(
+                "verdict.json reports merged findings but lacks a findings list"
+            )
+        return
+    if not findings:
+        return
+
+    finding_ids: list[str] = []
+    for index, finding in enumerate(findings, start=1):
+        if not isinstance(finding, dict):
+            blockers.append(f"verdict.json findings[{index - 1}] is not an object")
+            continue
+        finding_id = finding.get("finding_id")
+        if not isinstance(finding_id, str) or not finding_id:
+            blockers.append(f"verdict.json findings[{index - 1}] lacks finding_id")
+            continue
+        finding_ids.append(finding_id)
+
+    ids_by_kind: dict[str, set[str]] = {
+        kind: set() for kind in READINESS_VERIFIER_AUDIT_KINDS
+    }
+    for record in audit_records:
+        kind = record.get("kind")
+        if not isinstance(kind, str) or kind not in ids_by_kind:
+            continue
+        finding_id = audit_record_finding_id(record)
+        if finding_id is not None:
+            ids_by_kind[kind].add(finding_id)
+
+    missing_kinds = sorted(kind for kind, ids in ids_by_kind.items() if not ids)
+    if missing_kinds:
+        blockers.append(
+            "audit.jsonl lacks verifier evidence kind(s) for final findings: "
+            + ", ".join(missing_kinds)
+        )
+    for finding_id in finding_ids:
+        missing_for_finding = sorted(
+            kind for kind, ids in ids_by_kind.items() if finding_id not in ids
+        )
+        if missing_for_finding:
+            blockers.append(
+                f"audit.jsonl lacks verifier evidence for finding_id={finding_id}: "
+                + ", ".join(missing_for_finding)
+            )
 
 
 def readiness_report_paths(entries: dict[str, dict]) -> list[str]:
@@ -548,16 +654,16 @@ def validate_readiness_summary(path: Path) -> CheckResult:
         except zipfile.BadZipFile:
             blockers.append(f"packet_zip is not a valid ZIP file: {packet_zip}")
 
-    validate_readiness_audit(packet_dir, blockers)
+    audit_records = validate_readiness_audit(packet_dir, blockers)
     read_artifact_json(packet_dir, "run.manifest.json", "run.manifest.json", blockers)
     manifest_verify = read_artifact_json(
         packet_dir, "manifest_verify.json", "manifest_verify.json", blockers
     )
-    if manifest_verify is not None and manifest_verify.get("overall") is not True:
-        blockers.append("manifest_verify.json overall is not true")
+    validate_manifest_verify_object(manifest_verify, blockers)
     verdict = read_artifact_json(packet_dir, "verdict.json", "verdict.json", blockers)
     if verdict is not None:
         add_customer_ready_blockers(verdict, "verdict.json", blockers)
+        validate_verifier_audit_evidence(verdict, audit_records, blockers)
         report_qa = verdict.get("report_qa")
         if not isinstance(report_qa, dict):
             blockers.append("verdict.json lacks report_qa object")
@@ -694,19 +800,20 @@ def validate_readiness_packet_archive(
             if actual_sha.lower() != expected_sha.lower():
                 blockers.append(f"readiness packet hash mismatch: {relative_path}")
 
+    audit_records: list[dict] = []
     audit_text = read_zip_text(zf, "audit.jsonl", blockers)
     if audit_text is not None:
-        validate_readiness_audit_text(audit_text, blockers)
+        audit_records = validate_readiness_audit_text(audit_text, blockers)
 
     manifest_verify = read_zip_json(
         zf, "manifest_verify.json", "manifest_verify.json", blockers
     )
-    if manifest_verify is not None and manifest_verify.get("overall") is not True:
-        blockers.append("manifest_verify.json overall is not true")
+    validate_manifest_verify_object(manifest_verify, blockers)
 
     verdict = read_zip_json(zf, "verdict.json", "verdict.json", blockers)
     if verdict is not None:
         add_customer_ready_blockers(verdict, "verdict.json", blockers)
+        validate_verifier_audit_evidence(verdict, audit_records, blockers)
         report_qa = verdict.get("report_qa")
         if not isinstance(report_qa, dict):
             blockers.append("verdict.json lacks report_qa object")

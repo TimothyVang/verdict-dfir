@@ -198,6 +198,23 @@ def _finding(
     }
 
 
+def _verifier_actions(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+    for finding in findings:
+        action = str(finding.get("verifier_action") or "approved")
+        if action not in {"approved", "downgraded"}:
+            action = "approved"
+        actions.append(
+            {
+                "case_id": str(finding.get("case_id") or "smoke-case"),
+                "finding_id": str(finding["finding_id"]),
+                "action": action,
+                "reason": "smoke verifier action supplied before judge_findings",
+            }
+        )
+    return actions
+
+
 def latest_auto_run() -> Path | None:
     base = REPO / "tmp" / "auto-runs"
     if not base.is_dir():
@@ -306,8 +323,8 @@ def real_evidence_flow(client: StdioClient, case_dir: Path) -> int:
         {
             "pool_a_findings": pool_a,
             "pool_b_findings": pool_b,
-            "pool_a_verifier_actions": [],
-            "pool_b_verifier_actions": [],
+            "pool_a_verifier_actions": _verifier_actions(pool_a),
+            "pool_b_verifier_actions": _verifier_actions(pool_b),
         },
     )
     if "merged" not in j:
@@ -584,8 +601,8 @@ def synthetic_flow(client: StdioClient) -> int:
             {
                 "pool_a_findings": a_findings,
                 "pool_b_findings": b_findings,
-                "pool_a_verifier_actions": [],
-                "pool_b_verifier_actions": [],
+                "pool_a_verifier_actions": _verifier_actions(a_findings),
+                "pool_b_verifier_actions": _verifier_actions(b_findings),
             },
         )
         if not j["merged"] or j["budget_exceeded"]:
