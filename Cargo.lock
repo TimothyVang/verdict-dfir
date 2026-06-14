@@ -4185,9 +4185,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-proto"
-version = "1.12.0"
+version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5375bffd4138c57e57812fc68ff2cacf7e7825b76e2f39aa2fd60aa421293381"
+checksum = "dca87838f8e4179cad1266e4b833cc91ab4fe8414391557886df4d92dac018ef"
 dependencies = [
  "protobuf",
  "protobuf-codegen",
