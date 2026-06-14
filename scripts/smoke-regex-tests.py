@@ -593,6 +593,7 @@ def _run_tool_count_guard_cases(tool_count_guard) -> list[tuple[str, str]]:
             "README.md": "3 product tools: 2 Rust DFIR + 1 Python.\n",
             "INSTALL.md": "3 product tools: findevil-mcp has 2 DFIR tools; findevil-agent-mcp has 1 Python tool.\n",
             "docs/architecture.md": "Tool count: 3 (2 Rust DFIR + 1 Python).\n",
+            "docs/reference/mcp-and-tools.md": "3 product tools: 2 Rust tools + 1 Python tool.\n",
             "scripts/make-demo-video/src/components/ArchPoster.tsx": "const total = 3; const rust = 2; const python = 1;\n",
         }
         for rel, text in good_docs.items():

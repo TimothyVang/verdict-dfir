@@ -35,6 +35,12 @@ DOC_RULES = (
         requires_python=True,
     ),
     DocRule(
+        "docs/reference/mcp-and-tools.md",
+        requires_total=True,
+        requires_rust=True,
+        requires_python=True,
+    ),
+    DocRule(
         "scripts/make-demo-video/src/components/ArchPoster.tsx",
         requires_total=True,
         requires_rust=True,
