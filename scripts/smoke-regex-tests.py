@@ -351,6 +351,7 @@ def _run_smoke_runner_policy_cases(launch_smoke) -> list[tuple[str, str]]:
     failures = []
     runner = (REPO / "scripts/run-all-smokes.ps1").read_text(encoding="utf-8")
     posix_runner = (REPO / "scripts/run-all-smokes.sh").read_text(encoding="utf-8")
+    l1_compose = (REPO / "docker/l1-compose.yml").read_text(encoding="utf-8")
     quickstart = (REPO / "QUICKSTART.md").read_text(encoding="utf-8")
     readiness_smoke = (REPO / "scripts/readiness-gate-smoke.py").read_text(
         encoding="utf-8"
@@ -449,6 +450,17 @@ def _run_smoke_runner_policy_cases(launch_smoke) -> list[tuple[str, str]]:
             (
                 "run-all-smokes.ps1 does not call retired smoke",
                 "expected Windows runner to use verdict-smoke.py, not find-evil-run-smoke.py",
+            )
+        )
+    if not re.search(
+        r"if\s+\[\s+-f\s+scripts/demo-script-smoke\.py\s+\]\s+&&\s+"
+        r"\[\s+-f\s+docs/demo-script-a2\.md\s+\];\s+then",
+        l1_compose,
+    ):
+        failures.append(
+            (
+                "docker l1 demo-script smoke requires demo script",
+                "expected L1 Docker to skip demo-script-smoke when docs/demo-script-a2.md is absent",
             )
         )
     windows_expected_smokes = [
