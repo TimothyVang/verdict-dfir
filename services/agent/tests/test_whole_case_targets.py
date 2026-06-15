@@ -79,6 +79,44 @@ def test_rejects_output_directory_inside_case_root(tmp_path: Path) -> None:
         whole_case_targets.enumerate_targets(root, out)
 
 
+def test_rejects_source_disk_symlink_escape(tmp_path: Path) -> None:
+    root = tmp_path / "case"
+    out = tmp_path / "out"
+    escaped = tmp_path / "outside-secret.E01"
+    _write(escaped)
+    _write(root / "base-file-memory.img")
+    disk = root / "base-file-cdrive.E01"
+    disk.parent.mkdir(parents=True, exist_ok=True)
+    disk.symlink_to(escaped)
+
+    with pytest.raises(RuntimeError, match="source evidence must not be a symlink"):
+        whole_case_targets.enumerate_targets(root, out)
+
+    assert not (out / "_xartifact" / "base-file" / "base-file-cdrive.E01").exists()
+
+
+def test_rejects_source_host_symlink_escape(tmp_path: Path) -> None:
+    root = tmp_path / "case"
+    out = tmp_path / "out"
+    escaped_host = tmp_path / "escaped-host"
+    escaped_host.mkdir()
+    hosts_dir = root / "hosts"
+    hosts_dir.mkdir(parents=True)
+    (hosts_dir / "linked-host").symlink_to(escaped_host, target_is_directory=True)
+
+    with pytest.raises(RuntimeError, match="source evidence must not be a symlink"):
+        whole_case_targets.enumerate_targets(root, out)
+
+
+def test_rejects_target_labels_with_tsv_delimiters(tmp_path: Path) -> None:
+    root = tmp_path / "case"
+    out = tmp_path / "out"
+    (root / "hosts" / "bad\tlabel").mkdir(parents=True)
+
+    with pytest.raises(ValueError, match="target label contains unsafe characters"):
+        whole_case_targets.enumerate_targets(root, out)
+
+
 def test_run_whole_case_local_rejects_inside_output_before_mutation(
     tmp_path: Path,
 ) -> None:

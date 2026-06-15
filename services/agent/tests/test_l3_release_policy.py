@@ -28,3 +28,11 @@ def test_ci_checklist_does_not_treat_l3_fallback_as_skip_green() -> None:
 
     assert "when L3 gracefully skips" not in checklist
     assert "failed or below-bar L3 evidence is not green" in checklist
+
+
+def test_branch_protection_requires_ci_required_aggregate() -> None:
+    branch_protection = (_ROOT / "scripts" / "setup-branch-protection.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "required_status_checks[contexts][]=ci-required" in branch_protection
