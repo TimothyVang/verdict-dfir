@@ -179,7 +179,10 @@ Accuracy is measured against published answer keys, not asserted. The repo ships
 under `goldens/`; large fixtures are staged with `scripts/fetch-fixtures.sh`, then scored with
 `scripts/score-recall.py tmp/auto-runs/<case-id> --golden goldens/<case-id>`. Method, corpus shape,
 false-positive controls, and honest limits are in [`docs/accuracy-report.md`](docs/accuracy-report.md);
-the adversarial challenge is in [`docs/red-team-challenge.md`](docs/red-team-challenge.md).
+the adversarial challenge is in [`docs/red-team-challenge.md`](docs/red-team-challenge.md). A compact
+committed execution trace for reviewer spot-checks lives in
+[`docs/release-evidence/`](docs/release-evidence/): Finding `f-A-evtx-audit-log-cleared` maps to
+`evtx_query` tool call `tc-002`, with verifier replay and token usage recorded.
 
 ## Getting started
 
