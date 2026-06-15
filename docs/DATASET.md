@@ -14,7 +14,7 @@ This document covers every fixture the Find Evil! submission was tested against.
 | URL | `https://sansorg.egnyte.com/fl/HhH7crTYT4JK` |
 | License | Distributed as hackathon starter data by SANS Institute |
 | Content | Sample disk images + memory captures (hackathon-specific) |
-| Purpose | **Primary** L3 golden-run fixture — what judges are most likely to test submissions against |
+| Purpose | Intended **primary** L3 golden-run fixture — what judges are most likely to test submissions against. Still a pending stub: `goldens/sans-starter/expected-findings.json` has no findings enumerated and has never been run or scored. |
 | SHA-256 | Required as `SANS_STARTER_SHA256` when `SANS_STARTER_URL` is set; recorded in `fixtures/sha256sums.txt` |
 | Expected findings | *(enumerated in `goldens/sans-starter/expected-findings.json` after first manual walk-through)* |
 
@@ -270,7 +270,7 @@ unfetchable-on-host datasets are marked "staged, run pending evidence".)*
 
 | Case id | Run? | Verdict | Recall | Notes |
 |---|---|---|---|---|
-| `nitroba` | yes (local, tshark) | INDETERMINATE | **5/5 (100%) — PASS** (bar=80%) | Network-playbook gaps fixed (see below). Surfaces all five: anonymous-email contact, source host (192.168.15.4), Gmail-cookie attribution, authenticated Facebook login, and the send-vs-browsing timeline correlation. |
+| `nitroba` | yes (local, tshark) | INDETERMINATE | **5/5 (100%) — PASS** (bar=80%; local, not committed) | Network-playbook gaps fixed (see below). Surfaces all five: anonymous-email contact, source host (192.168.15.4), Gmail-cookie attribution, authenticated Facebook login, and the send-vs-browsing timeline correlation. |
 | `otrf-apt3-mordor` | staged, run pending evidence | — | — | strongest Windows EVTX/Sysmon/JSON candidate; sparse clone only, no raw evidence committed |
 | `memlabs-lab1` | staged, run pending evidence | — | — | Windows memory CTF; requires extracted memory dump URL or local file URL |
 | `memlabs-lab2` | staged, run pending evidence | — | — | Windows memory CTF; requires extracted memory dump URL or local file URL |

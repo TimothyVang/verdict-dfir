@@ -65,9 +65,9 @@ flowchart TB
     subgraph Trust2["**TRUST BOUNDARY 2** — Two MCP Servers (typed tool surface)"]
         RustMcp["**findevil-mcp** (Rust, hand-rolled MCP 2024-11-05)<br/>31 typed DFIR tools<br/>NO execute_shell<br/>---<br/>core Windows memory/disk/log/network verbs<br/>+ allow-listed long-tail wrappers"]
         AgentMcp["**findevil-agent-mcp** (Python, mcp SDK 1.x)<br/>12 typed crypto/ACH/memory/ACP/expert-feedback tools<br/>---<br/>audit_append/verify,<br/>manifest_finalize/verify,<br/>verify_finding,<br/>detect_contradictions,<br/>judge_findings,<br/>correlate_findings,<br/>memory_remember/recall,<br/>pool_handoff,<br/>expert_miss_capture"]
-        EvtxCrate["evtx crate<br/>MIT, in-process<br/>1600× python-evtx"]
-        Merkle["rs_merkle 1.4.0<br/>append-only tree"]
-        DuckDB["DuckDB 0.10<br/>L1 case store"]
+        EvtxCrate["evtx crate<br/>MIT, in-process<br/>~1600× python-evtx (upstream)"]
+        Merkle["hand-rolled Merkle<br/>(rs_merkle-compatible semantics)<br/>append-only tree"]
+        DuckDB["DuckDB L1 case store<br/>(path reserved, not yet initialized)"]
     end
 
     subgraph Trust3["**TRUST BOUNDARY 3** — Claude Code agent loop (A2 — replaces LangGraph)"]
@@ -219,7 +219,7 @@ All three modes are **judge-valid**. Judges pick whichever they already have —
 ## Data flow — a single investigation from `.e01` to verdict (under A2)
 
 1. Judge runs `scripts/verdict <evidence>` for a one-shot live investigation, or `claude` / `scripts/find-evil` at the repo root for interactive mode. The one-shot launcher performs preflight, starts the optional dashboard unless `--no-dashboard` is set, and delegates to the internal `find-evil-auto` engine. The interactive path uses Claude Code, which reads `.mcp.json`, spawns both MCP servers, and ingests `CLAUDE.md` + `agent-config/*` as system context.
-2. In interactive mode, the judge prompts: "investigate fixtures/nist-hacking-case/SCHARDT.001". In one-shot mode, `scripts/verdict` supplies the evidence path to the internal engine. The supervisor calls `case_open` (Rust MCP) — SHA-256 verifies the image, opens via libewf read-only, initializes DuckDB at `~/.findevil/cases/<id>/evidence.ddb`, calls `audit_append` (Python MCP) for the open event.
+2. In interactive mode, the judge prompts: "investigate fixtures/nist-hacking-case/SCHARDT.001". In one-shot mode, `scripts/verdict` supplies the evidence path to the internal engine. The supervisor calls `case_open` (Rust MCP) — SHA-256 verifies the image, opens via libewf read-only, reserves the `evidence.ddb` path at `~/.findevil/cases/<id>/evidence.ddb` (the DuckDB L1 store is not yet initialized), calls `audit_append` (Python MCP) for the open event.
 3. Claude Code emits a plan as text (no `PlanProposed` event needed — the terminal IS the channel) and forks two subagents via the native Task mechanism: one with the Pool A persistence prompt, one with Pool B exfil.
 4. Each pool subagent invokes Rust MCP DFIR tools (`evtx_query`, `mft_timeline`, `hayabusa_scan`, etc.); each call's SHA-256 output digest is `audit_append`-ed and contributes a Merkle leaf at `manifest_finalize` time.
 5. Both subagents return Findings (each citing a `tool_call_id`). Supervisor calls `detect_contradictions` (Python MCP) which surfaces Pool A vs Pool B disagreements **before** the judge fires.
@@ -246,7 +246,7 @@ All three modes are **judge-valid**. Judges pick whichever they already have —
 | Install pattern | `curl ... \| bash` one-liner | `curl ... \| bash` one-liner (same pattern, our repo) |
 | Credential mode | 1 (their gateway config) | 3 (CLAUDE_CODE_OAUTH_TOKEN / interactive / API key) |
 
-We match Valhuntir's architectural discipline and exceed it on three dimensions that are documented, measurable, and legally framed.
+We match Valhuntir's architectural discipline and exceed it on three dimensions that are documented, measurable on the cases actually scored, and legally framed.
 
 ---
 
