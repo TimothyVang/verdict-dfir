@@ -28,15 +28,18 @@ import { C, GROTESK, MONO } from "./editorial";
 // per CAPTURE.md.
 export const CAPTURED: ReadonlySet<string> = new Set<string>([
   "dashboard-live.mp4",
-  // Reference cut: a genuine asciinema capture of the self-correction run
-  // (verifier rejects an injected replay → re-dispatches → recovers). Legible
-  // but rough (1.6× speed, EVTX fixture). Replace with the polished take per
-  // CAPTURE.md — same filename, no code change.
+  // Primary terminal cut: a genuine asciinema capture of a clean investigation
+  // run with no fault injection (nitroba.pcap), local paths sanitized for the
+  // public cut. Backs the "findings replay before they count" deep-dive beat.
   "terminal-investigation.mp4",
   // Real offline tamper demo (CAPTURE.md Slot 3): trace-finding passes on the
   // committed run, one hex char is flipped in a /tmp copy, the verifier fails
   // naming the exact broken record (seq 97 prev_hash break).
   "manifest-tamper.mp4",
+  // Organic cross-pool contradiction (no injection): a real SRL-2018 run where
+  // Pool A and Pool B disagree, detect_contradictions surfaces each clash, and
+  // the credibility-weighted judge reconciles it (auto_higher_credibility).
+  "F-contradiction.mp4",
 ]);
 
 const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
