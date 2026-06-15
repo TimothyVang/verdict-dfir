@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "purpose": "Stage One Check 10 committed structured execution-log evidence for a fresh EVTX live run.",
+  "generated_at_utc": "2026-06-15T04:31:34Z",
+  "source_run_command": "scripts/verdict evidence/DE_1102_security_log_cleared.evtx --no-dashboard",
+  "source_run_dir": "tmp/auto-runs/auto-6fa7a27f-30a7-4bf3-acfd-628c8983adee",
+  "source_run_note": "Raw generated run directories remain gitignored. This packet commits a compact structured trace plus hashes sufficient to spot-check the finding-to-tool-call chain without committing raw evidence.",
+  "evidence": {
+    "path": "evidence/DE_1102_security_log_cleared.evtx",
+    "type": "evtx",
+    "sha256": "a0615707b547a2ac254688fd725c3c590f62440fc9b7947c2843dd40498a39e8",
+    "size_bytes": 1118208,
+    "public_fixture_note": "Small public/staged EVTX fixture used for the live-test matrix row: Security event log cleared. Raw EVTX evidence is not part of this release-evidence packet."
+  },
+  "run": {
+    "run_id": "auto-1781497893",
+    "case_id": "e997a38e-ebbc-4a12-9d65-209219299520",
+    "agent": "find-evil-auto MVP",
+    "verdict": "SUSPICIOUS",
+    "finding_count": 1,
+    "audit_log_record_count": 22,
+    "manifest_leaf_count": 3,
+    "merkle_root_hex": "90460790d90fc32f1c123e2237562adbc65eb06984c9904c53e1dde640276928",
+    "report_qa_status": "WARN",
+    "packet_state": "EXPERT_REVIEW_DRAFT",
+    "customer_releasable": false
+  },
+  "coverage_scope": {
+    "source": "coverage_manifest.json from source_run_dir",
+    "artifact_classes_recorded": 6,
+    "parsed": [
+      "custody",
+      "evtx"
+    ],
+    "not_supplied": [
+      "disk/filesystem",
+      "memory",
+      "network",
+      "velociraptor"
+    ],
+    "failed": [],
+    "unsupported": [],
+    "attack_blind_spot_count": 7,
+    "truth_boundary": "If no parser/tool extracts an artifact class, VERDICT cannot reason over it. This manifest records that boundary explicitly."
+  },
+  "token_usage": {
+    "mode": "deterministic_headless_engine",
+    "llm_api_calls": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0,
+    "reason": "scripts/find_evil_auto.py synthesizes Pool A/Pool B findings deterministically from typed tool outputs for this headless run. No Anthropic/OpenAI/OpenRouter/Groq completion call is made in this path; Claude credentials are checked only during preflight."
+  },
+  "committed_trace": {
+    "path": "docs/release-evidence/evtx-security-log-clear-trace.jsonl",
+    "record_count": 22,
+    "contains": [
+      "agent_message records",
+      "tool_call_start/tool_call_output records",
+      "ACP handoffs between supervisor, pools, verifier, and judge",
+      "verifier replay decision",
+      "finding approval",
+      "report QA and release gate records"
+    ]
+  },
+  "spot_check": {
+    "finding_id": "f-A-evtx-audit-log-cleared",
+    "finding_trace_record_seq": 17,
+    "cited_tool_call_id": "tc-002",
+    "tool_start_seq": 3,
+    "tool_output_seq": 4,
+    "tool_name": "evtx_query",
+    "tool_output_sha256": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
+    "verifier_action_seq": 8,
+    "verifier_replay_seq": 9,
+    "verifier_replay_matched": true,
+    "verifier_replay_record_sha256": "1d91f551cd00de020f29dabc64f4291a32bae504bca2936dc78c94dee529d9a4"
+  },
+  "manifest_verify": {
+    "overall": true,
+    "audit_chain_ok": true,
+    "leaf_count_ok": true,
+    "merkle_root_ok": true,
+    "signature_kind": "ed25519",
+    "signature_present": true,
+    "signature_verified": true,
+    "mcp_output_sha256": "421f727e0948e09b6cf53709aef6bbd8d686bf85de81fc593a8d44c0534c81cf"
+  },
+  "scope_limits": [
+    "This is a compact committed trace, not the raw tmp/auto-runs directory.",
+    "The run is a small EVTX live test for execution-log qualification, not the broader NIST/SRL fleet benchmark.",
+    "The customer_release_gate trace record is emitted before manifest finalization; this summary records the later manifest_verify.overall=true result.",
+    "Report QA remains WARN because ATT&CK blind spots and customer-release signer/expert-signoff requirements are intentionally visible."
+  ]
+}
