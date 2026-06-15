@@ -12,6 +12,8 @@ customer evidence.
 | `l3-local-sift.json` | Committed local NIST fallback evidence for `v-submit`. It records the NIST Hacking Case image hash, run/readiness state, artifact hashes, and verification commands used when the GitHub KVM runner label had no capacity. It is not SIFT/KVM parity evidence. |
 | `evtx-security-log-clear-trace.jsonl` | Compact structured execution trace from a fresh live EVTX run. It includes agent messages, typed tool calls, ACP handoffs, verifier replay, finding approval, report QA, and release-gate records with timestamps. |
 | `evtx-security-log-clear-trace-summary.json` | Reviewer index for the EVTX trace: run command, case id, evidence hash, manifest verification result, token usage ledger, and a spot-check mapping from Finding `f-A-evtx-audit-log-cleared` to `evtx_query` tool call `tc-002`. |
+| `natural-self-correction-trace.jsonl` | Verbatim excerpt (seq 169-183) from an organic run's hash-chained `audit.jsonl`: real `registry_query` failures on truncated RegBack hives, `course_correction` narrow/skip decisions, and `heartbeat_failure` escalation to an honest partial verdict. No fault injection. |
+| `natural-self-correction-summary.json` | Reviewer index for the self-correction trace: source run, organic (`fault_injection` absent) statement, the failure->adjust->escalate arc, event counts, and how to verify from `seq`/`ts`/`prev_hash`. |
 
 ## Historical L3 fallback packet
 
@@ -67,3 +69,29 @@ Trace validation:
 jq -e . docs/release-evidence/evtx-security-log-clear-trace-summary.json >/dev/null
 jq -e . docs/release-evidence/evtx-security-log-clear-trace.jsonl >/dev/null
 ```
+
+## Stage One self-correction packet
+
+`natural-self-correction-trace.jsonl` and `natural-self-correction-summary.json`
+exist for the requirement that self-correction be visible **in the logs**, not
+only in the demo video (Stage One Check 11 / Stage Two criterion 1).
+
+They are a verbatim excerpt of an **organic** run (the string `fault_injection`
+never appears in its audit chain). Reviewer spot-check:
+
+- Trigger: `registry_query` fails on truncated Windows RegBack hives
+  (`SAM`, `SECURITY`, `SOFTWARE`) with `registry hive parse failed ... hive
+  truncated (header too small)`.
+- Adjustment: each `course_correction` record sets
+  `action = "narrow (skip this key; continue remaining hive triage)"` — the
+  agent abandons the unreadable hive and continues other lanes instead of
+  inventing a result.
+- Escalation: after consecutive failures, `heartbeat_failure` sets
+  `action = "escalate"` with a rising `consecutive_failures` counter and a
+  recovery posture that seals an honest `INDETERMINATE`/partial Verdict.
+- Integrity: every record carries `seq`, `ts`, and `prev_hash`; the excerpt is
+  contiguous, so each record's `prev_hash` links to the one before it.
+
+This is the deliberately un-edited counterpart to the demo film: a real tool
+failure and a real recovery, not a staged or injected one.
+
