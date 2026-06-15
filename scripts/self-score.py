@@ -36,8 +36,12 @@ except Exception:  # pragma: no cover
     CRITERIA = [
         {
             "criterion": 1,
-            "question": "Did any tool call fail this run? If yes, did the audit log show explicit course-correction — and was the trigger natural or an injected fault?",
-            "answer_style": "failures=N corrections=N injected_faults=N",
+            "question": (
+                "Did any tool call fail this run? If yes, did the audit log show "
+                "explicit course-correction or verifier re-dispatch — and was the "
+                "trigger natural or an injected fault?"
+            ),
+            "answer_style": "failures=N corrections=N redispatches=N injected_faults=N",
         },
         {
             "criterion": 2,
@@ -113,6 +117,7 @@ def score(case_dir: Path) -> dict[str, Any]:
     findings: list[dict[str, Any]] = []
     rejected = 0
     corrections = 0  # kind=course_correction records (real-time failure recovery)
+    redispatches = 0  # kind=verifier_redispatch records (verifier retry recovery)
     injected = 0  # kind=fault_injection records — staged, judges discount these
 
     for rec in lines:
@@ -132,6 +137,8 @@ def score(case_dir: Path) -> dict[str, Any]:
             rejected += 1
         elif kind == "course_correction":
             corrections += 1
+        elif kind == "verifier_redispatch":
+            redispatches += 1
         elif kind == "fault_injection":
             injected += 1
 
@@ -155,7 +162,10 @@ def score(case_dir: Path) -> dict[str, Any]:
     reproducible = "yes" if tools and have_output >= set(tools) else "no"
 
     answers = [
-        f"failures={failures} corrections={corrections} injected_faults={injected}",
+        (
+            f"failures={failures} corrections={corrections} "
+            f"redispatches={redispatches} injected_faults={injected}"
+        ),
         f"C={c * 100 // n}% I={i * 100 // n}% H={h * 100 // n}% (n={len(findings)})",
         f"classes={classes} crossed={'yes' if len(classes) >= 2 else 'no'}",
         f"rejected={rejected} reasons=[]",

@@ -63,10 +63,11 @@ and the escalation rule is enforced in code (`scripts/find_evil_auto.py`
 not just documented.
 **Natural beats staged.** Judges are explicitly trained to discount
 "staged self-correction" — a contrived error with an instant clean fix.
-Prefer current case audit evidence: real tool failures, named
-`course_correction` records, HEARTBEAT escalation when applicable, and an
-honest partial verdict. Keep `fault-injection-redispatch/` labeled as the
-on-demand harness demonstration it is; never present it as organic evidence.
+Prefer current-case audit evidence: real tool failures, named
+`course_correction` records, clean `verifier_redispatch` records with
+`fault_injection=0`, HEARTBEAT escalation when applicable, and an honest
+partial verdict. Keep `fault-injection-redispatch/` labeled as the optional
+harness/demo evidence it is; never present it as organic evidence.
 **Anti-pattern:** silent retry. Failures must be logged and named.
 
 ## 2. IR Accuracy
@@ -168,7 +169,7 @@ from the sealed `audit.jsonl` and answers one row per criterion:
 
 | # | Question | Answer style |
 |---|----------|--------------|
-| 1 | Did any tool call fail this run? If yes, did the audit log show explicit course-correction — and was the trigger natural or an injected fault? | `failures=N corrections=N injected_faults=N` |
+| 1 | Did any tool call fail this run? If yes, did the audit log show explicit course-correction or verifier re-dispatch — and was the trigger natural or an injected fault? | `failures=N corrections=N redispatches=N injected_faults=N` |
 | 2 | What % of Findings are CONFIRMED vs INFERRED vs HYPOTHESIS? | `C=X% I=Y% H=Z%` |
 | 3 | How many artifact classes did this case touch? Which Findings cross ≥2? | `classes=[…] crossed=[…]` |
 | 4 | Were any tool calls rejected by typed-surface validation this run? | `rejected=N reasons=[…]` |

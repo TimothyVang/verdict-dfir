@@ -422,7 +422,8 @@ class TestVerifyManifest:
         path = write_manifest(manifest, tmp_path / "run.manifest.json")
 
         # Tamper with the audit log itself.
-        log_path = Path(json.loads(path.read_text(encoding="utf-8"))["audit_log_path"])
+        manifest_obj = json.loads(path.read_text(encoding="utf-8"))
+        log_path = path.parent / manifest_obj["audit_log_path"]
         lines = log_path.read_bytes().splitlines()
         first = json.loads(lines[0])
         first["payload"]["tool"] = "MUTATED"
@@ -464,7 +465,8 @@ class TestVerifyManifest:
         )
         path = write_manifest(manifest, tmp_path / "run.manifest.json")
         # Delete the audit log.
-        Path(json.loads(path.read_text(encoding="utf-8"))["audit_log_path"]).unlink()
+        manifest_obj = json.loads(path.read_text(encoding="utf-8"))
+        (path.parent / manifest_obj["audit_log_path"]).unlink()
 
         result = verify_manifest(path)
         assert result.audit_chain_ok is not True

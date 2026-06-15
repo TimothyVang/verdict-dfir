@@ -45,30 +45,21 @@ To light up a slot:
 
 ## Slot 1 — `ui/terminal-investigation.mp4` (Beat 2: "It starts in Claude Code")
 
-**The flagship shot.** A real terminal running the investigation end-to-end, **including the live
-self-correction** (the verifier catching a bad replay and re-dispatching). This single capture
-covers the audit's "live terminal" + "live self-correction" asks.
+**The primary clean shot.** A real terminal running the investigation end-to-end with no fault
+injection. This capture covers the audit's "live terminal" ask and shows the normal typed tool
+stream, verification, judging, and final verdict. The forced self-correction take belongs in the
+optional harness appendix.
 
 ```bash
-# From the repo root. FIND_EVIL_FAULT_INJECT makes the verifier reject one
-# replay so the re-dispatch loop fires ON CAMERA — then recovers, verdict
-# unchanged. The injection is labeled fault_injection in the chain (honest).
+# From the repo root. Do not set FIND_EVIL_FAULT_INJECT for the primary capture.
 FIND_EVIL_PACE=0.15 \
-FIND_EVIL_FAULT_INJECT="verifier_reject_once:prefetch-cain-exe" \
   python3 scripts/find_evil_auto.py evidence/SCHARDT.dd \
-  --local --unattended --case-id demo-self-correction
+  --local --unattended --case-id demo-clean-primary
 ```
 
-**What's on screen, in order:** `case_open` + the SHA-256, the tool stream
-(`vol_*` / `prefetch_parse` / `registry_query` / `evtx_query`), then the verify phase printing the
-self-correction **to stdout** (the engine now prints these — no audit-log spelunking needed):
-
-```
-verify_finding rejected f-A-… — re-dispatching once (fresh replay)
-verify_finding recovered f-A-… on re-dispatch ✓
-```
-
-…and the final `verdict = SUSPICIOUS`.
+**What's on screen, in order:** `case_open` + the SHA-256, the typed tool stream
+(`vol_*` / `prefetch_parse` / `registry_query` / `evtx_query`), normal verification and judging,
+and the final `verdict = SUSPICIOUS`.
 
 **Verified recipe (asciinema → agg → mp4), this machine:** record the run *inside* asciinema's
 `-c`, then render. No GUI needed; text stays razor-sharp.
@@ -76,25 +67,47 @@ verify_finding recovered f-A-… on re-dispatch ✓
 ```bash
 # 1. record the real run as an asciicast (the -c command runs in a pty)
 asciinema rec --overwrite \
-  -c "FIND_EVIL_PACE=0.08 FIND_EVIL_FAULT_INJECT=verifier_reject_once:prefetch-cain-exe \
+  -c "FIND_EVIL_PACE=0.08 \
       python3 scripts/find_evil_auto.py evidence/SCHARDT.dd --local --unattended --no-parallel \
-      --case-id demo-self-correction" \
-  /tmp/self-correction.cast
+      --case-id demo-clean-primary" \
+  /tmp/clean-primary.cast
 
 # 2. render to video (speed up a long run to fit the ~22s beat)
-agg --font-size 26 --theme asciinema --speed 1.6 /tmp/self-correction.cast /tmp/self-correction.gif
-ffmpeg -y -i /tmp/self-correction.gif -movflags +faststart -pix_fmt yuv420p \
+agg --font-size 26 --theme asciinema --speed 1.6 /tmp/clean-primary.cast /tmp/clean-primary.gif
+ffmpeg -y -i /tmp/clean-primary.gif -movflags +faststart -pix_fmt yuv420p \
   -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
   scripts/make-demo-video/public/ui/terminal-investigation.mp4
 
 # 3. add "terminal-investigation.mp4" to CAPTURED in ExhibitVideo.tsx, then `pnpm render`
 ```
 
-`evidence/attack-samples` (EVTX) is a faster swap-in if you want a ~30s run instead of the
-minutes-long NIST disk case — use `verifier_reject_once:audit-log-cleared` for that fixture. A
-quick reference clip recorded exactly this way verified the pipeline end-to-end (the recovery is
-legible at video scale). Trim or raise `--speed` / the `<ExhibitVideo playbackRate>` to fit the
-beat budget (≈ 22s).
+`evidence/attack-samples` (EVTX) is a faster swap-in if you want a ~30s clean run instead of the
+minutes-long NIST disk case. Do not use fault injection for the primary
+`terminal-investigation.mp4`. Trim or raise `--speed` / the `<ExhibitVideo playbackRate>` to fit
+the beat budget (≈ 22s).
+
+## Optional appendix — `ui/harness-self-correction.mp4` (fault-injection harness demo)
+
+This clip is optional harness/demo evidence only. It deliberately sets
+`FIND_EVIL_FAULT_INJECT` to make the verifier reject one replay so the re-dispatch loop fires on
+camera, then recovers with the verdict unchanged. The injected run demonstrates the recovery
+harness/code path; it is not organic self-correction evidence and should never replace the clean
+primary capture.
+
+```bash
+FIND_EVIL_PACE=0.15 \
+FIND_EVIL_FAULT_INJECT="verifier_reject_once:prefetch-cain-exe" \
+  python3 scripts/find_evil_auto.py evidence/SCHARDT.dd \
+  --local --unattended --case-id demo-harness-self-correction
+```
+
+For the faster EVTX fixture, use `verifier_reject_once:audit-log-cleared` only for this optional
+harness appendix clip. The expected visible recovery lines are:
+
+```
+verify_finding rejected f-A-… — re-dispatching once (fresh replay)
+verify_finding recovered f-A-… on re-dispatch ✓
+```
 
 ## Slot 2 — `ui/dashboard-live.mp4` (Beat 6: "Watch it work") — already present, re-capture for richness
 
@@ -139,10 +152,10 @@ pnpm render           # writes ../../docs/find-evil-demo.mp4
 
 Then host the mp4 and record the URL in the release notes or submission field.
 
-## Honesty note
+## Optional harness appendix note
 
-The fault injection in Slot 1 is deliberate and **declared in the audit chain** (a
-`fault_injection` record precedes the rejection) and on screen via the engine's stderr banner.
-The recovery itself is the production code path — the same re-dispatch fires on any real transient
-replay failure. Use a fresh `FIND_EVIL_FAULT_INJECT=verifier_reject_once:...` case run when
-recording this shot.
+Only the appendix self-correction clip uses fault injection. The primary Slot 1 capture should be
+recorded without `FIND_EVIL_FAULT_INJECT`. When used, the injected appendix run is deliberate and
+declared in the audit chain via a `fault_injection` record before the rejection, and on screen via
+the engine's stderr banner. The recovery itself exercises the production re-dispatch path that also
+fires on real transient replay failures.

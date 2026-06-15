@@ -1,4 +1,4 @@
-"""Tests for scripts/self-score.py — the course_correction metric (#4)."""
+"""Tests for scripts/self-score.py criterion 1 recovery/injection counters."""
 
 from __future__ import annotations
 
@@ -43,7 +43,12 @@ def test_counts_course_correction_records(tmp_path: Path) -> None:
 def test_zero_corrections_when_none(tmp_path: Path) -> None:
     _write_audit(
         tmp_path,
-        [{"kind": "tool_call_start", "payload": {"tool_call_id": "tc-1", "tool": "evtx_query"}}],
+        [
+            {
+                "kind": "tool_call_start",
+                "payload": {"tool_call_id": "tc-1", "tool": "evtx_query"},
+            }
+        ],
     )
     result = self_score.score(tmp_path)
     crit1 = next(r for r in result["rows"] if r["criterion"] == 1)
@@ -81,6 +86,65 @@ def test_zero_injected_faults_on_natural_run(tmp_path: Path) -> None:
     )
     result = self_score.score(tmp_path)
     crit1 = next(r for r in result["rows"] if r["criterion"] == 1)
+    assert "injected_faults=0" in crit1["answer"]
+
+
+def test_counts_clean_verifier_redispatch_separately_from_injection(
+    tmp_path: Path,
+) -> None:
+    _write_audit(
+        tmp_path,
+        [
+            {
+                "kind": "verifier_redispatch",
+                "payload": {
+                    "finding_id": "f-1",
+                    "attempt": 2,
+                    "first_action": "rejected",
+                    "trigger": "verifier_reject",
+                },
+            },
+        ],
+    )
+    result = self_score.score(tmp_path)
+    crit1 = next(r for r in result["rows"] if r["criterion"] == 1)
+    assert "redispatches=1" in crit1["answer"]
+    assert "injected_faults=0" in crit1["answer"]
+
+
+def test_counts_injected_redispatch_without_calling_it_natural(
+    tmp_path: Path,
+) -> None:
+    _write_audit(
+        tmp_path,
+        [
+            {"kind": "fault_injection", "payload": {"mode": "verifier_reject_once"}},
+            {
+                "kind": "verifier_redispatch",
+                "payload": {
+                    "finding_id": "f-1",
+                    "attempt": 2,
+                    "first_action": "rejected",
+                    "trigger": "verifier_reject",
+                },
+            },
+        ],
+    )
+    result = self_score.score(tmp_path)
+    crit1 = next(r for r in result["rows"] if r["criterion"] == 1)
+    assert "redispatches=1" in crit1["answer"]
+    assert "injected_faults=1" in crit1["answer"]
+
+
+def test_no_correction_counters_are_zero(tmp_path: Path) -> None:
+    _write_audit(
+        tmp_path,
+        [{"kind": "tool_call_start", "payload": {"tool_call_id": "tc-1", "tool": "evtx_query"}}],
+    )
+    result = self_score.score(tmp_path)
+    crit1 = next(r for r in result["rows"] if r["criterion"] == 1)
+    assert "corrections=0" in crit1["answer"]
+    assert "redispatches=0" in crit1["answer"]
     assert "injected_faults=0" in crit1["answer"]
 
 

@@ -110,6 +110,32 @@ No current release packet includes a hallucinated, uncited Finding as a valid
 Finding. When uncertain coverage remains, it is represented as a warning,
 limitation, contradiction, or `HYPOTHESIS` instead of a confirmed claim.
 
+## Stage Two Adversarial Checks
+
+Stage Two review is treated as hostile trace review, not as a demo-narrative
+exercise. The checks we expect judges to run are:
+
+- **False positives found:** `alihadi-09-encrypt` remains an explicit control for
+  benign or dual-use encryption-tool presence. The correct answer is scoped
+  `INDETERMINATE`, not a confident suspicious verdict from tool presence alone.
+- **Missed artifacts:** the public NIST Hacking Case score is still 7/14 recall.
+  The missing ACMru/search history, USB history, email carving, browser history,
+  XP `.evt`, thumbcache, and named-pipe artifacts are published as misses rather
+  than hidden behind a broad accuracy claim.
+- **Hallucination and overclaim classes caught:** uncited Findings, replay hash
+  drift, unsupported execution wording, single-source execution claims, and
+  unsupported exfiltration claims are vetoed, downgraded, or held as warnings by
+  verifier/report-QA/correlator controls before release material is considered.
+- **Three-claim trace methodology:** pick any three Findings from a report and
+  trace each one to `finding_approved.tool_call_id`, the matching
+  `tool_call_start`, its `tool_call_output.output_hash`, verifier replay records,
+  and the manifest verification result. The committed EVTX packet is a compact
+  public example of this method.
+- **Self-correction limitation:** the clean Stage Two packet is traceability
+  evidence with `fault_injection=0`. If a clean run has no organic runtime
+  failure, it must not be described as organic self-correction. The injected
+  verifier re-dispatch run is optional harness/demo evidence only.
+
 ## Evidence Integrity
 
 Evidence integrity is enforced architecturally rather than only by prompt text:

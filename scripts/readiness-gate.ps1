@@ -32,6 +32,7 @@ Set-Location -LiteralPath $repoRoot
 $script:blockers = New-Object System.Collections.Generic.List[string]
 $script:warnings = New-Object System.Collections.Generic.List[string]
 $script:steps = New-Object System.Collections.Generic.List[object]
+$script:allowedFigureExtensions = @(".jpeg", ".jpg", ".png", ".webp")
 
 function Write-ReadinessLog {
     param([Parameter(Mandatory = $true)][string]$Message)
@@ -425,6 +426,66 @@ function Write-JsonFile {
     [System.IO.File]::WriteAllText($Path, $json + [Environment]::NewLine, $utf8NoBom)
 }
 
+function Get-PacketMetadataRedactions {
+    $items = @(
+        @($script:packetDir, "<readiness-packet-dir>"),
+        @($script:logsDir, "<readiness-logs-dir>"),
+        @($script:runRoot, "<readiness-run-dir>"),
+        @($script:resolvedRunDir, "<evidence-run-dir>"),
+        @($script:outputRoot, "<readiness-output-root>"),
+        @($EvidencePath, "<evidence-path>"),
+        @($repoRoot, "<repo-root>")
+    )
+    return @($items | Where-Object {
+        -not [string]::IsNullOrWhiteSpace([string]$_[0])
+    } | Sort-Object { -([string]$_[0]).Length })
+}
+
+function ConvertTo-PacketSafeMetadata {
+    param([AllowNull()]$Value)
+
+    if ($null -eq $Value) { return $null }
+    if ($Value -is [string]) {
+        $safe = [string]$Value
+        foreach ($entry in Get-PacketMetadataRedactions) {
+            $pathValue = [string]$entry[0]
+            $token = [string]$entry[1]
+            $safe = $safe.Replace($pathValue, $token)
+            $safe = $safe.Replace(($pathValue -replace '\\', '/'), $token)
+        }
+        return $safe
+    }
+    if ($Value -is [System.Collections.IDictionary]) {
+        $safeMap = [ordered]@{}
+        foreach ($key in $Value.Keys) {
+            $safeMap[$key] = ConvertTo-PacketSafeMetadata -Value $Value[$key]
+        }
+        return $safeMap
+    }
+    if ($Value -is [pscustomobject]) {
+        $safeObj = [ordered]@{}
+        foreach ($property in $Value.PSObject.Properties) {
+            $safeObj[$property.Name] = ConvertTo-PacketSafeMetadata -Value $property.Value
+        }
+        return $safeObj
+    }
+    if ($Value -is [System.Collections.IEnumerable]) {
+        $safeItems = @()
+        foreach ($item in $Value) {
+            $safeItems += ConvertTo-PacketSafeMetadata -Value $item
+        }
+        return $safeItems
+    }
+    return $Value
+}
+
+function Write-PacketReadinessSummary {
+    param([Parameter(Mandatory = $true)]$Summary)
+
+    $packetSummaryPath = Join-Path $script:packetDir "readiness-summary.json"
+    Write-JsonFile -Path $packetSummaryPath -Value (ConvertTo-PacketSafeMetadata -Value $Summary)
+}
+
 function Test-AuditKind {
     param(
         [Parameter(Mandatory = $true)][object[]]$AuditKinds,
@@ -495,33 +556,125 @@ function Get-AuditRecordFindingId {
     return [string]$payload.finding_id
 }
 
+function Get-AuditRecordToolCallId {
+    param([Parameter(Mandatory = $true)][object]$Record)
+    $payload = $Record.payload
+    if ($null -ne $payload -and -not [string]::IsNullOrWhiteSpace([string]$payload.tool_call_id)) {
+        return [string]$payload.tool_call_id
+    }
+    if (-not [string]::IsNullOrWhiteSpace([string]$Record.tool_call_id)) {
+        return [string]$Record.tool_call_id
+    }
+    return ""
+}
+
+function Test-ReplayRecordSha256 {
+    param([string]$Value)
+    return (-not [string]::IsNullOrWhiteSpace($Value) -and $Value -match '^[0-9a-fA-F]{64}$')
+}
+
+function Get-ArtifactBaseName {
+    param([string]$PathValue)
+    if ([string]::IsNullOrWhiteSpace($PathValue)) { return "" }
+    $normalized = $PathValue.Replace("\", "/").TrimEnd("/")
+    return @($normalized -split "/")[-1]
+}
+
+function Get-CanonicalJsonSha256 {
+    param(
+        [Parameter(Mandatory = $true)][object]$Value,
+        [Parameter(Mandatory = $true)][string]$PythonBin
+    )
+    $tmp = [System.IO.Path]::GetTempFileName()
+    try {
+        $json = $Value | ConvertTo-Json -Depth 100 -Compress
+        [System.IO.File]::WriteAllText($tmp, $json, [System.Text.Encoding]::UTF8)
+        $script = "import hashlib,json,sys; obj=json.load(open(sys.argv[1], encoding='utf-8-sig')); print(hashlib.sha256(json.dumps(obj, separators=(',', ':'), sort_keys=True).encode('utf-8')).hexdigest())"
+        $hash = & $PythonBin -c $script $tmp
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace([string]$hash)) {
+            return ""
+        }
+        return [string]$hash.Trim().ToLowerInvariant()
+    }
+    finally {
+        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Get-AuditRecordReplayHash {
+    param([Parameter(Mandatory = $true)][object]$Record)
+    $payload = $Record.payload
+    if ($null -eq $payload) { return "" }
+    if ([string]$Record.kind -eq "acp_handoff") {
+        if ($null -ne $payload.payload) { return [string]$payload.payload.replay_record_sha256 }
+        return ""
+    }
+    return [string]$payload.replay_record_sha256
+}
+
+function Get-AuditRecordVerifierAction {
+    param([Parameter(Mandatory = $true)][object]$Record)
+    $payload = $Record.payload
+    if ($null -eq $payload) { return "" }
+    if ([string]$Record.kind -eq "acp_handoff") {
+        if ($null -ne $payload.payload) { return [string]$payload.payload.action }
+        return ""
+    }
+    return [string]$payload.action
+}
+
+function Get-AuditRecordVerifierPair {
+    param([Parameter(Mandatory = $true)][object]$Record)
+    $hash = Get-AuditRecordReplayHash -Record $Record
+    $action = Get-AuditRecordVerifierAction -Record $Record
+    if ([string]::IsNullOrWhiteSpace($hash) -or [string]::IsNullOrWhiteSpace($action)) {
+        return ""
+    }
+    return "$hash|$action"
+}
+
 function Test-ValidVerifierEvidenceRecord {
     param([Parameter(Mandatory = $true)][object]$Record)
     $payload = $Record.payload
     if ($null -eq $payload) { return $false }
     switch ([string]$Record.kind) {
         "verifier_action" {
-            return ([string]$payload.action) -in @("approved", "downgraded")
+            return ((@("approved", "downgraded") -ccontains ([string]$payload.action)) -and (Test-ReplayRecordSha256 -Value ([string]$payload.replay_record_sha256)))
         }
         "replay" {
             $matched = $payload.replay_matched
             if ($null -eq $matched -and $null -ne $payload.legacy_replay) {
                 $matched = $payload.legacy_replay.replay_matched
             }
-            return ($matched -eq $true -and -not [string]::IsNullOrWhiteSpace([string]$payload.replay_record_sha256))
+            return (($matched -is [bool]) -and $matched -eq $true -and (Test-ReplayRecordSha256 -Value ([string]$payload.replay_record_sha256)))
         }
         "acp_handoff" {
             $inner = $payload.payload
             return (
-                [string]$payload.from_role -eq "verifier" -and
-                [string]$payload.to_role -eq "judge" -and
+                [string]$payload.from_role -ceq "verifier" -and
+                [string]$payload.to_role -ceq "judge" -and
                 $null -ne $inner -and
-                ([string]$inner.action) -in @("approved", "downgraded") -and
-                -not [string]::IsNullOrWhiteSpace([string]$inner.replay_record_sha256)
+                (@("approved", "downgraded") -ccontains ([string]$inner.action)) -and
+                (Test-ReplayRecordSha256 -Value ([string]$inner.replay_record_sha256))
             )
         }
         default { return $false }
     }
+}
+
+function Get-ValidAuditEvidenceRecordsForFinding {
+    param(
+        [Parameter(Mandatory = $true)][object[]]$AuditRecords,
+        [Parameter(Mandatory = $true)][string]$Kind,
+        [Parameter(Mandatory = $true)][string]$FindingId
+    )
+    $matches = @()
+    foreach ($record in $AuditRecords) {
+        if ([string]$record.kind -ne $Kind) { continue }
+        if ((Get-AuditRecordFindingId -Record $record) -ne $FindingId) { continue }
+        if (Test-ValidVerifierEvidenceRecord -Record $record) { $matches += $record }
+    }
+    return $matches
 }
 
 function Test-AuditEvidenceForFinding {
@@ -530,12 +683,9 @@ function Test-AuditEvidenceForFinding {
         [Parameter(Mandatory = $true)][string]$Kind,
         [Parameter(Mandatory = $true)][string]$FindingId
     )
-    foreach ($record in $AuditRecords) {
-        if ([string]$record.kind -ne $Kind) { continue }
-        if ((Get-AuditRecordFindingId -Record $record) -ne $FindingId) { continue }
-        if (Test-ValidVerifierEvidenceRecord -Record $record) { return $true }
-    }
-    return $false
+    return @(
+        Get-ValidAuditEvidenceRecordsForFinding -AuditRecords $AuditRecords -Kind $Kind -FindingId $FindingId
+    ).Count -gt 0
 }
 
 function Invoke-ManifestVerify {
@@ -608,6 +758,28 @@ function Copy-PacketDirectory {
     Copy-Item -LiteralPath $Source -Destination $destination -Recurse -Force
 }
 
+function Copy-PacketFigures {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$RelativePath
+    )
+    if (-not (Test-Path -LiteralPath $Source -PathType Container)) { return }
+    $sourceRoot = (Resolve-Path -LiteralPath $Source).Path
+    $destinationRoot = Join-Path $script:packetDir $RelativePath
+    if (Test-Path -LiteralPath $destinationRoot) { Remove-Item -LiteralPath $destinationRoot -Recurse -Force }
+    foreach ($file in Get-ChildItem -LiteralPath $sourceRoot -Recurse -File) {
+        $extension = $file.Extension.ToLowerInvariant()
+        if ($script:allowedFigureExtensions -notcontains $extension) {
+            Add-ReadinessWarning "skipping non-image figure artifact: $($file.FullName)"
+            continue
+        }
+        $relative = $file.FullName.Substring($sourceRoot.Length).TrimStart([char[]]@('\', '/'))
+        $destination = Join-Path $destinationRoot $relative
+        New-DirectoryIfMissing -Path (Split-Path -Parent $destination)
+        Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
+    }
+}
+
 function New-PacketManifest {
     param(
         [Parameter(Mandatory = $true)][string]$PacketDir,
@@ -629,7 +801,7 @@ function New-PacketManifest {
         version = 1
         generated_at = Get-IsoUtcNow
         readiness_state = $ReadinessState
-        source_run_dir = $RunDir
+        source_run_dir = ConvertTo-PacketSafeMetadata -Value $RunDir
         artifact_count = $artifacts.Count
         artifacts = $artifacts
     }
@@ -670,9 +842,6 @@ function Invoke-SubmissionAssetsValidator {
     $result = Invoke-LoggedCommand -Name "submission-assets-validator" -Command $PythonBin -Arguments @(
         "scripts/validate-submission-assets.py", "--readiness-summary", $SummaryPath
     )
-    if ($null -ne $result.log -and (Test-Path -LiteralPath $result.log -PathType Leaf)) {
-        Copy-PacketFile -Source $result.log -RelativePath "logs/submission-assets-validator.log"
-    }
     return $result
 }
 
@@ -682,6 +851,7 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
 else {
     $OutputRoot = Resolve-LocalPath -Path $OutputRoot
 }
+$script:outputRoot = $OutputRoot
 if ([string]::IsNullOrWhiteSpace($RunId)) {
     $RunId = "readiness-$(Get-UtcStamp)"
 }
@@ -690,6 +860,7 @@ if ($RunId -notmatch '^[A-Za-z0-9_.-]+$') {
 }
 
 $runRoot = Join-Path $OutputRoot $RunId
+$script:runRoot = $runRoot
 $script:logsDir = Join-Path $runRoot "logs"
 $script:packetDir = Join-Path $runRoot "packet"
 New-DirectoryIfMissing -Path $script:logsDir
@@ -697,6 +868,7 @@ Reset-GeneratedDirectory -Path $script:packetDir
 
 $pythonBin = Get-PythonCommand
 $resolvedRunDir = ""
+$script:resolvedRunDir = ""
 $findEvilAutoRunSummary = $null
 
 Write-ReadinessLog "mode: $Mode"
@@ -804,13 +976,28 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
 
     $auditRecords = @()
     $auditKinds = @()
+    $auditToolCallStarts = @{}
+    $auditToolCallOutputs = @{}
     if (Test-Path -LiteralPath $auditPath -PathType Leaf) {
         $auditRecords = Read-AuditRecords -AuditPath $auditPath
         $auditKinds = @($auditRecords | ForEach-Object { [string]$_.kind })
+        foreach ($record in $auditRecords) {
+            $toolCallId = Get-AuditRecordToolCallId -Record $record
+            if ([string]::IsNullOrWhiteSpace($toolCallId)) { continue }
+            if ([string]$record.kind -eq "tool_call_start") {
+                $auditToolCallStarts[$toolCallId] = $true
+            }
+            elseif ([string]$record.kind -eq "tool_call_output") {
+                $auditToolCallOutputs[$toolCallId] = $true
+            }
+        }
         foreach ($kind in @("report_qa", "customer_release_gate", "verdict_artifact", "expert_signoff_packet")) {
             if (-not (Test-AuditKind -AuditKinds $auditKinds -Kind $kind)) {
                 Add-ReadinessBlocker "audit log lacks required $kind record: $auditPath"
             }
+        }
+        if (Test-AuditKind -AuditKinds $auditKinds -Kind "fault_injection") {
+            Add-ReadinessBlocker "audit log contains fault_injection demo record: $auditPath"
         }
     }
 
@@ -832,6 +1019,31 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
     $verdictObj = $null
     if (Test-Path -LiteralPath $verdictPath -PathType Leaf) {
         $verdictObj = Read-JsonFile -Path $verdictPath
+        $actualVerdictSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $verdictPath).Hash.ToLowerInvariant()
+        $verdictArtifactRecords = @($auditRecords | Where-Object { [string]$_.kind -eq "verdict_artifact" })
+        $matchedVerdictArtifact = $false
+        foreach ($record in $verdictArtifactRecords) {
+            $payload = $record.payload
+            if ($null -eq $payload) { continue }
+            $artifactName = Get-ArtifactBaseName -PathValue ([string]$payload.path)
+            if (-not [string]::IsNullOrWhiteSpace($artifactName) -and $artifactName -cne "verdict.json") {
+                Add-ReadinessBlocker "audit verdict_artifact does not point at verdict.json: $($payload.path)"
+            }
+            $declaredVerdictSha256 = [string]$payload.sha256
+            if (-not (Test-ReplayRecordSha256 -Value $declaredVerdictSha256)) {
+                Add-ReadinessBlocker "audit verdict_artifact lacks valid sha256: $auditPath"
+                continue
+            }
+            if ($declaredVerdictSha256.ToLowerInvariant() -ceq $actualVerdictSha256) {
+                $matchedVerdictArtifact = $true
+            }
+            else {
+                Add-ReadinessBlocker "audit verdict_artifact sha256 does not match verdict.json: $auditPath"
+            }
+        }
+        if ($verdictArtifactRecords.Count -gt 0 -and -not $matchedVerdictArtifact) {
+            Add-ReadinessBlocker "audit has no verdict_artifact hash for verdict.json: $auditPath"
+        }
     }
     $manifestVerifyObj = $null
     if (Test-Path -LiteralPath $manifestVerifyPath -PathType Leaf) {
@@ -856,9 +1068,85 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
                     Add-ReadinessBlocker "verdict.json contains a final finding without finding_id"
                     continue
                 }
+                $toolCallId = [string]$finding.tool_call_id
+                if ([string]::IsNullOrWhiteSpace($toolCallId)) {
+                    Add-ReadinessBlocker "verdict.json final finding ${findingId} lacks tool_call_id"
+                }
+                elseif (-not $auditToolCallStarts.ContainsKey($toolCallId)) {
+                    Add-ReadinessBlocker "verdict.json final finding ${findingId} cites unresolved tool_call_id ${toolCallId}: $auditPath"
+                }
+                elseif (-not $auditToolCallOutputs.ContainsKey($toolCallId)) {
+                    Add-ReadinessBlocker "verdict.json final finding ${findingId} cites tool_call_id without matching output ${toolCallId}: $auditPath"
+                }
+                $approvedFindingRecords = @($auditRecords | Where-Object {
+                    [string]$_.kind -eq "finding_approved" -and (Get-AuditRecordFindingId -Record $_) -ceq $findingId
+                })
+                if ($approvedFindingRecords.Count -eq 0) {
+                    Add-ReadinessBlocker "audit log lacks finding_approved record for final finding ${findingId}: $auditPath"
+                }
+                else {
+                    $finalFindingSha256 = Get-CanonicalJsonSha256 -Value $finding -PythonBin $pythonBin
+                    if (-not (Test-ReplayRecordSha256 -Value $finalFindingSha256)) {
+                        Add-ReadinessBlocker "could not canonicalize final finding ${findingId} for audit binding"
+                    }
+                    $matchedFindingApproval = $false
+                    foreach ($approvedRecord in $approvedFindingRecords) {
+                        $approvedPayload = $approvedRecord.payload
+                        if ($null -eq $approvedPayload) {
+                            Add-ReadinessBlocker "audit finding_approved payload is missing for ${findingId}: $auditPath"
+                            continue
+                        }
+                        if ($null -eq $approvedPayload.finding) {
+                            Add-ReadinessBlocker "audit finding_approved lacks embedded finding for ${findingId}: $auditPath"
+                            continue
+                        }
+                        $declaredFindingSha256 = [string]$approvedPayload.finding_sha256
+                        if (-not (Test-ReplayRecordSha256 -Value $declaredFindingSha256)) {
+                            Add-ReadinessBlocker "audit finding_approved lacks valid finding_sha256 for ${findingId}: $auditPath"
+                            continue
+                        }
+                        $embeddedFindingSha256 = Get-CanonicalJsonSha256 -Value $approvedPayload.finding -PythonBin $pythonBin
+                        if ($declaredFindingSha256.ToLowerInvariant() -cne $embeddedFindingSha256) {
+                            Add-ReadinessBlocker "audit finding_approved finding_sha256 does not match embedded finding for ${findingId}: $auditPath"
+                            continue
+                        }
+                        if (
+                            $declaredFindingSha256.ToLowerInvariant() -ceq $finalFindingSha256 -and
+                            [string]$approvedPayload.tool_call_id -ceq [string]$finding.tool_call_id -and
+                            [string]$approvedPayload.confidence -ceq [string]$finding.confidence
+                        ) {
+                            $matchedFindingApproval = $true
+                        }
+                    }
+                    if (-not $matchedFindingApproval) {
+                        Add-ReadinessBlocker "verdict.json final finding ${findingId} does not match audit finding_approved payload: $auditPath"
+                    }
+                }
+                $evidenceByKind = @{}
                 foreach ($kind in @("verifier_action", "replay", "acp_handoff")) {
-                    if (-not (Test-AuditEvidenceForFinding -AuditRecords $auditRecords -Kind $kind -FindingId $findingId)) {
+                    $matches = @(
+                        Get-ValidAuditEvidenceRecordsForFinding -AuditRecords $auditRecords -Kind $kind -FindingId $findingId
+                    )
+                    $evidenceByKind[$kind] = $matches
+                    if ($matches.Count -eq 0) {
                         Add-ReadinessBlocker "audit log lacks valid verifier evidence $kind for final finding ${findingId}: $auditPath"
+                    }
+                }
+                if ($evidenceByKind["verifier_action"].Count -gt 0 -and $evidenceByKind["replay"].Count -gt 0 -and $evidenceByKind["acp_handoff"].Count -gt 0) {
+                    $replayHashes = @($evidenceByKind["replay"] | ForEach-Object { Get-AuditRecordReplayHash -Record $_ })
+                    $verifierPairs = @($evidenceByKind["verifier_action"] | ForEach-Object { Get-AuditRecordVerifierPair -Record $_ })
+                    $handoffPairs = @($evidenceByKind["acp_handoff"] | ForEach-Object { Get-AuditRecordVerifierPair -Record $_ })
+                    $matchingPairs = @($verifierPairs | Where-Object {
+                        $pair = [string]$_
+                        if ([string]::IsNullOrWhiteSpace($pair)) { return $false }
+                        $hash = @($pair -split '\|', 2)[0]
+                        return ($handoffPairs -ccontains $pair -and $replayHashes -ccontains $hash)
+                    })
+                    if ($matchingPairs.Count -eq 0) {
+                        Add-ReadinessBlocker "audit log has mismatched verifier replay hash/action evidence for final finding ${findingId}: $auditPath"
+                    }
+                    elseif (($matchingPairs | Where-Object { ([string]$_).EndsWith("|downgraded", [System.StringComparison]::Ordinal) }).Count -gt 0 -and [string]$finding.confidence -ceq "CONFIRMED") {
+                        Add-ReadinessBlocker "verifier downgraded finding but verdict.json kept CONFIRMED for final finding ${findingId}: $auditPath"
                     }
                 }
             }
@@ -931,13 +1219,14 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.html") -RelativePath "REPORT-internal.html"
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.pdf") -RelativePath "REPORT-internal.pdf"
     Copy-PacketFile -Source (Join-Path $resolvedRunDir "REPORT-internal.new.pdf") -RelativePath "REPORT-internal.new.pdf"
-    Copy-PacketDirectory -Source (Join-Path $resolvedRunDir "figures") -RelativePath "figures"
+    Copy-PacketFigures -Source (Join-Path $resolvedRunDir "figures") -RelativePath "figures"
 }
 
 if ($script:blockers.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
     $readinessState = if ($Mode -eq "Full") { "READY_FOR_EXPERT_REVIEW" } else { "PACKET_READY_FOR_EXPERT_REVIEW" }
 }
 
+$script:resolvedRunDir = $resolvedRunDir
 $packetManifestPath = New-PacketManifest -PacketDir $script:packetDir -RunDir $resolvedRunDir -ReadinessState $readinessState
 $packetZip = Join-Path $runRoot "readiness-packet.zip"
 New-PacketZip -PacketDir $script:packetDir -ZipPath $packetZip
@@ -971,7 +1260,7 @@ $summary = [ordered]@{
 }
 $summaryPath = Join-Path $runRoot "readiness-summary.json"
 Write-JsonFile -Path $summaryPath -Value $summary
-Copy-PacketFile -Source $summaryPath -RelativePath "readiness-summary.json" -Required
+Write-PacketReadinessSummary -Summary $summary
 $packetManifestPath = New-PacketManifest -PacketDir $script:packetDir -RunDir $resolvedRunDir -ReadinessState $readinessState
 if (-not $SkipPackage -and (Test-Path -LiteralPath $packetZip -PathType Leaf)) {
     try {
@@ -993,7 +1282,7 @@ if ($script:blockers.Count -ne @($summary["blockers"]).Count -or $script:steps.C
     $summary["warnings"] = $script:warnings.ToArray()
     $summary["steps"] = $script:steps.ToArray()
     Write-JsonFile -Path $summaryPath -Value $summary
-    Copy-PacketFile -Source $summaryPath -RelativePath "readiness-summary.json" -Required
+    Write-PacketReadinessSummary -Summary $summary
     $packetManifestPath = New-PacketManifest -PacketDir $script:packetDir -RunDir $resolvedRunDir -ReadinessState $readinessState
     if (-not $SkipPackage -and (Test-Path -LiteralPath $packetZip -PathType Leaf)) {
         try {
@@ -1007,7 +1296,7 @@ if ($script:blockers.Count -ne @($summary["blockers"]).Count -or $script:steps.C
             $summary["warnings"] = $script:warnings.ToArray()
             $summary["steps"] = $script:steps.ToArray()
             Write-JsonFile -Path $summaryPath -Value $summary
-            Copy-PacketFile -Source $summaryPath -RelativePath "readiness-summary.json" -Required
+            Write-PacketReadinessSummary -Summary $summary
         }
     }
 }

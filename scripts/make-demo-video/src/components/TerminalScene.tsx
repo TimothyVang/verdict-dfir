@@ -7,10 +7,11 @@ import { ExhibitVideo } from "./shared/ExhibitVideo";
 
 // Beat 3 (marquee) — "The host that lied." The left column carries the
 // editorial story (the pslist/psscan divergence, the DKOM read); the right is a
-// GENUINE terminal capture of the live investigation — case_open, the tool
-// stream, and the verifier catching + recovering its own replay (the
-// FIND_EVIL_FAULT_INJECT self-correction). The substance is real screen
-// recording, framed as Exhibit A-1. Record it per CAPTURE.md.
+// GENUINE terminal capture of the clean live investigation — case_open, the
+// tool stream, normal verifier replay, judging, and the final verdict. Optional
+// fault-injection harness clips are appendix footage, not this primary exhibit.
+// The substance is real screen recording, framed as Exhibit A-1. Record it per
+// CAPTURE.md.
 
 const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 

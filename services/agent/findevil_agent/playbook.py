@@ -344,8 +344,12 @@ def classify_artifact_path(path: str) -> dict[str, str | None]:
 JUDGE_SELFSCORE_CRITERIA: list[dict[str, str]] = [
     {
         "criterion": 1,
-        "question": "Did any tool call fail this run? If yes, did the audit log show explicit course-correction — and was the trigger natural or an injected fault?",
-        "answer_style": "failures=N corrections=N injected_faults=N",
+        "question": (
+            "Did any tool call fail this run? If yes, did the audit log show "
+            "explicit course-correction or verifier re-dispatch — and was the "
+            "trigger natural or an injected fault?"
+        ),
+        "answer_style": "failures=N corrections=N redispatches=N injected_faults=N",
     },
     {
         "criterion": 2,

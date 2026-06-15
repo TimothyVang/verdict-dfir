@@ -207,7 +207,7 @@ def build_manifest(
         run_id=run_id,
         started_at=started_at,
         finalized_at=finalized_at,
-        audit_log_path=str(audit_log.path),
+        audit_log_path=audit_log.path.name,
         audit_log_final_hash=final_hash,
         audit_log_record_count=record_count,
         merkle_root_hex=root_hex,
