@@ -6,9 +6,9 @@ submission release tag is `v-submit`; later entries in `[Unreleased]` document
 work that has landed after that release and should be merged through the
 canonical GitHub repo before any refreshed release.
 
-> **Release repo:** use `TimothyVang/verdict-dfir` / the local `release` remote
-> for GitHub release, Devpost, and public-doc work. The older
-> `TimothyVang/sans-hackathon` remote is superseded for release operations.
+> **Dev-first release flow:** push review branches to `TimothyVang/sans-hackathon`
+> / `origin` first. Promote only the reviewed commit or a controlled cherry-pick
+> to `TimothyVang/verdict-dfir` / `release` after approval.
 
 ## [Unreleased]
 
@@ -16,8 +16,8 @@ canonical GitHub repo before any refreshed release.
 
 - **Post-`v-submit` developer/release docs refresh.** Current active docs now
   distinguish the historical `v-submit` submission snapshot from the post-tag
-  working tree, route release work to the `release` remote /
-  `TimothyVang/verdict-dfir`, and keep the shipped product-surface count at
+  working tree, document the dev-first `origin` review flow before curated
+  `release` promotion, and keep the shipped product-surface count at
   **43 audit-chained product tools** (**31 Rust DFIR + 12 Python
   crypto/ACH/memory/ACP/expert-feedback**).
 

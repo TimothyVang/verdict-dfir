@@ -33,19 +33,14 @@ fi
 
 log "applying master-branch protection to ${REPO_SLUG}"
 
-# Spec #4 §6. Required checks: l0-static + l1-unit. L2 is advisory.
-# L3 is nightly, not a per-PR gate.
+# Required checks: use the aggregate ci-required context. The underlying L0/L1
+# jobs stay visible in GitHub Actions, but requiring one uniquely named aggregate
+# avoids ambiguous duplicate status-check names blocking PRs.
 gh api \
   "repos/${REPO_SLUG}/branches/master/protection" \
   --method PUT \
   --field 'required_status_checks[strict]=true' \
-  --field 'required_status_checks[contexts][]=l0-static / workflow-lint' \
-  --field 'required_status_checks[contexts][]=l0-static / shell-lint' \
-  --field 'required_status_checks[contexts][]=l0-static / python-lint' \
-  --field 'required_status_checks[contexts][]=l0-static / rust-lint' \
-  --field 'required_status_checks[contexts][]=l0-static / typescript-lint' \
-  --field 'required_status_checks[contexts][]=l0-static / docs-consistency' \
-  --field 'required_status_checks[contexts][]=l1-unit / unit-build' \
+  --field 'required_status_checks[contexts][]=ci-required' \
   --field 'enforce_admins=true' \
   --field 'required_pull_request_reviews[required_approving_review_count]=1' \
   --field 'required_pull_request_reviews[dismiss_stale_reviews]=true' \

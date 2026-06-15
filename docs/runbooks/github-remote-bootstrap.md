@@ -1,6 +1,6 @@
 # GitHub remote bootstrap — runbook
 
-**Status:** historical bootstrap runbook, updated for the current public release repo. Devpost now points at `https://github.com/TimothyVang/verdict-dfir`, and the local `release` remote should be used for public release and PR operations. The older bootstrap steps below are retained for archaeology and for anyone recreating the setup from scratch.
+**Status:** historical bootstrap runbook, updated for the current dev-first release flow. Devpost points at `https://github.com/TimothyVang/verdict-dfir`, but release changes should land in `TimothyVang/sans-hackathon` first for review before any curated promotion to the local `release` remote. The older bootstrap steps below are retained for archaeology and for anyone recreating the setup from scratch.
 
 Current release facts:
 
@@ -117,7 +117,7 @@ gh repo view TimothyVang/verdict-dfir
 gh release view v-submit --repo TimothyVang/verdict-dfir
 ```
 
-Only cut or refresh release assets after confirming the workflow registrations and required gates for the exact target commit. If refreshing through a branch, push to the `release` remote and open a PR in `TimothyVang/verdict-dfir`; do not use `origin` for public release work unless it points at the canonical release repo.
+Only cut or refresh release assets after confirming the workflow registrations and required gates for the exact target commit. For active development, push a review branch to `origin` (`TimothyVang/sans-hackathon`) and review it there first; after approval, promote the exact reviewed commit or a controlled cherry-pick to `release` (`TimothyVang/verdict-dfir`).
 
 ---
 
