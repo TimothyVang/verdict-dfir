@@ -129,13 +129,14 @@ jobs:
           fi
 
       - name: Notify Slack on failure
-        if: |
-          steps.kvm-check.outputs.kvm_ok == 'true'
-          && failure()
-          && env.SLACK_WEBHOOK_CI != ''
+        if: failure()
         env:
           SLACK_WEBHOOK_CI: ${{ secrets.SLACK_WEBHOOK_CI }}
         run: |
+          if [[ -z "${SLACK_WEBHOOK_CI:-}" ]]; then
+            echo "::notice::SLACK_WEBHOOK_CI is not configured; skipping Slack failure notification."
+            exit 0
+          fi
           msg="[find-evil CI] l3-nightly | FAIL | ${GITHUB_SHA:0:7} | ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
           L3 golden run failed on main. Release gates blocked until green."
           curl -fsSL -X POST "${SLACK_WEBHOOK_CI}" \

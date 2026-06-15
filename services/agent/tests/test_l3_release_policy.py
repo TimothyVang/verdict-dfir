@@ -13,9 +13,7 @@ def _workflow_step(text: str, name: str) -> str:
 
 
 def test_l3_nightly_failure_notification_covers_fallback_failures() -> None:
-    workflow = (_ROOT / ".github" / "workflows" / "l3-nightly.yml").read_text(
-        encoding="utf-8"
-    )
+    workflow = (_ROOT / ".github" / "workflows" / "l3-nightly.yml").read_text(encoding="utf-8")
 
     notify_step = _workflow_step(workflow, "Notify Slack on failure")
 
@@ -26,9 +24,7 @@ def test_l3_nightly_failure_notification_covers_fallback_failures() -> None:
 
 
 def test_ci_checklist_does_not_treat_l3_fallback_as_skip_green() -> None:
-    checklist = (_ROOT / "docs" / "runbooks" / "ci-smoke-checklist.md").read_text(
-        encoding="utf-8"
-    )
+    checklist = (_ROOT / "docs" / "runbooks" / "ci-smoke-checklist.md").read_text(encoding="utf-8")
 
     assert "when L3 gracefully skips" not in checklist
     assert "failed or below-bar L3 evidence is not green" in checklist

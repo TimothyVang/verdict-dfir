@@ -118,4 +118,4 @@ If any step fails:
 3. If it's a secret / credential problem, check the repo Settings → Secrets and Variables → Actions page for the missing name. See glue Spec #4 §5 for the canonical list.
 4. If it's a workflow-syntax issue: run `actionlint .github/workflows/*.yml` locally and fix before pushing a patch.
 
-Green run end-to-end: expect ~25–40 minutes when KVM runners are available, ~15–20 minutes when L3 gracefully skips.
+Green run end-to-end: expect ~25–40 minutes when KVM runners are available. When remote KVM falls back to committed local evidence, the run is green only if that evidence validates; failed or below-bar L3 evidence is not green.
