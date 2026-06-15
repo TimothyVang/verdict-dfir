@@ -193,6 +193,45 @@ SMOKE_LABEL_POLICY_FILES = [
     "scripts/run-all-smokes.sh",
 ]
 
+STALE_RELEASE_DOC_PATTERNS = [
+    (
+        "SRL fixed 28-target heading",
+        "SRL-2018 (28 targets)",
+    ),
+    (
+        "SRL fixed 28-target completion claim",
+        "Every one of the 28 targets",
+    ),
+    (
+        "SRL fixed 28/28 manifest claim",
+        "manifest_ok:    28 / 28",
+    ),
+    (
+        "release-only remote flow",
+        "push to the `release` remote and open a PR in `TimothyVang/verdict-dfir`; do not use `origin`",
+    ),
+    (
+        "sans-hackathon marked superseded for release operations",
+        "`TimothyVang/sans-hackathon` remote is superseded for release operations",
+    ),
+    (
+        "branch protection individual l0 workflow context",
+        "required_status_checks[contexts][]=l0-static / workflow-lint",
+    ),
+    (
+        "ci checklist individual required context list",
+        "returns the full list: `l0-static / workflow-lint`",
+    ),
+]
+
+RELEASE_DOC_POLICY_FILES = [
+    "CHANGELOG.md",
+    "docs/runbooks/ci-smoke-checklist.md",
+    "docs/runbooks/github-remote-bootstrap.md",
+    "docs/using/whole-case-local-run.md",
+    "scripts/setup-branch-protection.sh",
+]
+
 PATH_EXISTENCE_ALLOW_CASES = [
     # (label, candidate, expected_allowed)
     ("URL is allowed", "https://example.com/x/y", True),
@@ -535,6 +574,24 @@ def _run_smoke_label_policy_cases() -> list[tuple[str, str]]:
     return failures
 
 
+def _run_release_doc_policy_cases() -> list[tuple[str, str]]:
+    failures = []
+    source_texts = [
+        (rel, (REPO / rel).read_text(encoding="utf-8"))
+        for rel in RELEASE_DOC_POLICY_FILES
+    ]
+    for label, needle in STALE_RELEASE_DOC_PATTERNS:
+        matches = [rel for rel, text in source_texts if needle in text]
+        if matches:
+            failures.append(
+                (
+                    label,
+                    f"unexpected stale release-doc claim {needle!r} in {', '.join(matches)}",
+                )
+            )
+    return failures
+
+
 def _run_path_existence_cases(pes_smoke) -> list[tuple[str, str]]:
     failures = []
     for label, candidate, expected_allowed in PATH_EXISTENCE_ALLOW_CASES:
@@ -715,6 +772,15 @@ def main() -> int:
     for label, err in smoke_label_failures:
         all_failures.append(("smoke-label policies", label, err))
 
+    release_doc_failures = _run_release_doc_policy_cases()
+    print(
+        f"release-doc policies:    "
+        f"{len(STALE_RELEASE_DOC_PATTERNS) - len(release_doc_failures)}"
+        f" / {len(STALE_RELEASE_DOC_PATTERNS)} passed"
+    )
+    for label, err in release_doc_failures:
+        all_failures.append(("release-doc policies", label, err))
+
     pes_failures = _run_path_existence_cases(pes_smoke)
     print(
         f"path-existence-smoke allow-list: "
@@ -760,6 +826,7 @@ def main() -> int:
         len(DIVERGENCE_CASES)
         + n_launcher
         + len(STALE_SMOKE_LABEL_PATTERNS)
+        + len(STALE_RELEASE_DOC_PATTERNS)
         + len(PATH_EXISTENCE_ALLOW_CASES)
         + readiness_total
         + tool_count_total
