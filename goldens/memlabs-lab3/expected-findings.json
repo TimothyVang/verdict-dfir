@@ -1,0 +1,43 @@
+{
+  "_comment": [
+    "Windows memory-forensics golden for MemLabs Lab 3 - The Evil's Den.",
+    "Source: https://github.com/stuxnet999/MemLabs/tree/master/Lab%203",
+    "The public prompt states that a malicious script encrypted secret information and that steghide is required. This is CTF-style ground truth, not a full incident answer key."
+  ],
+  "status": "ctf_flag_ground_truth_without_flag_values",
+  "case_id": "memlabs-lab3",
+  "source_url": "https://github.com/stuxnet999/MemLabs/tree/master/Lab%203",
+  "license": "MIT License (MemLabs)",
+  "verdict": "SUSPICIOUS",
+  "min_recall_percent": 67,
+  "source_hashes": {
+    "archive_md5": "c41a03bc57b6965ce3f9dbc9df19ba10",
+    "memory_dump_md5": "ce4e7adc4efbf719888d2c87256d1da3"
+  },
+  "findings": [
+    {
+      "finding_id": "ml3-001",
+      "description": "Memory image contains evidence of a malicious script that encrypted secret information",
+      "mitre_technique": "T1059.001",
+      "confidence": "INFERRED",
+      "artifact_class": "memory",
+      "artifact_hint": "Volatility command line, consoles, process, or filescan evidence for the script"
+    },
+    {
+      "finding_id": "ml3-002",
+      "description": "First half of the flag or secret can be recovered from memory before extracting the second half",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "memory",
+      "artifact_hint": "Recovered memory strings or dumped files; flag value intentionally omitted"
+    },
+    {
+      "finding_id": "ml3-003",
+      "description": "Second half of the flag requires steganography extraction with steghide from a recovered artifact",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "memory",
+      "artifact_hint": "Recovered image/file from memory, followed by steghide extraction"
+    }
+  ]
+}

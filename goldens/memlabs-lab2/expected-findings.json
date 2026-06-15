@@ -1,0 +1,43 @@
+{
+  "_comment": [
+    "Windows memory-forensics golden for MemLabs Lab 2 - A New World.",
+    "Source: https://github.com/stuxnet999/MemLabs/tree/master/Lab%202",
+    "CTF-style expected claims derived from the public challenge prompt and hashes; actual flags are intentionally not included."
+  ],
+  "status": "ctf_flag_ground_truth_without_flag_values",
+  "case_id": "memlabs-lab2",
+  "source_url": "https://github.com/stuxnet999/MemLabs/tree/master/Lab%202",
+  "license": "MIT License (MemLabs)",
+  "verdict": "SUSPICIOUS",
+  "min_recall_percent": 67,
+  "source_hashes": {
+    "archive_md5": "75d2ee1fcf2bc8a25329723e6ce2be93",
+    "memory_dump_md5": "ddb337936a75153822baed718851716b"
+  },
+  "findings": [
+    {
+      "finding_id": "ml2-001",
+      "description": "Memory image contains browser activity from the user's go-to applications",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "memory",
+      "artifact_hint": "Process list, command line, filescan, or dumped browser artifacts"
+    },
+    {
+      "finding_id": "ml2-002",
+      "description": "Memory image contains password-manager or credential-store artifacts relevant to recovering important data",
+      "mitre_technique": "T1555",
+      "confidence": "INFERRED",
+      "artifact_class": "memory",
+      "artifact_hint": "Volatility filescan/dumpfiles/strings against browser and password manager processes"
+    },
+    {
+      "finding_id": "ml2-003",
+      "description": "Three ordered CTF flags or important recovered values can be extracted from memory",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "memory",
+      "artifact_hint": "Recovered memory artifacts; flag values intentionally omitted from the golden"
+    }
+  ]
+}

@@ -14,12 +14,11 @@ product MCP servers and the host DFIR toolchain; Claude Code auto-spawns the ser
 
 ## Prerequisites
 
-Install these first, or let the installer bootstrap them. By default `scripts/setup` (below)
-**checks** for them and prints a green/red summary without installing anything (fail-closed — judges
-and CI rely on this). To have it install missing required tools for you, run
-`bash scripts/install.sh --bootstrap` (or set `FINDEVIL_BOOTSTRAP=1`): it installs a C toolchain
-(`build-essential` on Debian/Ubuntu) and missing cargo/uv via their official installers, and Node 20
-via `fnm` (best-effort, since Node is optional).
+Install the required OS tools and configure one Claude credential first. The first-run setup can
+bootstrap the C toolchain (`build-essential` on Debian/Ubuntu), missing cargo/uv via their official
+installers, and Node 20 via `fnm` when needed (best-effort, since Node is optional):
+`bash scripts/setup` calls `scripts/install.sh --bootstrap`. For fail-closed CI/judge checks, run
+`bash scripts/install.sh` without `--bootstrap`; it reports missing tools instead of installing them.
 
 | Tool | Version | Why | Required? |
 |---|---|---|---|
