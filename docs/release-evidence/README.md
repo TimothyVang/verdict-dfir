@@ -95,3 +95,7 @@ never appears in its audit chain). Reviewer spot-check:
 This is the deliberately un-edited counterpart to the demo film: a real tool
 failure and a real recovery, not a staged or injected one.
 
+## Stage Two evidence map
+
+`stage-two-evidence.md` indexes each of the six Official Rules criteria to the committed artifact that supports it, with a one-line verify command per criterion. Start there for a criterion-by-criterion walk of the evidence.
+
