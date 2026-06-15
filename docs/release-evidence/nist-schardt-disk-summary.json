@@ -1,0 +1,44 @@
+{
+ "version": 1,
+ "purpose": "Stage Two depth + traceability evidence: a real multi-artifact disk Case on the NIST CFReDS Hacking Case (SCHARDT.dd). Derived summary + trace only; no raw evidence committed.",
+ "evidence": {
+  "name": "SCHARDT.dd",
+  "source": "NIST CFReDS Hacking Case (public domain)",
+  "type": "raw disk image"
+ },
+ "verdict": "SUSPICIOUS",
+ "findings_total": 27,
+ "artifact_classes_parsed": [
+  "custody",
+  "disk/filesystem",
+  "mft",
+  "prefetch",
+  "registry",
+  "unknown_tool_output"
+ ],
+ "artifact_classes_partial": [
+  "timeline"
+ ],
+ "artifact_classes_not_supplied": [
+  "evtx",
+  "memory",
+  "network",
+  "velociraptor"
+ ],
+ "depth_note": "One disk image corroborated across 6 parsed artifact classes (custody, disk/filesystem, mft, prefetch, registry, unknown_tool_output); cross-artifact findings satisfy the >=2-class execution rule. Memory/network/evtx honestly marked not_supplied (single-evidence run).",
+ "real_failure_pivot": {
+  "tools_failed": [
+   "plaso_parse"
+  ],
+  "behavior": "plaso_parse unavailable -> attempted 17x, all failed -> timeline sealed as PARTIAL and the Case continued and sealed an honest verdict (genuine failure-handling, fault_injection=0)"
+ },
+ "audit_chain": {
+  "records": 597,
+  "leaf_count": 244,
+  "merkle_root_hex": "1ceddadee9f8914f3e4e128d166246ed5f21f872aef8679a06e9f0b1176b2d5d",
+  "signature_kind": "ed25519"
+ },
+ "manifest_verify_overall": true,
+ "how_to_verify": "scripts/trace-finding <run-dir>  ->  'audit chain OK ... 244 leaves all resolve ... 27 findings traced'.  See nist-schardt-disk-trace.txt for the captured run.",
+ "honesty": "EXPERT_REVIEW_DRAFT: not customer-ready without sigstore identity signer + human expert approval; ATT&CK blind spots and analysis limitations kept visible."
+}

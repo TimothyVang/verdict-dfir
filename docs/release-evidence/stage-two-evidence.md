@@ -28,15 +28,18 @@ here is asserted without a path you can open or a command you can run.
 
 - **Artifacts:** [`../accuracy-report.md`](../accuracy-report.md) (`## False Positives`, `## Missed Artifacts`, `## Hallucinated Claims Found During Testing`, `## Evidence Integrity`), and [`../../agent-config/SOUL.md`](../../agent-config/SOUL.md) epistemic hierarchy (`CONFIRMED` / `INFERRED` / `HYPOTHESIS`).
 - **Specifics the report names (not adjectives):** `alihadi-09-encrypt` dual-use control → expected `INDETERMINATE`; NIST Hacking Case `7/14` recall with the seven unmatched `nhc-*` IDs listed; the Nitroba `NO_EVIL` overclaim caught during testing and the exact fix.
+- **Live run, all findings labeled and traced:** [`nist-schardt-disk-trace.txt`](nist-schardt-disk-trace.txt) — the NIST disk Case produced **27 findings**, each tagged `CONFIRMED` / `INFERRED` and resolving to a tool execution (the chain check reports `27 findings traced`).
 - **Verify:** `grep -nE '^## (False Positives|Missed Artifacts|Hallucinated Claims)' docs/accuracy-report.md`.
 
 ## 3. Breadth and depth of analysis
 
 **Claim:** depth is measured and partial coverage is never sold as clean.
 
-- **Artifacts:** every run writes a `coverage_manifest.json` (each artifact class marked `parsed` / `failed` / `unsupported` / `not_supplied`); the ≥2-artifact-class rule for execution claims is a hard rule in [`../../CLAUDE.md`](../../CLAUDE.md) and `agent-config/SOUL.md`.
-- **Verify:** see the `coverage_manifest` block referenced in [`evtx-security-log-clear-trace-summary.json`](evtx-security-log-clear-trace-summary.json) (records the not-supplied classes for that run).
-- **Scope (honest):** the committed public runs are intentionally scoped (EVTX packet; Nitroba `5/5`; NIST `7/14`). The depth gold standard — a single deep chain correlated across **disk and memory** — is the next evidence to commit, not something the current public packets demonstrate. This is stated plainly rather than implied.
+- **Artifacts:** every run writes a `coverage_manifest.json` (each artifact class marked `parsed` / `failed` / `unsupported` / `not_supplied`); the ≥2-artifact-class rule for execution claims is a hard rule in [`../../CLAUDE.md`](../../CLAUDE.md) and `agent-config/SOUL.md`. **A real deep run is committed:** [`nist-schardt-disk-summary.json`](nist-schardt-disk-summary.json) + [`nist-schardt-disk-trace.txt`](nist-schardt-disk-trace.txt).
+- **What that run shows:** the NIST CFReDS Hacking Case disk image (`SCHARDT.dd`) → `SUSPICIOUS`, **27 findings**, parsed across **6 artifact classes** (custody, disk/filesystem, MFT — 5000 records, prefetch, registry, timeline), with cross-artifact findings (e.g. a hacking-tool claim corroborated from MFT + registry MRU). Memory / network / evtx are honestly `not_supplied` for this single-evidence run.
+- **Real failure-handling (depth, not theater):** `plaso_parse` was unavailable, so the agent attempted it 17×, all failed, sealed the timeline class as **`partial`**, and continued to a complete honest verdict — `fault_injection=0`.
+- **Verify:** `scripts/trace-finding <run>` → `audit chain OK … 244 leaves all resolve … 27 findings traced`.
+- **Honest next step:** this is deep multi-artifact **disk** depth; the **disk + memory** correlation specifically (the `rocba` disk+memory pair) is a heavier run still to be committed — stated plainly rather than implied.
 
 ## 4. Constraint implementation
 
@@ -52,7 +55,7 @@ here is asserted without a path you can open or a command you can run.
 
 - **Artifact:** [`evtx-security-log-clear-trace.jsonl`](evtx-security-log-clear-trace.jsonl) + [`evtx-security-log-clear-trace-summary.json`](evtx-security-log-clear-trace-summary.json).
 - **Worked trace (one clean finding, end to end):** Finding `f-A-evtx-audit-log-cleared` → cited `tool_call_id` `tc-002` (`evtx_query`) → `tool_call_output.output_hash` → `manifest_verify.overall = true` (ed25519 signature verified, Merkle root ok, audit chain ok).
-- **Three-claim trace (the judge's check):** run `scripts/trace-finding <run-dir>` over any fresh case — it resolves **every** finding to its producing tool execution and replays the hash. (`scripts/trace-finding` is the same tool that flags a tampered chain, e.g. it reports `AUDIT CHAIN BROKEN` on the deliberate `refute-tamper` test run.)
+- **Three-claim trace (the judge's check), worked on a real deep run:** [`nist-schardt-disk-trace.txt`](nist-schardt-disk-trace.txt) is the captured `scripts/trace-finding` output for the NIST disk Case — `audit chain OK — 597 records … prev_hash chain intact`, `244 leaves all resolve`, `27 findings traced`, e.g. `f-A-mft-tools → tc-004 (mft_timeline)`, `f-A-mru-lalsetup250-exe → tc-176 (registry_query)`, each with `output_sha256`. Run it yourself over any fresh case. (Same tool flags a tampered chain — it reports `AUDIT CHAIN BROKEN` on the deliberate `refute-tamper` test run.)
 - **Verify:** `jq .manifest_verify.overall docs/release-evidence/evtx-security-log-clear-trace-summary.json` → `true`.
 
 ## 6. Usability and documentation

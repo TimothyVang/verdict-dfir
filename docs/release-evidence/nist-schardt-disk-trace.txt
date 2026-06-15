@@ -1,0 +1,223 @@
+VERDICT trace -- tmp/auto-runs/auto-d5cfd55f-8698-4ef1-9a63-7bf2bbc75e30
+audit chain: OK -- 597 records, seq monotonic, every line canonical, prev_hash chain intact
+manifest:    OK -- final hash closes the chain; 244 leaves all resolve to audit records
+verdict:     artifact hash OK
+verdict:     SUSPICIOUS  (27 finding(s) traced)
+
+Finding f-A-mft-tools  [INFERRED]  T1588.002
+  Hacking-tool artifacts present on disk as downloaded applications, recovered from the MFT: Progra...
+  └─ tool_call_id tc-004
+       ├─ audit seq 7  tool_call_start   tool=mft_timeline
+       ├─ audit seq 8  tool_call_output  output_sha256=9dbbbd01e4952495...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-A-mru-lalsetup250-exe  [INFERRED]  T1217
+  User recently opened-file MRU records 'C:\Documents and Settings\Mr. Evil\Desktop\lalsetup250.exe...
+  └─ tool_call_id tc-176
+       ├─ audit seq 351  tool_call_start   tool=registry_query
+       ├─ audit seq 352  tool_call_output  output_sha256=2c1a21bddeeaee55...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-A-mru-netstumblerinstaller-0-4-0-exe  [INFERRED]  T1217
+  User recently opened-file MRU records 'C:\Documents and Settings\Mr. Evil\Desktop\netstumblerinst...
+  └─ tool_call_id tc-176
+       ├─ audit seq 351  tool_call_start   tool=registry_query
+       ├─ audit seq 352  tool_call_output  output_sha256=2c1a21bddeeaee55...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-A-mru-ethereal-setup-0-10-6-exe  [INFERRED]  T1217
+  User recently opened-file MRU records 'C:\Documents and Settings\Mr. Evil\Desktop\ethereal-setup-...
+  └─ tool_call_id tc-176
+       ├─ audit seq 351  tool_call_start   tool=registry_query
+       ├─ audit seq 352  tool_call_output  output_sha256=2c1a21bddeeaee55...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-A-mru-winpcap-3-01-a-exe  [INFERRED]  T1217
+  User recently opened-file MRU records 'C:\Documents and Settings\Mr. Evil\Desktop\WinPcap_3_01_a....
+  └─ tool_call_id tc-176
+       ├─ audit seq 351  tool_call_start   tool=registry_query
+       ├─ audit seq 352  tool_call_output  output_sha256=2c1a21bddeeaee55...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-A-sam-mr-evil  [INFERRED]  T1136.001
+  User account 'Mr. Evil' with suspicious naming was created on this system: it is recorded in the ...
+  └─ tool_call_id tc-206
+       ├─ audit seq 411  tool_call_start   tool=registry_query
+       ├─ audit seq 412  tool_call_output  output_sha256=0bdce70657b47c43...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-prefetch-cain-exe  [CONFIRMED]  T1588.002
+  cain.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (pe...
+  └─ tool_call_id tc-010
+       ├─ audit seq 19  tool_call_start   tool=prefetch_parse
+       ├─ audit seq 20  tool_call_output  output_sha256=b2e14c91aaa2765b...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-prefetch-cain25b45-exe  [CONFIRMED]  T1588.002
+  cain25b45.exe executed on this host: Windows Prefetch records its execution and the UserAssist ke...
+  └─ tool_call_id tc-011
+       ├─ audit seq 21  tool_call_start   tool=prefetch_parse
+       ├─ audit seq 22  tool_call_output  output_sha256=76ae3ea8345e5c99...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-prefetch-ethereal-setup-0-10-6-exe  [CONFIRMED]  T1040
+  ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch records its execution and the U...
+  └─ tool_call_id tc-020
+       ├─ audit seq 39  tool_call_start   tool=prefetch_parse
+       ├─ audit seq 40  tool_call_output  output_sha256=eba2574fcda278c7...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-prefetch-ethereal-exe  [CONFIRMED]  T1040
+  ethereal.exe executed on this host: Windows Prefetch records its execution and the UserAssist key...
+  └─ tool_call_id tc-021
+       ├─ audit seq 41  tool_call_start   tool=prefetch_parse
+       ├─ audit seq 42  tool_call_output  output_sha256=cf2fcec981910563...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-prefetch-lookatlan-exe  [CONFIRMED]  T1046
+  lookatlan.exe executed on this host: Windows Prefetch records its execution and the UserAssist ke...
+  └─ tool_call_id tc-038
+       ├─ audit seq 75  tool_call_start   tool=prefetch_parse
+       ├─ audit seq 76  tool_call_output  output_sha256=9a10d59745b30f75...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-prefetch-mirc-exe  [CONFIRMED]  T1071.001
+  mirc.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (pe...
+  └─ tool_call_id tc-040
+       ├─ audit seq 79  tool_call_start   tool=prefetch_parse
+       ├─ audit seq 80  tool_call_output  output_sha256=b035f2359a052351...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-prefetch-mirc612-exe  [CONFIRMED]  T1071.001
+  mirc612.exe executed on this host: Windows Prefetch records its execution and the UserAssist key ...
+  └─ tool_call_id tc-041
+       ├─ audit seq 81  tool_call_start   tool=prefetch_parse
+       ├─ audit seq 82  tool_call_output  output_sha256=b36f1b611dd33dba...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-prefetch-netstumbler-exe  [CONFIRMED]  T1046
+  netstumbler.exe executed on this host: Windows Prefetch records its execution and the UserAssist ...
+  └─ tool_call_id tc-047
+       ├─ audit seq 93  tool_call_start   tool=prefetch_parse
+       ├─ audit seq 94  tool_call_output  output_sha256=c912d93baf9bf81c...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-prefetch-netstumblerinstaller-0-4-0-ex  [INFERRED]  T1046
+  Windows Prefetch contains NETSTUMBLERINSTALLER_0_4_0.EX with run_count=1; NetStumbler wireless di...
+  └─ tool_call_id tc-048
+       ├─ audit seq 95  tool_call_start   tool=prefetch_parse
+       ├─ audit seq 96  tool_call_output  output_sha256=80850ecc397c7f70...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-lnk-removable-media-525fb1b2  [HYPOTHESIS]  T1074
+  hypothesis: LNK shortcut artifact references removable media activity: ~/.findevil/c...
+  └─ tool_call_id tc-055
+       ├─ audit seq 109  tool_call_start   tool=ez_parse
+       ├─ audit seq 110  tool_call_output  output_sha256=18c71430a4617c2e...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-lnk-removable-media-5bcf91f1  [HYPOTHESIS]  T1074
+  hypothesis: LNK shortcut artifact references removable media activity: ~/.findevil/c...
+  └─ tool_call_id tc-056
+       ├─ audit seq 111  tool_call_start   tool=ez_parse
+       ├─ audit seq 112  tool_call_output  output_sha256=2111b7d4525efac8...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-lnk-removable-media-dc481747  [HYPOTHESIS]  T1074
+  hypothesis: LNK shortcut artifact references removable media activity: ~/.findevil/c...
+  └─ tool_call_id tc-057
+       ├─ audit seq 113  tool_call_start   tool=ez_parse
+       ├─ audit seq 114  tool_call_output  output_sha256=12cb72b3df8dddea...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-lnk-removable-media-1b9c9c68  [HYPOTHESIS]  T1074
+  hypothesis: LNK shortcut artifact references removable media activity: ~/.findevil/c...
+  └─ tool_call_id tc-058
+       ├─ audit seq 115  tool_call_start   tool=ez_parse
+       ├─ audit seq 116  tool_call_output  output_sha256=526334684f1e8ce3...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-lnk-removable-media-275da4b9  [HYPOTHESIS]  T1074
+  hypothesis: LNK shortcut artifact references removable media activity: ~/.findevil/c...
+  └─ tool_call_id tc-059
+       ├─ audit seq 117  tool_call_start   tool=ez_parse
+       ├─ audit seq 118  tool_call_output  output_sha256=8c87e19a75ce3ae1...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-lnk-removable-media-51b011b5  [HYPOTHESIS]  T1074
+  hypothesis: LNK shortcut artifact references removable media activity: ~/.findevil/c...
+  └─ tool_call_id tc-060
+       ├─ audit seq 119  tool_call_start   tool=ez_parse
+       ├─ audit seq 120  tool_call_output  output_sha256=23abec7f996617a6...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-lnk-removable-media-78244215  [HYPOTHESIS]  T1074
+  hypothesis: LNK shortcut artifact references removable media activity: ~/.findevil/c...
+  └─ tool_call_id tc-061
+       ├─ audit seq 121  tool_call_start   tool=ez_parse
+       ├─ audit seq 122  tool_call_output  output_sha256=23a6714eb46ca044...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-lnk-removable-media-3925db74  [HYPOTHESIS]  T1074
+  hypothesis: LNK shortcut artifact references removable media activity: ~/.findevil/c...
+  └─ tool_call_id tc-062
+       ├─ audit seq 123  tool_call_start   tool=ez_parse
+       ├─ audit seq 124  tool_call_output  output_sha256=c0cc5a47827cb346...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-lnk-removable-media-1f877015  [HYPOTHESIS]  T1074
+  hypothesis: LNK shortcut artifact references removable media activity: ~/.findevil/c...
+  └─ tool_call_id tc-063
+       ├─ audit seq 125  tool_call_start   tool=ez_parse
+       ├─ audit seq 126  tool_call_output  output_sha256=a304b76209976e5c...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-recyclebin-staging  [HYPOTHESIS]  T1070.004
+  hypothesis: Recycle Bin recycle_bin_info2 deleted-item artifact records a deleted staging/tool ar...
+  └─ tool_call_id tc-135
+       ├─ audit seq 269  tool_call_start   tool=plaso_parse
+       ├─ audit seq 270  tool_call_output  output_sha256=4fa78692829fc5ae...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-shellbag-d1ab4298  [HYPOTHESIS]  T1074.001
+  hypothesis: NTUSER.DAT shellbag entries record user folder navigation to staging/tooling location...
+  └─ tool_call_id tc-178
+       ├─ audit seq 355  tool_call_start   tool=registry_query
+       ├─ audit seq 356  tool_call_output  output_sha256=acfb334a39542a48...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+Finding f-B-shellbag-f93b46c9  [HYPOTHESIS]  T1074.001
+  hypothesis: NTUSER.DAT shellbag entries record user folder navigation to staging/tooling location...
+  └─ tool_call_id tc-179
+       ├─ audit seq 357  tool_call_start   tool=registry_query
+       ├─ audit seq 358  tool_call_output  output_sha256=456cb1bf666093fb...
+       └─ Merkle leaf: tool_call_id present | finding_id present
+          finding_approved: present
+
+TRACE OK: 27/27 findings resolve to an approved finding, tool execution, and Merkle leaves.
