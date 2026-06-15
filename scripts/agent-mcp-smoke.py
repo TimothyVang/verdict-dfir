@@ -202,8 +202,6 @@ def _verifier_actions(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     actions: list[dict[str, Any]] = []
     for finding in findings:
         action = str(finding.get("verifier_action") or "approved")
-        if action not in {"approved", "downgraded"}:
-            action = "approved"
         actions.append(
             {
                 "case_id": str(finding.get("case_id") or "smoke-case"),

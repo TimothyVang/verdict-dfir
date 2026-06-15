@@ -456,6 +456,88 @@ function Read-AuditKinds {
     return $kinds.ToArray()
 }
 
+function Read-AuditRecords {
+    param([Parameter(Mandatory = $true)][string]$AuditPath)
+    $records = New-Object System.Collections.Generic.List[object]
+    $lineNumber = 0
+    foreach ($line in Get-Content -LiteralPath $AuditPath -Encoding UTF8) {
+        $lineNumber += 1
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        try {
+            $record = $line | ConvertFrom-Json
+        }
+        catch {
+            Add-ReadinessBlocker "audit log line $lineNumber is not valid JSON: $AuditPath"
+            continue
+        }
+        if ($null -eq $record.kind -or [string]::IsNullOrWhiteSpace([string]$record.kind)) {
+            Add-ReadinessBlocker "audit log line $lineNumber lacks top-level kind: $AuditPath"
+            continue
+        }
+        $records.Add($record) | Out-Null
+    }
+    return $records.ToArray()
+}
+
+function Get-AuditRecordFindingId {
+    param([Parameter(Mandatory = $true)][object]$Record)
+    $payload = $Record.payload
+    if ($null -eq $payload) { return "" }
+    if ([string]$Record.kind -eq "acp_handoff") {
+        if ($null -ne $payload.payload -and -not [string]::IsNullOrWhiteSpace([string]$payload.payload.finding_id)) {
+            return [string]$payload.payload.finding_id
+        }
+        if (-not [string]::IsNullOrWhiteSpace([string]$payload.correlation_id)) {
+            return [string]$payload.correlation_id
+        }
+        return ""
+    }
+    return [string]$payload.finding_id
+}
+
+function Test-ValidVerifierEvidenceRecord {
+    param([Parameter(Mandatory = $true)][object]$Record)
+    $payload = $Record.payload
+    if ($null -eq $payload) { return $false }
+    switch ([string]$Record.kind) {
+        "verifier_action" {
+            return ([string]$payload.action) -in @("approved", "downgraded")
+        }
+        "replay" {
+            $matched = $payload.replay_matched
+            if ($null -eq $matched -and $null -ne $payload.legacy_replay) {
+                $matched = $payload.legacy_replay.replay_matched
+            }
+            return ($matched -eq $true -and -not [string]::IsNullOrWhiteSpace([string]$payload.replay_record_sha256))
+        }
+        "acp_handoff" {
+            $inner = $payload.payload
+            return (
+                [string]$payload.from_role -eq "verifier" -and
+                [string]$payload.to_role -eq "judge" -and
+                $null -ne $inner -and
+                ([string]$inner.action) -in @("approved", "downgraded") -and
+                -not [string]::IsNullOrWhiteSpace([string]$inner.replay_record_sha256)
+            )
+        }
+        default { return $false }
+    }
+}
+
+function Test-AuditEvidenceForFinding {
+    param(
+        [Parameter(Mandatory = $true)][object[]]$AuditRecords,
+        [Parameter(Mandatory = $true)][string]$Kind,
+        [Parameter(Mandatory = $true)][string]$FindingId
+    )
+    foreach ($record in $AuditRecords) {
+        if ([string]$record.kind -ne $Kind) { continue }
+        if ((Get-AuditRecordFindingId -Record $record) -ne $FindingId) { continue }
+        if (Test-ValidVerifierEvidenceRecord -Record $record) { return $true }
+    }
+    return $false
+}
+
 function Invoke-ManifestVerify {
     param(
         [Parameter(Mandatory = $true)][string]$RunDir,
@@ -720,9 +802,11 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
         }
     }
 
+    $auditRecords = @()
     $auditKinds = @()
     if (Test-Path -LiteralPath $auditPath -PathType Leaf) {
-        $auditKinds = Read-AuditKinds -AuditPath $auditPath
+        $auditRecords = Read-AuditRecords -AuditPath $auditPath
+        $auditKinds = @($auditRecords | ForEach-Object { [string]$_.kind })
         foreach ($kind in @("report_qa", "customer_release_gate", "verdict_artifact", "expert_signoff_packet")) {
             if (-not (Test-AuditKind -AuditKinds $auditKinds -Kind $kind)) {
                 Add-ReadinessBlocker "audit log lacks required $kind record: $auditPath"
@@ -766,9 +850,16 @@ if (-not [string]::IsNullOrWhiteSpace($resolvedRunDir)) {
 
     if ($null -ne $verdictObj) {
         if ($null -ne $verdictObj.findings -and @($verdictObj.findings).Count -gt 0) {
-            foreach ($kind in @("verifier_action", "replay", "acp_handoff")) {
-                if (-not (Test-AuditKind -AuditKinds $auditKinds -Kind $kind)) {
-                    Add-ReadinessBlocker "audit log lacks verifier evidence $kind record for final findings: $auditPath"
+            foreach ($finding in @($verdictObj.findings)) {
+                $findingId = [string]$finding.finding_id
+                if ([string]::IsNullOrWhiteSpace($findingId)) {
+                    Add-ReadinessBlocker "verdict.json contains a final finding without finding_id"
+                    continue
+                }
+                foreach ($kind in @("verifier_action", "replay", "acp_handoff")) {
+                    if (-not (Test-AuditEvidenceForFinding -AuditRecords $auditRecords -Kind $kind -FindingId $findingId)) {
+                        Add-ReadinessBlocker "audit log lacks valid verifier evidence $kind for final finding ${findingId}: $auditPath"
+                    }
                 }
             }
         }

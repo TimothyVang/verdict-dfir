@@ -41,6 +41,8 @@ def make_run(
     manifest_overall: bool = True,
     customer_releasable: bool = False,
     cryptographic_signature: bool = True,
+    findings: list[dict] | None = None,
+    verifier_evidence_ids: list[str] | None = None,
 ) -> Path:
     run = root / "case-ready"
     run.mkdir(parents=True)
@@ -53,6 +55,37 @@ def make_run(
         "tool_call_output",
         {"tool_call_id": "tc-ready", "output_hash": "c" * 64},
     )
+    for finding_id in verifier_evidence_ids or []:
+        audit.append(
+            "verifier_action",
+            {
+                "finding_id": finding_id,
+                "action": "approved",
+                "reason": "readiness smoke replay matched",
+                "replay_record_sha256": "d" * 64,
+            },
+        )
+        audit.append(
+            "replay",
+            {
+                "finding_id": finding_id,
+                "replay_matched": True,
+                "replay_record_sha256": "d" * 64,
+            },
+        )
+        audit.append(
+            "acp_handoff",
+            {
+                "from_role": "verifier",
+                "to_role": "judge",
+                "correlation_id": finding_id,
+                "payload": {
+                    "finding_id": finding_id,
+                    "action": "approved",
+                    "replay_record_sha256": "d" * 64,
+                },
+            },
+        )
     manifest = build_manifest(
         case_id="case-ready",
         run_id="run-ready",
@@ -83,6 +116,7 @@ def make_run(
             "case_id": "case-ready",
             "run_id": "run-ready",
             "verdict": "NO_EVIL",
+            "findings": findings or [],
             "report_qa": report_qa,
             "release_gate": {
                 "manifest_verified": manifest_overall,
@@ -321,6 +355,25 @@ def main() -> int:
         stub_signature = run_gate(ps, stub_signature_run, out, "stub-signature")
         if stub_signature.returncode == 0:
             raise SystemExit("stub-signature readiness gate unexpectedly passed")
+
+        mismatched_verifier_run = make_run(
+            tmp / "mismatched-verifier",
+            manifest_overall=True,
+            findings=[
+                {
+                    "finding_id": "f-ready",
+                    "tool_call_id": "tc-ready",
+                    "confidence": "CONFIRMED",
+                    "description": "Final finding needs matching verifier evidence.",
+                }
+            ],
+            verifier_evidence_ids=["f-other"],
+        )
+        mismatched_verifier = run_gate(
+            ps, mismatched_verifier_run, out, "mismatched-verifier"
+        )
+        if mismatched_verifier.returncode == 0:
+            raise SystemExit("mismatched-verifier readiness gate unexpectedly passed")
 
         blocked_run = make_run(tmp / "negative", manifest_overall=False)
         negative = run_gate(ps, blocked_run, out, "negative")

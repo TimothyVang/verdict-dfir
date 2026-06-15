@@ -11086,8 +11086,8 @@ class Investigation:
         j = py.call_tool(
             "judge_findings",
             {
-                "pool_a_findings": pool_a_verified,
-                "pool_b_findings": pool_b_verified,
+                "pool_a_findings": self.findings_pool_a,
+                "pool_b_findings": self.findings_pool_b,
                 "pool_a_verifier_actions": pool_a_actions,
                 "pool_b_verifier_actions": pool_b_actions,
             },

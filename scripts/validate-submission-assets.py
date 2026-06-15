@@ -15,7 +15,7 @@ import hashlib
 import io
 import json
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import urlparse
 import zipfile
 
@@ -73,6 +73,23 @@ CUSTOMER_READY_STATES = {
     "READY_FOR_CUSTOMER_RELEASE",
     "CUSTOMER_RELEASE_READY",
     "CUSTOMER_RELEASABLE",
+}
+READINESS_MAX_ZIP_MEMBER_BYTES = 25 * 1024 * 1024
+READINESS_MAX_ZIP_TOTAL_BYTES = 100 * 1024 * 1024
+READINESS_MAX_COMPRESSION_RATIO = 100
+READINESS_FORBIDDEN_ZIP_SUFFIXES = {
+    ".e01",
+    ".dd",
+    ".mem",
+    ".raw",
+    ".img",
+    ".vmem",
+}
+READINESS_FORBIDDEN_ZIP_NAMES = {
+    ".env",
+    ".env.local",
+    ".credentials.json",
+    "credentials.json",
 }
 
 
@@ -342,6 +359,59 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def validate_readiness_relative_path(
+    relative_path: str, label: str, blockers: list[str]
+) -> str | None:
+    normalized = relative_path.replace("\\", "/").strip("/")
+    parsed = PurePosixPath(normalized)
+    parts = parsed.parts
+    if (
+        not normalized
+        or relative_path.startswith(("/", "\\"))
+        or ":" in parts[0]
+        or any(part in {"", ".", ".."} for part in parts)
+    ):
+        blockers.append(f"{label} has unsafe relative path: {relative_path!r}")
+        return None
+    name = parsed.name.lower()
+    if (
+        name in READINESS_FORBIDDEN_ZIP_NAMES
+        or parsed.suffix.lower() in READINESS_FORBIDDEN_ZIP_SUFFIXES
+    ):
+        blockers.append(
+            f"{label} contains prohibited public-release artifact path: {relative_path!r}"
+        )
+        return None
+    return normalized
+
+
+def validate_readiness_zip_members(
+    zf: zipfile.ZipFile, blockers: list[str], label: str
+) -> None:
+    seen: set[str] = set()
+    total_size = 0
+    for info in zf.infolist():
+        normalized = validate_readiness_relative_path(info.filename, label, blockers)
+        if normalized is None:
+            continue
+        if normalized in seen:
+            blockers.append(f"{label} contains duplicate ZIP entry: {normalized}")
+        seen.add(normalized)
+        if info.is_dir():
+            continue
+        total_size += info.file_size
+        if info.file_size > READINESS_MAX_ZIP_MEMBER_BYTES:
+            blockers.append(f"{label} ZIP entry too large: {normalized}")
+        if total_size > READINESS_MAX_ZIP_TOTAL_BYTES:
+            blockers.append(f"{label} ZIP uncompressed size exceeds limit")
+            break
+        compressed = max(info.compress_size, 1)
+        if info.file_size / compressed > READINESS_MAX_COMPRESSION_RATIO:
+            blockers.append(
+                f"{label} ZIP entry compression ratio too high: {normalized}"
+            )
+
+
 def artifact_entries(manifest: dict, blockers: list[str]) -> dict[str, dict]:
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, list):
@@ -356,7 +426,11 @@ def artifact_entries(manifest: dict, blockers: list[str]) -> dict[str, dict]:
         if not isinstance(raw_path, str) or not raw_path.strip():
             blockers.append(f"packet_manifest artifact #{index} lacks path")
             continue
-        normalized = raw_path.replace("\\", "/").strip("/")
+        normalized = validate_readiness_relative_path(
+            raw_path, f"packet_manifest artifact #{index}", blockers
+        )
+        if normalized is None:
+            continue
         entries[normalized] = artifact
     return entries
 
@@ -436,9 +510,7 @@ def parse_readiness_audit_text(text: str, blockers: list[str]) -> list[dict]:
     return records
 
 
-def validate_readiness_audit_records(
-    records: list[dict], blockers: list[str]
-) -> None:
+def validate_readiness_audit_records(records: list[dict], blockers: list[str]) -> None:
     kinds: set[str] = set()
     for record in records:
         if isinstance(record, dict) and isinstance(record.get("kind"), str):
@@ -495,6 +567,36 @@ def audit_record_finding_id(record: dict) -> str | None:
     return str(value) if isinstance(value, str) and value else None
 
 
+def is_valid_verifier_evidence_record(record: dict) -> bool:
+    payload = record.get("payload")
+    if not isinstance(payload, dict):
+        return False
+    kind = record.get("kind")
+    if kind == "verifier_action":
+        return payload.get("action") in {"approved", "downgraded"}
+    if kind == "replay":
+        legacy = payload.get("legacy_replay")
+        replay_matched = payload.get("replay_matched")
+        if replay_matched is None and isinstance(legacy, dict):
+            replay_matched = legacy.get("replay_matched")
+        return (
+            replay_matched is True
+            and isinstance(payload.get("replay_record_sha256"), str)
+            and bool(payload.get("replay_record_sha256"))
+        )
+    if kind == "acp_handoff":
+        handoff_payload = payload.get("payload")
+        return (
+            payload.get("from_role") == "verifier"
+            and payload.get("to_role") == "judge"
+            and isinstance(handoff_payload, dict)
+            and handoff_payload.get("action") in {"approved", "downgraded"}
+            and isinstance(handoff_payload.get("replay_record_sha256"), str)
+            and bool(handoff_payload.get("replay_record_sha256"))
+        )
+    return False
+
+
 def validate_verifier_audit_evidence(
     verdict: dict, audit_records: list[dict], blockers: list[str]
 ) -> None:
@@ -527,6 +629,8 @@ def validate_verifier_audit_evidence(
     for record in audit_records:
         kind = record.get("kind")
         if not isinstance(kind, str) or kind not in ids_by_kind:
+            continue
+        if not is_valid_verifier_evidence_record(record):
             continue
         finding_id = audit_record_finding_id(record)
         if finding_id is not None:
@@ -627,6 +731,7 @@ def validate_readiness_summary(path: Path) -> CheckResult:
     if packet_zip is not None and packet_zip.is_file():
         try:
             with zipfile.ZipFile(packet_zip) as zf:
+                validate_readiness_zip_members(zf, blockers, "packet_zip")
                 names = {name.rstrip("/") for name in zf.namelist()}
                 required_zip_names = (
                     set(READINESS_REQUIRED_ARTIFACTS)
@@ -646,7 +751,10 @@ def validate_readiness_summary(path: Path) -> CheckResult:
                         continue
                     expected_sha = artifact.get("sha256")
                     if isinstance(expected_sha, str) and expected_sha:
-                        actual_sha = hashlib.sha256(zf.read(relative_path)).hexdigest()
+                        data = read_zip_bytes(zf, relative_path, blockers)
+                        if data is None:
+                            continue
+                        actual_sha = hashlib.sha256(data).hexdigest()
                         if actual_sha.lower() != expected_sha.lower():
                             blockers.append(
                                 f"packet_zip hash mismatch: {relative_path}"
@@ -711,10 +819,25 @@ def validate_readiness_summary(path: Path) -> CheckResult:
 def read_zip_text(
     zf: zipfile.ZipFile, relative_path: str, blockers: list[str]
 ) -> str | None:
+    data = read_zip_bytes(zf, relative_path, blockers)
+    if data is None:
+        return None
+    return data.decode("utf-8", errors="replace")
+
+
+def read_zip_bytes(
+    zf: zipfile.ZipFile, relative_path: str, blockers: list[str]
+) -> bytes | None:
     try:
-        return zf.read(relative_path).decode("utf-8", errors="replace")
+        info = zf.getinfo(relative_path)
     except KeyError:
         blockers.append(f"readiness packet missing {relative_path}")
+        return None
+    if info.file_size > READINESS_MAX_ZIP_MEMBER_BYTES:
+        blockers.append(f"readiness packet member too large: {relative_path}")
+        return None
+    try:
+        return zf.read(info)
     except OSError as exc:
         blockers.append(f"readiness packet could not read {relative_path}: {exc}")
     return None
@@ -733,6 +856,7 @@ def validate_readiness_packet_archive(
     zf: zipfile.ZipFile, label: str = "readiness packet"
 ) -> CheckResult:
     blockers: list[str] = []
+    validate_readiness_zip_members(zf, blockers, label)
     names = {name.rstrip("/") for name in zf.namelist()}
     for required in {"readiness-summary.json", "readiness-packet-manifest.json"}:
         if required not in names:
@@ -796,7 +920,10 @@ def validate_readiness_packet_archive(
             continue
         expected_sha = artifact.get("sha256")
         if isinstance(expected_sha, str) and expected_sha:
-            actual_sha = hashlib.sha256(zf.read(relative_path)).hexdigest()
+            data = read_zip_bytes(zf, relative_path, blockers)
+            if data is None:
+                continue
+            actual_sha = hashlib.sha256(data).hexdigest()
             if actual_sha.lower() != expected_sha.lower():
                 blockers.append(f"readiness packet hash mismatch: {relative_path}")
 

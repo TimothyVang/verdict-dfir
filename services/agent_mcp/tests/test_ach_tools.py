@@ -45,9 +45,7 @@ def _finding(**overrides: Any) -> dict[str, Any]:
     return base
 
 
-def _verifier_action(
-    finding_id: str = "f-1", action: str = "approved"
-) -> dict[str, Any]:
+def _verifier_action(finding_id: str = "f-1", action: str = "approved") -> dict[str, Any]:
     return {
         "case_id": "case-001",
         "finding_id": finding_id,
@@ -107,6 +105,28 @@ class TestJudgeFindings:
             JudgeFindingsInput(
                 pool_a_findings=[_finding(pool_origin="A")],
                 pool_a_verifier_actions=[_verifier_action("f-other")],
+                pool_b_findings=[],
+            )
+
+    async def test_applies_downgraded_verifier_action_before_judging(self) -> None:
+        result = await JUDGE_SPEC.handler(
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A", confidence="CONFIRMED")],
+                pool_a_verifier_actions=[_verifier_action("f-1", "downgraded")],
+                pool_b_findings=[],
+            )
+        )
+
+        assert result.merged[0].finding["confidence"] != "CONFIRMED"
+
+    async def test_rejects_duplicate_verifier_actions(self) -> None:
+        with pytest.raises(ValueError, match="duplicate verifier action"):
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A", confidence="CONFIRMED")],
+                pool_a_verifier_actions=[
+                    _verifier_action("f-1", "rejected"),
+                    _verifier_action("f-1", "approved"),
+                ],
                 pool_b_findings=[],
             )
 

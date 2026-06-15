@@ -130,16 +130,15 @@ def validate_evidence(
     ):
         errors.append("recall.recall_percent must be >= recall.min_recall_percent")
     matched_ids = recall.get("matched_ids")
-    if (
-        isinstance(matched_ids, list)
-        and recalled_n is not None
-        and len(matched_ids) != recalled_n
-    ):
+    if not isinstance(matched_ids, list):
+        errors.append("recall.matched_ids must be a list")
+    elif recalled_n is not None and len(matched_ids) != recalled_n:
         errors.append("recall.matched_ids length must equal recall.recalled_n")
     unmatched_ids = recall.get("unmatched_ids")
-    if (
-        isinstance(unmatched_ids, list)
-        and expected_n is not None
+    if not isinstance(unmatched_ids, list):
+        errors.append("recall.unmatched_ids must be a list")
+    elif (
+        expected_n is not None
         and recalled_n is not None
         and len(unmatched_ids) != expected_n - recalled_n
     ):

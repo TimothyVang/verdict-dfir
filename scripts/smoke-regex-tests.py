@@ -245,6 +245,21 @@ RELEASE_POLICY_REQUIRED_STRINGS = [
         ".github/workflows/** @TimothyVang",
     ),
     (
+        "CODEOWNERS protects L1 compose gates",
+        ".github/CODEOWNERS",
+        "docker/l1-compose.yml @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects smoke policy checks",
+        ".github/CODEOWNERS",
+        "scripts/*smoke*.py @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects readiness gate implementation",
+        ".github/CODEOWNERS",
+        "scripts/readiness-gate.ps1 @TimothyVang",
+    ),
+    (
         "CODEOWNERS protects CODEOWNERS policy",
         ".github/CODEOWNERS",
         ".github/CODEOWNERS @TimothyVang",

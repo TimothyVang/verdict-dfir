@@ -615,16 +615,57 @@ def main() -> int:
         missing_verifier_packet_result = validator.validate_readiness_packet_bytes(
             finding_packet, "finding packet missing verifier evidence"
         )
-        unverifiable_signature_packet_result = validator.validate_readiness_packet_bytes(
+        invalid_verifier_audit = (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+            '{"kind":"verifier_action","payload":{"finding_id":"f-ready",'
+            '"action":"rejected","reason":"replay mismatch"}}\n'
+            '{"kind":"replay","payload":{"finding_id":"f-ready",'
+            '"replay_matched":false,"replay_record_sha256":"' + ("c" * 64) + '"}}\n'
+            '{"kind":"acp_handoff","payload":{"from_role":"pool_a",'
+            '"to_role":"judge","correlation_id":"f-ready",'
+            '"payload":{"finding_id":"f-ready","action":"rejected",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}}\n'
+        )
+        invalid_verifier_packet_result = validator.validate_readiness_packet_bytes(
             build_readiness_packet_zip(
                 valid_html_text,
-                manifest_verify={
-                    "overall": True,
-                    "signature_present": True,
-                    "signature_verified": False,
+                audit_jsonl=invalid_verifier_audit,
+                verdict_overrides={
+                    "findings": [
+                        {
+                            "finding_id": "f-ready",
+                            "tool_call_id": "tc-ready",
+                            "confidence": "CONFIRMED",
+                            "description": "Replay-backed finding.",
+                        }
+                    ]
                 },
             ),
-            "packet with unverified manifest signature",
+            "packet with invalid verifier evidence",
+        )
+        unsafe_path_packet = io.BytesIO()
+        with zipfile.ZipFile(unsafe_path_packet, "w") as zf:
+            zf.writestr("../audit.jsonl", "{}\n")
+        unsafe_path_packet_result = validator.validate_readiness_packet_bytes(
+            unsafe_path_packet.getvalue(), "packet with traversal path"
+        )
+        unverifiable_signature_packet_result = (
+            validator.validate_readiness_packet_bytes(
+                build_readiness_packet_zip(
+                    valid_html_text,
+                    manifest_verify={
+                        "overall": True,
+                        "signature_present": True,
+                        "signature_verified": False,
+                    },
+                ),
+                "packet with unverified manifest signature",
+            )
         )
 
     checks = [
@@ -791,6 +832,14 @@ def main() -> int:
         (
             "readiness packet rejects findings without verifier audit evidence",
             not missing_verifier_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects invalid verifier audit evidence",
+            not invalid_verifier_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects unsafe ZIP paths",
+            not unsafe_path_packet_result.ok,
         ),
         (
             "readiness packet rejects unverified manifest signature when reported",

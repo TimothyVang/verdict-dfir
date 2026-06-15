@@ -72,6 +72,25 @@ def test_l3_fallback_fails_when_product_commit_is_not_expected_commit() -> None:
     assert "product_commit must match expected commit" in errors
 
 
+def test_l3_fallback_fails_without_itemized_recall_ids() -> None:
+    evidence = _l3_fallback_evidence()
+    evidence["recall"] = {
+        **evidence["recall"],
+        "pass": True,
+        "recalled_n": 14,
+        "expected_n": 14,
+        "recall_percent": 100,
+        "min_recall_percent": 71,
+    }
+    del evidence["recall"]["matched_ids"]
+    del evidence["recall"]["unmatched_ids"]
+
+    errors = validate_l3_evidence.validate_evidence(evidence)
+
+    assert "recall.matched_ids must be a list" in errors
+    assert "recall.unmatched_ids must be a list" in errors
+
+
 def test_l3_fallback_accepts_synthesized_passing_packet() -> None:
     evidence = _l3_fallback_evidence()
     expected_commit = "a" * 40

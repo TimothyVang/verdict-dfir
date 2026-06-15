@@ -17,6 +17,12 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from findevil_agent_mcp.tools._base import ToolSpec
 
+DOWNGRADED_CONFIDENCE = {
+    "CONFIRMED": "INFERRED",
+    "INFERRED": "HYPOTHESIS",
+    "HYPOTHESIS": "HYPOTHESIS",
+}
+
 
 class JudgeFindingsInput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -58,26 +64,45 @@ def _validate_pool_verifier_actions(
     if not findings:
         return
     if not actions:
-        raise ValueError(
-            f"{pool}_verifier_actions required when {pool}_findings is non-empty"
-        )
-    action_by_finding = {
-        str(action.get("finding_id")): action
-        for action in actions
-        if isinstance(action.get("finding_id"), str)
-    }
+        raise ValueError(f"{pool}_verifier_actions required when {pool}_findings is non-empty")
+    action_by_finding: dict[str, dict[str, Any]] = {}
+    for action in actions:
+        finding_id = action.get("finding_id")
+        if not isinstance(finding_id, str):
+            continue
+        if finding_id in action_by_finding:
+            raise ValueError(
+                f"{pool}_verifier_actions duplicate verifier action for "
+                f"finding_id={finding_id!r}"
+            )
+        action_by_finding[finding_id] = action
     for finding in findings:
         finding_id = str(finding.get("finding_id") or "")
         action = action_by_finding.get(finding_id)
         if action is None:
             raise ValueError(
-                f"{pool}_verifier_actions missing verifier action for "
-                f"finding_id={finding_id!r}"
+                f"{pool}_verifier_actions missing verifier action for " f"finding_id={finding_id!r}"
             )
+
+
+def _apply_verifier_actions(
+    findings: list[dict[str, Any]], actions: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    action_by_finding = {str(action.get("finding_id")): action for action in actions}
+    verified: list[dict[str, Any]] = []
+    for finding in findings:
+        finding_id = str(finding.get("finding_id") or "")
+        action = action_by_finding[finding_id]
         if action.get("action") == "rejected":
-            raise ValueError(
-                f"{pool}_findings includes verifier-rejected finding_id={finding_id!r}"
+            continue
+        next_finding = dict(finding)
+        if action.get("action") == "downgraded":
+            next_finding["confidence"] = DOWNGRADED_CONFIDENCE.get(
+                str(next_finding.get("confidence")),
+                next_finding.get("confidence"),
             )
+        verified.append(next_finding)
+    return verified
 
 
 class MergedFindingRecord(BaseModel):
@@ -105,12 +130,18 @@ async def _handle(inp: BaseModel) -> JudgeFindingsOutput:
     assert isinstance(inp, JudgeFindingsInput)
     pool_a = PoolStats(
         pool="A",
-        findings=[Finding.model_validate(f) for f in inp.pool_a_findings],
+        findings=[
+            Finding.model_validate(f)
+            for f in _apply_verifier_actions(inp.pool_a_findings, inp.pool_a_verifier_actions)
+        ],
         verified_actions=[VerifierAction.model_validate(a) for a in inp.pool_a_verifier_actions],
     )
     pool_b = PoolStats(
         pool="B",
-        findings=[Finding.model_validate(f) for f in inp.pool_b_findings],
+        findings=[
+            Finding.model_validate(f)
+            for f in _apply_verifier_actions(inp.pool_b_findings, inp.pool_b_verifier_actions)
+        ],
         verified_actions=[VerifierAction.model_validate(a) for a in inp.pool_b_verifier_actions],
     )
     try:
