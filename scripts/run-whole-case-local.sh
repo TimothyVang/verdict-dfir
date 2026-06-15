@@ -70,6 +70,7 @@ for entry in "${TARGETS[@]}"; do
   label="${entry%%	*}"; path="${entry##*	}"
   safe=$(printf '%s' "$label" | tr ':/ ' '___')
   summ="$OUT/$safe.run-summary.json"
+  run_status=0
   if [ -s "$summ" ]; then
     echo "$(ts) [$i/${#TARGETS[@]}] SKIP $label (done)"
   else
@@ -86,6 +87,12 @@ for entry in "${TARGETS[@]}"; do
   if [ ! -s "$summ" ]; then
     echo "$(ts)        missing run summary for $label" >&2
     failed=1
+    python3 - "$label" "$run_status" "$RESULTS" <<'PY'
+import json, sys
+label, status, res = sys.argv[1:4]
+row = {"host": label, "verdict": "ERROR", "exit_code": int(status)}
+open(res, "a").write(json.dumps(row) + "\n")
+PY
     continue
   fi
   if ! python3 - "$label" "$summ" "$RESULTS" <<'PY'
