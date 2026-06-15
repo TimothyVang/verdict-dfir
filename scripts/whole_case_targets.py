@@ -38,7 +38,20 @@ def _make_read_only(path: Path) -> None:
     path.chmod(path.stat().st_mode & ~0o222)
 
 
+def _reject_symlink(path: Path) -> None:
+    if path.is_symlink():
+        raise RuntimeError(f"staged xartifact path must not be a symlink: {path}")
+
+
+def _reject_staging_symlinks(path: Path, out_dir: Path) -> None:
+    current = out_dir
+    for part in path.relative_to(out_dir).parts:
+        current = current / part
+        _reject_symlink(current)
+
+
 def _copy_read_only(source: Path, destination: Path) -> None:
+    _reject_symlink(destination)
     if destination.exists():
         if source.samefile(destination):
             raise RuntimeError(
@@ -63,6 +76,7 @@ def _add_target(targets: list[Target], seen: set[str], label: str, path: Path) -
 
 def _stage_base_file_xartifact(disk: Path, memory: Path, out_dir: Path) -> Path:
     xartifact_dir = out_dir / "_xartifact" / "base-file"
+    _reject_staging_symlinks(xartifact_dir, out_dir)
     xartifact_dir.mkdir(parents=True, exist_ok=True)
     _copy_read_only(disk, xartifact_dir / BASE_FILE_DISK)
     _copy_read_only(memory, xartifact_dir / BASE_FILE_MEMORY)

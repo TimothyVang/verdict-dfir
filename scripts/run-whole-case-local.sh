@@ -39,13 +39,18 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROOT="$1"
 ROOT="$(cd "$ROOT" && pwd)"
 OUT="${2:-$REPO/tmp/whole-case-local/$(basename "$ROOT")}"
-mkdir -p "$OUT"
 ts() { date -u +%H:%M:%S; }
 
 # --- build the target list: "label<TAB>path" ---
 TARGETS=()
 TARGETS_FILE="$OUT/targets.tsv"
-python3 "$REPO/scripts/whole_case_targets.py" "$ROOT" "$OUT" > "$TARGETS_FILE" || exit $?
+TMP_TARGETS="$(mktemp "${TMPDIR:-/tmp}/whole-case-targets.XXXXXX")" || exit 1
+cleanup_targets_tmp() { rm -f "$TMP_TARGETS"; }
+trap cleanup_targets_tmp EXIT
+python3 "$REPO/scripts/whole_case_targets.py" "$ROOT" "$OUT" > "$TMP_TARGETS" || exit $?
+mkdir -p "$OUT"
+mv "$TMP_TARGETS" "$TARGETS_FILE" || exit $?
+trap - EXIT
 while IFS=$'\t' read -r label path; do
   [ -n "$label" ] || continue
   TARGETS+=("$label	$path")
