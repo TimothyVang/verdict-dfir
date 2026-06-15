@@ -4,12 +4,11 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import os
-from pathlib import Path
 import shutil
 import sys
-
+from dataclasses import dataclass
+from pathlib import Path
 
 BASE_FILE_DISK = "base-file-cdrive.E01"
 BASE_FILE_MEMORY = "base-file-memory.img"
@@ -73,7 +72,9 @@ def enumerate_targets(root: Path, out_dir: Path) -> list[Target]:
 
     base_disk = disk_candidates.get(BASE_FILE_DISK)
     if base_disk is not None and root_base_memory.exists():
-        xartifact_path = _stage_base_file_xartifact(base_disk, root_base_memory, out_dir)
+        xartifact_path = _stage_base_file_xartifact(
+            base_disk, root_base_memory, out_dir
+        )
         _add_target(targets, seen, "xart:base-file", xartifact_path)
 
     return targets
