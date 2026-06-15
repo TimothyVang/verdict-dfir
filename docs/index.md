@@ -23,8 +23,7 @@ were examined through replayable tools, not that an entire system is clean.
 The public release repository is
 [`TimothyVang/verdict-dfir`](https://github.com/TimothyVang/verdict-dfir). The
 older `TimothyVang/sans-hackathon` repository is the historical development
-remote for the SANS Find Evil! entry and should not be treated as a separate
-product release channel.
+remote and should not be treated as a separate product release channel.
 
 ## Verification Model
 
