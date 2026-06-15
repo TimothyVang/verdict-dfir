@@ -68,6 +68,21 @@ winget install Velociraptor  # or github.com/Velocidex/velociraptor/releases
 # That's it — `.mcp.json` points at local subprocesses by default.
 ```
 
+### Path C — Free smoke run (no VM, no disk image, no paid service)
+
+You do not need the SIFT VM, a disk image, or any paid service to try VERDICT.
+Memory, EVTX, PCAP, and Velociraptor evidence run entirely on the local host:
+
+```bash
+bash scripts/fetch-fixtures.sh        # stage public test data (sources + SHA-256 in docs/DATASET.md)
+scripts/verdict fixtures/<staged-evtx-or-pcap>   # local run -> signed verdict + report
+```
+
+The only hard requirement is a Claude credential. A Claude Code subscription or a
+`CLAUDE_CODE_OAUTH_TOKEN` runs with no metered cost; `ANTHROPIC_API_KEY` is billed
+per token by Anthropic. The SIFT VM (Path A) is needed only to extract artifacts
+from raw `.E01`/`.dd` disk images — everything else is local and free.
+
 ---
 
 ## 2. Choose a run mode
