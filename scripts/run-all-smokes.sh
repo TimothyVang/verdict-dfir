@@ -154,6 +154,10 @@ run_smoke \
     "python3 scripts/starter-data-smoke.py"
 
 run_smoke \
+    "windows-goldens-smoke (Windows log/memory/disk golden inventory)" \
+    "python3 scripts/windows-goldens-smoke.py"
+
+run_smoke \
     "verdict-smoke (the one command, --dry-run)" \
     "python3 scripts/verdict-smoke.py"
 

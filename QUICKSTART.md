@@ -1,4 +1,4 @@
-# Find Evil! — Quickstart
+# VERDICT DFIR — Quickstart
 
 For the project pitch + claims, see [README.md](README.md). For the full doc map, see [`docs/README.md`](docs/README.md).
 

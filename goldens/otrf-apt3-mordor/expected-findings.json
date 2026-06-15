@@ -1,0 +1,63 @@
+{
+  "_comment": [
+    "Windows EVTX/Sysmon golden for OTRF Security-Datasets compound APT3.",
+    "Source: https://github.com/OTRF/Security-Datasets/tree/master/datasets/compound/windows/apt3",
+    "The dataset replicates MITRE ATT&CK Evaluations Round 1 APT3 activity and ships Windows telemetry plus an APT3 playbook.",
+    "Ground truth is scenario/playbook-derived from the OTRF dataset and ATT&CK evaluation scope; it is strong for log-correlation coverage but still must be verified from the staged telemetry at run time."
+  ],
+  "case_id": "otrf-apt3-mordor",
+  "source_url": "https://github.com/OTRF/Security-Datasets/tree/master/datasets/compound/windows/apt3",
+  "license": "MIT License (OTRF Security-Datasets)",
+  "verdict": "SUSPICIOUS",
+  "min_recall_percent": 60,
+  "findings": [
+    {
+      "finding_id": "otrf-apt3-001",
+      "description": "APT3 emulation starts with script-based execution through Empire or Caldera stagers on Windows hosts",
+      "mitre_technique": "T1059.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Windows Sysmon / PowerShell / process creation events from compound/windows/apt3"
+    },
+    {
+      "finding_id": "otrf-apt3-002",
+      "description": "Discovery activity enumerates system network configuration, owner or user, processes, services, groups, accounts, remote systems, and registry state",
+      "mitre_technique": "T1082",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "APT3 Empire resource files 12.A through 13.C and matching Windows event telemetry"
+    },
+    {
+      "finding_id": "otrf-apt3-003",
+      "description": "Credential-access phase includes keylogging or credential collection from files and password spraying",
+      "mitre_technique": "T1056.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "APT3 Empire resource files 15.A, 15.B, and 16.A plus Windows host events"
+    },
+    {
+      "finding_id": "otrf-apt3-004",
+      "description": "Lateral movement uses administrative shares, remote file copy, remote service execution, or WMI/DCOM execution between Windows hosts",
+      "mitre_technique": "T1021.002",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "APT3 resource files 16.B through 16.L and Sysmon process/network events"
+    },
+    {
+      "finding_id": "otrf-apt3-005",
+      "description": "Persistence or privilege escalation modifies Windows registry, scheduled tasks, or accessibility features",
+      "mitre_technique": "T1547.001",
+      "confidence": "INFERRED",
+      "artifact_class": "log",
+      "artifact_hint": "APT3 resource files 14.A, 17.A, and 17.C with registry/task/process telemetry"
+    },
+    {
+      "finding_id": "otrf-apt3-006",
+      "description": "Collection and exfiltration sequence stages files, compresses data, exfiltrates over an alternate protocol, and deletes artifacts",
+      "mitre_technique": "T1560.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "APT3 resource files 18.A through 19.D and Windows host/network telemetry"
+    }
+  ]
+}

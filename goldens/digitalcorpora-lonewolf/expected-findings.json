@@ -1,0 +1,44 @@
+{
+  "_comment": [
+    "Windows disk+memory golden candidate for Digital Corpora 2018 Lone Wolf scenario.",
+    "Source: https://digitalcorpora.org/corpora/scenarios/2018-lone-wolf-scenario/",
+    "Official teacher guide is password-protected and faculty-gated, so this golden is report-output/scenario-derived until an authorized answer key is available.",
+    "Use as a Windows disk+memory coverage benchmark, not as an authoritative court-ready answer key."
+  ],
+  "status": "teacher_guide_gated_candidate",
+  "case_id": "digitalcorpora-lonewolf",
+  "source_url": "https://digitalcorpora.org/corpora/scenarios/2018-lone-wolf-scenario/",
+  "license": "Digital Corpora scenario data; see source terms and teacher-guide restrictions",
+  "verdict": "INDETERMINATE",
+  "min_recall_percent": 0,
+  "required_artifacts": [
+    "LoneWolf.E01-LoneWolf.E09",
+    "memdump.mem",
+    "pagefile.sys",
+    "FTK Imager Log.txt"
+  ],
+  "findings": [],
+  "lead_hypotheses": [
+    {
+      "lead_id": "lw-lead-001",
+      "description": "Cloud-client artifacts are expected because the scenario is designed for cloud-forensics analysis of client-side remnants",
+      "mitre_technique": "T1530",
+      "artifact_class": "disk",
+      "artifact_hint": "Browser, sync-client, file-system, registry, and application artifacts in the E01 set"
+    },
+    {
+      "lead_id": "lw-lead-002",
+      "description": "Planning or concerning-behavior artifacts should be sought across documents, browser history, downloads, and recovered files",
+      "mitre_technique": null,
+      "artifact_class": "disk",
+      "artifact_hint": "Forensic Outputs package and disk image user-profile artifacts; exact answer key is teacher-guide gated"
+    },
+    {
+      "lead_id": "lw-lead-003",
+      "description": "Memory or pagefile data may corroborate active browser, cloud client, document, or user-session activity from the disk timeline",
+      "mitre_technique": null,
+      "artifact_class": "memory",
+      "artifact_hint": "memdump.mem and pagefile.sys correlation with disk/user-profile artifacts; exact answer key is teacher-guide gated"
+    }
+  ]
+}
