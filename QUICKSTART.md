@@ -26,7 +26,7 @@ run-mode catalog.
 
 ## 1. Pick your environment (one-time, ~15 min)
 
-### Path A — SIFT VM (recommended; matches the SANS judging environment)
+### Path A — SIFT VM (recommended; the reference forensic environment)
 
 **The one-command way** — install local prerequisites, attempt the gated OVA fetch via Playwright,
 and build the VM when the download succeeds:
@@ -233,6 +233,6 @@ For the full doc map (every file with status badge + one-line purpose), see [`do
 4. [ ] Cross-host corroboration done (if multi-host case)
 5. [ ] Synthetic-benign baseline run produced zero findings
 6. [ ] Report rendered to PDF or HTML in the case output directory
-7. [ ] Readiness packet created and reviewed if this is a submission/customer-review candidate
+7. [ ] Readiness packet created and reviewed if this is a release/customer-review candidate
 
 If all relevant checks are complete, you're done. If any are skipped, document the reason in the report's §8 (Limitations).

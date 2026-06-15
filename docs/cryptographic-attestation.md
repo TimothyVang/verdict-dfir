@@ -1,33 +1,32 @@
 # Cryptographic Chain of Custody
 
-This document is the canonical answer to "how does Find Evil's
+This document is the canonical answer to "how does VERDICT's
 cryptographic attestation work, and how do I verify a manifest
 someone else produced?" The story is scattered across CLAUDE.md,
 README.md, the DC investigation report, and the demo script — this
 file collects the load-bearing claims in one place.
 
-> **Why this matters:** SANS Find Evil! 2026 rubric criterion #5
-> ("Audit Trail Quality") asks whether the agent's findings are
-> independently verifiable by a third party with no trust in the
-> agent itself. Find Evil's answer is "yes, by `manifest_verify`
-> alone — no network, no trusted third-party servers." This
-> supports a FRE 902(14) self-authenticating-evidence claim, with
-> the honest caveat documented below.
+> **Why this matters:** audit-trail quality turns on whether the
+> agent's findings are independently verifiable by a third party
+> with no trust in the agent itself. VERDICT's answer is "yes, by
+> `manifest_verify` alone — no network, no trusted third-party
+> servers." This supports a FRE 902(14) self-authenticating-evidence
+> claim, with the honest caveat documented below.
 
 > **Amendment A5 (2026-05-01):** the OpenTimestamps + Bitcoin
 > anchoring tier was removed. The chain dropped from five links
 > to four primitives composed across three tiers (audit chain →
 > Merkle root → manifest signature). The Bitcoin tier required
 > network reach to a calendar server plus a multi-hour wait for
-> the attestation to mature, neither of which a judge scoring
-> offline can exercise. The honest implication for the FRE 902(14)
+> the attestation to mature, neither of which an offline verifier
+> can exercise. The honest implication for the FRE 902(14)
 > claim is in the "What FRE 902(14) requires" section.
 
 ---
 
 ## The three-link chain
 
-Every Find Evil! investigation produces a `run.manifest.json`
+Every VERDICT investigation produces a `run.manifest.json`
 backed by composed cryptographic primitives across three tiers:
 
 ```
@@ -105,8 +104,8 @@ Python side composes the chain and signs.
 
 ## How a third party verifies offline
 
-A judge, regulator, or counter-party who has zero trust in the
-agent can verify a Find Evil! manifest with one tool, offline:
+An auditor, regulator, or counter-party who has zero trust in the
+agent can verify a VERDICT manifest with one tool, offline:
 
 ```bash
 # The manifest signature, audit chain, and Merkle root.
@@ -202,11 +201,11 @@ and certification (the Rule 902(11) notice requirement).
 > exist.** Neither 902(13) nor 902(14) requires a third-party
 > timestamp. The rule requires only the qualified-person
 > certification via a process of digital identification (ordinarily
-> hashing) plus 902(11) notice. Find Evil! therefore satisfies
+> hashing) plus 902(11) notice. VERDICT therefore satisfies
 > 902(14) on hash-value identification alone — the sigstore/Rekor
 > signature is **defense-in-depth, not a legal prerequisite.**
 
-**How Find Evil! meets the actual requirement:**
+**How VERDICT meets the actual requirement:**
 
 - **Accurate process of digital identification (the rule's core):**
   every evidence image is SHA-256 hashed at `case_open` and every
@@ -221,7 +220,7 @@ and certification (the Rule 902(11) notice requirement).
   append-only inclusion proof, establishing that the signed body
   existed at or before the entry's logged time, attested by an
   independent party (the Linux Foundation) with no relationship to
-  Find Evil!'s authors. This *strengthens* provenance and gives a
+  VERDICT's authors. This *strengthens* provenance and gives a
   lower-bound time, but the 902(14) admissibility claim does not
   depend on it.
   - **Historical (pre-A5):** the shipped chain is Rekor-only for this
@@ -231,9 +230,9 @@ and certification (the Rule 902(11) notice requirement).
     timestamp; Rekor trusts the LF to operate the log honestly. Either
     way, this is supplementary to — not part of — the 902(14) requirement.
 
-A judge looking at a `run.manifest.json` three years from now
+A court looking at a `run.manifest.json` three years from now
 establishes the record's integrity from the hash chain and signature
-offline, without trusting Find Evil! or the analyst. Trusting Rekor
+offline, without trusting VERDICT or the analyst. Trusting Rekor
 not to have been silently rewritten is relevant only to the
 *supplementary* time claim, not to the core 902(14) self-
 authentication, which rests on hash-value identification.
@@ -313,8 +312,8 @@ Honest disclosure (per `docs/false-positives.md` and SOUL.md):
   every Finding cites a `tool_call_id`)
 - `agent-config/SOUL.md` (epistemic hierarchy: CONFIRMED >
   INFERRED > HYPOTHESIS)
-- `agent-config/JUDGING.md` (pre-submission self-assessment rubric;
-  graded out-of-band by `scripts/self-score.py`, not part of the chain)
+- `agent-config/JUDGING.md` (after-the-fact self-assessment rubric;
+  scored out-of-band by `scripts/self-score.py`, not part of the chain)
 - `scripts/trace-finding` (offline replay helper for completed case directories)
 - `scripts/agent-mcp-smoke.py` (the negative test runs in CI on
   every L1 build per `docker/l1-compose.yml`)
