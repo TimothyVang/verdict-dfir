@@ -46,3 +46,27 @@ def test_l3_fallback_fails_when_recall_percent_is_below_minimum() -> None:
     errors = validate_l3_evidence.validate_evidence(evidence)
 
     assert "recall.recall_percent must be >= recall.min_recall_percent" in errors
+
+
+def test_l3_fallback_fails_when_recall_percent_does_not_match_counts() -> None:
+    evidence = _l3_fallback_evidence()
+    evidence["recall"] = {
+        **evidence["recall"],
+        "pass": True,
+        "recalled_n": 7,
+        "expected_n": 14,
+        "recall_percent": 71,
+        "min_recall_percent": 71,
+    }
+
+    errors = validate_l3_evidence.validate_evidence(evidence)
+
+    assert "recall.recall_percent must match recalled_n / expected_n" in errors
+
+
+def test_l3_fallback_fails_when_product_commit_is_not_expected_commit() -> None:
+    evidence = _l3_fallback_evidence()
+
+    errors = validate_l3_evidence.validate_evidence(evidence, expected_commit="a" * 40)
+
+    assert "product_commit must match expected commit" in errors

@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import importlib.util
+import stat
 import sys
 from pathlib import Path
+
+import pytest
 
 _SCRIPTS = Path(__file__).resolve().parents[3] / "scripts"
 
@@ -43,8 +46,12 @@ def test_enumerates_hosts_disks_and_root_base_file_pair(tmp_path: Path) -> None:
     assert by_label["mem:base-file-memory"] == root / "base-file-memory.img"
     assert by_label["xart:base-file"] == out / "_xartifact" / "base-file"
     assert not (root / "_xartifact").exists()
-    assert (out / "_xartifact" / "base-file" / "base-file-cdrive.E01").exists()
-    assert (out / "_xartifact" / "base-file" / "base-file-memory.img").exists()
+    staged_disk = out / "_xartifact" / "base-file" / "base-file-cdrive.E01"
+    staged_memory = out / "_xartifact" / "base-file" / "base-file-memory.img"
+    assert staged_disk.exists()
+    assert staged_memory.exists()
+    assert staged_disk.stat().st_ino != (root / "base-file-cdrive.E01").stat().st_ino
+    assert not (staged_disk.stat().st_mode & stat.S_IWUSR)
 
 
 def test_does_not_duplicate_base_file_disk_when_it_is_in_disks_dir(tmp_path: Path) -> None:
@@ -58,3 +65,26 @@ def test_does_not_duplicate_base_file_disk_when_it_is_in_disks_dir(tmp_path: Pat
 
     assert labels.count("disk:base-file-cdrive") == 1
     assert "mem:base-file-memory" in labels
+
+
+def test_rejects_output_directory_inside_case_root(tmp_path: Path) -> None:
+    root = tmp_path / "case"
+    out = root / "derived-output"
+    _write(root / "base-file-cdrive.E01")
+    _write(root / "base-file-memory.img")
+
+    with pytest.raises(ValueError, match="out_dir must not be inside"):
+        whole_case_targets.enumerate_targets(root, out)
+
+
+def test_rejects_stale_existing_xartifact_copy(tmp_path: Path) -> None:
+    root = tmp_path / "case"
+    out = tmp_path / "out"
+    _write(root / "base-file-cdrive.E01")
+    _write(root / "base-file-memory.img")
+    stale = out / "_xartifact" / "base-file" / "base-file-cdrive.E01"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"stale")
+
+    with pytest.raises(RuntimeError, match="staged xartifact file does not match"):
+        whole_case_targets.enumerate_targets(root, out)
