@@ -205,6 +205,35 @@ inside the zip). **A single-file input can only ever trigger that one type's bra
 at a mixed directory for full breadth.** The supervisor stitches case_ids together via the `case_id`
 argument every tool accepts.
 
+### Multi-host fleet (many hosts / many disk images) — the scale path
+
+When the case root holds a `hosts/` and/or `disks/` subfolder (many machines, not one), run a fleet
+instead of one host at a time:
+
+```bash
+scripts/verdict <case-root> --fleet           # local
+scripts/verdict <case-root> --fleet --sift    # SIFT — recommended for disk images
+```
+
+This runs each host as its own audit-chained Case, then cross-host correlation (`fleet_correlate`),
+then a fleet report (`render_fleet_report`); outputs land in `tmp/fleet-runs/<fleet-id>/`. It is
+**resumable** — a host whose run-summary already exists is skipped — so a long fleet can be driven in
+one command. How to operate it well:
+
+1. **Validate on one host first.** Run a single representative host end to end (verdict + `manifest_verify.overall=true`) before fanning out, so a pipeline problem surfaces on host 1, not host 7.
+2. **SIFT mount-in-place for large images.** Evidence already inside the VM (e.g. a read-only shared folder) is mounted read-only *in place* — pass the in-VM path and skip copy-staging tens of GB per host. VERDICT treats an evidence path that is not on the host but exists in the VM as an in-VM path.
+3. **Manage VM space.** Per-host extracts accumulate; on a small VM, clean a finished host's extracted/mount dirs before the next host. Never delete source evidence or another tool's data without operator approval.
+4. **Fuse disk + memory for ≥2-class corroboration.** Put a host's disk image **and** its memory image in one folder so they run as a single cross-artifact Case (the memory lane first, disk lane last). This is how an EVTX-only execution/persistence lead reaches the two-artifact-class bar — pairing adds a class, it does not lower the bar.
+5. **Close the on-disk YARA gap.** Per the disk coverage-gap note above, set `FIND_EVIL_DISK_YARA_RULES` to a ruleset so `yara_scan` runs over extracted yara-targets; and when a service/driver ImagePath is flagged (e.g. an EID 7045 install), recover and scan that specific file off the mount — the yara-target heuristic may not include it. Do
+that analysis with an **audit-chained** tool (`yara_scan` / typed parse) so the file's attributes carry a
+`tool_call_id`; raw shell triage (vol/file/sha256sum) is a lead only and will not trace under
+`manifest_verify`, so a "2-artifact-class" claim needs **both** classes cited, not one in-chain + one asserted.
+6. **Custody stays per host.** Each host has its own `run.manifest.json`; the fleet correlation report is a derivative summary, not a substitute for per-host `manifest_verify`.
+
+See `MEMORY.md` for the interpretation traps that bite at scale (EID 1102 build-residue vs incident
+clears, malfind RWX false positives, and truncated-capture `pslist=0`/`malfind=0` that is "not
+analyzable," not clean).
+
 ---
 
 ## Pool biases (recap from `AGENTS.md`)

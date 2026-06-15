@@ -137,6 +137,50 @@ Expected high-value outputs:
 
 A run is not complete unless the pipeline reaches `case_open`, all Findings cite `tool_call_id`, `report_qa` is audited, and `manifest_verify.json` reports `overall: true` for the completed manifest. If `manifest_verify.json` is missing or `overall` is not `true`, report `RUN INCOMPLETE / CUSTODY INVALID` and do not describe the output as signed or customer-ready.
 
+## Large And Multi-Host Cases
+
+When the evidence is a whole-case folder (many hosts, many disk/memory images) rather than a single
+file, run it as a **fleet** instead of one host at a time:
+
+```bash
+scripts/verdict <case-root> --fleet           # local
+scripts/verdict <case-root> --fleet --sift    # SIFT (recommended for disk images)
+```
+
+Fleet mode auto-engages when `<case-root>` holds a `hosts/` and/or `disks/` subfolder. It runs each
+host as its own audit-chained Case, then cross-host correlation, then a fleet report. Outputs:
+
+```text
+tmp/fleet-runs/<fleet-id>/   fleet.json, fleet_correlation.{json,md}, FLEET_REPORT.{html,pdf}
+```
+
+Operating notes for large cases (so a run does not have to be hand-driven):
+
+- **SIFT mount-in-place for big images.** Evidence already visible inside the SIFT VM (for example a
+  read-only shared folder) is mounted read-only *in place* — pass the in-VM path and no copy-staging
+  happens. This is the right way to handle many large `.E01`s without copying tens of GB per host.
+- **Watch VM free space.** Per-host extracted artifacts accumulate in the VM; on a small VM, clean a
+  finished host's extracts before the next host. Never delete source evidence or another tool's data
+  to make room without explicit operator approval.
+- **Cross-artifact corroboration (fusion).** A folder holding a host's disk image **and** its memory
+  image runs as one Case spanning ≥2 artifact classes — the supported way to push an execution lead
+  past the two-artifact-class gate. Pairing only adds a second class; it does not lower the bar.
+- **Recommended flow:** validate the pipeline on one host first, then fan out (fleet runs are
+  resumable — a host with a completed run-summary is skipped), then correlate, then deep-dive the
+  priority hosts the correlation surfaces.
+- **Custody is still per host.** Each host carries its own `run.manifest.json` / `manifest_verify`;
+  the fleet correlation report is a derivative summary, never a substitute for per-host verification.
+- **On-disk YARA is opt-in.** The disk `yara_scan` only covers files `disk_extract_artifacts`
+  classified as yara-targets (often `ProgramData`-class), so it can miss an implant elsewhere (e.g.
+  `C:\Windows`, `\System32\drivers`). Set `FIND_EVIL_DISK_YARA_RULES` to a ruleset, and when a
+  service/driver ImagePath is flagged, scan that specific file too.
+- **Keep recovered-file analysis in the audit chain.** When you pull a flagged file (driver, binary)
+  off a mount, characterize it with an audit-chained product tool (`yara_scan` or a typed parse) so the
+  Finding carries a `tool_call_id`. Raw shell triage (vol/file/sha256sum/strings) is a lead only — a
+  Finding whose only support is out-of-chain triage will not trace under `manifest_verify`, so a
+  cross-class corroboration must have **each** class backed by a cited tool call, not one in-chain class
+  plus one analyst-asserted class.
+
 ## Development Rules
 
 When modifying VERDICT, keep changes small and evidence-safe.
