@@ -16,6 +16,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "scripts" / "verdict"
 VERDICT_SKILL = REPO_ROOT / ".claude" / "skills" / "verdict" / "SKILL.md"
+VERDICT_PLAN = (
+    REPO_ROOT
+    / "docs"
+    / "superpowers"
+    / "plans"
+    / "2026-06-14-verdict-case-root-consolidation.md"
+)
 
 
 def test_script_exists_and_executable() -> None:
@@ -113,11 +120,210 @@ def test_sift_cleanup_guard_selftest() -> None:
     ), f"SIFT cleanup guard selftest did not confirm success: {result.stdout!r}"
 
 
+def test_case_id_rejects_traversal_before_engine_args() -> None:
+    commands = [
+        [
+            "bash",
+            str(SCRIPT),
+            "README.md",
+            "--dry-run",
+            "--skip-build",
+            "--case-id",
+            "../../outside",
+        ],
+        [
+            "bash",
+            str(SCRIPT),
+            "README.md",
+            "--dry-run",
+            "--skip-build",
+            "--case-id=../../outside",
+        ],
+        [
+            "bash",
+            str(SCRIPT),
+            "README.md",
+            "--dry-run",
+            "--skip-build",
+            "--",
+            "--case-id",
+            "../../outside",
+        ],
+        [
+            "bash",
+            str(SCRIPT),
+            "README.md",
+            "--dry-run",
+            "--skip-build",
+            "--",
+            "--case-id=../../outside",
+        ],
+    ]
+    for command in commands:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=10)
+        combined = result.stdout + result.stderr
+        assert result.returncode != 0, f"unsafe --case-id was accepted: {combined!r}"
+        assert (
+            "unsafe --case-id" in combined
+            or "--case-id must be a top-level" in combined
+        ), f"unsafe --case-id lacked clear error: {combined!r}"
+
+
+def test_case_id_validation_happens_before_preflight_and_sift() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    validation = 'CASE_ID_OVERRIDE="$(safe_case_id "${CASE_ID_OVERRIDE}")"'
+    assert validation in text, "verdict should validate top-level --case-id"
+    assert text.index(validation) < text.index(
+        "# Resolve evidence"
+    ), "verdict should reject unsafe --case-id before evidence resolution side effects"
+    assert text.index(validation) < text.index(
+        "# 1. preflight"
+    ), "verdict should reject unsafe --case-id before preflight/build side effects"
+    assert text.index(validation) < text.index(
+        "# 3. SIFT-VM toggle"
+    ), "verdict should reject unsafe --case-id before SIFT SSH/staging side effects"
+
+
+def test_case_dir_resolution_selftest() -> None:
+    env = {**os.environ, "FINDEVIL_VERDICT_SELFTEST": "case-dir-resolution"}
+    result = subprocess.run(
+        ["bash", str(SCRIPT), "--dry-run", "--skip-build"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+        env=env,
+    )
+    assert (
+        result.returncode == 0
+    ), f"case dir resolution selftest failed: stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert (
+        "case dir resolution selftest OK" in result.stdout
+    ), f"case dir resolution selftest did not confirm success: {result.stdout!r}"
+    assert (
+        "case dir resolution mixed rejection OK" in result.stdout
+    ), f"case dir resolution selftest did not cover mixed rejection: {result.stdout!r}"
+    assert (
+        "case dir fallback symlink rejection OK" in result.stdout
+    ), f"case dir resolution selftest did not cover symlink fallback rejection: {result.stdout!r}"
+
+
+def test_case_id_ownership_selftest() -> None:
+    env = {**os.environ, "FINDEVIL_VERDICT_SELFTEST": "case-id-ownership"}
+    result = subprocess.run(
+        ["bash", str(SCRIPT), "--dry-run", "--skip-build"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+        env=env,
+    )
+    assert (
+        result.returncode == 0
+    ), f"case id ownership selftest failed: stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert (
+        "case id ownership selftest OK" in result.stdout
+    ), f"case id ownership selftest did not confirm success: {result.stdout!r}"
+
+
+def test_case_layout_ownership_selftest() -> None:
+    env = {**os.environ, "FINDEVIL_VERDICT_SELFTEST": "case-layout-ownership"}
+    result = subprocess.run(
+        ["bash", str(SCRIPT), "--dry-run", "--skip-build"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+        env=env,
+    )
+    assert (
+        result.returncode == 0
+    ), f"case layout ownership selftest failed: stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert (
+        "case layout ownership selftest OK" in result.stdout
+    ), f"case layout ownership selftest did not confirm success: {result.stdout!r}"
+    assert (
+        "case sidecar symlink rejection OK" in result.stdout
+    ), f"case layout ownership selftest did not cover sidecar symlink rejection: {result.stdout!r}"
+    assert (
+        "case sidecar parent symlink rejection OK" in result.stdout
+    ), f"case layout ownership selftest did not cover sidecar parent symlink rejection: {result.stdout!r}"
+
+
+def test_run_summary_rejects_outside_project_tmp_before_engine() -> None:
+    result = subprocess.run(
+        [
+            "bash",
+            str(SCRIPT),
+            "README.md",
+            "--dry-run",
+            "--skip-build",
+            "--run-summary",
+            "/tmp/verdict-outside.json",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0, f"out-of-tree run summary was accepted: {combined!r}"
+    assert (
+        "run summary" in combined.lower()
+    ), f"run summary rejection lacked clear error: {combined!r}"
+
+
+def test_run_summary_requires_value() -> None:
+    result = subprocess.run(
+        [
+            "bash",
+            str(SCRIPT),
+            "README.md",
+            "--dry-run",
+            "--skip-build",
+            "--run-summary",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    combined = result.stdout + result.stderr
+    assert (
+        result.returncode != 0
+    ), f"missing --run-summary value was accepted: {combined!r}"
+    assert (
+        "--run-summary requires a value" in combined
+    ), f"missing value error was unclear: {combined!r}"
+
+
+def test_case_local_run_summary_path_does_not_precreate_case_dir() -> None:
+    case_id = f"summary-case-{os.getpid()}"
+    result = subprocess.run(
+        [
+            "bash",
+            str(SCRIPT),
+            "README.md",
+            "--dry-run",
+            "--skip-build",
+            "--case-id",
+            case_id,
+            "--run-summary",
+            f"tmp/auto-runs/{case_id}/summaries/custom.json",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    combined = result.stdout + result.stderr
+    assert (
+        result.returncode == 0
+    ), f"case-local run summary pre-created case dir: {combined!r}"
+
+
 def test_sift_staging_defaults_to_run_owned_cleanup() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
     assert (
-        ".verdict-staging" in text
+        "staging/sift" in text
     ), "verdict should stage SIFT evidence under a run-owned staging root"
+    assert (
+        "FINDEVIL_SIFT_CASE_STAGING_ROOT" in text
+    ), "host-path SIFT staging should require a guest-visible project staging root"
     assert (
         "STAGED_REMOTE_PATH" in text
     ), "verdict should record the current run's staged evidence path"
@@ -145,18 +351,87 @@ def test_sift_staging_has_keep_opt_out() -> None:
     ), "verdict should report retained staging when the opt-out is used"
 
 
+def test_verdict_uses_case_local_artifact_layout() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "CASE_ROOT" in text, "verdict should define one canonical case root"
+    assert (
+        'CASE_ROOT="tmp/auto-runs"' in text
+    ), "case root should match engine output root"
+    assert (
+        "FINDEVIL_VERDICT_CASE_ROOT" not in text
+    ), "verdict should not advertise an output root override the engine does not honor"
+    assert "CASE_STAGING_DIR" in text, "verdict should define case-local staging"
+    assert "CASE_SUMMARY_DIR" in text, "verdict should define case-local summaries"
+    assert "CASE_LOG_DIR" in text, "verdict should define case-local logs"
+
+
+def test_sift_staging_is_case_local_and_marker_guarded() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "staging/sift" in text, "SIFT staging should live under the case directory"
+    assert (
+        ".verdict-stage-marker" in text
+    ), "SIFT staging cleanup should require a marker"
+    assert (
+        "safe_sift_case_staging_parent" in text
+    ), "SIFT host-path staging should validate the configured case staging parent"
+    assert (
+        "GEVDIR}/.verdict-staging" not in text
+    ), "SIFT staging should not default to legacy GEVDIR staging"
+
+
+def test_guest_mounted_evidence_bypasses_copy_staging() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert (
+        "is_guest_mounted_evidence" in text
+    ), "verdict should detect guest-mounted evidence"
+    assert (
+        "safe_guest_mounted_evidence_path" in text
+    ), "guest-mounted evidence paths should reject traversal before bypassing staging"
+    assert (
+        "validate_guest_mounted_evidence" in text
+    ), "guest-mounted evidence paths should be validated in the VM"
+    assert (
+        "/mnt/hgfs/" in text
+    ), "VMware HGFS mounted evidence should bypass copy staging"
+    assert (
+        "treating it as an in-VM path" in text
+    ), "existing direct guest path behavior should remain"
+    assert (
+        "/proc/self/mountinfo" in text
+    ), "guest-mounted evidence should verify mount options before direct use"
+    assert (
+        "read-only" in text
+    ), "guest-mounted evidence should require a read-only mount"
+    assert (
+        text.count("require_read_only_mount(path)") >= 2
+    ), "guest-mounted evidence should require read-only mounts for nested entries"
+
+
+def test_case_root_is_ignored() -> None:
+    ignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
+    assert (
+        "tmp/" in ignore or "tmp/auto-runs/" in ignore
+    ), "case root must remain ignored"
+
+
 def test_sift_cleanup_uses_remote_realpath_guards() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
     assert (
         "prepare_sift_staging_parent" in text
     ), "verdict should validate the remote staging parent before mkdir/copy"
     assert (
+        "mkdir -p -- ${qparent}" not in text
+    ), "verdict should not create the SIFT staging parent before symlink/component validation"
+    assert (
+        "os.lstat(next_path)" in text
+    ), "verdict should lstat existing remote staging parent components before creating children"
+    assert (
         "create_sift_staging_root" in text
     ), "verdict should create a fresh owned staging root before copy"
     assert "realpath -e" in text, "verdict should validate physical remote paths"
     assert (
         "[ ! -L ${qparent} ]" in text
-    ), "verdict should refuse a symlinked .verdict-staging parent"
+    ), "verdict should refuse a symlinked SIFT staging parent"
     assert (
         "[ ! -L ${qroot} ]" in text
     ), "verdict should refuse a symlinked current-run staging root"
@@ -179,6 +454,32 @@ def test_sift_stage_id_collision_fails_closed() -> None:
     ), "verdict should fail closed if the generated/overridden staging root already exists"
 
 
+def test_sift_host_staging_is_bound_to_case_id() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert (
+        "sift_case_id_from_staging_parent" in text
+    ), "SIFT host-path staging should extract the case id from FINDEVIL_SIFT_CASE_STAGING_ROOT"
+    assert (
+        "host evidence copy requires --case-id" in text
+    ), "SIFT host-path staging should require an explicit case id"
+    assert (
+        "does not match --case-id" in text
+    ), "SIFT host-path staging should reject a staging root for a different case id"
+    assert (
+        "FIND_EVIL_GUEST_REPO" in text
+    ), "SIFT host-path staging should be bound to the configured guest project root"
+
+
+def test_sift_case_id_reserves_host_case_dir() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert (
+        'if [[ "${SIFT}" == "1" ]]; then' in text
+    ), "SIFT runs should reserve the host-side case directory before execution"
+    assert (
+        'create_owned_case_dir "${CASE_DIR}" "$(case_root_abs)"' in text
+    ), "SIFT case reservation should use the same owned-case guard as local mode"
+
+
 def test_sift_run_owned_staging_never_reuses_existing_copy() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
     assert "should_stage" not in text, "run-owned SIFT staging should always copy fresh"
@@ -190,7 +491,7 @@ def test_sift_run_owned_staging_never_reuses_existing_copy() -> None:
 def test_verdict_skill_documents_sift_staging_cleanup_contract() -> None:
     text = VERDICT_SKILL.read_text(encoding="utf-8")
     assert (
-        "current-run SIFT staging" in text
+        "current-run sift staging" in text.lower()
     ), "repo-local verdict skill should document automatic SIFT staging cleanup"
     assert (
         "--keep-sift-staging" in text
@@ -198,6 +499,52 @@ def test_verdict_skill_documents_sift_staging_cleanup_contract() -> None:
     assert (
         "legacy root-level staging" in text
     ), "repo-local verdict skill should distinguish automatic cleanup from legacy staging cleanup"
+    assert (
+        "n8n <fired" not in text
+    ), "repo-local verdict skill should not overclaim n8n reachability as fired actions"
+    assert (
+        "reachable/recorded" in text
+    ), "repo-local verdict skill should describe n8n as reachable/recorded, skipped, or unavailable"
+    assert (
+        "ARTIFACT=" in text
+    ), "repo-local verdict skill SIFT example should use shell-safe artifact variables"
+    assert (
+        'CASE_ID="auto-$(python3' in text
+    ), "repo-local verdict skill should generate shell-safe case ids in examples"
+    assert (
+        "bash scripts/verdict <evidence>" not in text
+    ), "repo-local verdict skill local example should not use shell redirection-like placeholders"
+    assert (
+        'EVIDENCE="/path/to/evidence"' in text
+    ), "repo-local verdict skill local example should use a shell-safe evidence variable"
+    assert (
+        "tmp/auto-runs/<case-id>/summaries/run-summary.json" in text
+    ), "repo-local verdict skill should prefer case-local run summaries"
+    assert (
+        "Read `tmp/verdict-last-run.json` if it exists" not in text
+    ), "repo-local verdict skill should not prefer potentially stale last-run summaries"
+
+
+def test_plan_documents_case_local_summary_flow() -> None:
+    text = VERDICT_PLAN.read_text(encoding="utf-8")
+    sync = 'sync_case_summary "${SUMMARY}"'
+    copy = 'copy_requested_run_summary "${SUMMARY}"'
+    assert (
+        'SUMMARY="${RUN_SUMMARY:-tmp/verdict-last-run.json}"' not in text
+    ), "plan should not preserve stale default run-summary behavior"
+    assert (
+        'cp -f -- "${SUMMARY}"' not in text
+    ), "plan should not document raw summary copies"
+    assert (
+        'SUMMARY="${CASE_SUMMARY_DIR}/engine-run-summary.json"' in text
+    ), "plan should document case-local engine summary writes"
+    assert sync in text, "plan should document case-local summary syncing"
+    assert (
+        copy in text
+    ), "plan should document symlink-safe requested summary publishing"
+    assert text.index(sync) < text.index(
+        copy
+    ), "plan should sync case summary before requested summary copy"
 
 
 def test_sift_directory_staging_uses_remote_type_and_fingerprint_helpers() -> None:
@@ -313,7 +660,40 @@ def main() -> int:
             "sift_staging_defaults_to_run_owned_cleanup",
             test_sift_staging_defaults_to_run_owned_cleanup,
         ),
+        (
+            "case_id_rejects_traversal_before_engine_args",
+            test_case_id_rejects_traversal_before_engine_args,
+        ),
+        (
+            "case_id_validation_happens_before_preflight_and_sift",
+            test_case_id_validation_happens_before_preflight_and_sift,
+        ),
+        ("case_dir_resolution_selftest", test_case_dir_resolution_selftest),
+        ("case_id_ownership_selftest", test_case_id_ownership_selftest),
+        ("case_layout_ownership_selftest", test_case_layout_ownership_selftest),
+        (
+            "run_summary_rejects_outside_project_tmp_before_engine",
+            test_run_summary_rejects_outside_project_tmp_before_engine,
+        ),
+        ("run_summary_requires_value", test_run_summary_requires_value),
+        (
+            "case_local_run_summary_path_does_not_precreate_case_dir",
+            test_case_local_run_summary_path_does_not_precreate_case_dir,
+        ),
         ("sift_staging_has_keep_opt_out", test_sift_staging_has_keep_opt_out),
+        (
+            "verdict_uses_case_local_artifact_layout",
+            test_verdict_uses_case_local_artifact_layout,
+        ),
+        (
+            "sift_staging_is_case_local_and_marker_guarded",
+            test_sift_staging_is_case_local_and_marker_guarded,
+        ),
+        (
+            "guest_mounted_evidence_bypasses_copy_staging",
+            test_guest_mounted_evidence_bypasses_copy_staging,
+        ),
+        ("case_root_is_ignored", test_case_root_is_ignored),
         (
             "sift_cleanup_uses_remote_realpath_guards",
             test_sift_cleanup_uses_remote_realpath_guards,
@@ -327,12 +707,24 @@ def main() -> int:
             test_sift_stage_id_collision_fails_closed,
         ),
         (
+            "sift_host_staging_is_bound_to_case_id",
+            test_sift_host_staging_is_bound_to_case_id,
+        ),
+        (
+            "sift_case_id_reserves_host_case_dir",
+            test_sift_case_id_reserves_host_case_dir,
+        ),
+        (
             "sift_run_owned_staging_never_reuses_existing_copy",
             test_sift_run_owned_staging_never_reuses_existing_copy,
         ),
         (
             "verdict_skill_documents_sift_staging_cleanup_contract",
             test_verdict_skill_documents_sift_staging_cleanup_contract,
+        ),
+        (
+            "plan_documents_case_local_summary_flow",
+            test_plan_documents_case_local_summary_flow,
         ),
         (
             "sift_directory_staging_uses_remote_type_and_fingerprint_helpers",
