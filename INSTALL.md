@@ -17,7 +17,7 @@ product MCP servers and the host DFIR toolchain; Claude Code auto-spawns the ser
 Install the required OS tools and configure one Claude credential first. The first-run setup can
 bootstrap the C toolchain (`build-essential` on Debian/Ubuntu), missing cargo/uv via their official
 installers, and Node 20 via `fnm` when needed (best-effort, since Node is optional):
-`bash scripts/setup` calls `scripts/install.sh --bootstrap`. For fail-closed CI/judge checks, run
+`bash scripts/setup` calls `scripts/install.sh --bootstrap`. For fail-closed CI checks, run
 `bash scripts/install.sh` without `--bootstrap`; it reports missing tools instead of installing them.
 
 | Tool | Version | Why | Required? |
@@ -33,7 +33,7 @@ installers, and Node 20 via `fnm` when needed (best-effort, since Node is option
 
 **Claude credential — one of three modes** (full detail in [CLAUDE.md §8](CLAUDE.md)):
 
-1. `CLAUDE_CODE_OAUTH_TOKEN` env var (from `claude setup-token`) — best for judges/automation.
+1. `CLAUDE_CODE_OAUTH_TOKEN` env var (from `claude setup-token`) — best for CI/automation.
 2. A logged-in Claude Code session (`~/.claude/` present) — the dev default.
 3. `ANTHROPIC_API_KEY` env var — direct metered API.
 
