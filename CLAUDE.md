@@ -75,6 +75,7 @@ Read `agent-config/JUDGING.md` only for after-the-fact self-assessment of a comp
 These rules are part of the product safety boundary.
 
 - Evidence is read-only. Do not modify source evidence, mounted evidence, or original case files.
+- Derived whole-case staging, including `_xartifact`, belongs under the run/output directory, never under the source evidence or case root.
 - Call `case_open` before evidence analysis whenever using the MCP tool surface.
 - Every Finding must cite a valid `tool_call_id` from the current Case.
 - Run `verify_finding` for each Finding and record each verifier decision with `pool_handoff` before `judge_findings` consumes the Findings.
@@ -185,6 +186,7 @@ Operating notes for large cases (so a run does not have to be hand-driven):
 
 When modifying VERDICT, keep changes small and evidence-safe.
 
+- Push review branches to `origin` / `TimothyVang/sans-hackathon` first. Do not push, tag, or publish to `release` / `TimothyVang/verdict-dfir` until the dev branch has been reviewed and explicitly approved for promotion.
 - Prefer surgical diffs over rewrites.
 - Follow existing Rust, Python, and web package boundaries.
 - Do not restore removed Product orchestrator surfaces such as the old graph, API, CLI, supervisor, specialists, FastAPI, or LangGraph runtime code under `services/agent/`.

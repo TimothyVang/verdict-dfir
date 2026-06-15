@@ -24,6 +24,7 @@ Verdict words are scoped:
 ## Required Guardrails
 
 - Evidence is read-only. Never mutate source evidence, mounted evidence, or original case files.
+- Derived whole-case staging, including `_xartifact`, must be written under the run/output directory, never under the source evidence or case root.
 - Every Finding must cite a current-case `tool_call_id`; uncited Findings are invalid.
 - Run `verify_finding` for each Finding and record each verifier decision with `pool_handoff` before `judge_findings` consumes the Findings.
 - `report_qa` must be audited before `manifest_finalize`; a failed or missing report QA gate blocks customer-ready output and requires expert review.
@@ -114,6 +115,8 @@ Smokes are CI predictors. They are not a substitute for a real investigation.
 Do not restore removed orchestrator code under `services/agent/` such as `graph.py`, `api.py`, `cli.py`, `supervisor.py`, `specialists/`, FastAPI, or LangGraph Product runtime files. Claude Code is the investigation orchestrator.
 
 ## Release Hygiene
+
+Development branches must be pushed to `origin` / `TimothyVang/sans-hackathon` for review first. Do not push, tag, or publish to `release` / `TimothyVang/verdict-dfir` until the reviewed dev commit is explicitly approved for promotion.
 
 Do not commit or copy private/bulky evidence into public release snapshots:
 
