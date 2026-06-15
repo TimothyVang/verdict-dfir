@@ -1,12 +1,12 @@
 name: L0 Static Checks
 
 # Spec #3 §4.1 — fastest possible structural gate on PRs and branch pushes.
-# Runs on every change. Required status check on master (see glue Spec #4 §6).
+# Runs on PRs and master pushes. Required status check on master (see glue Spec #4 §6).
 # Budget: 30-60s wall clock on ubuntu-24.04.
 
 on:
   push:
-    branches: ['**']
+    branches: [master]
   pull_request:
     branches: [master]
 
