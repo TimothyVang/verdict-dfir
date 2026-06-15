@@ -1,6 +1,6 @@
 # False-Positive Prevention — Operator's Guide
 
-Find Evil! has **three architectural layers** that filter false positives before findings reach the analyst, plus **four operational habits** the analyst applies on top. This document explains both.
+VERDICT has **three architectural layers** that filter false positives before findings reach the analyst, plus **four operational habits** the analyst applies on top. This document explains both.
 
 ---
 

@@ -1,8 +1,8 @@
 # Dataset Documentation
 
-**Devpost Required Component #5** — what the agent was tested against, source of data, and what it found.
+What the agent was tested against, the source of each dataset, and what it found.
 
-This document covers every fixture the Find Evil! submission was tested against. All fixtures are either public domain, permissively licensed, or pulled from SANS's own starter case data. None are bundled in the git tree; `scripts/fetch-fixtures.sh` pulls them at CI time.
+This document covers every fixture VERDICT was tested against. All fixtures are either public domain, permissively licensed, or pulled from SANS's own starter case data. None are bundled in the git tree; `scripts/fetch-fixtures.sh` pulls them at CI time.
 
 ---
 
@@ -10,15 +10,15 @@ This document covers every fixture the Find Evil! submission was tested against.
 
 | Attribute | Value |
 |---|---|
-| Source | SANS Find Evil! official starter case data |
+| Source | SANS official starter case data |
 | URL | `https://sansorg.egnyte.com/fl/HhH7crTYT4JK` |
-| License | Distributed as hackathon starter data by SANS Institute |
-| Content | Sample disk images + memory captures (hackathon-specific) |
-| Purpose | Intended **primary** L3 golden-run fixture — what judges are most likely to test submissions against. Still a pending stub: `goldens/sans-starter/expected-findings.json` has no findings enumerated and has never been run or scored. |
+| License | Distributed as starter case data by SANS Institute |
+| Content | Sample disk images + memory captures |
+| Purpose | Intended **primary** L3 golden-run fixture — the primary reference golden fixture. Still a pending stub: `goldens/sans-starter/expected-findings.json` has no findings enumerated and has never been run or scored. |
 | SHA-256 | Required as `SANS_STARTER_SHA256` when `SANS_STARTER_URL` is set; recorded in `fixtures/sha256sums.txt` |
 | Expected findings | *(enumerated in `goldens/sans-starter/expected-findings.json` after first manual walk-through)* |
 
-**Rationale for primary status:** This dataset ships with the hackathon and is what Rob Lee and the judges are most familiar with. Optimizing for it aligns our accuracy metrics with the judging experience.
+**Rationale for primary status:** This dataset is published by SANS and is widely familiar to working DFIR practitioners. Optimizing for it aligns our accuracy metrics with a recognized reference baseline.
 
 ---
 
@@ -103,7 +103,7 @@ The fetch script is deliberately strict: SHA pin enforced when supplied, magic-b
 | Expected findings | **0** (verdict: `NO_EVIL`) |
 | Verdict | `NO_EVIL` |
 
-**Rationale:** A submission that only finds evil on evil data is useless. This fixture verifies that the agent distinguishes benign systems from compromised ones — addresses the "hallucination" criticism that Valhuntir explicitly warns about but does not measure.
+**Rationale:** A tool that only finds evil on evil data is useless. This fixture verifies that the agent distinguishes benign systems from compromised ones — addresses the "hallucination" criticism that Valhuntir explicitly warns about but does not measure.
 
 ---
 
@@ -179,7 +179,7 @@ All fixtures are fetched by `scripts/fetch-fixtures.sh` (Spec #3 Task 10). On fi
 
 Storage policy:
 - **Never committed to git.** `.gitignore` excludes `*.E01`, `*.ova`, `*.raw`, `*.mem`, `*.dd`, `*.aff`, `*.aff4`.
-- **Not bundled in Devpost submission zip.** Fixture URLs documented here; judges fetch via `scripts/fetch-fixtures.sh`.
+- **Not bundled in the release archive.** Fixture URLs documented here; operators fetch via `scripts/fetch-fixtures.sh`.
 - **Cached in GHA via `actions/cache`** keyed on `fixtures/sha256sums.txt` hash.
 
 ---
@@ -357,7 +357,7 @@ Completed case outputs are generated locally under `tmp/auto-runs/<case-id>/` an
 
 | Fixture | License | Redistribute? |
 |---|---|---|
-| SANS starter data | Hackathon starter | No (fetch from SANS) |
+| SANS starter data | SANS starter case data | No (fetch from SANS) |
 | NIST CFReDS | Public domain | Yes, by URL reference |
 | OTRF Security-Datasets | MIT | Yes, by URL reference (attribution via fetch script) |
 | Volatility samples | CC-BY | Yes, by URL reference (attribution via fetch script) |
@@ -369,4 +369,4 @@ Completed case outputs are generated locally under `tmp/auto-runs/<case-id>/` an
 | Ali Hadi challenges (#1/#7/#9) | Free for research/education (answers gated) | By URL reference |
 | DFRWS 2008/2011 | Public for research/education | By URL reference |
 
-None of these licenses contaminate our Apache-2.0 licensed submission repo because we redistribute only URLs and SHA-256 hashes, not the fixtures themselves.
+None of these licenses contaminate our Apache-2.0 licensed release repo because we redistribute only URLs and SHA-256 hashes, not the fixtures themselves.
