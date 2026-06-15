@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import importlib.util
 import stat
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-_SCRIPTS = Path(__file__).resolve().parents[3] / "scripts"
+_ROOT = Path(__file__).resolve().parents[3]
+_SCRIPTS = _ROOT / "scripts"
 
 
 def _load(name: str):
@@ -77,6 +79,25 @@ def test_rejects_output_directory_inside_case_root(tmp_path: Path) -> None:
         whole_case_targets.enumerate_targets(root, out)
 
 
+def test_run_whole_case_local_rejects_inside_output_before_mutation(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "case"
+    out = root / "derived-output"
+    _write(root / "base-file-cdrive.E01")
+    _write(root / "base-file-memory.img")
+
+    result = subprocess.run(
+        ["bash", str(_SCRIPTS / "run-whole-case-local.sh"), str(root), str(out)],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert not out.exists()
+
+
 def test_rejects_stale_existing_xartifact_copy(tmp_path: Path) -> None:
     root = tmp_path / "case"
     out = tmp_path / "out"
@@ -88,3 +109,21 @@ def test_rejects_stale_existing_xartifact_copy(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeError, match="staged xartifact file does not match"):
         whole_case_targets.enumerate_targets(root, out)
+
+
+def test_rejects_xartifact_symlink_without_writing_through_it(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "case"
+    out = tmp_path / "out"
+    _write(root / "base-file-cdrive.E01")
+    _write(root / "base-file-memory.img")
+    external_target = tmp_path / "outside-target.E01"
+    symlink = out / "_xartifact" / "base-file" / "base-file-cdrive.E01"
+    symlink.parent.mkdir(parents=True)
+    symlink.symlink_to(external_target)
+
+    with pytest.raises(RuntimeError, match="symlink"):
+        whole_case_targets.enumerate_targets(root, out)
+
+    assert not external_target.exists()

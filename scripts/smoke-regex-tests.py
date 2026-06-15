@@ -244,6 +244,36 @@ RELEASE_POLICY_REQUIRED_STRINGS = [
         ".github/CODEOWNERS",
         ".github/workflows/** @TimothyVang",
     ),
+    (
+        "CODEOWNERS protects CODEOWNERS policy",
+        ".github/CODEOWNERS",
+        ".github/CODEOWNERS @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects L3 evidence validator",
+        ".github/CODEOWNERS",
+        "scripts/validate-l3-evidence.py @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects L3 golden runner",
+        ".github/CODEOWNERS",
+        "scripts/l3-run-goldens.sh @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects submission validator",
+        ".github/CODEOWNERS",
+        "scripts/validate-submission-assets.py @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects benchmark conversion",
+        ".github/CODEOWNERS",
+        "scripts/json-to-benchmark-csv.py @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects release evidence docs",
+        ".github/CODEOWNERS",
+        "docs/release-evidence/** @TimothyVang",
+    ),
 ]
 
 PATH_EXISTENCE_ALLOW_CASES = [

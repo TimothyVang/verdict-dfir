@@ -70,3 +70,25 @@ def test_l3_fallback_fails_when_product_commit_is_not_expected_commit() -> None:
     errors = validate_l3_evidence.validate_evidence(evidence, expected_commit="a" * 40)
 
     assert "product_commit must match expected commit" in errors
+
+
+def test_l3_fallback_accepts_synthesized_passing_packet() -> None:
+    evidence = _l3_fallback_evidence()
+    expected_commit = "a" * 40
+    evidence["product_commit"] = expected_commit
+    evidence["recall"] = {
+        **evidence["recall"],
+        "pass": True,
+        "recalled_n": 14,
+        "expected_n": 14,
+        "recall_percent": 100,
+        "min_recall_percent": 71,
+        "matched_ids": [f"nhc-{index:03d}" for index in range(1, 15)],
+        "unmatched_ids": [],
+    }
+
+    errors = validate_l3_evidence.validate_evidence(
+        evidence, expected_commit=expected_commit
+    )
+
+    assert errors == []
