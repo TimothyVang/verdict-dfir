@@ -25,8 +25,8 @@ log() { printf '[fetch-fixtures] %s\n' "$*" >&2; }
 # goldens/<case-id>/. Staging a benchmark dataset into evidence/ would orphan it
 # from its golden and the l3-run-goldens scoring loop. Enforce it rather than
 # trust convention: resolve FIXTURES and abort if it points at evidence/.
-_fixtures_abs="$(cd "$(dirname "${FIXTURES}")" 2>/dev/null && pwd)/$(basename "${FIXTURES}")"
-_evidence_abs="${REPO_ROOT}/evidence"
+_fixtures_abs="$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve(strict=False))' "${FIXTURES}")"
+_evidence_abs="$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve(strict=False))' "${REPO_ROOT}/evidence")"
 case "${_fixtures_abs}/" in
   "${_evidence_abs}/"*)
     log "ERROR: FIXTURES (${FIXTURES}) resolves under evidence/. Benchmark fixtures"
@@ -40,6 +40,116 @@ SHA_FILE="${FIXTURES}/sha256sums.txt"
 mkdir -p "${FIXTURES}"
 touch "${SHA_FILE}"
 
+safe_url_label() {
+  python3 - "$1" <<'PY'
+from pathlib import PurePosixPath
+from urllib.parse import urlsplit
+import sys
+
+url = sys.argv[1]
+parts = urlsplit(url)
+if not parts.scheme:
+    print("<local-path>")
+elif parts.scheme == "file":
+    print(f"file://.../{PurePosixPath(parts.path).name}")
+else:
+    host = parts.hostname or "<host>"
+    name = PurePosixPath(parts.path).name
+    print(f"{parts.scheme}://{host}/{name}" if name else f"{parts.scheme}://{host}/")
+PY
+}
+
+manifest_sha_for_dest() {
+  local dest="$1"
+  awk -v dest="${dest}" '$2 == dest { print $1; found = 1; exit } END { if (!found) exit 1 }' \
+    "${SHA_FILE}" 2>/dev/null || true
+}
+
+record_sha_for_dest() {
+  local sha="$1"
+  local dest="$2"
+  local tmp_sha
+  tmp_sha="$(mktemp "${SHA_FILE}.XXXXXX")"
+  awk -v dest="${dest}" '$2 != dest' "${SHA_FILE}" > "${tmp_sha}" || true
+  printf '%s  %s\n' "${sha}" "${dest}" >> "${tmp_sha}"
+  mv "${tmp_sha}" "${SHA_FILE}"
+}
+
+remove_sha_for_dest() {
+  local dest="$1"
+  local tmp_sha
+  tmp_sha="$(mktemp "${SHA_FILE}.XXXXXX")"
+  awk -v dest="${dest}" '$2 != dest' "${SHA_FILE}" > "${tmp_sha}" || true
+  mv "${tmp_sha}" "${SHA_FILE}"
+}
+
+extract_zip_fixture() {
+  local zip_path="$1"
+  local target_dir="$2"
+  local parent base zip_name tmp_dir backup_dir
+
+  if [[ ! -f "${zip_path}" ]]; then
+    log "ERROR: zip fixture not found: ${zip_path}"
+    exit 1
+  fi
+
+  parent="$(dirname "${target_dir}")"
+  base="$(basename "${target_dir}")"
+  zip_name="$(basename "${zip_path}")"
+  tmp_dir="$(mktemp -d "${parent}/.${base}.extract.XXXXXX")"
+  backup_dir="${target_dir}.previous.$$"
+
+  if ! ln "${zip_path}" "${tmp_dir}/${zip_name}" 2>/dev/null; then
+    cp -p "${zip_path}" "${tmp_dir}/${zip_name}"
+  fi
+
+  if ! python3 - "${zip_path}" "${tmp_dir}" "${zip_name}" <<'PY'
+from pathlib import PurePosixPath
+import stat
+import sys
+import zipfile
+
+zip_path = sys.argv[1]
+target_dir = sys.argv[2]
+zip_name = sys.argv[3]
+
+with zipfile.ZipFile(zip_path) as archive:
+    for info in archive.infolist():
+        raw = info.filename
+        normalized = raw.replace("\\", "/")
+        path = PurePosixPath(normalized)
+        if not normalized or normalized.startswith("/") or path.is_absolute() or ".." in path.parts:
+            raise SystemExit(f"unsafe zip member path: {raw}")
+        if path.parts and path.parts[0] == zip_name:
+            raise SystemExit(f"zip member would overwrite staged archive: {raw}")
+        mode = (info.external_attr >> 16) & 0o170000
+        if mode in {stat.S_IFLNK, stat.S_IFCHR, stat.S_IFBLK, stat.S_IFIFO, stat.S_IFSOCK}:
+            raise SystemExit(f"unsafe zip member type: {raw}")
+    archive.extractall(target_dir)
+PY
+  then
+    rm -rf "${tmp_dir}"
+    log "ERROR: unsafe or invalid zip fixture: ${zip_path}"
+    exit 1
+  fi
+
+  if [[ -d "${target_dir}" ]]; then
+    rm -rf "${backup_dir}"
+    mv "${target_dir}" "${backup_dir}"
+  fi
+  if mv "${tmp_dir}" "${target_dir}"; then
+    rm -rf "${backup_dir}"
+    log "ok: extracted ${zip_name} into ${target_dir}"
+  else
+    rm -rf "${tmp_dir}"
+    if [[ -d "${backup_dir}" ]]; then
+      mv "${backup_dir}" "${target_dir}"
+    fi
+    log "ERROR: failed to replace extracted fixture directory: ${target_dir}"
+    exit 1
+  fi
+}
+
 # Download helper — atomic: downloads to .tmp, checksums, renames.
 # fetch_fixture <url> <dest-subpath> <optional-expected-sha256>
 fetch_fixture() {
@@ -52,21 +162,38 @@ fetch_fixture() {
   if [[ -f "${abs}" ]]; then
     local actual_sha
     actual_sha="$(sha256sum "${abs}" | awk '{print $1}')"
-    if grep -q "^${actual_sha}  ${dest}$" "${SHA_FILE}" 2>/dev/null; then
-      log "ok: ${dest} (cached, sha verified)"
-      return 0
-    fi
+    local manifest_sha
+    manifest_sha="$(manifest_sha_for_dest "${dest}")"
     if [[ -n "${expected_sha}" ]] && [[ "${actual_sha}" != "${expected_sha}" ]]; then
       log "ERROR: ${dest} sha mismatch. expected=${expected_sha} actual=${actual_sha}"
       exit 1
     fi
+    if [[ -n "${manifest_sha}" && "${actual_sha}" != "${manifest_sha}" ]]; then
+      log "ERROR: ${dest} cached sha mismatch. manifest=${manifest_sha} actual=${actual_sha}"
+      log "       remove the stale fixture or update the pinned source intentionally."
+      exit 1
+    fi
+    if [[ -n "${manifest_sha}" ]]; then
+      log "ok: ${dest} (cached, sha verified)"
+      return 0
+    fi
+    if [[ -n "${expected_sha}" ]]; then
+      record_sha_for_dest "${actual_sha}" "${dest}"
+      log "ok: ${dest} (cached, pinned sha verified)"
+      return 0
+    fi
+    record_sha_for_dest "${actual_sha}" "${dest}"
+    log "ok: ${dest} (cached, sha recorded)"
+    return 0
   fi
 
-  log "downloading ${url} → ${abs}"
+  local url_label
+  url_label="$(safe_url_label "${url}")"
+  log "downloading ${url_label} → ${abs}"
   if ! curl -fsSL --retry 3 --retry-delay 2 --max-time 600 \
     "${url}" -o "${abs}.tmp"; then
     rm -f "${abs}.tmp"
-    log "ERROR: failed to download ${url}"
+    log "ERROR: failed to download ${url_label}"
     exit 1
   fi
   mv "${abs}.tmp" "${abs}"
@@ -79,10 +206,15 @@ fetch_fixture() {
     exit 1
   fi
 
-  # Record in SHA_FILE if not already present.
-  if ! grep -q "  ${dest}$" "${SHA_FILE}" 2>/dev/null; then
-    echo "${got_sha}  ${dest}" >> "${SHA_FILE}"
+  local existing_sha
+  existing_sha="$(manifest_sha_for_dest "${dest}")"
+  if [[ -n "${existing_sha}" && "${existing_sha}" != "${got_sha}" && -z "${expected_sha}" ]]; then
+    log "ERROR: ${dest} downloaded sha differs from manifest. manifest=${existing_sha} got=${got_sha}"
+    log "       set an expected SHA-256 or remove the stale manifest entry intentionally."
+    rm -f "${abs}"
+    exit 1
   fi
+  record_sha_for_dest "${got_sha}" "${dest}"
   log "ok: ${dest} (sha=${got_sha})"
 }
 
@@ -94,11 +226,15 @@ fetch_fixture() {
 #    fetch from there (useful for mirroring).
 # ---------------------------------------------------------------------
 if [[ -n "${SANS_STARTER_URL:-}" ]]; then
+  if [[ -z "${SANS_STARTER_SHA256:-}" ]]; then
+    log "ERROR: SANS_STARTER_URL is set but SANS_STARTER_SHA256 is missing. Pin the archive SHA-256 before extraction."
+    exit 1
+  fi
   log "SANS_STARTER_URL set — fetching SANS starter dataset"
   fetch_fixture "${SANS_STARTER_URL}" "sans-starter/sans-starter.zip" \
-    "${SANS_STARTER_SHA256:-}"
+    "${SANS_STARTER_SHA256}"
   if [[ -f "${FIXTURES}/sans-starter/sans-starter.zip" ]]; then
-    (cd "${FIXTURES}/sans-starter" && unzip -qo sans-starter.zip || true)
+    extract_zip_fixture "${FIXTURES}/sans-starter/sans-starter.zip" "${FIXTURES}/sans-starter"
   fi
 else
   log "SKIP sans-starter: set SANS_STARTER_URL to a mirror of https://sansorg.egnyte.com/fl/HhH7crTYT4JK"
@@ -115,21 +251,33 @@ fetch_fixture \
 
 # ---------------------------------------------------------------------
 # 3. OTRF Security-Datasets — small EVTX/JSON samples. MIT.
-#    Clone sparse (only one dataset family) to stay under ~100 MB.
+#    Clone sparse Windows atomic telemetry plus the compound APT3 bundle.
 # ---------------------------------------------------------------------
+OTRF_SECURITY_DATASETS_REF="${OTRF_SECURITY_DATASETS_REF:-d9d40ef123d2c87d5d3df28c96bcab4f0faccc87}"
+if [[ ! "${OTRF_SECURITY_DATASETS_REF}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  log "ERROR: OTRF_SECURITY_DATASETS_REF must be a full 40-hex commit SHA, got ${OTRF_SECURITY_DATASETS_REF}"
+  exit 1
+fi
+OTRF_PATHS=(
+  datasets/compound/windows/apt3
+  datasets/atomic/windows/defense_evasion
+  datasets/atomic/windows/credential_access
+  datasets/atomic/windows/lateral_movement
+  datasets/atomic/windows/persistence
+)
 if [[ ! -d "${FIXTURES}/otrf-apt3-mordor/.git" ]]; then
   log "cloning OTRF Security-Datasets (sparse)..."
   rm -rf "${FIXTURES}/otrf-apt3-mordor"
-  git clone --depth 1 --filter=blob:none --sparse \
+  git clone --filter=blob:none --sparse \
     https://github.com/OTRF/Security-Datasets.git \
     "${FIXTURES}/otrf-apt3-mordor"
-  (cd "${FIXTURES}/otrf-apt3-mordor" && \
-    git sparse-checkout set \
-      datasets/atomic/windows/defense_evasion \
-      datasets/atomic/windows/credential_access || true)
 else
-  log "ok: otrf-apt3-mordor already cloned"
+  log "updating OTRF Security-Datasets sparse checkout..."
 fi
+(cd "${FIXTURES}/otrf-apt3-mordor" && \
+  git fetch --depth 1 origin "${OTRF_SECURITY_DATASETS_REF}" && \
+  git checkout --detach FETCH_HEAD && \
+  git sparse-checkout set "${OTRF_PATHS[@]}")
 
 # ---------------------------------------------------------------------
 # 4. Volatility Foundation memory samples — pick the smallest one.
@@ -185,10 +333,14 @@ fi
 
 # 6b. NIST Data Leakage — disk (insider exfil + anti-forensics). GREEN.
 if [[ -n "${DATA_LEAKAGE_URL:-}" ]]; then
+  if [[ -z "${DATA_LEAKAGE_SHA256:-}" ]]; then
+    log "ERROR: DATA_LEAKAGE_URL is set but DATA_LEAKAGE_SHA256 is missing. Pin the archive SHA-256 before extraction."
+    exit 1
+  fi
   fetch_fixture "${DATA_LEAKAGE_URL}" "nist-data-leakage/data-leakage.zip" \
-    "${DATA_LEAKAGE_SHA256:-}"
+    "${DATA_LEAKAGE_SHA256}"
   if [[ -f "${FIXTURES}/nist-data-leakage/data-leakage.zip" ]]; then
-    (cd "${FIXTURES}/nist-data-leakage" && unzip -qo data-leakage.zip || true)
+    extract_zip_fixture "${FIXTURES}/nist-data-leakage/data-leakage.zip" "${FIXTURES}/nist-data-leakage"
   fi
 else
   log "SKIP nist-data-leakage: set DATA_LEAKAGE_URL=<archive of https://cfreds.nist.gov/all/NIST/DataLeakageCase> (multi-file case; stage the packaged image)"
@@ -200,14 +352,24 @@ if ! ( fetch_fixture "${M57_JEAN_URL}" "m57-jean/jean.aff" "${M57_JEAN_SHA256:-}
   log "WARN: m57-jean fetch failed; override with M57_JEAN_URL=<mirror of https://digitalcorpora.org/corpora/scenarios/m57-jean/>"
 fi
 
-# 6d. DFRWS 2008 Linux — memory+disk+network. YELLOW. Shallow git clone.
+# 6d. DFRWS 2008 Linux — memory+disk+network. YELLOW. Sparse pinned clone.
+DFRWS2008_REF="${DFRWS2008_REF:-af9a3ebcfebcfedf8791e1b3bbaf0c70183c6927}"
+if [[ ! "${DFRWS2008_REF}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  log "ERROR: DFRWS2008_REF must be a full 40-hex commit SHA, got ${DFRWS2008_REF}"
+  exit 1
+fi
 if [[ ! -d "${FIXTURES}/dfrws-2008-linux/.git" ]]; then
   log "cloning DFRWS 2008 challenge..."
   rm -rf "${FIXTURES}/dfrws-2008-linux"
-  git clone --depth 1 https://github.com/dfrws/dfrws2008-challenge.git \
+  git clone --filter=blob:none --no-checkout https://github.com/dfrws/dfrws2008-challenge.git \
     "${FIXTURES}/dfrws-2008-linux" || log "WARN: dfrws-2008 clone failed"
 else
-  log "ok: dfrws-2008-linux already cloned"
+  log "updating DFRWS 2008 challenge pinned checkout..."
+fi
+if [[ -d "${FIXTURES}/dfrws-2008-linux/.git" ]]; then
+  (cd "${FIXTURES}/dfrws-2008-linux" && \
+    git fetch --depth 1 origin "${DFRWS2008_REF}" && \
+    git checkout --detach FETCH_HEAD)
 fi
 
 # 6e-g. Ali Hadi challenges — gated (archive.org item filenames vary per case).
@@ -246,6 +408,64 @@ elif [[ -f "${FIXTURES}/volatility/cridex.vmem" ]]; then
   log "ok: volatility-cridex linked from fixtures/volatility/cridex.vmem"
 else
   log "SKIP volatility-cridex: canonical download is dead; set CRIDEX_URL=<verified mirror>"
+fi
+
+# 6j-l. MemLabs Lab 1-3 — Windows memory CTF labs. Mega.nz links in the
+#       upstream README are browser-oriented and not reliable curl targets, so
+#       operators should extract the upstream archive and provide a direct URL
+#       or file:// URL to the memory dump itself. These are metadata/flag-count
+#       goldens; actual flag values are intentionally not committed.
+#       Required env pairs when enabled: MEMLABS_LAB1_URL + MEMLABS_LAB1_SHA256,
+#       MEMLABS_LAB2_URL + MEMLABS_LAB2_SHA256, MEMLABS_LAB3_URL + MEMLABS_LAB3_SHA256.
+for spec in \
+  "MEMLABS_LAB1_URL:memlabs-lab1:b9fec1a443907d870cb32b048bda9380" \
+  "MEMLABS_LAB2_URL:memlabs-lab2:ddb337936a75153822baed718851716b" \
+  "MEMLABS_LAB3_URL:memlabs-lab3:ce4e7adc4efbf719888d2c87256d1da3"; do
+  var="${spec%%:*}"; rest="${spec#*:}"; name="${rest%%:*}"; expected_md5="${rest##*:}"
+  url="${!var:-}"
+  if [[ -n "${url}" ]]; then
+    sha_var="${var/_URL/_SHA256}"
+    expected_sha="${!sha_var:-}"
+    if [[ -z "${expected_sha}" ]]; then
+      log "ERROR: ${var} is set but ${sha_var} is missing. Compute SHA-256 from the extracted memory dump before staging ${name}."
+      exit 1
+    fi
+    dest="${name}/$(basename "${url%%\?*}")"
+    fetch_fixture "${url}" "${dest}" "${expected_sha}"
+    if command -v md5sum >/dev/null 2>&1; then
+      got_md5="$(md5sum "${FIXTURES}/${dest}" | awk '{print $1}')"
+    elif command -v md5 >/dev/null 2>&1; then
+      got_md5="$(md5 -q "${FIXTURES}/${dest}")"
+    else
+      log "ERROR: ${name} requires md5sum or md5 to verify the staged memory dump"
+      rm -f "${FIXTURES}/${dest}"
+      remove_sha_for_dest "${dest}"
+      exit 1
+    fi
+    if [[ "${got_md5}" != "${expected_md5}" ]]; then
+      log "ERROR: ${name} memory dump MD5 mismatch. expected=${expected_md5} got=${got_md5}"
+      rm -f "${FIXTURES}/${dest}"
+      remove_sha_for_dest "${dest}"
+      exit 1
+    fi
+  else
+    log "SKIP ${name}: set ${var}=<extracted memory dump direct/file:// URL> and ${var/_URL/_SHA256}=<sha256>; memory dump MD5=${expected_md5}"
+  fi
+done
+
+# 6m. Digital Corpora 2018 Lone Wolf — Windows E01 + memory + pagefile.
+#     Large (~32GB full bundle) and teacher-guide-gated for official answers, so
+#     it is opt-in only. Point LONEWOLF_URL at the full image bundle that includes
+#     disk segments, memdump.mem, and pagefile.sys.
+if [[ -n "${LONEWOLF_URL:-}" ]]; then
+  if [[ -z "${LONEWOLF_SHA256:-}" ]]; then
+    log "ERROR: LONEWOLF_URL is set but LONEWOLF_SHA256 is missing. Pin the full bundle SHA-256 before staging."
+    exit 1
+  fi
+  fetch_fixture "${LONEWOLF_URL}" "digitalcorpora-lonewolf/$(basename "${LONEWOLF_URL%%\?*}")" \
+    "${LONEWOLF_SHA256}"
+else
+  log "SKIP digitalcorpora-lonewolf: set LONEWOLF_URL=<full direct/file:// bundle> and LONEWOLF_SHA256=<sha256> from https://digitalcorpora.org/corpora/scenarios/2018-lone-wolf-scenario/"
 fi
 
 log "done. See ${SHA_FILE} for checksums."

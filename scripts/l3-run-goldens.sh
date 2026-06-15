@@ -43,6 +43,11 @@ FIXTURES=(
   "alihadi-09-encrypt"
   "dfrws-2011-android"
   "volatility-cridex"
+  "otrf-apt3-mordor"
+  "memlabs-lab1"
+  "memlabs-lab2"
+  "memlabs-lab3"
+  "digitalcorpora-lonewolf"
 )
 
 mkdir -p "${LOG_DIR}"

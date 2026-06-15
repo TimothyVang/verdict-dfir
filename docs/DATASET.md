@@ -15,7 +15,7 @@ This document covers every fixture the Find Evil! submission was tested against.
 | License | Distributed as hackathon starter data by SANS Institute |
 | Content | Sample disk images + memory captures (hackathon-specific) |
 | Purpose | **Primary** L3 golden-run fixture — what judges are most likely to test submissions against |
-| SHA-256 | *(recorded by `scripts/fetch-fixtures.sh` at first download; see `fixtures/sha256sums.txt`)* |
+| SHA-256 | Required as `SANS_STARTER_SHA256` when `SANS_STARTER_URL` is set; recorded in `fixtures/sha256sums.txt` |
 | Expected findings | *(enumerated in `goldens/sans-starter/expected-findings.json` after first manual walk-through)* |
 
 **Rationale for primary status:** This dataset ships with the hackathon and is what Rob Lee and the judges are most familiar with. Optimizing for it aligns our accuracy metrics with the judging experience.
@@ -186,8 +186,8 @@ Storage policy:
 
 ## Public DFIR benchmark suite (one scenario per artifact class)
 
-Ten verified public datasets (Anna Tchijova's ranked list) onboarded so we can do live
-runs against every DFIR artifact class. Each has a ground-truth answer key at
+Public and candidate benchmark datasets are onboarded so we can do live
+runs against every DFIR artifact class. Each has an answer-key file at
 `goldens/<case-id>/expected-findings.json`, is fetched by `scripts/fetch-fixtures.sh`
 (§6), and is scored offline by `scripts/score-recall.py` (recall vs `min_recall_percent`
 plus honest verdict consistency). Run + score loop:
@@ -206,17 +206,27 @@ decision it is NOT a scoring gate (training-data contamination is not modeled). 
 | # | Case id | Class | Tier | Fetch | Expected outcome | Recall target |
 |---|---|---|---|---|---|---|
 | 1 | `nitroba` | network (pcap) | 🟢 | `NITROBA_URL` (default digitalcorpora) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 80% |
-| 2 | `nist-data-leakage` | disk (insider exfil) | 🟢 | `DATA_LEAKAGE_URL` | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 60% |
+| 2 | `nist-data-leakage` | disk (insider exfil) | 🟢 | `DATA_LEAKAGE_URL` + `DATA_LEAKAGE_SHA256` | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 60% |
 | 3 | `nist-hacking-case` | disk (XP) | 🟢 | default cfreds URL (already wired) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 71% |
-| 4 | `alihadi-09-encrypt` | disk (crypto) | 🟡 | `ALIHADI09_URL` | **INDETERMINATE** (false-positive control) | 50% |
-| 5 | `alihadi-01-webserver` | disk + memory | 🟡 | `ALIHADI01_URL` | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 60% |
-| 6 | `dfrws-2008-linux` | memory+disk+network | 🟡 | git clone | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 50% |
-| 7 | `m57-jean` | disk/email | 🟠 | `M57_JEAN_URL` (default digitalcorpora) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 60% |
-| 8 | `alihadi-07-sysinternals` | disk (E01) | 🟠 | `ALIHADI07_URL` | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 50% |
-| 9 | `dfrws-2011-android` | mobile/disk | 🔴 | `DFRWS2011_URL` | UNKNOWN (stub) | 40% |
-| 10 | `volatility-cridex` | memory | 🔴 (sourcing) | `CRIDEX_URL` (canonical link dead) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 50% |
+| 4 | `otrf-apt3-mordor` | Windows logs (EVTX/Sysmon/JSON) | 🟢 | sparse clone from OTRF Security-Datasets | SUSPICIOUS | 60% |
+| 5 | `memlabs-lab1` | Windows memory | 🟡 | `MEMLABS_LAB1_URL` + `MEMLABS_LAB1_SHA256` (extracted memory dump direct URL or `file://`) | SUSPICIOUS | 67% |
+| 6 | `memlabs-lab2` | Windows memory | 🟡 | `MEMLABS_LAB2_URL` + `MEMLABS_LAB2_SHA256` (extracted memory dump direct URL or `file://`) | SUSPICIOUS | 67% |
+| 7 | `memlabs-lab3` | Windows memory | 🟡 | `MEMLABS_LAB3_URL` + `MEMLABS_LAB3_SHA256` (extracted memory dump direct URL or `file://`) | SUSPICIOUS | 67% |
+| 8 | `digitalcorpora-lonewolf` | Windows disk + memory | 🟡 | `LONEWOLF_URL` + `LONEWOLF_SHA256` (large full Digital Corpora bundle) | INDETERMINATE candidate | 0% |
+| 9 | `alihadi-09-encrypt` | disk (crypto) | 🟡 | `ALIHADI09_URL` | **INDETERMINATE** (false-positive control) | 50% |
+| 10 | `alihadi-01-webserver` | disk + memory | 🟡 | `ALIHADI01_URL` | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 60% |
+| 11 | `dfrws-2008-linux` | memory+disk+network | 🟡 | pinned git clone (`DFRWS2008_REF`) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 50% |
+| 12 | `m57-jean` | disk/email | 🟠 | `M57_JEAN_URL` (default digitalcorpora) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 60% |
+| 13 | `alihadi-07-sysinternals` | disk (E01) | 🟠 | `ALIHADI07_URL` | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 50% |
+| 14 | `dfrws-2011-android` | mobile/disk | 🔴 | `DFRWS2011_URL` | UNKNOWN (stub) | 40% |
+| 15 | `volatility-cridex` | memory | 🔴 (sourcing) | `CRIDEX_URL` (canonical link dead) | SUSPICIOUS (legacy golden label: CONFIRMED_EVIL) | 50% |
 
 **Notable cases**
+- **Windows-focused golden expansion.** The Windows-heavy lane now covers logs
+  (`otrf-apt3-mordor`), memory (`memlabs-lab1` through `memlabs-lab3`), and combined
+  disk+memory (`digitalcorpora-lonewolf`) in addition to the existing NIST and Ali Hadi
+  disk images. This is intentionally metadata/answer-key only; raw evidence remains under
+  `fixtures/` when staged locally and is never committed.
 - **`alihadi-09-encrypt` is the false-positive control.** Encryption tooling is present
   but its presence is not proof of malice. The golden verdict is `INDETERMINATE`; a run
   that escalates to `SUSPICIOUS` (or the legacy scoring label `CONFIRMED_EVIL`) FAILS the asymmetric verdict-match check
@@ -230,6 +240,23 @@ decision it is NOT a scoring gate (training-data contamination is not modeled). 
   to a verified mirror (a SANS-hosted copy with published hashes was requested in the
   thread). The IOCs themselves are canonical (`reader_sl.exe` ← `explorer.exe`, malfind
   injection, C2).
+- **`otrf-apt3-mordor` is the strongest Windows log expansion.** It comes from OTRF
+  Security-Datasets' compound Windows APT3 telemetry and MITRE ATT&CK Evaluations Round 1
+  emulation material. `scripts/fetch-fixtures.sh` sparse-clones the compound APT3 tree plus
+  focused atomic Windows credential-access, defense-evasion, lateral-movement, and
+  persistence telemetry. This is a log-correlation golden, not a disk/memory image.
+- **`memlabs-lab1` through `memlabs-lab3` are Windows memory CTF labs.** They are useful for
+  Volatility coverage and extraction behavior, but the committed goldens intentionally record
+  flag counts/objectives and source hashes, not the actual flag values. The upstream downloads
+  are Mega/browser-oriented, so fetch is env-gated via `MEMLABS_LAB{1,2,3}_URL` and requires
+  the matching `MEMLABS_LAB{1,2,3}_SHA256` to point at a vetted direct mirror or `file://` URL
+  for the extracted memory dump, not the compressed archive. The upstream archive MD5 remains
+  in each golden for provenance; the fetch helper verifies the staged memory dump MD5 before L3.
+- **`digitalcorpora-lonewolf` is a large Windows disk+memory candidate.** Digital Corpora
+  publishes the E01 segments, `memdump.mem`, `pagefile.sys`, FTK log, and commercial forensic
+  outputs, but the teacher guide is password-protected/faculty-gated. Fetch is opt-in and requires
+  `LONEWOLF_SHA256`; until an authorized guide is available, the committed file records required
+  artifacts and non-scored lead hypotheses instead of reportable expected Findings.
 - **Disk classes need mount/extract prerequisites.** Local raw `.dd/.E01` runs can parse supported
   artifacts when Sleuth Kit/libewf are present; otherwise they return `INDETERMINATE`
   (custody-only). SIFT remains the recommended parity path. `INDETERMINATE` is an honest PASS of
@@ -244,6 +271,11 @@ unfetchable-on-host datasets are marked "staged, run pending evidence".)*
 | Case id | Run? | Verdict | Recall | Notes |
 |---|---|---|---|---|
 | `nitroba` | yes (local, tshark) | INDETERMINATE | **5/5 (100%) — PASS** (bar=80%) | Network-playbook gaps fixed (see below). Surfaces all five: anonymous-email contact, source host (192.168.15.4), Gmail-cookie attribution, authenticated Facebook login, and the send-vs-browsing timeline correlation. |
+| `otrf-apt3-mordor` | staged, run pending evidence | — | — | strongest Windows EVTX/Sysmon/JSON candidate; sparse clone only, no raw evidence committed |
+| `memlabs-lab1` | staged, run pending evidence | — | — | Windows memory CTF; requires extracted memory dump URL or local file URL |
+| `memlabs-lab2` | staged, run pending evidence | — | — | Windows memory CTF; requires extracted memory dump URL or local file URL |
+| `memlabs-lab3` | staged, run pending evidence | — | — | Windows memory CTF; requires extracted memory dump URL or local file URL |
+| `digitalcorpora-lonewolf` | staged, run pending evidence | — | — | large Windows disk+memory scenario; teacher guide gated |
 | `nist-data-leakage` | staged, run pending evidence | — | — | needs `--sift` (disk) |
 | `nist-hacking-case` | yes (committed local summary) | SUSPICIOUS | 7/14 (50%) | coverage gap (not custody). Up from 1/14 after disk-artifact emitters and native fallback triage: now matches nhc-004 (hacking-tool files in Program Files/Desktop, from the MFT), nhc-005 (prefetch execution), nhc-007 (NTUSER shellbag navigation to a `\\4.220.254\Temp` staging share + tool folders), nhc-008 (LNK removable-media traces), nhc-009 (Recycle Bin staging artifacts), nhc-010 (suspiciously-named SAM account "Mr. Evil"), and nhc-011 (OpenSaveMRU recently-opened installers). Still below the 71% bar — the remaining seven: nhc-001 (ACMru/search history), nhc-002 (USB history), nhc-003 (email carving), nhc-006 (IE index.dat/browser history), nhc-012 (XP `.evt`, not EVTX), nhc-013 (thumbcache), and nhc-014 (named-pipe enum) are not yet parsed. |
 | `alihadi-09-encrypt` | staged, run pending evidence | — | — | false-positive control; expect INDETERMINATE |
@@ -302,6 +334,14 @@ goldens/
 ├── nist-hacking-case/
 │   └── expected-findings.json
 ├── otrf-apt3-mordor/
+│   └── expected-findings.json
+├── memlabs-lab1/
+│   └── expected-findings.json
+├── memlabs-lab2/
+│   └── expected-findings.json
+├── memlabs-lab3/
+│   └── expected-findings.json
+├── digitalcorpora-lonewolf/
 │   └── expected-findings.json
 ├── volatility-cridex/
 │   └── expected-findings.json

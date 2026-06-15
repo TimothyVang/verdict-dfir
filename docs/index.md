@@ -9,7 +9,9 @@ were examined through replayable tools, not that an entire system is clean.
 
 | Need | Read |
 |---|---|
-| Install and run | [Running VERDICT](using/running-verdict.md) |
+| Install from a cold clone | [Install Guide](https://github.com/TimothyVang/verdict-dfir/blob/master/INSTALL.md) |
+| Run in three commands | [Quickstart](https://github.com/TimothyVang/verdict-dfir/blob/master/QUICKSTART.md) |
+| Run every mode and flag | [Running VERDICT](using/running-verdict.md) |
 | Understand trust boundaries | [Architecture](architecture.md) |
 | Verify custody claims | [Cryptographic Attestation](cryptographic-attestation.md) |
 | Interpret verdict words | [Verdict Semantics](verdict-semantics.md) |
