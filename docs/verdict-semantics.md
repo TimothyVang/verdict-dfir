@@ -53,8 +53,8 @@ class touched, or the verifier downgraded a Pool A claim that
 Pool B contradicted). Some will be false positives. The analyst
 decides which.
 
-If a fleet has many INDETERMINATE hosts (10/22 in the
-`fleet-20260426T055440Z` run), the cross-host correlations in
+If a fleet has many INDETERMINATE hosts (e.g. an illustrative
+10/22 split), the cross-host correlations in
 `FLEET_REPORT.pdf` are usually more useful than triaging each
 host's HYPOTHESES individually. Cross-host recurrence is a
 correlation lead, not a second artifact class; execution or
@@ -188,8 +188,8 @@ fleet investigation done
 
 ## When to override the verdict
 
-The compute_verdict function deliberately lives in 25 lines of
-Python — it is not a black box. If your operational context
+The compute_verdict function deliberately lives in a single
+deterministic, readable function in Python — it is not a black box. If your operational context
 disagrees with the policy (e.g. you treat T1098 Account
 Manipulation at HYPOTHESIS-tier as SUSPICIOUS where the policy
 says INDETERMINATE), edit
@@ -200,7 +200,7 @@ is a code change with a clear diff and CI run.
 ## References
 
 - `scripts/find_evil_auto.py::compute_verdict` — the
-  authoritative implementation (25 lines).
+  authoritative implementation (~95 lines).
 - `agent-config/SOUL.md` — the epistemic hierarchy that defines
   CONFIRMED / INFERRED / HYPOTHESIS at the per-finding level.
 - `agent-config/JUDGING.md` — the pre-submission self-assessment

@@ -53,16 +53,16 @@ The agent's `verifier` re-runs the cited tool calls on every finding before merg
 
 The other tiers are *leads*, not *facts*. When you first read the verdict, look only at CONFIRMED findings. Come back to INFERRED/HYPOTHESIS when you have time to verify them individually.
 
-In the manifest, this is one line:
+In the verdict, this is one line:
 ```bash
-jq '.merged[] | select(.finding.confidence == "CONFIRMED") | .finding.description' run.manifest.json
+jq '.findings[] | select(.confidence == "CONFIRMED") | .description' verdict.json
 ```
 
 ### 2. Read the contradiction surface before the verdict
 
 The judge's `merged` output is a *resolution* of disagreements, not the underlying truth. If `detect_contradictions` returned ≥1, look at the raw Pool A vs Pool B findings before trusting the merged result.
 
-Pattern in the audit log: search for `kind: "ContradictionFound"` and read the `pool_a` vs `pool_b` description for each.
+Pattern in the audit log: search for `kind: "contradiction_resolved"` and read the `pool_a` vs `pool_b` description for each. (The in-process wire event is named `ContradictionFound`, but the committed audit-chain record kind is `contradiction_resolved`.)
 
 ### 3. Cross-corroborate execution claims by hand
 
