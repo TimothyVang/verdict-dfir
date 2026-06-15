@@ -105,8 +105,8 @@ jump, and the correction is in the open: the original run headlined `vol_psscan`
 expert review caught the over-claim: `KeNumberProcessors`=0, core OS singletons (e.g. `System`)
 recovered *only* by `psscan`, and a duplicate `System` EPROCESS — and a rootkit cannot produce
 those. On that image the divergence is an **acquisition smear / kernel-global read failure**, not
-T1014, so the report was reconciled to **HYPOTHESIS** (commit `cd075c9`; the full story is in
-[`accuracy-report.md`](accuracy-report.md) §3). The escalation checklist above and `vol_psxview`
+T1014, so the report was reconciled to **HYPOTHESIS** (commit `cd075c9`; see the `vol_pslist returns 0`
+section above and the [accuracy report](accuracy-report.md)'s Calibration Rules). The escalation checklist above and `vol_psxview`
 in the typed surface exist *because of* that miss: a T1014 claim needs ≥2 artifact classes, and
 process-list divergence alone — once an acquisition fault is on the table — does not clear that
 bar.

@@ -90,8 +90,9 @@ MCP tool flags within-run hallucinations; the judge merges
 credibility-weighted across Pool A/B. The named caught-hallucination
 instances (SRL-2018 DKOM near-miss, nitroba's 14 `contradiction_resolved`
 records, the verifier catch-and-redispatch, heartbeat-partial honest
-scoping) live in `docs/accuracy-report.md` §3 — keep them specific and
-reproducible; the asymmetry pays for specifics, not adjectives.
+scoping) are documented in `docs/false-positives.md` (the `vol_pslist`/DKOM
+near-miss) and the accuracy report's Calibration Rules / Known Limits — keep
+them specific and reproducible; the asymmetry pays for specifics, not adjectives.
 
 ## 3. Breadth and Depth of Analysis
 > How much case data can the agent handle? Depth on fewer types beats
@@ -123,11 +124,10 @@ typed Input/Output. Architectural enforcement points:
 - Read-only evidence opener (libewf in `case_open`, no mutation path).
 - SHA-256 verification of image at open and at every tool re-execution.
 - Hash-chained append-only audit JSONL (each line cites `prev_hash`).
-- Tool-level `readOnlyHint`/`destructiveHint` annotations (commit
-  `151510a`).
-- L0 CI invariants guard for Amendment A2 (commit `ad4a36e`).
-- Bypass tests live in `services/mcp/tests/` — UTF-8 truncation panic
-  fix (`405117a`) is one example of a tested bypass attempt.
+- Tool-level `readOnlyHint`/`destructiveHint` annotations.
+- L0 CI invariants guard for Amendment A2.
+- Bypass tests live in `services/mcp/tests/` — the UTF-8 truncation panic
+  fix is one example of a tested bypass attempt.
 **Anti-pattern:** "the prompt says don't do X." Prompt-only guardrails
 score lower than typed-surface enforcement.
 
