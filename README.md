@@ -107,7 +107,7 @@ Every run writes a self-contained case directory:
 | `verdict.json` | The evidence-bound verdict + findings, each citing a `tool_call_id` and a confidence tier |
 | `coverage_manifest.json` | Explicit anti-overclaim sidecar: available / attempted / parsed / failed / unsupported / not supplied per artifact class |
 | `run.manifest.json` | Merkle root over canonical tool outputs + signature metadata — verifiable offline |
-| `REPORT.md` / `REPORT.html` / `REPORT.pdf` | Analyst report: findings, ATT&CK coverage, normalized timeline, next analyst actions |
+| `REPORT.md` / `REPORT.html` / `REPORT.pdf` | Analyst report: findings, ATT&CK coverage, normalized timeline, next analyst actions. `REPORT.md` is always written; `REPORT.html` (requires pandoc) and `REPORT.pdf` (requires headless Chrome) are produced when those tools are present (installed by `scripts/setup`). |
 
 <p align="center">
   <img src="assets/screenshots/chain-of-custody.png" alt="Cryptographic chain of custody: hash-chained audit log to Merkle root to signed manifest" width="760">
@@ -171,8 +171,9 @@ committed live runs:
    a committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/
    YARA/USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
 
-2. **A cryptographic chain of custody.** Hash-chained audit log → `rs_merkle` Merkle root over
-   canonical-JSON tool outputs → a manifest signature. The default signer is a real local Ed25519
+2. **A cryptographic chain of custody.** Hash-chained audit log → Merkle root over
+   canonical-JSON tool outputs (the manifest root is computed by the Python manifest builder,
+   mirroring `rs_merkle` semantics) → a manifest signature. The default signer is a real local Ed25519
    key that verifies offline; Sigstore/Rekor is the identity + transparency-log tier; the stub
    signer is explicit dev-only fallback. `manifest_verify` checks the chain + root offline, and
    customer-release candidates include an expert-signoff packet. Framed for FRE 902(14)
@@ -204,8 +205,8 @@ Beyond the three ideas above, a single case run also:
 - **Scales to a fleet.** Run a whole compromised estate, not one box: the 3-stage investigate →
   correlate → render pipeline produces a single cross-host `FLEET_REPORT` surfacing the signals that
   only appear *across* machines — the same uncommon process on many hosts, near-simultaneous
-  process-creation waves, MITRE-technique spread. (On a 22-host SANS estate it pinned one implant
-  image to 20 of 22 hosts.) Runs in the SANS SIFT VM ([fleet analysis](docs/using/fleet-analysis.md)),
+  process-creation waves, MITRE-technique spread. (In the pictured SRL-2018 showcase run, one implant
+  image appeared on 20 of 22 hosts.) Runs in the SANS SIFT VM ([fleet analysis](docs/using/fleet-analysis.md)),
   or per-host locally with no VM ([whole-case local run](docs/using/whole-case-local-run.md)).
 - **Acts on the verdict (optional).** When the operator deploys an n8n workflow, post-verdict automation
   can turn a verdict into a notification, ticket, or containment step; out of the box no workflow is
