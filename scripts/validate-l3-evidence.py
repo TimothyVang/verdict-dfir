@@ -91,12 +91,26 @@ def validate_evidence(data: dict[str, Any]) -> list[str]:
         recall = {}
     expected_n = positive_int(recall.get("expected_n"))
     recalled_n = positive_int(recall.get("recalled_n"))
+    recall_percent = positive_int(recall.get("recall_percent"))
+    min_recall_percent = positive_int(recall.get("min_recall_percent"))
     if expected_n != 14:
         errors.append("recall.expected_n must be 14")
     if recalled_n is None:
         errors.append("recall.recalled_n must be positive")
     elif expected_n is not None and recalled_n > expected_n:
         errors.append("recall.recalled_n must not exceed recall.expected_n")
+    if recall.get("pass") is not True:
+        errors.append("recall.pass must be true")
+    if recall_percent is None:
+        errors.append("recall.recall_percent must be positive")
+    if min_recall_percent is None:
+        errors.append("recall.min_recall_percent must be positive")
+    if (
+        recall_percent is not None
+        and min_recall_percent is not None
+        and recall_percent < min_recall_percent
+    ):
+        errors.append("recall.recall_percent must be >= recall.min_recall_percent")
     if (
         finding_count is not None
         and recalled_n is not None
