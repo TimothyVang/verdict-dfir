@@ -246,7 +246,7 @@ All three modes are **judge-valid**. Judges pick whichever they already have —
 | Install pattern | `curl ... \| bash` one-liner | `curl ... \| bash` one-liner (same pattern, our repo) |
 | Credential mode | 1 (their gateway config) | 3 (CLAUDE_CODE_OAUTH_TOKEN / interactive / API key) |
 
-We match Valhuntir's architectural discipline and exceed it on three dimensions that are documented, measurable, and legally framed.
+We match Valhuntir's architectural discipline and exceed it on three dimensions that are documented, measurable on the cases actually scored, and legally framed.
 
 ---
 

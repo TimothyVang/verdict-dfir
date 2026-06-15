@@ -205,8 +205,8 @@ Beyond the three ideas above, a single case run also:
 - **Scales to a fleet.** Run a whole compromised estate, not one box: the 3-stage investigate →
   correlate → render pipeline produces a single cross-host `FLEET_REPORT` surfacing the signals that
   only appear *across* machines — the same uncommon process on many hosts, near-simultaneous
-  process-creation waves, MITRE-technique spread. (On a 22-host SANS estate it pinned one implant
-  image to 20 of 22 hosts.) Runs in the SANS SIFT VM ([fleet analysis](docs/using/fleet-analysis.md)),
+  process-creation waves, MITRE-technique spread. (In the pictured SRL-2018 showcase run, one implant
+  image appeared on 20 of 22 hosts.) Runs in the SANS SIFT VM ([fleet analysis](docs/using/fleet-analysis.md)),
   or per-host locally with no VM ([whole-case local run](docs/using/whole-case-local-run.md)).
 - **Acts on the verdict (optional).** When the operator deploys an n8n workflow, post-verdict automation
   can turn a verdict into a notification, ticket, or containment step; out of the box no workflow is
