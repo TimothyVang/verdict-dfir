@@ -34,31 +34,32 @@ historical development remote for the SANS Find Evil! entry, not a second produc
 Semver tags (`v0.1.0`, `v0.1.1`, ...) are the forward release line; `v-submit` is retained as the
 historical hackathon submission tag.
 
-## Run it against supported evidence
+## Install and run
 
-VERDICT is a Claude Code skill. Point it at supported evidence — a memory image, EVTX log, disk
+| Need | Start here |
+|---|---|
+| Cold clone install | [`INSTALL.md`](INSTALL.md) |
+| Three-command quickstart | [`QUICKSTART.md`](QUICKSTART.md) |
+| Every run mode, flag, and output file | [`docs/using/running-verdict.md`](docs/using/running-verdict.md) |
+| Failure mode fixes | [`docs/troubleshooting.md`](docs/troubleshooting.md) |
+
+```bash
+git clone --depth 1 https://github.com/TimothyVang/verdict-dfir.git verdict
+cd verdict
+bash scripts/setup
+scripts/verdict <path-to-evidence>
+```
+
+VERDICT is a Claude Code agent. Point it at supported evidence — a memory image, EVTX log, disk
 image (`.E01` / `.dd`), packet capture, Velociraptor collection, or a whole multi-host case folder —
 and it opens the case, drives the typed read-only DFIR tools, verifies every finding, and produces a
 signed verdict + report. Unsupported formats degrade to custody/limitation records instead of a
 broad clearance claim.
 
-```bash
-# First run — install/check prerequisites, attempt SIFT VM setup, then run:
-bash scripts/setup --with-sift --run
-
-# Any time after — point it at supported evidence:
-/verdict <evidence>                 # in Claude Code: the turnkey skill (recommended)
-bash scripts/verdict <evidence>     # the same pipeline, headless from a shell
-#  …or in an interactive `claude` session just say:  investigate <evidence>
-```
-
-**It can drive the SIFT VM dynamically.** `/verdict` attempts to discover the SANS SIFT VM, boot it
-when the implemented VMware path is available, resolve its IP (VMware Tools or the DHCP lease), and
-route supported forensic tools into it over SSH so disk images can mount/extract. No reachable VM?
-It falls back to host-local tools with the same hash-chained, offline-verifiable audit trail.
-Supported disk images can be parsed locally through Sleuth Kit direct-read when prerequisites are present;
-`case_open` alone remains custody-only, and unsupported artifact classes stay as named limitations.
-The SIFT VM remains the recommended parity path for disk images.
+**Prefer Claude Code interactively?** Run `claude` in this repo and type `/verdict <evidence>` or
+`investigate <evidence>`. Disk images work best with local Sleuth Kit/libewf or SIFT VM support;
+without mount/extract coverage, disk auto mode records custody and limitations instead of making a
+broad clearance claim. Full environment choices are in [`QUICKSTART.md`](QUICKSTART.md).
 
 ## What VERDICT can miss
 
@@ -195,7 +196,7 @@ Beyond the three ideas above, a single case run also:
   support or in SIFT mode, it opens raw/E01 images read-only and extracts `$MFT`, registry hives,
   EVTX, and Prefetch (`disk_mount` / `disk_extract_artifacts` / `disk_unmount`), then analyzes memory
   in the same case. Raw disk with no supported mounted/extracted content remains custody-only and
-  honestly `INDETERMINATE`. ([tool inventory](docs/reference/mcp-and-tools.md))
+  honestly `INDETERMINATE`. Supported disk images can be parsed locally through Sleuth Kit direct-read when prerequisites are present; `case_open` alone remains custody-only and unsupported artifact classes stay as named limitations. ([tool inventory](docs/reference/mcp-and-tools.md))
 - **Re-verifies its own findings.** `verify_finding` re-runs each cited tool call and confirms the
   output SHA-256 still matches, and `detect_contradictions` raises Pool A vs Pool B conflicts as
   first-class records before the judge merges — so a third party can independently replay the chain.

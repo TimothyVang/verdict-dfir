@@ -49,28 +49,50 @@ This helper builds missing MCP servers through `scripts/install.sh`, checks opti
 If `SIFT_OK=1`, run SIFT mode:
 
 ```bash
-FIND_EVIL_GUEST_IP=<ip> bash scripts/verdict <evidence> --sift
+ARTIFACT="/mnt/hgfs/evidence/example.E01"
+FIND_EVIL_GUEST_IP="<ip>" bash scripts/verdict "${ARTIFACT}" --sift
+```
+
+For host-local evidence that is not guest-mounted, configure an explicit guest-visible case staging root instead of falling back to legacy VM evidence directories:
+
+```bash
+HOST_EVIDENCE="/path/to/evidence.E01"
+CASE_ID="auto-$(python3 -c 'import uuid; print(uuid.uuid4())')"
+FINDEVIL_SIFT_CASE_STAGING_ROOT="/home/sansforensics/find-evil/tmp/auto-runs/${CASE_ID}/staging/sift" \
+FIND_EVIL_GUEST_IP="<ip>" \
+bash scripts/verdict "${HOST_EVIDENCE}" --sift --case-id "${CASE_ID}"
 ```
 
 If `SIFT_OK=0`, run local mode:
 
 ```bash
-bash scripts/verdict <evidence>
+EVIDENCE="/path/to/evidence"
+bash scripts/verdict "${EVIDENCE}"
 ```
 
 In local mode, state the scope honestly: memory, EVTX, PCAP, Velociraptor collections, and extracted artifacts can still be useful; raw disk images need local Sleuth Kit/libewf support to produce parsed artifacts, and remain custody-only if mount/extract fails or yields no supported artifacts.
 
 Use default parallel execution. Pass `--no-dashboard` only when the operator explicitly does not want browser/dashboard behavior.
 
-SIFT mode copies host evidence into a current-run SIFT staging directory and removes that current-run SIFT staging after a successful run. Use `--keep-sift-staging` only when the operator needs the copied VM path retained for debugging. Do not ask the operator to manually remove current-run staging after a successful `scripts/verdict --sift` run; if disk pressure remains, distinguish automatic current-run cleanup from legacy root-level staging that predates this lifecycle and requires explicit approval before deletion.
+SIFT mode should prefer read-only guest-mounted evidence paths such as `/mnt/hgfs/evidence/<artifact>`; these are referenced directly and are not copied. If the operator supplies a host-only path in `--sift` mode, the launcher fails closed unless `FINDEVIL_SIFT_CASE_STAGING_ROOT` points to a guest-visible project case staging directory, typically ending in `staging/sift`. Current-run SIFT staging is marker-guarded and removed after a successful run unless `--keep-sift-staging` is set. Do not ask the operator to manually remove current-run staging after a successful `scripts/verdict --sift` run; if disk pressure remains, distinguish automatic current-run cleanup from legacy root-level staging that predates this lifecycle and requires explicit approval before deletion.
 
 ### 4. Locate Case Outputs
 
-Read `tmp/verdict-last-run.json` if it exists, then inspect the referenced Case directory under:
+Use the case path printed by `scripts/verdict`. Prefer the case-local run summary:
+
+```text
+tmp/auto-runs/<case-id>/summaries/run-summary.json
+```
+
+Then inspect the referenced Case directory under:
 
 ```text
 tmp/auto-runs/<case-id>/
 ```
+
+Generated sidecars are grouped under the same case directory, including `summaries/`, `logs/`, `staging/`, `artifacts/`, and `evidence/` reference metadata when present.
+
+Only read `tmp/verdict-last-run.json` when it was explicitly requested with `--run-summary tmp/verdict-last-run.json`; otherwise it may be stale from a prior compatibility run.
 
 Read the relevant outputs when present:
 
@@ -91,7 +113,7 @@ Verdict   : <SUSPICIOUS | INDETERMINATE | NO_EVIL> (confidence <value>)
 Findings  : <N> (all Findings cite tool_call_id: <yes|no>)
 Custody   : manifest_verify.overall = true
 Coverage  : <short scope statement from coverage_manifest/verdict limitations>
-Automation: n8n <fired | skipped | unavailable> -> automation.json if present
+Automation: n8n <reachable/recorded | skipped | unavailable> -> automation.json if present
 Grounding : <claims researched | skipped | unavailable> -> grounding.json if present
 Case      : tmp/auto-runs/<case-id>/
 Report    : REPORT.html / REPORT.pdf if present

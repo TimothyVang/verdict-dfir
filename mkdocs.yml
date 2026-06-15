@@ -55,6 +55,8 @@ theme:
 
 nav:
   - Home: index.md
+  - Install: https://github.com/TimothyVang/verdict-dfir/blob/master/INSTALL.md
+  - Quickstart: https://github.com/TimothyVang/verdict-dfir/blob/master/QUICKSTART.md
   - Running VERDICT: using/running-verdict.md
   - Architecture: architecture.md
   - Accuracy: accuracy-report.md

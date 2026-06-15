@@ -37,6 +37,9 @@ when the operator wants to run benchmark cases.
 |---|---|---|
 | `nitroba` | PCAP | Network-evidence recall without over-attribution. |
 | `nist-hacking-case` | Disk | Hacking-tool execution and artifact-corroboration coverage. |
+| `otrf-apt3-mordor` | Windows logs | EVTX/Sysmon/JSON correlation against OTRF's APT3 emulation telemetry. |
+| `memlabs-lab1`-`memlabs-lab3` | Windows memory | Volatility-oriented memory extraction coverage using CTF-style objectives without committed flag values. |
+| `digitalcorpora-lonewolf` | Windows disk + memory | Large Digital Corpora laptop scenario; records required artifacts and non-scored leads until an authorized teacher guide is available. |
 | `synthetic-benign` | Synthetic control | False-positive floor: zero findings should remain `NO_EVIL`. |
 | `sans-starter` | Mixed | SANS starter-case answer-key placeholder for local/eventual scoring. |
 | Additional public cases | Disk, memory, Android, Linux | Regression corpus for parser expansion and confidence calibration. |
