@@ -696,6 +696,33 @@ bash "${REPO}/scripts/install-dfir-tools.sh" || warn "some DFIR tools did not in
 # Make fresh ~/.local/bin installs visible to the doctor check below.
 export PATH="${HOME}/.local/bin:${PATH}"
 
+# Long-tail DFIR system packages (ausearch / nfdump / suricata), behind the
+# ausearch / nfdump_query / suricata_eve tools. install-dfir-tools.sh stays
+# user-space (no sudo), so these apt-only packages are installed here, and only
+# under --bootstrap (the same gate as the toolchain installs above) — so a plain
+# `install.sh` never sudo-prompts. Best-effort and non-fatal: a miss degrades to a
+# clean BinaryNotFound the agent pivots on.
+if bootstrap_enabled && command -v apt-get &> /dev/null; then
+    dfir_apt_missing=()
+    command -v ausearch &> /dev/null || dfir_apt_missing+=(auditd)
+    command -v nfdump   &> /dev/null || dfir_apt_missing+=(nfdump)
+    command -v suricata &> /dev/null || dfir_apt_missing+=(suricata)
+    if [ "${#dfir_apt_missing[@]}" -gt 0 ]; then
+        info "[bootstrap] installing long-tail DFIR packages: ${dfir_apt_missing[*]}"
+        if [ "$(id -u)" -eq 0 ]; then
+            apt-get update -qq && apt-get install -y --no-install-recommends "${dfir_apt_missing[@]}" \
+                || warn "long-tail DFIR apt install failed (non-fatal; ausearch/nfdump/suricata stay BinaryNotFound)."
+        elif command -v sudo &> /dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends "${dfir_apt_missing[@]}" \
+                || warn "long-tail DFIR apt install failed (non-fatal; ausearch/nfdump/suricata stay BinaryNotFound)."
+        else
+            warn "ausearch/nfdump/suricata need root/sudo to apt-install; skipping (run: sudo apt-get install -y ${dfir_apt_missing[*]})."
+        fi
+    else
+        ok "long-tail DFIR packages present (ausearch/nfdump/suricata)."
+    fi
+fi
+
 echo ""
 info "Verifying DFIR tools + environment (scripts/doctor.sh)..."
 if bash "${REPO}/scripts/doctor.sh"; then

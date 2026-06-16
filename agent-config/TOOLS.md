@@ -29,13 +29,14 @@ committed case run. The committed sample runs prove the core disk/registry/EVTX/
 USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
 
 > **Long-tail tool availability.** `scripts/setup` installs `volatility3`, `hayabusa` (+ Sigma
-> rules), `chainsaw`, `velociraptor`, and `pandoc`/`matplotlib`. The long-tail wrappers —
-> `plaso_parse` (log2timeline), `ez_parse` (Eric Zimmerman tools), `mac_triage` (mac_apt),
-> `ausearch`, `nfdump_query` (nfdump), `suricata_eve` (suricata), and `indx_parse` (INDXParse) —
-> are wired and schema-validated but are **NOT** installed by setup. On a host without them, each
-> call returns a typed `BinaryNotFound` error and the run continues (graceful skip); it never
-> crashes the server. On a SANS SIFT VM, plaso / EZ tools / mac_apt are typically already present;
-> ausearch / nfdump / suricata / INDXParse are install-first. `scripts/doctor.sh` reports which are
+> rules), `chainsaw`, `velociraptor`, and `pandoc`/`matplotlib`, plus the long-tail wrappers it can
+> install cleanly: `indx_parse` (INDXParse) and `plaso_parse` (log2timeline, best-effort pip) go in
+> user-space via `install-dfir-tools.sh`, and `ausearch` (auditd), `nfdump_query` (nfdump), and
+> `suricata_eve` (suricata) are apt-installed by `install.sh` under `--bootstrap` (which
+> `scripts/setup` passes). `ez_parse` (Eric Zimmerman tools, .NET) and `mac_triage` (mac_apt) ship
+> on the SANS SIFT VM and are reported (not auto-installed) elsewhere, since neither has a clean
+> cross-distro user-space installer. Any tool still missing returns a typed `BinaryNotFound` error
+> and the run continues (graceful skip); it never crashes the server. `scripts/doctor.sh` reports which are
 > present, and the install hint is in each tool's `BinaryNotFound` error message.
 
 ### case_open
