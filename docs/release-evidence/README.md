@@ -14,6 +14,9 @@ customer evidence.
 | `evtx-security-log-clear-trace-summary.json` | Reviewer index for the EVTX trace: run command, case id, evidence hash, manifest verification result, token usage ledger, and a spot-check mapping from Finding `f-A-evtx-audit-log-cleared` to `evtx_query` tool call `tc-002`. |
 | `natural-self-correction-trace.jsonl` | Verbatim excerpt (seq 169-183) from an organic run's hash-chained `audit.jsonl`: real `registry_query` failures on truncated RegBack hives, `course_correction` narrow/skip decisions, and `heartbeat_failure` escalation to an honest partial verdict. No fault injection. |
 | `natural-self-correction-summary.json` | Reviewer index for the self-correction trace: source run, organic (`fault_injection` absent) statement, the failure->adjust->escalate arc, event counts, and how to verify from `seq`/`ts`/`prev_hash`. |
+| `nist-schardt-disk-trace.txt` | Captured `scripts/trace-finding` output for a real disk Case on the NIST CFReDS Hacking Case image (SCHARDT.dd): audit chain OK, all leaves resolve, all findings traced. |
+| `nist-schardt-disk-summary.json` | Reviewer index for the NIST disk Case: SUSPICIOUS, 27 findings across 6 parsed artifact classes, the organic `plaso_parse`-unavailable -> PARTIAL-timeline pivot, Merkle root, and `manifest_verify.overall=true`. |
+| `memory-volatility-summary.json` | Reviewer index for a real ~18 GB memory-image Case: INDETERMINATE, 2 findings, the four Volatility tools run, and the honest single-class scope (no second class to corroborate execution). |
 
 ## Historical L3 fallback packet
 
@@ -94,6 +97,38 @@ never appears in its audit chain). Reviewer spot-check:
 
 This is the deliberately un-edited counterpart to the demo film: a real tool
 failure and a real recovery, not a staged or injected one.
+
+## Stage Two real-run packets (disk + memory)
+
+`nist-schardt-disk-*` and `memory-volatility-summary.json` are reviewer indexes
+for two real `scripts/verdict` runs, each traced with `scripts/trace-finding`
+and each carrying `manifest_verify.overall=true`. They cover the depth and the
+breadth criteria without committing any raw evidence.
+
+- **Disk depth** — NIST CFReDS Hacking Case image (`SCHARDT.dd`, public domain):
+  `SUSPICIOUS`, 27 findings, 6 parsed artifact classes (custody, disk/filesystem,
+  MFT, prefetch, registry, and tool-output), with the timeline class sealed
+  `PARTIAL`. `plaso_parse` was genuinely unavailable (attempted, all failed), so
+  the agent sealed the timeline as partial and continued to an honest verdict —
+  an organic course-correction, `fault_injection=0`. See
+  `nist-schardt-disk-trace.txt` for the captured trace.
+- **Memory breadth** — a real ~18 GB memory image: `INDETERMINATE`, 2 findings,
+  with `vol_pslist` / `vol_psscan` / `vol_psxview` / `vol_malfind` all run and
+  the memory class parsed. `INDETERMINATE` is the correct word: memory-only, with
+  no second artifact class to corroborate execution against.
+
+Known gap (kept honest): same-host disk **and** memory correlated inside **one**
+Case — the disk-vs-memory discrepancy signal — is still pending. A flat evidence
+folder was not ingested as a single fusion Case; the two packets above are
+separate single-class Cases, and `memory-volatility-summary.json` records this
+gap rather than implying fusion was demonstrated.
+
+Reviewer spot-check:
+
+```bash
+jq -e '.manifest_verify_overall == true' docs/release-evidence/nist-schardt-disk-summary.json
+jq -e '.manifest_verify_overall == true' docs/release-evidence/memory-volatility-summary.json
+```
 
 ## Stage Two evidence map
 

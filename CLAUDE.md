@@ -254,4 +254,9 @@ Public release docs must describe the application and its safety contract. Do no
 - `docs/verdict-semantics.md` - Verdict-word semantics.
 - `docs/false-positives.md` - overclaim prevention.
 - `docs/cryptographic-attestation.md` - custody and manifest verification.
+- `docs/release-evidence/` - reviewable summaries of real `scripts/verdict` runs traced with `scripts/trace-finding` (`manifest_verify.overall=true`):
+  - `stage-two-evidence.md` - criterion-by-criterion map from each Official Rules criterion to its committed artifact.
+  - `nist-schardt-disk-trace.txt` / `nist-schardt-disk-summary.json` - NIST CFReDS Hacking Case disk (SCHARDT.dd): SUSPICIOUS, 27 findings, 6 parsed artifact classes; `plaso_parse` genuinely unavailable so the timeline sealed PARTIAL and the Case continued (organic course_correction, fault_injection=0).
+  - `memory-volatility-summary.json` - ~18 GB memory image: INDETERMINATE, 2 findings, `vol_pslist`/`psscan`/`psxview`/`malfind` run; single-class scope (same-host disk+memory fusion in one Case is still a known gap).
+  - `natural-self-correction-trace.jsonl` / `natural-self-correction-summary.json` - verbatim audit-chain excerpt of an organic failure->adjust->escalate arc (`fault_injection` absent).
 - `agent-config/` - runtime DFIR agent rules.

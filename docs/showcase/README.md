@@ -44,6 +44,11 @@ report — every finding traceable to a tool call, the whole chain verifiable of
 
 ---
 
+The narrated **feature deep-dive film** (George / eleven_v3 voice) builds on these captures, and
+its self-correction beat is real live-TUI footage — VERDICT hitting a genuinely unavailable
+`plaso_parse` on the NIST SCHARDT.dd Case and adapting to `mft_timeline` (`fault_injection=0`),
+shipped as `scripts/make-demo-video/public/ui/self-correction.mp4`.
+
 Reproduce any of these with the recipes in
 [`scripts/make-demo-video/CAPTURE.md`](../../scripts/make-demo-video/CAPTURE.md), or just run
 `scripts/verdict <evidence>` yourself.
