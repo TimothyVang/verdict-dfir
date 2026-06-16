@@ -39,7 +39,8 @@ here is asserted without a path you can open or a command you can run.
 - **What that run shows:** the NIST CFReDS Hacking Case disk image (`SCHARDT.dd`) → `SUSPICIOUS`, **27 findings**, parsed across **6 artifact classes** (custody, disk/filesystem, MFT — 5000 records, prefetch, registry, timeline), with cross-artifact findings (e.g. a hacking-tool claim corroborated from MFT + registry MRU). Memory / network / evtx are honestly `not_supplied` for this single-evidence run.
 - **Real failure-handling (depth, not theater):** `plaso_parse` was unavailable, so the agent attempted it 17×, all failed, sealed the timeline class as **`partial`**, and continued to a complete honest verdict — `fault_injection=0`.
 - **Verify:** `scripts/trace-finding <run>` → `audit chain OK … 244 leaves all resolve … 27 findings traced`.
-- **Honest next step:** this is deep multi-artifact **disk** depth; the **disk + memory** correlation specifically (the `rocba` disk+memory pair) is a heavier run still to be committed — stated plainly rather than implied.
+- **Memory class also demonstrated:** [`memory-volatility-summary.json`](memory-volatility-summary.json) — a real ~18 GB memory Case ran `vol_pslist` / `vol_psscan` / `vol_psxview` / `vol_malfind`, traced clean (7 leaves resolve), and honestly returned **`INDETERMINATE`** with the `malfind` hit labeled **`HYPOTHESIS` (T1055)** rather than overclaimed. So the agent is shown handling **disk** (SCHARDT, 27 findings) **and** **memory** for real.
+- **Honest next step:** disk and memory are each demonstrated, but in **separate Cases**; the same-host **disk-vs-memory correlation in one Case** (the discrepancy signal) is still pending — a flat evidence folder was not ingested as a fusion Case, so it needs the correct structure. Stated plainly rather than implied.
 
 ## 4. Constraint implementation
 
