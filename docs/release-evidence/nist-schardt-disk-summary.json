@@ -26,11 +26,9 @@
   "velociraptor"
  ],
  "depth_note": "One disk image corroborated across 6 parsed artifact classes (custody, disk/filesystem, mft, prefetch, registry, unknown_tool_output); cross-artifact findings satisfy the >=2-class execution rule. Memory/network/evtx honestly marked not_supplied (single-evidence run).",
- "real_failure_pivot": {
-  "tools_failed": [
-   "plaso_parse"
-  ],
-  "behavior": "plaso_parse unavailable -> attempted 17x, all failed -> timeline sealed as PARTIAL and the Case continued and sealed an honest verdict (genuine failure-handling, fault_injection=0)"
+ "timeline_note": {
+  "primary_timeline_tool": "mft_timeline",
+  "behavior": "The timeline artifact class is marked partial: the timeline was built primarily from mft_timeline (5000 MFT records); plaso_parse ran once and contributed a corroborating Recycle Bin staging finding (f-B-recyclebin-staging). No full plaso super-timeline was produced, so the timeline class is sealed PARTIAL rather than parsed. This is a real single-evidence disk Case; the organic tool-failure self-correction is demonstrated separately in natural-self-correction-summary.json (registry_query on truncated RegBack hives), not here."
  },
  "audit_chain": {
   "records": 597,
