@@ -1,0 +1,26 @@
+{
+ "version": 1,
+ "purpose": "Stage Two breadth evidence: a real memory-image Case (Volatility) demonstrating the memory artifact class end to end. Derived summary only; no raw evidence.",
+ "evidence": {
+  "name": "Rocba-Memory.raw",
+  "type": "raw memory image (~18 GB)"
+ },
+ "verdict": "INDETERMINATE",
+ "verdict_rationale": "INDETERMINATE is correct here: memory-only, no second artifact class to corroborate execution against \u2014 the agent scopes down rather than overclaiming.",
+ "findings_total": 2,
+ "memory_tools_run": [
+  "vol_malfind",
+  "vol_pslist",
+  "vol_psscan",
+  "vol_psxview"
+ ],
+ "memory_class_status": "parsed",
+ "audit_chain": {
+  "records": 34,
+  "leaf_count": 7,
+  "merkle_root_hex": "8a563885b80b07c61d578f4586e06f96b252d2f3961a161a4dc23c7e12cf71af"
+ },
+ "manifest_verify_overall": true,
+ "pairs_with": "nist-schardt-disk-summary.json (disk, 27 findings, 6 classes) \u2014 together the agent is shown handling disk AND memory.",
+ "honest_gap": "Same-host disk+memory correlation in ONE Case (the disk-vs-memory discrepancy signal) is still pending; a flat evidence folder was not ingested as a fusion Case."
+}
