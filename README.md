@@ -146,6 +146,29 @@ claims require at least two artifact classes.
 > disk/registry/EVTX/MFT/Prefetch/YARA/USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and
 > `browser_history` paths.
 
+## Architecture
+
+The whole workflow as one picture — every boundary is crossed only through a typed, read-only tool
+whose output is hash-chained into custody: the read-only **evidence vault** → **SIFT tool
+subprocesses** → **two typed MCP servers** → the **Claude Code agent loop** → **cryptographic
+custody** → the **presentation** layer, with trust boundaries marked.
+
+<p align="center">
+  <img src="docs/diagrams/architecture-poster.png" alt="VERDICT architecture and chain of custody: the read-only evidence vault, SIFT tool subprocesses, two typed MCP servers (findevil-mcp 31 Rust tools and findevil-agent-mcp 12 Python tools), the Claude Code agent loop, the hash-chained and signed custody chain, and the presentation layer, with trust boundaries marked" width="900">
+</p>
+
+The same pipeline mapped to the repository — entrypoints (`scripts/`), the agent loop governed by
+`agent-config/`, the `.mcp.json` surface (product servers `findevil-mcp` + `findevil-agent-mcp` =
+43 audit-chained tools, plus the n8n / playwright / puppeteer / qmd convenience servers that never
+emit findings), the SIFT DFIR tools, the read-only evidence vault, the custody chain
+(`audit.jsonl` → `manifest_finalize` → `manifest_verify`), and the outputs:
+
+<p align="center">
+  <img src="docs/diagrams/verdict-code-architecture.png" alt="VERDICT code architecture mapping each pipeline stage to its repository location: scripts entrypoints, the agent-config-governed agent loop, the .mcp.json product and convenience MCP servers, SIFT DFIR subprocess tools, the read-only evidence vault, the audit.jsonl to manifest_verify custody chain, and the verdict.json, report, and dashboard outputs" width="680">
+</p>
+
+Trust-boundary detail and the agent topology are in [`docs/architecture.md`](docs/architecture.md).
+
 ## Capabilities
 
 - **Disk and memory in one Case.** With local Sleuth Kit/libewf support or in SIFT mode, it opens
