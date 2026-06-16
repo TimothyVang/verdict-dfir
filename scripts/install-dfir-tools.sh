@@ -147,6 +147,52 @@ else
   fi
 fi
 
+# --- INDXParse ($I30 / INDX slack) — pip --user ---
+# Provides INDXParse.py on ~/.local/bin for the indx_parse tool.
+if have INDXParse.py; then
+  ok "INDXParse present."
+else
+  info "Installing INDXParse (pip --user; indx_parse \$I30/INDX slack)..."
+  if pip3 install --user --quiet INDXParse; then
+    ok "INDXParse installed."
+  else
+    warn "INDXParse install failed — try: pip3 install --user --break-system-packages INDXParse. indx_parse will BinaryNotFound."
+  fi
+fi
+
+# --- plaso / log2timeline (super-timeline) — pip --user, best-effort ---
+# plaso pulls heavy low-level deps (libyal); on a stock host pip can fail to build
+# them. It ships on the SANS SIFT VM. Best-effort: try pip --user, otherwise point
+# at the SIFT VM / GIFT PPA. A miss degrades to a clean BinaryNotFound on plaso_parse.
+if have log2timeline.py && have psort.py; then
+  ok "plaso present (log2timeline.py/psort.py)."
+else
+  info "Installing plaso (pip --user; best-effort)..."
+  if pip3 install --user --quiet plaso; then
+    ok "plaso installed."
+  else
+    warn "plaso pip install failed (heavy native deps). It ships on the SANS SIFT VM; on a host use the GIFT PPA: sudo add-apt-repository ppa:gift/stable && sudo apt-get install -y plaso-tools. plaso_parse will BinaryNotFound until then."
+  fi
+fi
+
+# --- Eric Zimmerman tools (ez_parse: LNK/Amcache/ShimCache/RecycleBin/shellbags) ---
+# The cross-platform .NET 6 port needs the dotnet runtime; no clean user-space
+# installer across distros, so it is reported, not auto-installed. Ships on SIFT.
+if [ -n "${EZTOOLS_DIR:-}" ] || have LECmd || have AmcacheParser; then
+  ok "EZ tools present."
+else
+  warn "EZ tools absent (ez_parse). They ship on the SANS SIFT VM; on a host install the .NET 6 build from https://ericzimmerman.github.io and set \$EZTOOLS_DIR (or add to PATH)."
+fi
+
+# --- mac_apt (mac_triage: macOS image triage) ---
+# A Python project (git clone + pytsk3/native deps), not a clean pip package, so
+# it is reported, not auto-installed. Ships on the SANS SIFT VM.
+if [ -n "${MAC_APT:-}" ] || have mac_apt.py || have mac_apt; then
+  ok "mac_apt present."
+else
+  warn "mac_apt absent (mac_triage). It ships on the SANS SIFT VM; on a host clone github.com/ydkhatri/mac_apt and set \$MAC_APT to mac_apt.py (or add to PATH)."
+fi
+
 # --- tshark (pcap_triage) — system package; not user-space installable ---
 if have tshark; then
   ok "tshark present."
