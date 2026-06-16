@@ -19,7 +19,7 @@ const CREDITS: Credit[] = [
   { label: "Tool surface", value: "31 Rust · 12 Python", mono: true },
 ];
 
-export function OutroScene() {
+export function OutroScene({ page = 10, total = 10 }: { page?: number; total?: number } = {}) {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -28,7 +28,7 @@ export function OutroScene() {
 
   return (
     <div style={{ opacity: fadeOut, width: "100%", height: "100%" }}>
-      <Scene page={10} caption="Colophon">
+      <Scene page={page} caption="Colophon" total={total}>
         {/* Left column — the imprint: stamp + logotype + creed */}
         <div style={{ position: "absolute", left: MARGIN, top: 232, width: 760 }}>
           <Kicker frame={frame} delay={6} color={C.accent}>End of File</Kicker>

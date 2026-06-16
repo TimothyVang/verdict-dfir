@@ -163,9 +163,9 @@ function BeatContent({ beat, totalBeats }: { beat: Beat; totalBeats: number }) {
     switch (beat.scene) {
       case "concept": return <ConceptCard beat={beat} totalBeats={totalBeats} />;
       case "exhibit": return <ExhibitChapter beat={beat} totalBeats={totalBeats} />;
-      case "tools": return <ToolGrid />;
-      case "arch": return <ArchDiagram />;
-      case "outro": return <OutroScene />;
+      case "tools": return <ToolGrid page={beat.number} total={totalBeats} />;
+      case "arch": return <ArchDiagram page={beat.number} total={totalBeats} />;
+      case "outro": return <OutroScene page={beat.number} total={totalBeats} />;
       case "logo": return <LogoIntro />;
       case "title":
       default: return <TitleCard beat={beat} totalBeats={totalBeats} />;
