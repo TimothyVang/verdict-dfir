@@ -29,8 +29,8 @@ import { C, GROTESK, MONO } from "./editorial";
 export const CAPTURED: ReadonlySet<string> = new Set<string>([
   "dashboard-live.mp4",
   // Primary terminal cut: a genuine asciinema capture of a clean investigation
-  // run with no fault injection (nitroba.pcap), local paths sanitized for the
-  // public cut. Backs the "findings replay before they count" deep-dive beat.
+  // run with no fault injection. Optional harness recovery footage uses a
+  // separate appendix clip and must not replace this primary asset.
   "terminal-investigation.mp4",
   // Real offline tamper demo (CAPTURE.md Slot 3): trace-finding passes on the
   // committed run, one hex char is flipped in a /tmp copy, the verifier fails
@@ -40,6 +40,10 @@ export const CAPTURED: ReadonlySet<string> = new Set<string>([
   // Pool A and Pool B disagree, detect_contradictions surfaces each clash, and
   // the credibility-weighted judge reconciles it (auto_higher_credibility).
   "F-contradiction.mp4",
+  // Live interactive Claude Code TUI investigating NIST SCHARDT.dd: plaso_parse is
+  // genuinely unavailable (log2timeline not on PATH), the agent says so and adapts
+  // to mft_timeline — organic self-correction captured on the real TUI, fault_injection=0.
+  "self-correction.mp4",
 ]);
 
 const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;

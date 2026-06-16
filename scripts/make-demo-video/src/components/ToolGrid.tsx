@@ -142,7 +142,7 @@ function ToolChip({ name, delay, tone }: { name: string; delay: number; tone: st
   );
 }
 
-export function ToolGrid() {
+export function ToolGrid({ page = 4, total = 10 }: { page?: number; total?: number } = {}) {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
 
@@ -158,7 +158,7 @@ export function ToolGrid() {
   const groupTone = (i: number) => (i === GROUPS.length - 1 ? C.confirmed : C.ink);
 
   return (
-    <Scene page={4} caption="The tools" total={10}>
+    <Scene page={page} caption="The tools" total={total}>
       {/* Left column — the story */}
       <div style={{ position: "absolute", left: MARGIN, top: 168, width: 560 }}>
         <Kicker frame={frame} delay={sd(2)} color={C.accent}>

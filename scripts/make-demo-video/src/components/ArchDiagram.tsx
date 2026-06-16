@@ -26,7 +26,7 @@ const BOUNDARIES: Boundary[] = [
   { no: "05", label: "VERDICT Orchestrator", sub: "Claude Code · Pool A + Pool B · judge · correlate" },
 ];
 
-export function ArchDiagram() {
+export function ArchDiagram({ page = 2, total = 10 }: { page?: number; total?: number } = {}) {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -36,7 +36,7 @@ export function ArchDiagram() {
   const sd = (raw: number) => spread(raw, 0, 100, durationInFrames, 24, 200);
 
   return (
-    <Scene page={2} caption="Architecture">
+    <Scene page={page} caption="Architecture" total={total}>
       {/* Masthead — kicker + headline, left gutter, with intentional space */}
       <div style={{ position: "absolute", left: MARGIN, top: 168, width: 980 }}>
         <Kicker frame={frame} delay={sd(2)} color={C.accent}>
