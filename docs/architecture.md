@@ -74,9 +74,9 @@ flowchart TB
         Supervisor["Claude Code main agent<br/>= supervisor<br/>reads agent-config/SOUL.md<br/>+ AGENTS.md + MEMORY.md"]
         PoolA["Pool A subagent<br/>(native Task mechanism)<br/>persistence-biased prompt:<br/>Tasks, Services, WMI,<br/>Run, IFEO, LOLBins"]
         PoolB["Pool B subagent<br/>(native Task mechanism)<br/>exfil-biased prompt:<br/>net connections, staging,<br/>certutil/bitsadmin, cloud sync,<br/>USB writes"]
-        Contradiction["detect_contradictions<br/>(MCP tool call into agent_mcp)<br/>FIRES BEFORE JUDGE"]
+        Contradiction["detect_contradictions<br/>(MCP tool call into agent_mcp)<br/>surfaces disagreements first"]
         Judge["judge_findings<br/>credibility-weighted<br/>Estornell ICML 2025"]
-        Verifier["verify_finding<br/>re-executes cited tool calls<br/>vetos uncited Findings"]
+        Verifier["verify_finding<br/>re-executes cited tool calls<br/>vetos uncited Findings<br/>runs before judge"]
         Correlator["correlate_findings<br/>≥2 artifact classes<br/>for execution claims"]
     end
 
@@ -114,9 +114,9 @@ flowchart TB
     PoolA --> Contradiction
     PoolB --> Contradiction
     Contradiction -->|ContradictionFound<br/>event surfaced FIRST| Terminal
-    Contradiction --> Judge
-    Judge --> Verifier
-    Verifier --> Correlator
+    Contradiction --> Verifier
+    Verifier --> Judge
+    Judge --> Correlator
     Correlator --> Trust4
 
     Trust3 --> SignerTier
@@ -144,7 +144,7 @@ flowchart TB
 | 0 | Evidence vault | **Architectural (shipped):** originals opened read-only (libewf for `.e01`); SHA-256 fingerprinted at `case_open` and re-checked at every verifier replay; no write verb exists anywhere in the 43-tool product surface. **Hardened-deployment posture (recommended, not code-enforced):** `mount -o ro` + `chmod 444` on the vault, `inotifywait` write-monitoring | Code-enforced today; filesystem hardening is operator posture |
 | 1 | SIFT tool subprocesses | **Architectural (shipped):** unprivileged user (no root, no CAP_SYS_ADMIN); fixed-argv invocation — `Command::new(bin).args([...])`, never `sh -c`, so a path/arg is never shell-parsed (adversarially pinned by `services/mcp/tests/bypass_paths.rs`). **Roadmap (documented, not yet enforced in code):** per-call wall-clock budget, cpulimit, tmpfs work dir, binary allowlist | Process-enforced today; resource sandboxing is roadmap |
 | 2 | Two typed MCP servers | **Architectural:** Rust `findevil-mcp` type system forbids `execute_shell`; Python `findevil-agent-mcp` Pydantic input models use `extra="forbid"`; tool surfaces fixed at compile/build time. Adding a shell passthrough would require a code change + PR + review | Compiler/schema-enforced |
-| 3 | Claude Code agent loop | **Mixed:** agent system prompts (`agent-config/SOUL.md` — epistemic hierarchy, AGENTS.md — roles) are **prompt-based guardrails**; verifier veto (no Finding without `tool_call_id`) is **architectural** (Pydantic schema-level enforced at the `findevil-agent-mcp` boundary). **Roadmap (tracked, not yet in code):** emit in-chain self-correction — a `course_correction`/`re_evaluation` audit record citing the triggering `tool_call_id` when the agent reverses or down-grades a Finding — so analyst-driven revisions are auditable under `manifest_verify` ([#54](https://github.com/TimothyVang/sans-hackathon/issues/54)) | Mixed — prompt guards behavior, Pydantic guards data |
+| 3 | Claude Code agent loop | **Mixed:** agent system prompts (`agent-config/SOUL.md` — epistemic hierarchy, AGENTS.md — roles) are **prompt-based guardrails**; verifier veto (no Finding without `tool_call_id`) is **architectural** (Pydantic schema-level enforced at the `findevil-agent-mcp` boundary). **Real-time recovery is audit-visible and shipped:** the auto-runner (`scripts/find_evil_auto.py`) emits a named `course_correction` record when a tool or verifier path fails, escalates to a run-level `heartbeat_failure` after two consecutive recovery failures, and seals a scoped partial verdict through `heartbeat_terminated`; demo-only fault injection is explicitly labeled `fault_injection`. These chain-visible records are reconstructed and scored by `scripts/self-score.py` and pinned by tests (`services/agent/tests/test_self_score.py`, `test_heartbeat_escalation.py`, `test_verifier_redispatch.py`, `test_evtx_resilience.py`). **Roadmap (not yet emitted):** explicit labeled `plan_step` / `hypothesis` / `re_evaluation` records — the recovery arc is currently shown through real failure→adjust→escalate records, not an explicit hypothesis log. | Mixed — prompt guards behavior, Pydantic/schema and audit-chain records guard data and recovery transparency |
 | 4 | Crypto Custody | **Architectural:** manifest signing and Merkle root computation happen inside `findevil-agent-mcp` before any finding is user-visible. Ed25519 is the offline-verifiable default; Sigstore/Rekor is the identity + transparency-log tier; the pre-A5 OpenTimestamps/Bitcoin tier was removed so `manifest_finalize` is the terminal custody step | Cryptographic |
 | 5 | Presentation | **DEFERRED to bonus (A2 §2.1).** The terminal IS the primary UX. Optional Next.js SSE bus (when shipped) is read-only from the frontend; `--unattended` mode logs `approved_by: "auto"` to the audit chain. | Auth-enforced (when present) |
 
