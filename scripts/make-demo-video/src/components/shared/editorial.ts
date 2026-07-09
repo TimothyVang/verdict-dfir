@@ -1,23 +1,23 @@
-// Editorial / forensic-dossier design tokens for the demo video.
-// Warm near-black "paper", cream "ink", ONE brand accent + ONE alert accent,
-// and the three confidence tiers as desaturated letterpress tones (meaning
-// only — never decorative). Replaces the old GitHub-dark + rainbow palette.
-export { SERIF, GROTESK, MONO } from "../../fonts";
+// VERDICT v2 demo-video design tokens.
+// Mirrors VERDICT_DFIR_SVG_Assets_v2/verdict-brand-board-reconstructed.png:
+// Midnight Ink, Paper Cream, Electric Cobalt, Soft Lilac, Seafoam, Signal Coral,
+// and Butter Yellow. Semantic colors carry meaning and should not be decorative.
+export { SERIF, GROTESK, MONO, BODY, HAND, CONDENSED } from "../../fonts";
 
 export const C = {
-  paper: "#0e0c10", // warm near-black page
-  paperEdge: "#060507", // vignette darkening
-  surface: "#161318", // raised exhibit panel
-  ink: "#ece6da", // warm cream text (not pure white)
-  inkMuted: "#8c8576", // captions, furniture
-  inkFaint: "#544f48", // hairline-adjacent text
-  hairline: "#2b2620", // editorial rules
-  accent: "#9b59b6", // brand purple — sparing
-  alert: "#d6452f", // redaction / the "evil" found
-  // confidence tiers (semantic, desaturated):
-  confirmed: "#7fae6e",
-  inferred: "#c79a4a",
-  hypothesis: "#6f93b8",
+  paper: "#101426", // Midnight Ink
+  paperEdge: "#080b18", // vignette darkening
+  surface: "#12131A", // Near Black raised exhibit panel
+  ink: "#F5F1E8", // Paper Cream text
+  inkMuted: "#B8A8FF", // Soft Lilac captions, furniture
+  inkFaint: "#7F789C", // subdued secondary text
+  hairline: "#27304A", // editorial rules
+  accent: "#4D5DFF", // Electric Cobalt brand
+  alert: "#FF6257", // Signal Coral — rejected / flagged
+  // confidence tiers (semantic):
+  confirmed: "#73D9C2",
+  inferred: "#FFD76A",
+  hypothesis: "#4D5DFF",
 } as const;
 
 export const CONFIDENCE_TONE: Record<string, string> = {

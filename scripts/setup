@@ -23,6 +23,12 @@ set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO}"
 
+# Point Claude Code's agent env at THIS folder (portable — regenerates the
+# .claude/settings.local.json env block for wherever the project now lives).
+# Best-effort and never fatal: a missing/locked settings file must not block setup.
+bash "${REPO}/scripts/setup-containment.sh" >/dev/null 2>&1 \
+  || echo "[setup] note: agent-env containment not configured (non-fatal); run scripts/setup-containment.sh manually." >&2
+
 # cargo often lives under ~/.cargo/bin but is absent from a fresh shell's PATH
 # (doctor.sh:30 / install.sh source this too).
 # shellcheck disable=SC1091

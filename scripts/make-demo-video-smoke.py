@@ -91,6 +91,61 @@ def test_beat_data_has_ten_beats_and_275s() -> None:
     assert ends[-1] == 275, f"Expected 275s total, got {ends[-1]}s"
 
 
+# --- Additional videos (explainer, deep-dives, quickstart, contributor call) ---
+
+ADDITIONAL_BEAT_FILES = [
+    "explainer-beats.ts",
+    "deepdive-beats.ts",
+    "quickstart-beats.ts",
+    "contributor-beats.ts",
+]
+ADDITIONAL_COMPOSITIONS = [
+    "EducationalExplainer",
+    "FeatureDeepDives",
+    "Quickstart",
+    "ContributorCall",
+]
+
+
+def _timing_for(beats_file: Path) -> tuple[list[int], list[int], list[int]]:
+    src = beats_file.read_text(encoding="utf-8")
+    numbers = [int(n) for n in re.findall(r"number:\s*(\d+),", src)]
+    starts = [int(n) for n in re.findall(r"startS:\s*(\d+),", src)]
+    ends = [int(n) for n in re.findall(r"endS:\s*(\d+),", src)]
+    return numbers, starts, ends
+
+
+def test_additional_beat_files_exist_and_are_contiguous() -> None:
+    beats_dir = BEATS_DATA.parent
+    for name in ADDITIONAL_BEAT_FILES:
+        path = beats_dir / name
+        assert path.exists(), f"Missing beats file: {path}"
+        numbers, starts, ends = _timing_for(path)
+        assert numbers, f"No beats found in {name}"
+        assert (
+            len(numbers) == len(starts) == len(ends)
+        ), f"Field counts disagree in {name}"
+        assert starts[0] == 0, f"{name}: first beat must start at 0s"
+        for i, n in enumerate(numbers):
+            assert ends[i] > starts[i], f"{name}: beat {n} has non-positive duration"
+            if i > 0:
+                assert (
+                    starts[i] == ends[i - 1]
+                ), f"{name}: beat {n} timing not contiguous"
+
+
+def test_root_registers_additional_compositions() -> None:
+    src = ROOT_TSX.read_text(encoding="utf-8")
+    for comp in ADDITIONAL_COMPOSITIONS:
+        assert f'id="{comp}"' in src, f"Root.tsx missing composition id={comp}"
+
+
+def test_builder_knows_additional_compositions() -> None:
+    src = BUILDER_SCRIPT.read_text(encoding="utf-8")
+    for comp in ADDITIONAL_COMPOSITIONS:
+        assert comp in src, f"make-demo-video.sh missing default for {comp}"
+
+
 def test_beat_timing_is_contiguous_and_positive() -> None:
     numbers, starts, ends = beat_timing()
     assert starts[0] == 0, f"First beat should start at 0s, got {starts[0]}s"
@@ -133,6 +188,18 @@ def main() -> int:
             test_beat_dispatch_covers_all_configured_beats,
         ),
         ("beat_data_has_ten_beats_and_275s", test_beat_data_has_ten_beats_and_275s),
+        (
+            "additional_beat_files_exist_and_are_contiguous",
+            test_additional_beat_files_exist_and_are_contiguous,
+        ),
+        (
+            "root_registers_additional_compositions",
+            test_root_registers_additional_compositions,
+        ),
+        (
+            "builder_knows_additional_compositions",
+            test_builder_knows_additional_compositions,
+        ),
         (
             "beat_timing_is_contiguous_and_positive",
             test_beat_timing_is_contiguous_and_positive,

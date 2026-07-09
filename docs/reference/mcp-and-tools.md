@@ -2,19 +2,19 @@
 
 > **Status: ACTIVE.** This is the single source of truth for *which MCP servers exist*, *which
 > tools they expose*, and *what is and is not in the audit chain*. `agent-config/TOOLS.md` is
-> the agent read-order catalog of the 43 typed **product** tools; this file is the wider map
+> the agent read-order catalog of the 46 typed **product** tools; this file is the wider map
 > (every registered server + the host/browser MCP). When the two disagree, the tool *counts* in
 > both must match — fix the drift, don't pick a winner.
 
 Two numbers that look like a contradiction but aren't:
 
-- **43** = the **product tool surface** (31 Rust + 12 Python). This is the narrow, typed,
+- **48** = the **product tool surface** (34 Rust + 14 Python). This is the narrow, typed,
   audit-chained verb set the investigation runs on. It does not change lightly.
 - **6** = the number of **MCP servers actually registered in `.mcp.json`**. Only the first two
   are product-default and in the audit chain; the other four are non-product conveniences
   (operator-runtime browser/automation + the optional `qmd` memory sidecar).
 
-Neither number contradicts the other: 43 counts *product tools*, 6 counts *registered servers*.
+Neither number contradicts the other: 46 counts *product tools*, 6 counts *registered servers*.
 
 ---
 
@@ -22,8 +22,8 @@ Neither number contradicts the other: 43 counts *product tools*, 6 counts *regis
 
 | # | Server | Transport / command | Role | In audit chain? | Emits Findings? |
 |---|---|---|---|---|---|
-| 1 | `findevil-mcp` | stdio · `bash scripts/run-mcp-rust.sh` | 31 typed Rust DFIR tools | **Yes** | **Yes** |
-| 2 | `findevil-agent-mcp` | stdio · `bash scripts/run-mcp-python.sh` | 12 Python crypto / ACH / memory / ACP / expert tools | **Yes** | **Yes** |
+| 1 | `findevil-mcp` | stdio · `bash scripts/run-mcp-rust.sh` | 34 typed Rust DFIR tools | **Yes** | **Yes** |
+| 2 | `findevil-agent-mcp` | stdio · `bash scripts/run-mcp-python.sh` | 14 Python crypto / ACH / memory / ACP / expert tools | **Yes** | **Yes** |
 | 3 | `n8n-mcp` | stdio · `npx -y n8n-mcp` (`MCP_MODE=stdio`) | Post-verdict finding-to-action automation (operator-local) | No | No |
 | 4 | `playwright` | stdio · `npx -y @playwright/mcp@latest` | Browser automation / dashboard verification | No | No |
 | 5 | `puppeteer` | stdio · `npx -y @modelcontextprotocol/server-puppeteer` | Gated-asset (SANS SIFT OVA) browser download during `setup` | No | No |
@@ -33,10 +33,12 @@ Neither number contradicts the other: 43 counts *product tools*, 6 counts *regis
 Merkle-rooted, and signed. Every Finding cites a `tool_call_id` from one of these two.
 
 **Non-product (3–6)** are conveniences for the human operator — automation (`n8n-mcp`), browser
-tasks (`playwright`/`puppeteer`), and an optional `qmd` memory sidecar. They **never touch evidence,
-never append to the audit chain, and never emit a Finding.** `qmd` is launched via
-`scripts/run-mcp-qmd.sh` and exits cleanly when the optional local vault/toolchain is absent. Seeing
-six entries in `.mcp.json` is correct, not malformed.
+tasks (`playwright`/`puppeteer`), and an optional `qmd` dev-memory sidecar. They **never touch
+evidence, never append to the audit chain, and never emit a Finding.** `qmd` is launched via
+`scripts/run-mcp-qmd.sh`, which resolves Node 22 via nvm and is **inert without Node 22 + QMD** —
+it exits cleanly when the optional local vault/toolchain is absent, so a fresh clone / a judge
+without the toolchain simply doesn't get it. Seeing six entries in `.mcp.json` is correct, not
+malformed.
 
 ### SIFT-transport variant — `.mcp.json.sift`
 
@@ -55,7 +57,7 @@ operator-runtime servers, it is **not** part of the investigation surface.
 
 ---
 
-## 2. Product tools — 43 total (31 Rust + 12 Python)
+## 2. Product tools — 48 total (34 Rust + 14 Python)
 
 **Invariant: there is no `execute_shell` tool, ever.** This typed surface is the entire verb
 set the investigation has. The narrowness *is* the security pitch. The five generic Rust verbs
@@ -74,13 +76,13 @@ unit-tested against synthetic fixtures, but they have not yet been exercised on 
 committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/YARA/
 USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
 
-### `findevil-mcp` — 31 Rust DFIR tools (`services/mcp/src/tools/`)
+### `findevil-mcp` — 34 Rust DFIR tools (`services/mcp/src/tools/`)
 
 | Tool | Purpose | Source |
 |---|---|---|
 | `case_open` | SHA-256 the evidence, issue `case_id`, open the case dir (must be called first) | `case_open.rs` |
 | `disk_mount` | Register a read-only disk-mount session for raw/E01 images | `disk.rs` |
-| `disk_extract_artifacts` | Copy `$MFT`/Registry/EVTX/Prefetch/… from the mount into the case area | `disk.rs` |
+| `disk_extract_artifacts` | Copy `$MFT`/Registry/EVTX/Prefetch/… from the mount into the case area; also recovers deleted-but-metadata-intact files (staged under `__deleted__/<inode>/`, reallocated inodes skipped, opt out with `recover_deleted: false`) | `disk.rs` |
 | `disk_unmount` | Unmount a disk-mount session, mark it unmounted in the ledger | `disk.rs` |
 | `evtx_query` | Parse `.evtx` with EventID/limit filtering (in-process `evtx` crate) | `evtx_query.rs` |
 | `prefetch_parse` | Execution evidence from Windows Prefetch (MAM + SCCA) | `prefetch_parse.rs` |
@@ -98,6 +100,9 @@ USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` pat
 | `vol_malfind` | Volatility3 `windows.malfind` (injected code, T1055) | `vol_malfind.rs` |
 | `vel_collect` | Run a Velociraptor artifact via subprocess, stream rows | `vel_collect.rs` |
 | `browser_history` | Read visited URLs from a Chrome/Edge `History` or Firefox `places.sqlite` (read-only, in-process via `rusqlite`) | `browser_history.rs` |
+| `oe_dbx_parse` | Read an Outlook Express `.dbx` mail/news store — OE-signature-validated, extracts RFC822 `Subject`/`From`/`Newsgroups` headers (in-process; no other parser reads DBX) | `oe_dbx_parse.rs` |
+| `thumbcache_parse` | Parse XP `Thumbs.db` (OLE/CFB catalog) and Vista+ `thumbcache_*.db`/`iconcache_*.db` (CMMM) — image-viewed/presence evidence that survives file deletion (in-process, magic-byte detected) | `thumbcache_parse.rs` |
+| `hashset_lookup` | NSRL known-good / operator known-bad hash-set lookup — streamed text sets or read-only-immutable SQLite (RDS v3 / generic), parameterized queries only | `hashset_lookup.rs` |
 | `vol_run` | Allow-listed Volatility3 plugin verb (the ~40-plugin memory tail in one tool) — `PluginNotAllowed` before argv | `vol_run.rs` |
 | `ez_parse` | Allow-listed Eric Zimmerman tool verb (LNK/JumpLists/Amcache/ShimCache/RecycleBin/shellbags/WxT) → CSV rows | `ez_parse.rs` |
 | `plaso_parse` | Allow-listed log2timeline parser verb (cross-OS text/binary logs) → normalized timeline events | `plaso_parse.rs` |
@@ -110,7 +115,7 @@ USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` pat
 | `suricata_eve` | PCAP → Suricata `eve.json` (install-first) | `suricata_eve.rs` |
 | `indx_parse` | NTFS `$I30`/INDX slack via `INDXParse.py` (install-first) | `indx_parse.rs` |
 
-### `findevil-agent-mcp` — 12 Python tools (`services/agent_mcp/findevil_agent_mcp/tools/`)
+### `findevil-agent-mcp` — 14 Python tools (`services/agent_mcp/findevil_agent_mcp/tools/`)
 
 | Tool | Purpose | Source |
 |---|---|---|
@@ -126,10 +131,13 @@ USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` pat
 | `memory_recall` | Hermes FTS5 cross-case memory query (BM25 × decay) | `memory_recall.py` |
 | `pool_handoff` | IBM-ACP structured role-to-role handoff (audit record) | `pool_handoff.py` |
 | `expert_miss_capture` | Record an expert's pre-release PDF edit into the miss ledger | `expert_miss_capture.py` |
+| `accuracy_compare` | Read-only ground-truth accuracy diagnostic (TP/FP/FN, precision/recall/F1, hallucination rate) for a finished Case vs a curated golden — a DIAGNOSTIC, never a Finding (emits at most one non-Finding `accuracy_diagnostic` audit record) | `accuracy_compare.py` |
 
 > The `memory_remember`/`memory_recall` pair is the **in-flow investigation memory** (Hermes
 > FTS5, audit-chained). It is distinct from any optional operator-side memory sidecar such as
-> `qmd`: Hermes lives inside cases and the audit chain; operator memory never does.
+> `qmd` / the **obsidian-mind dev/operator memory vault** — optional operator memory that may be
+> omitted from reduced source checkouts. Don't conflate them: Hermes lives inside cases and the
+> audit chain; operator memory (qmd / obsidian-mind) never does.
 
 ---
 
@@ -161,5 +169,5 @@ limitation reported as BinaryNotFound**, never evidence-absence.
 
 - [`dependencies.md`](dependencies.md) — version pins, licenses, expected-failure matrix.
 - [`environment-variables.md`](environment-variables.md) — the full env-var surface.
-- [`agent-config/TOOLS.md`](https://github.com/TimothyVang/verdict-dfir/blob/master/agent-config/TOOLS.md) — per-tool args/returns (agent read-order).
+- [`agent-config/TOOLS.md`](https://github.com/TimothyVang/verdict-dfir-beta/blob/main/agent-config/TOOLS.md) — per-tool args/returns (agent read-order).
 - [`../architecture.md`](../architecture.md) — the trust boundaries and where the surface sits.

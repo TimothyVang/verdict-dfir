@@ -9,13 +9,14 @@ placeholders, or header-only benchmark files.
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
 from dataclasses import dataclass
 import hashlib
 import io
 import json
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import urlparse
 import zipfile
 
@@ -26,6 +27,7 @@ REQUIRED_ZIP_FILES = {
     "LICENSE",
     "report.html",
 }
+ALLOWED_SUBMISSION_ZIP_FILES = REQUIRED_ZIP_FILES | {"readiness-packet.zip"}
 
 PLACEHOLDER_PATTERNS = (
     "placeholder",
@@ -47,12 +49,46 @@ READINESS_REQUIRED_ARTIFACTS = {
     "expert_signoff.json",
     "customer_release_gate.final.json",
 }
+READINESS_OPTIONAL_ARTIFACTS = {
+    "automation.json",
+    "coverage_manifest.json",
+    "disk_artifact_summary.json",
+    "evidence_inventory.json",
+    "expert_signoff_manifest_link.json",
+    "grounding.json",
+    "malfind.json",
+    "malware_triage.json",
+    "psscan.json",
+    "psxview.json",
+    "recall-score.json",
+    "readiness-packet-manifest.json",
+    "readiness-summary.json",
+    "REPORT-internal.md",
+    "REPORT-internal.html",
+    "REPORT-internal.new.pdf",
+    "REPORT-internal.pdf",
+    "REPORT.md",
+    "REPORT.new.pdf",
+    "REPORT.pdf",
+    "self-score.json",
+    "timeline.csv",
+    "timeline.json",
+}
+READINESS_ALLOWED_FIGURE_SUFFIXES = {".jpeg", ".jpg", ".png", ".webp"}
 
 READINESS_REQUIRED_AUDIT_KINDS = {
     "report_qa",
     "customer_release_gate",
     "verdict_artifact",
     "expert_signoff_packet",
+}
+
+READINESS_FORBIDDEN_AUDIT_KINDS = {"fault_injection"}
+
+READINESS_VERIFIER_AUDIT_KINDS = {
+    "verifier_action",
+    "replay",
+    "acp_handoff",
 }
 
 READINESS_REPORT_ARTIFACTS = {
@@ -68,6 +104,98 @@ CUSTOMER_READY_STATES = {
     "CUSTOMER_RELEASE_READY",
     "CUSTOMER_RELEASABLE",
 }
+SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+CANONICAL_JSON_SEPARATORS = (",", ":")
+FAULT_INJECTION_DOC_RE = re.compile(r"fault[-_\s]+injection")
+FAULT_INJECTION_CONTEXT_CHARS = 240
+FAULT_INJECTION_MISLEADING_PHRASES = (
+    "fault_injection is natural",
+    "fault_injection is organic",
+    "fault_injection as natural",
+    "fault_injection as organic",
+    "fault_injection as primary",
+    "fault_injection is primary",
+    "fault_injection is flagship",
+    "primary fault_injection",
+    "flagship fault_injection",
+)
+FAULT_INJECTION_MISLEADING_WINDOW_PHRASES = (
+    "as organic",
+    "is organic",
+    "organic evidence",
+    "organic self-correction",
+    "as natural",
+    "is natural",
+    "natural evidence",
+    "natural self-correction",
+    "as primary",
+    "primary evidence",
+    "primary self-correction",
+    "flagship evidence",
+    "flagship proof",
+)
+FAULT_INJECTION_SAFE_NEGATIONS = (
+    "not organic",
+    "not natural",
+    "not primary",
+    "not proof of organic",
+    "not be counted as organic",
+    "must not be counted as organic",
+    "never present",
+    "never replace",
+)
+FAULT_INJECTION_SAFE_NEGATION_PREFIXES = (
+    "not ",
+    "never ",
+    "does not ",
+    "do not ",
+    "must not ",
+    "should not ",
+    "cannot ",
+    "not be counted as ",
+    "must not be counted as ",
+)
+READINESS_MAX_ZIP_MEMBER_BYTES = 25 * 1024 * 1024
+READINESS_MAX_ZIP_TOTAL_BYTES = 100 * 1024 * 1024
+READINESS_MAX_COMPRESSION_RATIO = 100
+READINESS_FORBIDDEN_ZIP_SUFFIXES = {
+    ".001",
+    ".db",
+    ".e01",
+    ".dd",
+    ".evtx",
+    ".key",
+    ".mem",
+    ".ova",
+    ".ovf",
+    ".p12",
+    ".p7b",
+    ".p7c",
+    ".pcap",
+    ".pcapng",
+    ".pem",
+    ".pfx",
+    ".qcow2",
+    ".raw",
+    ".sqlite",
+    ".sqlite3",
+    ".vhd",
+    ".vhdx",
+    ".vmdk",
+    ".img",
+    ".vmem",
+}
+READINESS_FORBIDDEN_ZIP_NAMES = {
+    ".env",
+    ".env.local",
+    ".credentials.json",
+    "credentials.json",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "id_rsa",
+}
+READINESS_FORBIDDEN_ZIP_DIRS = {"evidence", "tmp"}
 
 
 @dataclass
@@ -248,7 +376,20 @@ def validate_zip(path: Path) -> CheckResult:
     if not path.is_file():
         return CheckResult(False, f"submission zip missing: {path}")
     with zipfile.ZipFile(path) as zf:
+        blockers: list[str] = []
+        validate_readiness_zip_members(zf, blockers, "submission zip")
+        if blockers:
+            return CheckResult(False, "; ".join(blockers))
         names = {name.rstrip("/") for name in zf.namelist()}
+        file_names = {
+            info.filename.rstrip("/") for info in zf.infolist() if not info.is_dir()
+        }
+        unexpected = sorted(file_names - ALLOWED_SUBMISSION_ZIP_FILES)
+        if unexpected:
+            return CheckResult(
+                False,
+                "zip contains unrecognized file(s): " + ", ".join(unexpected),
+            )
         missing = sorted(REQUIRED_ZIP_FILES - names)
         if missing:
             return CheckResult(
@@ -336,6 +477,72 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def validate_readiness_relative_path(
+    relative_path: str, label: str, blockers: list[str]
+) -> str | None:
+    normalized = relative_path.replace("\\", "/").strip("/")
+    parsed = PurePosixPath(normalized)
+    parts = parsed.parts
+    if (
+        not normalized
+        or relative_path.startswith(("/", "\\"))
+        or any(":" in part for part in parts)
+        or any(part in {"", ".", ".."} for part in parts)
+    ):
+        blockers.append(f"{label} has unsafe relative path: {relative_path!r}")
+        return None
+    lowered_parts = {part.lower() for part in parsed.parts}
+    name = parsed.name.lower()
+    if (
+        name in READINESS_FORBIDDEN_ZIP_NAMES
+        or name.startswith(".env")
+        or any(
+            suffix.lower() in READINESS_FORBIDDEN_ZIP_SUFFIXES
+            for suffix in parsed.suffixes
+        )
+        or bool(lowered_parts & READINESS_FORBIDDEN_ZIP_DIRS)
+    ):
+        blockers.append(
+            f"{label} contains prohibited public-release artifact path: {relative_path!r}"
+        )
+        return None
+    return normalized
+
+
+def zip_info_is_symlink(info: zipfile.ZipInfo) -> bool:
+    return ((info.external_attr >> 16) & 0o170000) == 0o120000
+
+
+def validate_readiness_zip_members(
+    zf: zipfile.ZipFile, blockers: list[str], label: str
+) -> None:
+    seen: set[str] = set()
+    total_size = 0
+    for info in zf.infolist():
+        normalized = validate_readiness_relative_path(info.filename, label, blockers)
+        if normalized is None:
+            continue
+        if normalized in seen:
+            blockers.append(f"{label} contains duplicate ZIP entry: {normalized}")
+        seen.add(normalized)
+        if zip_info_is_symlink(info):
+            blockers.append(f"{label} contains symlink ZIP entry: {normalized}")
+            continue
+        if info.is_dir():
+            continue
+        total_size += info.file_size
+        if info.file_size > READINESS_MAX_ZIP_MEMBER_BYTES:
+            blockers.append(f"{label} ZIP entry too large: {normalized}")
+        if total_size > READINESS_MAX_ZIP_TOTAL_BYTES:
+            blockers.append(f"{label} ZIP uncompressed size exceeds limit")
+            break
+        compressed = max(info.compress_size, 1)
+        if info.file_size / compressed > READINESS_MAX_COMPRESSION_RATIO:
+            blockers.append(
+                f"{label} ZIP entry compression ratio too high: {normalized}"
+            )
+
+
 def artifact_entries(manifest: dict, blockers: list[str]) -> dict[str, dict]:
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, list):
@@ -350,7 +557,11 @@ def artifact_entries(manifest: dict, blockers: list[str]) -> dict[str, dict]:
         if not isinstance(raw_path, str) or not raw_path.strip():
             blockers.append(f"packet_manifest artifact #{index} lacks path")
             continue
-        normalized = raw_path.replace("\\", "/").strip("/")
+        normalized = validate_readiness_relative_path(
+            raw_path, f"packet_manifest artifact #{index}", blockers
+        )
+        if normalized is None:
+            continue
         entries[normalized] = artifact
     return entries
 
@@ -364,6 +575,13 @@ def read_artifact_text(packet_dir: Path, relative_path: str) -> str | None:
     if not path.is_file():
         return None
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def read_artifact_bytes(packet_dir: Path, relative_path: str) -> bytes | None:
+    path = artifact_path(packet_dir, relative_path)
+    if not path.is_file():
+        return None
+    return path.read_bytes()
 
 
 def read_artifact_json(
@@ -407,8 +625,8 @@ def add_customer_ready_blockers(obj: object, label: str, blockers: list[str]) ->
             add_customer_ready_blockers(nested, f"{label}.{nested_key}", blockers)
 
 
-def validate_readiness_audit_text(text: str, blockers: list[str]) -> None:
-    kinds: set[str] = set()
+def parse_readiness_audit_text(text: str, blockers: list[str]) -> list[dict]:
+    records: list[dict] = []
     line_count = 0
     for line_number, line in enumerate(text.splitlines(), start=1):
         if not line.strip():
@@ -419,28 +637,624 @@ def validate_readiness_audit_text(text: str, blockers: list[str]) -> None:
         except json.JSONDecodeError as exc:
             blockers.append(f"audit.jsonl line {line_number} is not valid JSON: {exc}")
             continue
-        if isinstance(record, dict) and isinstance(record.get("kind"), str):
-            kinds.add(record["kind"])
+        if not isinstance(record, dict):
+            blockers.append(f"audit.jsonl line {line_number} is not a JSON object")
+            continue
+        records.append(record)
+        if not isinstance(record.get("kind"), str):
+            blockers.append(f"audit.jsonl line {line_number} lacks top-level kind")
     if line_count == 0:
         blockers.append("audit.jsonl has no audit records")
+    return records
+
+
+def validate_readiness_audit_records(records: list[dict], blockers: list[str]) -> None:
+    kinds: set[str] = set()
+    for record in records:
+        if isinstance(record, dict) and isinstance(record.get("kind"), str):
+            kinds.add(record["kind"])
     missing = sorted(READINESS_REQUIRED_AUDIT_KINDS - kinds)
     if missing:
         blockers.append(
             "audit.jsonl lacks required record kind(s): " + ", ".join(missing)
         )
+    forbidden = sorted(READINESS_FORBIDDEN_AUDIT_KINDS & kinds)
+    if forbidden:
+        blockers.append(
+            "audit.jsonl contains demo-only record kind(s) not allowed in "
+            "primary readiness packets: " + ", ".join(forbidden)
+        )
 
 
-def validate_readiness_audit(packet_dir: Path, blockers: list[str]) -> None:
+def has_unnegated_fault_injection_claim(text: str) -> bool:
+    for phrase in FAULT_INJECTION_MISLEADING_WINDOW_PHRASES:
+        search_from = 0
+        while True:
+            index = text.find(phrase, search_from)
+            if index == -1:
+                break
+            prefix = text[max(0, index - 40) : index]
+            if not any(
+                prefix.endswith(negation)
+                for negation in FAULT_INJECTION_SAFE_NEGATION_PREFIXES
+            ):
+                return True
+            search_from = index + len(phrase)
+    return False
+
+
+def validate_stage_two_judge_packet_text(text: str, label: str) -> CheckResult:
+    lowered = text.lower()
+    normalized = FAULT_INJECTION_DOC_RE.sub("fault_injection", lowered)
+    blockers: list[str] = []
+    for phrase in FAULT_INJECTION_MISLEADING_PHRASES:
+        if phrase in normalized:
+            blockers.append(
+                f"{label} presents fault_injection as primary/organic evidence"
+            )
+            break
+
+    for match in FAULT_INJECTION_DOC_RE.finditer(lowered):
+        index = match.start()
+        start = max(0, index - FAULT_INJECTION_CONTEXT_CHARS)
+        end = match.end() + FAULT_INJECTION_CONTEXT_CHARS
+        window = lowered[start:end]
+        has_optional_label = "optional" in window and (
+            "harness" in window or "demo" in window
+        )
+        if not has_optional_label:
+            blockers.append(
+                f"{label} mentions fault_injection without nearby optional harness/demo wording"
+            )
+            break
+        normalized_window = FAULT_INJECTION_DOC_RE.sub("fault_injection", window)
+        if has_unnegated_fault_injection_claim(normalized_window):
+            blockers.append(
+                f"{label} presents fault_injection as primary/organic evidence"
+            )
+            break
+
+    if blockers:
+        return CheckResult(False, "; ".join(blockers))
+    return CheckResult(
+        True,
+        f"{label} labels fault-injection content as optional harness/demo evidence",
+    )
+
+
+def validate_stage_two_judge_packet(path: Path) -> CheckResult:
+    if not path.is_file():
+        return CheckResult(False, f"stage two judge packet missing: {path}")
+    text = path.read_text(encoding="utf-8", errors="replace")
+    return validate_stage_two_judge_packet_text(text, str(path))
+
+
+def validate_readiness_audit_text(text: str, blockers: list[str]) -> list[dict]:
+    records = parse_readiness_audit_text(text, blockers)
+    validate_readiness_audit_records(records, blockers)
+    return records
+
+
+def validate_readiness_audit(packet_dir: Path, blockers: list[str]) -> list[dict]:
     path = artifact_path(packet_dir, "audit.jsonl")
     if not path.is_file():
         blockers.append(f"audit.jsonl missing from packet dir: {path}")
-        return
+        return []
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
         blockers.append(f"audit.jsonl could not be read: {exc}")
+        return []
+    return validate_readiness_audit_text(text, blockers)
+
+
+def validate_manifest_verify_object(
+    manifest_verify: dict | None, blockers: list[str]
+) -> None:
+    if manifest_verify is None:
         return
-    validate_readiness_audit_text(text, blockers)
+    if manifest_verify.get("overall") is not True:
+        blockers.append("manifest_verify.json overall is not true")
+    if manifest_verify.get("signature_verified") is not True:
+        blockers.append("manifest_verify.json signature_verified is not true")
+
+
+def canonicalize_json(obj: object) -> bytes:
+    return json.dumps(
+        obj,
+        sort_keys=True,
+        separators=CANONICAL_JSON_SEPARATORS,
+        ensure_ascii=True,
+    ).encode("ascii")
+
+
+def hash_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def merkle_root_hex(leaves: list[str]) -> str:
+    tier = [bytes.fromhex(leaf) for leaf in leaves]
+    if not tier:
+        return (b"\x00" * 32).hex()
+    while len(tier) > 1:
+        if len(tier) % 2:
+            tier = [*tier, tier[-1]]
+        tier = [
+            hashlib.sha256(tier[i] + tier[i + 1]).digest()
+            for i in range(0, len(tier), 2)
+        ]
+    return tier[0].hex()
+
+
+def verifier_payload_digest(payload: dict, key: str) -> str | None:
+    value = payload.get(key)
+    return value if isinstance(value, str) and SHA256_HEX_RE.fullmatch(value) else None
+
+
+def derive_audit_manifest_state(
+    audit_text: str, blockers: list[str], label: str
+) -> tuple[int, str, list[dict[str, object]]] | None:
+    prev_hash = ""
+    final_hash = ""
+    leaves: list[dict[str, object]] = []
+    record_count = 0
+    for raw_line in [line for line in audit_text.splitlines() if line.strip()]:
+        raw = raw_line.encode("utf-8")
+        try:
+            record = json.loads(raw_line)
+        except json.JSONDecodeError as exc:
+            blockers.append(f"{label} audit record is not valid JSON: {exc}")
+            return None
+        if not isinstance(record, dict):
+            blockers.append(f"{label} audit record is not an object")
+            return None
+        canonical = canonicalize_json(record)
+        if canonical != raw:
+            blockers.append(
+                f"{label} audit record is not canonical JSON at seq {record_count}"
+            )
+            return None
+        if record.get("seq") != record_count:
+            blockers.append(
+                f"{label} audit seq mismatch at {record_count}: {record.get('seq')!r}"
+            )
+            return None
+        if record.get("prev_hash") != prev_hash:
+            blockers.append(f"{label} audit prev_hash mismatch at seq {record_count}")
+            return None
+        payload = (
+            record.get("payload") if isinstance(record.get("payload"), dict) else {}
+        )
+        final_hash = hash_bytes(raw)
+        kind = record.get("kind")
+        if kind == "tool_call_output":
+            digest = verifier_payload_digest(payload, "output_hash") or final_hash
+            leaves.append(
+                {
+                    "seq": record_count,
+                    "kind": "tool_call_output",
+                    "digest_hex": digest,
+                    "record_id": str(payload.get("tool_call_id", "")),
+                }
+            )
+        elif kind == "finding_approved":
+            leaves.append(
+                {
+                    "seq": record_count,
+                    "kind": "finding",
+                    "digest_hex": final_hash,
+                    "record_id": str(payload.get("finding_id", "")),
+                }
+            )
+        prev_hash = final_hash
+        record_count += 1
+    return record_count, final_hash, leaves
+
+
+def verify_manifest_signature(manifest: dict, blockers: list[str], label: str) -> None:
+    signature = manifest.get("signature")
+    if not isinstance(signature, dict):
+        blockers.append(f"{label} lacks signature object")
+        return
+    if signature.get("kind") != "ed25519":
+        blockers.append(f"{label} signature kind is not ed25519")
+        return
+    # The signed body excludes BOTH ``signature`` and ``transparency_log``: the
+    # Rekor/RFC-3161 anchor is attached AFTER signing, so the signer
+    # (crypto/manifest.py::_to_json_safe(exclude_signature=True)) and the offline
+    # verifier strip both. Excluding only ``signature`` here would hash a body the
+    # signer never signed and spuriously fail whenever a transparency_log key is
+    # present (which it is by default, since the Rekor field landed).
+    body = {
+        key: value
+        for key, value in manifest.items()
+        if key not in ("signature", "transparency_log")
+    }
+    body_bytes = canonicalize_json(body)
+    if signature.get("payload_sha256") != hash_bytes(body_bytes):
+        blockers.append(
+            f"{label} signature payload_sha256 does not match manifest body"
+        )
+        return
+    try:
+        bundle = json.loads(base64.b64decode(str(signature.get("bundle_b64") or "")))
+        public_key = base64.b64decode(str(bundle["public_key_b64"]))
+        signature_bytes = base64.b64decode(str(bundle["signature_b64"]))
+    except (KeyError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        blockers.append(f"{label} ed25519 bundle malformed: {exc}")
+        return
+    try:
+        from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+        Ed25519PublicKey.from_public_bytes(public_key).verify(
+            signature_bytes, body_bytes
+        )
+    except InvalidSignature:
+        blockers.append(f"{label} ed25519 signature verification failed")
+    except Exception as exc:
+        blockers.append(f"{label} ed25519 signature verification error: {exc}")
+
+
+def validate_recomputed_manifest(
+    manifest: dict | None, audit_text: str | None, blockers: list[str], label: str
+) -> None:
+    if manifest is None or audit_text is None:
+        return
+    state = derive_audit_manifest_state(audit_text, blockers, label)
+    if state is None:
+        return
+    record_count, final_hash, leaves = state
+    declared_leaves = manifest.get("leaves")
+    if not isinstance(declared_leaves, list):
+        blockers.append(f"{label} lacks manifest leaves list")
+        return
+    if manifest.get("audit_log_record_count") != record_count:
+        blockers.append(f"{label} audit_log_record_count does not match audit.jsonl")
+    if manifest.get("audit_log_final_hash") != final_hash:
+        blockers.append(f"{label} audit_log_final_hash does not match audit.jsonl")
+    if declared_leaves != leaves:
+        blockers.append(f"{label} manifest leaves do not match audit.jsonl")
+    if manifest.get("leaf_count") != len(declared_leaves):
+        blockers.append(f"{label} leaf_count does not match manifest leaves")
+    derived_root = merkle_root_hex([str(leaf["digest_hex"]) for leaf in leaves])
+    if manifest.get("merkle_root_hex") != derived_root:
+        blockers.append(f"{label} merkle_root_hex does not match audit-derived leaves")
+    verify_manifest_signature(manifest, blockers, label)
+
+
+def audit_record_finding_id(record: dict) -> str | None:
+    payload = record.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    if record.get("kind") == "acp_handoff":
+        handoff_payload = payload.get("payload")
+        if isinstance(handoff_payload, dict):
+            value = handoff_payload.get("finding_id") or payload.get("correlation_id")
+        else:
+            value = payload.get("correlation_id")
+    else:
+        value = payload.get("finding_id")
+    return str(value) if isinstance(value, str) and value else None
+
+
+def audit_record_tool_call_id(record: dict) -> str | None:
+    payload = record.get("payload")
+    if isinstance(payload, dict):
+        value = payload.get("tool_call_id") or record.get("tool_call_id")
+    else:
+        value = record.get("tool_call_id")
+    return str(value) if isinstance(value, str) and value else None
+
+
+def audit_record_has_valid_output_hash(record: dict) -> bool:
+    payload = record.get("payload")
+    output_hash = payload.get("output_hash") if isinstance(payload, dict) else None
+    return isinstance(output_hash, str) and bool(SHA256_HEX_RE.fullmatch(output_hash))
+
+
+def is_valid_verifier_evidence_record(record: dict) -> bool:
+    payload = record.get("payload")
+    if not isinstance(payload, dict):
+        return False
+    kind = record.get("kind")
+    if kind == "verifier_action":
+        return (
+            payload.get("action") in {"approved", "downgraded"}
+            and isinstance(payload.get("replay_record_sha256"), str)
+            and bool(SHA256_HEX_RE.fullmatch(payload["replay_record_sha256"]))
+        )
+    if kind == "replay":
+        legacy = payload.get("legacy_replay")
+        replay_matched = payload.get("replay_matched")
+        if replay_matched is None and isinstance(legacy, dict):
+            replay_matched = legacy.get("replay_matched")
+        return (
+            replay_matched is True
+            and isinstance(payload.get("replay_record_sha256"), str)
+            and bool(SHA256_HEX_RE.fullmatch(payload["replay_record_sha256"]))
+        )
+    if kind == "acp_handoff":
+        handoff_payload = payload.get("payload")
+        return (
+            payload.get("from_role") == "verifier"
+            and payload.get("to_role") == "judge"
+            and isinstance(handoff_payload, dict)
+            and handoff_payload.get("action") in {"approved", "downgraded"}
+            and isinstance(handoff_payload.get("replay_record_sha256"), str)
+            and bool(SHA256_HEX_RE.fullmatch(handoff_payload["replay_record_sha256"]))
+        )
+    return False
+
+
+def verifier_record_replay_hash(record: dict) -> str | None:
+    payload = record.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    if record.get("kind") == "acp_handoff":
+        handoff_payload = payload.get("payload")
+        if isinstance(handoff_payload, dict):
+            value = handoff_payload.get("replay_record_sha256")
+        else:
+            value = None
+    else:
+        value = payload.get("replay_record_sha256")
+    return str(value) if isinstance(value, str) and value else None
+
+
+def verifier_record_action(record: dict) -> str | None:
+    payload = record.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    if record.get("kind") == "acp_handoff":
+        handoff_payload = payload.get("payload")
+        if isinstance(handoff_payload, dict):
+            value = handoff_payload.get("action")
+        else:
+            value = None
+    else:
+        value = payload.get("action")
+    return str(value) if isinstance(value, str) and value else None
+
+
+def audit_payload(record: dict) -> dict | None:
+    payload = record.get("payload")
+    return payload if isinstance(payload, dict) else None
+
+
+def artifact_basename(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return value.replace("\\", "/").rstrip("/").split("/")[-1]
+
+
+def validate_verdict_artifact_binding(
+    verdict_bytes: bytes | None, audit_records: list[dict], blockers: list[str]
+) -> None:
+    if verdict_bytes is None:
+        return
+    actual_sha256 = hash_bytes(verdict_bytes)
+    artifact_records = [
+        payload
+        for record in audit_records
+        if record.get("kind") == "verdict_artifact"
+        for payload in [audit_payload(record)]
+        if payload is not None
+    ]
+    if not artifact_records:
+        return
+    matched = False
+    for payload in artifact_records:
+        path_name = artifact_basename(payload.get("path"))
+        if path_name and path_name != "verdict.json":
+            blockers.append(
+                "audit.jsonl verdict_artifact does not point at verdict.json: "
+                f"{payload.get('path')!r}"
+            )
+        declared_sha256 = payload.get("sha256")
+        if not isinstance(declared_sha256, str) or not SHA256_HEX_RE.fullmatch(
+            declared_sha256
+        ):
+            blockers.append("audit.jsonl verdict_artifact lacks valid sha256")
+            continue
+        if declared_sha256.lower() == actual_sha256:
+            matched = True
+        else:
+            blockers.append(
+                "audit.jsonl verdict_artifact sha256 does not match verdict.json"
+            )
+    if not matched:
+        blockers.append("audit.jsonl has no verdict_artifact hash for verdict.json")
+
+
+def finding_sha256(finding: dict) -> str:
+    return hash_bytes(canonicalize_json(finding))
+
+
+def finding_approved_payloads_by_id(
+    audit_records: list[dict], blockers: list[str]
+) -> dict[str, list[dict]]:
+    payloads_by_id: dict[str, list[dict]] = {}
+    for record in audit_records:
+        if record.get("kind") != "finding_approved":
+            continue
+        payload = audit_payload(record)
+        if payload is None:
+            blockers.append("audit.jsonl finding_approved payload is not an object")
+            continue
+        finding_id = payload.get("finding_id")
+        if not isinstance(finding_id, str) or not finding_id:
+            blockers.append("audit.jsonl finding_approved lacks finding_id")
+            continue
+        embedded_finding = payload.get("finding")
+        declared_sha256 = payload.get("finding_sha256")
+        if not isinstance(embedded_finding, dict):
+            blockers.append(
+                f"audit.jsonl finding_approved lacks embedded finding for {finding_id}"
+            )
+            continue
+        if not isinstance(declared_sha256, str) or not SHA256_HEX_RE.fullmatch(
+            declared_sha256
+        ):
+            blockers.append(
+                f"audit.jsonl finding_approved lacks valid finding_sha256 for {finding_id}"
+            )
+            continue
+        if finding_sha256(embedded_finding) != declared_sha256.lower():
+            blockers.append(
+                "audit.jsonl finding_approved finding_sha256 does not match embedded "
+                f"finding for {finding_id}"
+            )
+            continue
+        payloads_by_id.setdefault(finding_id, []).append(payload)
+    return payloads_by_id
+
+
+def validate_verifier_audit_evidence(
+    verdict: dict, audit_records: list[dict], blockers: list[str]
+) -> None:
+    findings = verdict.get("findings")
+    if not isinstance(findings, list):
+        summary = verdict.get("findings_summary")
+        total = summary.get("total_merged") if isinstance(summary, dict) else None
+        if isinstance(total, int) and total > 0:
+            blockers.append(
+                "verdict.json reports merged findings but lacks a findings list"
+            )
+        return
+    if not findings:
+        return
+
+    approved_payloads_by_id = finding_approved_payloads_by_id(audit_records, blockers)
+    finding_ids: list[str] = []
+    finding_tool_call_ids: dict[str, str] = {}
+    findings_by_id: dict[str, dict] = {}
+    for index, finding in enumerate(findings, start=1):
+        if not isinstance(finding, dict):
+            blockers.append(f"verdict.json findings[{index - 1}] is not an object")
+            continue
+        finding_id = finding.get("finding_id")
+        if not isinstance(finding_id, str) or not finding_id:
+            blockers.append(f"verdict.json findings[{index - 1}] lacks finding_id")
+            continue
+        tool_call_id = finding.get("tool_call_id")
+        if not isinstance(tool_call_id, str) or not tool_call_id:
+            blockers.append(f"verdict.json findings[{index - 1}] lacks tool_call_id")
+        else:
+            finding_tool_call_ids[finding_id] = tool_call_id
+        finding_ids.append(finding_id)
+        findings_by_id[finding_id] = finding
+
+    tool_call_starts: set[str] = set()
+    tool_call_outputs: set[str] = set()
+    ids_by_kind: dict[str, set[str]] = {
+        kind: set() for kind in READINESS_VERIFIER_AUDIT_KINDS
+    }
+    replay_hashes_by_kind: dict[str, dict[str, set[str]]] = {
+        kind: {} for kind in READINESS_VERIFIER_AUDIT_KINDS
+    }
+    pairs_by_kind: dict[str, dict[str, set[tuple[str, str]]]] = {
+        "verifier_action": {},
+        "acp_handoff": {},
+    }
+    for record in audit_records:
+        kind = record.get("kind")
+        if kind == "tool_call_start":
+            tool_call_id = audit_record_tool_call_id(record)
+            if tool_call_id is not None:
+                tool_call_starts.add(tool_call_id)
+        elif kind == "tool_call_output":
+            tool_call_id = audit_record_tool_call_id(record)
+            if tool_call_id is not None and audit_record_has_valid_output_hash(record):
+                tool_call_outputs.add(tool_call_id)
+        if not isinstance(kind, str) or kind not in ids_by_kind:
+            continue
+        if not is_valid_verifier_evidence_record(record):
+            continue
+        finding_id = audit_record_finding_id(record)
+        if finding_id is not None:
+            ids_by_kind[kind].add(finding_id)
+            replay_hash = verifier_record_replay_hash(record)
+            if replay_hash is not None:
+                replay_hashes_by_kind[kind].setdefault(finding_id, set()).add(
+                    replay_hash
+                )
+            action = verifier_record_action(record)
+            if replay_hash is not None and action is not None and kind in pairs_by_kind:
+                pairs_by_kind[kind].setdefault(finding_id, set()).add(
+                    (replay_hash, action)
+                )
+
+    missing_kinds = sorted(kind for kind, ids in ids_by_kind.items() if not ids)
+    if missing_kinds:
+        blockers.append(
+            "audit.jsonl lacks verifier evidence kind(s) for final findings: "
+            + ", ".join(missing_kinds)
+        )
+    for finding_id in finding_ids:
+        finding = findings_by_id.get(finding_id, {})
+        tool_call_id = finding_tool_call_ids.get(finding_id)
+        if tool_call_id is not None:
+            if tool_call_id not in tool_call_starts:
+                blockers.append(
+                    "verdict.json cites unresolved current-case tool_call_id "
+                    f"for finding_id={finding_id}: {tool_call_id}"
+                )
+            elif tool_call_id not in tool_call_outputs:
+                blockers.append(
+                    "verdict.json cites tool_call_id without matching output hash "
+                    f"for finding_id={finding_id}: {tool_call_id}"
+                )
+        approved_payloads = approved_payloads_by_id.get(finding_id, [])
+        if not approved_payloads:
+            blockers.append(
+                "audit.jsonl lacks finding_approved record for final finding "
+                f"finding_id={finding_id}"
+            )
+        else:
+            final_finding_sha256 = finding_sha256(finding)
+            has_matching_approval = any(
+                str(payload.get("finding_sha256") or "").lower() == final_finding_sha256
+                and payload.get("tool_call_id") == finding.get("tool_call_id")
+                and payload.get("confidence") == finding.get("confidence")
+                for payload in approved_payloads
+            )
+            if not has_matching_approval:
+                blockers.append(
+                    "verdict.json final finding does not match audit finding_approved "
+                    f"payload for finding_id={finding_id}"
+                )
+        missing_for_finding = sorted(
+            kind for kind, ids in ids_by_kind.items() if finding_id not in ids
+        )
+        if missing_for_finding:
+            blockers.append(
+                f"audit.jsonl lacks verifier evidence for finding_id={finding_id}: "
+                + ", ".join(missing_for_finding)
+            )
+            continue
+        replay_hashes = replay_hashes_by_kind["replay"].get(finding_id, set())
+        verifier_pairs = pairs_by_kind["verifier_action"].get(finding_id, set())
+        handoff_pairs = pairs_by_kind["acp_handoff"].get(finding_id, set())
+        matching_pairs = {
+            pair
+            for pair in (verifier_pairs & handoff_pairs)
+            if pair[0] in replay_hashes
+        }
+        if not matching_pairs:
+            blockers.append(
+                "audit.jsonl has mismatched verifier replay hash/action evidence "
+                f"for finding_id={finding_id}"
+            )
+        elif (
+            "downgraded" in {action for _, action in matching_pairs}
+            and str(findings_by_id.get(finding_id, {}).get("confidence") or "")
+            == "CONFIRMED"
+        ):
+            blockers.append(
+                "verifier downgraded finding but verdict.json kept CONFIRMED "
+                f"for finding_id={finding_id}"
+            )
 
 
 def readiness_report_paths(entries: dict[str, dict]) -> list[str]:
@@ -448,6 +1262,17 @@ def readiness_report_paths(entries: dict[str, dict]) -> list[str]:
         artifact
         for artifact in entries
         if Path(artifact).name.lower() in READINESS_REPORT_ARTIFACTS
+    )
+
+
+def readiness_artifact_is_allowed(relative_path: str, allowed_exact: set[str]) -> bool:
+    if relative_path in allowed_exact:
+        return True
+    parsed = PurePosixPath(relative_path)
+    return (
+        len(parsed.parts) >= 2
+        and parsed.parts[0] == "figures"
+        and parsed.suffix.lower() in READINESS_ALLOWED_FIGURE_SUFFIXES
     )
 
 
@@ -504,6 +1329,19 @@ def validate_readiness_summary(path: Path) -> CheckResult:
         blockers.append(
             "packet_manifest lacks report artifact; expected REPORT.html, REPORT.pdf, or REPORT.md"
         )
+    allowed_artifacts = (
+        READINESS_REQUIRED_ARTIFACTS | READINESS_OPTIONAL_ARTIFACTS | set(report_paths)
+    )
+    unexpected_artifacts = sorted(
+        artifact
+        for artifact in entries
+        if not readiness_artifact_is_allowed(artifact, allowed_artifacts)
+    )
+    if unexpected_artifacts:
+        blockers.append(
+            "packet_manifest contains unrecognized artifact(s): "
+            + ", ".join(unexpected_artifacts)
+        )
 
     for relative_path, artifact in entries.items():
         disk_path = artifact_path(packet_dir, relative_path)
@@ -521,7 +1359,23 @@ def validate_readiness_summary(path: Path) -> CheckResult:
     if packet_zip is not None and packet_zip.is_file():
         try:
             with zipfile.ZipFile(packet_zip) as zf:
+                validate_readiness_zip_members(zf, blockers, "packet_zip")
                 names = {name.rstrip("/") for name in zf.namelist()}
+                file_names = {
+                    info.filename.rstrip("/")
+                    for info in zf.infolist()
+                    if not info.is_dir()
+                }
+                allowed_zip_names = set(entries) | {
+                    "readiness-summary.json",
+                    "readiness-packet-manifest.json",
+                }
+                unexpected_zip = sorted(file_names - allowed_zip_names)
+                if unexpected_zip:
+                    blockers.append(
+                        "packet_zip contains unrecognized file(s): "
+                        + ", ".join(unexpected_zip)
+                    )
                 required_zip_names = (
                     set(READINESS_REQUIRED_ARTIFACTS)
                     | set(report_paths)
@@ -540,7 +1394,10 @@ def validate_readiness_summary(path: Path) -> CheckResult:
                         continue
                     expected_sha = artifact.get("sha256")
                     if isinstance(expected_sha, str) and expected_sha:
-                        actual_sha = hashlib.sha256(zf.read(relative_path)).hexdigest()
+                        data = read_zip_bytes(zf, relative_path, blockers)
+                        if data is None:
+                            continue
+                        actual_sha = hashlib.sha256(data).hexdigest()
                         if actual_sha.lower() != expected_sha.lower():
                             blockers.append(
                                 f"packet_zip hash mismatch: {relative_path}"
@@ -548,16 +1405,24 @@ def validate_readiness_summary(path: Path) -> CheckResult:
         except zipfile.BadZipFile:
             blockers.append(f"packet_zip is not a valid ZIP file: {packet_zip}")
 
-    validate_readiness_audit(packet_dir, blockers)
-    read_artifact_json(packet_dir, "run.manifest.json", "run.manifest.json", blockers)
+    audit_text = read_artifact_text(packet_dir, "audit.jsonl")
+    audit_records = validate_readiness_audit(packet_dir, blockers)
+    run_manifest = read_artifact_json(
+        packet_dir, "run.manifest.json", "run.manifest.json", blockers
+    )
     manifest_verify = read_artifact_json(
         packet_dir, "manifest_verify.json", "manifest_verify.json", blockers
     )
-    if manifest_verify is not None and manifest_verify.get("overall") is not True:
-        blockers.append("manifest_verify.json overall is not true")
+    validate_manifest_verify_object(manifest_verify, blockers)
+    validate_recomputed_manifest(
+        run_manifest, audit_text, blockers, "run.manifest.json"
+    )
+    verdict_bytes = read_artifact_bytes(packet_dir, "verdict.json")
+    validate_verdict_artifact_binding(verdict_bytes, audit_records, blockers)
     verdict = read_artifact_json(packet_dir, "verdict.json", "verdict.json", blockers)
     if verdict is not None:
         add_customer_ready_blockers(verdict, "verdict.json", blockers)
+        validate_verifier_audit_evidence(verdict, audit_records, blockers)
         report_qa = verdict.get("report_qa")
         if not isinstance(report_qa, dict):
             blockers.append("verdict.json lacks report_qa object")
@@ -605,10 +1470,25 @@ def validate_readiness_summary(path: Path) -> CheckResult:
 def read_zip_text(
     zf: zipfile.ZipFile, relative_path: str, blockers: list[str]
 ) -> str | None:
+    data = read_zip_bytes(zf, relative_path, blockers)
+    if data is None:
+        return None
+    return data.decode("utf-8", errors="replace")
+
+
+def read_zip_bytes(
+    zf: zipfile.ZipFile, relative_path: str, blockers: list[str]
+) -> bytes | None:
     try:
-        return zf.read(relative_path).decode("utf-8", errors="replace")
+        info = zf.getinfo(relative_path)
     except KeyError:
         blockers.append(f"readiness packet missing {relative_path}")
+        return None
+    if info.file_size > READINESS_MAX_ZIP_MEMBER_BYTES:
+        blockers.append(f"readiness packet member too large: {relative_path}")
+        return None
+    try:
+        return zf.read(info)
     except OSError as exc:
         blockers.append(f"readiness packet could not read {relative_path}: {exc}")
     return None
@@ -627,7 +1507,11 @@ def validate_readiness_packet_archive(
     zf: zipfile.ZipFile, label: str = "readiness packet"
 ) -> CheckResult:
     blockers: list[str] = []
+    validate_readiness_zip_members(zf, blockers, label)
     names = {name.rstrip("/") for name in zf.namelist()}
+    file_names = {
+        info.filename.rstrip("/") for info in zf.infolist() if not info.is_dir()
+    }
     for required in {"readiness-summary.json", "readiness-packet-manifest.json"}:
         if required not in names:
             blockers.append(f"{label} missing {required}")
@@ -672,12 +1556,35 @@ def validate_readiness_packet_archive(
         blockers.append(
             "readiness-packet-manifest lacks report artifact; expected REPORT.html, REPORT.pdf, REPORT.new.pdf, or REPORT.md"
         )
+    allowed_artifacts = (
+        READINESS_REQUIRED_ARTIFACTS | READINESS_OPTIONAL_ARTIFACTS | set(report_paths)
+    )
+    unexpected_artifacts = sorted(
+        artifact
+        for artifact in entries
+        if not readiness_artifact_is_allowed(artifact, allowed_artifacts)
+    )
+    if unexpected_artifacts:
+        blockers.append(
+            "readiness-packet-manifest contains unrecognized artifact(s): "
+            + ", ".join(unexpected_artifacts)
+        )
 
     required_zip_names = (
         set(READINESS_REQUIRED_ARTIFACTS)
         | set(report_paths)
         | {"readiness-summary.json", "readiness-packet-manifest.json"}
     )
+    allowed_zip_names = set(entries) | {
+        "readiness-summary.json",
+        "readiness-packet-manifest.json",
+    }
+    unexpected_zip = sorted(file_names - allowed_zip_names)
+    if unexpected_zip:
+        blockers.append(
+            "readiness packet ZIP contains unrecognized file(s): "
+            + ", ".join(unexpected_zip)
+        )
     missing_zip = sorted(required_zip_names - names)
     if missing_zip:
         blockers.append(
@@ -690,23 +1597,41 @@ def validate_readiness_packet_archive(
             continue
         expected_sha = artifact.get("sha256")
         if isinstance(expected_sha, str) and expected_sha:
-            actual_sha = hashlib.sha256(zf.read(relative_path)).hexdigest()
+            data = read_zip_bytes(zf, relative_path, blockers)
+            if data is None:
+                continue
+            actual_sha = hashlib.sha256(data).hexdigest()
             if actual_sha.lower() != expected_sha.lower():
                 blockers.append(f"readiness packet hash mismatch: {relative_path}")
 
+    audit_records: list[dict] = []
     audit_text = read_zip_text(zf, "audit.jsonl", blockers)
     if audit_text is not None:
-        validate_readiness_audit_text(audit_text, blockers)
+        audit_records = validate_readiness_audit_text(audit_text, blockers)
 
     manifest_verify = read_zip_json(
         zf, "manifest_verify.json", "manifest_verify.json", blockers
     )
-    if manifest_verify is not None and manifest_verify.get("overall") is not True:
-        blockers.append("manifest_verify.json overall is not true")
+    validate_manifest_verify_object(manifest_verify, blockers)
+    run_manifest = read_zip_json(zf, "run.manifest.json", "run.manifest.json", blockers)
+    validate_recomputed_manifest(
+        run_manifest, audit_text, blockers, "run.manifest.json"
+    )
 
-    verdict = read_zip_json(zf, "verdict.json", "verdict.json", blockers)
+    verdict_bytes = read_zip_bytes(zf, "verdict.json", blockers)
+    validate_verdict_artifact_binding(verdict_bytes, audit_records, blockers)
+    verdict = (
+        read_json_text(
+            verdict_bytes.decode("utf-8", errors="replace"),
+            "verdict.json",
+            blockers,
+        )
+        if verdict_bytes is not None
+        else None
+    )
     if verdict is not None:
         add_customer_ready_blockers(verdict, "verdict.json", blockers)
+        validate_verifier_audit_evidence(verdict, audit_records, blockers)
         report_qa = verdict.get("report_qa")
         if not isinstance(report_qa, dict):
             blockers.append("verdict.json lacks report_qa object")
@@ -799,6 +1724,9 @@ def main() -> int:
     parser.add_argument(
         "--readiness-packet", type=Path, help="readiness-packet.zip path"
     )
+    parser.add_argument(
+        "--stage-two-packet", type=Path, help="Stage Two judge packet markdown path"
+    )
     args = parser.parse_args()
 
     checks: list[tuple[str, CheckResult]] = []
@@ -819,6 +1747,10 @@ def main() -> int:
     if args.readiness_packet is not None:
         checks.append(
             ("readiness-packet", validate_readiness_packet(args.readiness_packet))
+        )
+    if args.stage_two_packet is not None:
+        checks.append(
+            ("stage-two-packet", validate_stage_two_judge_packet(args.stage_two_packet))
         )
     if not checks:
         parser.error("provide at least one artifact to validate")

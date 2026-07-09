@@ -171,20 +171,20 @@ require "uv"      "curl -LsSf https://astral.sh/uv/install.sh | sh" \
 GROUP="MCP servers"
 [ -z "${JSON_MODE}" ] && { echo; echo "${c_blu}MCP servers${c_off} ${c_dim}(auto-spawned by Claude Code from .mcp.json)${c_off}"; }
 
-# findevil-mcp — Rust, 31 typed DFIR tools. Needs the release binary
+# findevil-mcp — Rust, 32 typed DFIR tools. Needs the release binary
 # (scripts/run-mcp-rust.sh falls back to a slow `cargo run` without it).
 if [ -x "target/release/findevil-mcp" ] || [ -x "target/release/findevil-mcp.exe" ]; then
-  row ok "findevil-mcp" "Rust · 31 DFIR tools · target/release/findevil-mcp"
+  row ok "findevil-mcp" "Rust · 32 DFIR tools · target/release/findevil-mcp"
 else
   row err "findevil-mcp" "not built — run: bash scripts/install.sh"
   REMEDIES+=("findevil-mcp: bash scripts/install.sh   # cargo build --release -p findevil-mcp")
   missing_required=$((missing_required + 1))
 fi
 
-# findevil-agent-mcp — Python, 12 crypto/ACH/memory/ACP tools. Needs the uv
+# findevil-agent-mcp — Python, 13 crypto/ACH/memory/ACP tools. Needs the uv
 # venv synced + the package present (run-mcp-python.sh does `uv run … -m`).
 if [ -d "services/agent_mcp/.venv" ] && [ -d "services/agent_mcp/findevil_agent_mcp" ]; then
-  row ok "findevil-agent-mcp" "Python · 12 tools · services/agent_mcp/.venv"
+  row ok "findevil-agent-mcp" "Python · 13 tools · services/agent_mcp/.venv"
 else
   row err "findevil-agent-mcp" "venv not synced — run: bash scripts/install.sh"
   REMEDIES+=("findevil-agent-mcp: bash scripts/install.sh   # uv sync --directory services/agent_mcp")

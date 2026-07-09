@@ -8,16 +8,152 @@ story, QA / expert signoff, evidence-bound tool calls, and overclaim caveats.
 
 from __future__ import annotations
 
+import base64
 import importlib.util
 import hashlib
 import io
 import json
+import stat
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+CANONICAL_SEPARATORS = (",", ":")
+VERDICT_SHA_TOKEN = "__VERDICT_SHA256__"
+
+
+def canonicalize_json(obj: object) -> bytes:
+    return json.dumps(
+        obj,
+        sort_keys=True,
+        separators=CANONICAL_SEPARATORS,
+        ensure_ascii=True,
+    ).encode("ascii")
+
+
+def sha256_hex(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def merkle_root_hex(leaves: list[str]) -> str:
+    tier = [bytes.fromhex(leaf) for leaf in leaves]
+    if not tier:
+        return (b"\x00" * 32).hex()
+    while len(tier) > 1:
+        if len(tier) % 2:
+            tier = [*tier, tier[-1]]
+        tier = [
+            hashlib.sha256(tier[i] + tier[i + 1]).digest()
+            for i in range(0, len(tier), 2)
+        ]
+    return tier[0].hex()
+
+
+def build_chained_audit_text(audit_jsonl: str) -> str:
+    lines: list[str] = []
+    prev_hash = ""
+    for seq, line in enumerate(
+        line for line in audit_jsonl.splitlines() if line.strip()
+    ):
+        record = json.loads(line)
+        payload = (
+            record.get("payload") if isinstance(record.get("payload"), dict) else {}
+        )
+        chained = {
+            "seq": seq,
+            "ts": f"2026-05-10T00:00:{seq:02d}Z",
+            "kind": str(record.get("kind") or "unknown"),
+            "prev_hash": prev_hash,
+            "payload": payload,
+        }
+        raw = canonicalize_json(chained)
+        prev_hash = sha256_hex(raw)
+        lines.append(raw.decode("ascii"))
+    return "\n".join(lines) + "\n"
+
+
+def build_manifest_bytes(audit_text: str) -> bytes:
+    leaves: list[dict[str, object]] = []
+    final_hash = ""
+    for raw_line in [line for line in audit_text.splitlines() if line.strip()]:
+        raw = raw_line.encode("ascii")
+        record = json.loads(raw_line)
+        final_hash = sha256_hex(raw)
+        kind = record.get("kind")
+        payload = (
+            record.get("payload") if isinstance(record.get("payload"), dict) else {}
+        )
+        if kind == "tool_call_output":
+            output_hash = payload.get("output_hash")
+            digest = (
+                output_hash
+                if isinstance(output_hash, str) and len(output_hash) == 64
+                else final_hash
+            )
+            leaves.append(
+                {
+                    "seq": int(record.get("seq", -1)),
+                    "kind": "tool_call_output",
+                    "digest_hex": digest,
+                    "record_id": str(payload.get("tool_call_id", "")),
+                }
+            )
+        elif kind == "finding_approved":
+            leaves.append(
+                {
+                    "seq": int(record.get("seq", -1)),
+                    "kind": "finding",
+                    "digest_hex": final_hash,
+                    "record_id": str(payload.get("finding_id", "")),
+                }
+            )
+
+    body = {
+        "version": "1",
+        "case_id": "case-ready",
+        "run_id": "run-ready",
+        "started_at": "2026-05-10T00:00:00Z",
+        "finalized_at": "2026-05-10T00:01:00Z",
+        "audit_log_path": "audit.jsonl",
+        "audit_log_final_hash": final_hash,
+        "audit_log_record_count": len(
+            [line for line in audit_text.splitlines() if line.strip()]
+        ),
+        "merkle_root_hex": merkle_root_hex(
+            [str(leaf["digest_hex"]) for leaf in leaves]
+        ),
+        "leaf_count": len(leaves),
+        "leaves": leaves,
+        "extra": {"image_path": "synthetic"},
+    }
+    body_bytes = canonicalize_json(body)
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    private_key = Ed25519PrivateKey.generate()
+    public_bytes = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    signature = private_key.sign(body_bytes)
+    bundle = {
+        "public_key_b64": base64.b64encode(public_bytes).decode("ascii"),
+        "signature_b64": base64.b64encode(signature).decode("ascii"),
+    }
+    manifest = {
+        **body,
+        "signature": {
+            "payload_sha256": sha256_hex(body_bytes),
+            "bundle_b64": base64.b64encode(canonicalize_json(bundle)).decode("ascii"),
+            "cert_fingerprint": None,
+            "signed_at": "2026-05-10T00:01:00Z",
+            "kind": "ed25519",
+        },
+    }
+    return json.dumps(manifest, indent=2, sort_keys=True).encode() + b"\n"
 
 
 def load_render_report():
@@ -45,31 +181,49 @@ def load_submission_validator():
     return mod
 
 
-def build_readiness_packet_zip(report_html: str) -> bytes:
+def build_readiness_packet_zip(
+    report_html: str,
+    *,
+    audit_jsonl: str | None = None,
+    manifest_verify: dict[str, object] | None = None,
+    run_manifest: bytes | None = None,
+    verdict_overrides: dict[str, object] | None = None,
+) -> bytes:
+    verdict_obj: dict[str, object] = {
+        "verdict": "INDETERMINATE",
+        "report_qa": {
+            "status": "PASS",
+            "ready_for_expert_signoff": True,
+            "customer_releasable": False,
+        },
+        "release_gate": {"customer_releasable": False},
+        "expert_signoff": {"customer_releasable": False},
+    }
+    if verdict_overrides:
+        verdict_obj.update(verdict_overrides)
+    verdict_bytes = json.dumps(verdict_obj, sort_keys=True).encode()
+    audit_text = audit_jsonl or (
+        '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+        '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+        '{"kind":"verdict_artifact","payload":{"path":"verdict.json","sha256":"'
+        + VERDICT_SHA_TOKEN
+        + '"}}\n'
+        '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+        + ("b" * 64)
+        + '"}}\n'
+    )
+    audit_text = audit_text.replace(VERDICT_SHA_TOKEN, sha256_hex(verdict_bytes))
+    if run_manifest is None:
+        audit_text = build_chained_audit_text(audit_text)
+        run_manifest = build_manifest_bytes(audit_text)
     packet_files: dict[str, bytes] = {
-        "audit.jsonl": (
-            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
-            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
-            '{"kind":"verdict_artifact","payload":{"path":"verdict.json"}}\n'
-            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
-            + ("b" * 64)
-            + '"}}\n'
-        ).encode(),
-        "run.manifest.json": b'{"case_id":"case-ready"}\n',
-        "manifest_verify.json": b'{"overall":true}\n',
-        "verdict.json": json.dumps(
-            {
-                "verdict": "INDETERMINATE",
-                "report_qa": {
-                    "status": "PASS",
-                    "ready_for_expert_signoff": True,
-                    "customer_releasable": False,
-                },
-                "release_gate": {"customer_releasable": False},
-                "expert_signoff": {"customer_releasable": False},
-            },
+        "audit.jsonl": audit_text.encode(),
+        "run.manifest.json": run_manifest,
+        "manifest_verify.json": json.dumps(
+            manifest_verify or {"overall": True, "signature_verified": True},
             sort_keys=True,
         ).encode(),
+        "verdict.json": verdict_bytes,
         "expert_signoff.json": b'{"decision":"pending","customer_releasable":false}\n',
         "customer_release_gate.final.json": (
             b'{"customer_releasable":false,"expert_decision":"pending"}\n'
@@ -104,6 +258,58 @@ def build_readiness_packet_zip(report_html: str) -> bytes:
         for name, data in sorted(packet_files.items()):
             zf.writestr(name, data)
     return out.getvalue()
+
+
+def add_manifested_packet_file(
+    packet_zip: bytes, relative_path: str, data: bytes
+) -> bytes:
+    files: dict[str, bytes] = {}
+    with zipfile.ZipFile(io.BytesIO(packet_zip)) as source:
+        for info in source.infolist():
+            files[info.filename] = source.read(info.filename)
+    manifest = json.loads(files["readiness-packet-manifest.json"].decode())
+    manifest["artifacts"] = [
+        *manifest["artifacts"],
+        {
+            "path": relative_path,
+            "bytes": len(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
+        },
+    ]
+    files[relative_path] = data
+    files["readiness-packet-manifest.json"] = json.dumps(
+        manifest, sort_keys=True
+    ).encode()
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, content in sorted(files.items()):
+            zf.writestr(name, content)
+    return out.getvalue()
+
+
+def raw_audit_record(kind: str, payload: dict[str, object]) -> str:
+    return (
+        json.dumps(
+            {"kind": kind, "payload": payload},
+            sort_keys=True,
+            separators=CANONICAL_SEPARATORS,
+        )
+        + "\n"
+    )
+
+
+def finding_approved_audit_record(finding: dict[str, object]) -> str:
+    finding_id = str(finding["finding_id"])
+    return raw_audit_record(
+        "finding_approved",
+        {
+            "finding_id": finding_id,
+            "confidence": finding.get("confidence"),
+            "tool_call_id": finding.get("tool_call_id"),
+            "finding_sha256": sha256_hex(canonicalize_json(finding)),
+            "finding": finding,
+        },
+    )
 
 
 def load_find_evil_auto():
@@ -211,6 +417,102 @@ def main() -> int:
         expert_rules=expert_rules,
         customer_visible_text=[],
     )
+    # Negative-completeness gate: a NO_EVIL / scoped-clean verdict must not be
+    # assertable over an artifact class the inventory marks 'available' that was
+    # never actually examined (absence is not proof of no evil). The coverage
+    # manifest records that gap as an `available_not_attempted` row with empty
+    # tool_call_ids.
+    unexamined_coverage_manifest = {
+        "artifact_classes": [
+            {
+                "artifact_class": "memory",
+                "status": "parsed",
+                "available": True,
+                "attempted": True,
+                "parsed": True,
+                "tool_call_ids": ["tc-pslist"],
+            },
+            {
+                "artifact_class": "evtx",
+                "status": "available_not_attempted",
+                "available": True,
+                "attempted": False,
+                "parsed": False,
+                "tool_call_ids": [],
+            },
+        ]
+    }
+    fully_examined_coverage_manifest = {
+        "artifact_classes": [
+            {
+                "artifact_class": "memory",
+                "status": "parsed",
+                "available": True,
+                "attempted": True,
+                "parsed": True,
+                "tool_call_ids": ["tc-pslist"],
+            },
+            {
+                "artifact_class": "network",
+                "status": "not_supplied",
+                "available": False,
+                "attempted": False,
+                "parsed": False,
+                "tool_call_ids": [],
+            },
+        ]
+    }
+    unexamined_gap_classes = fea.coverage_unexamined_available_classes(
+        unexamined_coverage_manifest
+    )
+    fully_examined_gap_classes = fea.coverage_unexamined_available_classes(
+        fully_examined_coverage_manifest
+    )
+    no_evil_case_completeness = {
+        "checks": [
+            {
+                "artifact_class": "memory",
+                "available": True,
+                "touched": True,
+                "tools": ["vol_pslist"],
+            }
+        ]
+    }
+    no_evil_unexamined_qa = fea.build_report_qa_signoff(
+        findings=[],
+        tool_calls=[{"tool": "vol_pslist", "tool_call_id": "tc-pslist"}],
+        verdict="NO_EVIL",
+        case_completeness=no_evil_case_completeness,
+        attack_coverage={"blind_spot_count": 0},
+        normalized_timeline={"events": []},
+        analysis_limitations=[],
+        expert_rules=expert_rules,
+        customer_visible_text=[],
+        coverage_manifest=unexamined_coverage_manifest,
+    )
+    no_evil_unexamined_check = next(
+        row
+        for row in no_evil_unexamined_qa["checks"]
+        if row["check_id"] == "no_evil_is_scoped"
+    )
+    no_evil_complete_qa = fea.build_report_qa_signoff(
+        findings=[],
+        tool_calls=[{"tool": "vol_pslist", "tool_call_id": "tc-pslist"}],
+        verdict="NO_EVIL",
+        case_completeness=no_evil_case_completeness,
+        attack_coverage={"blind_spot_count": 0},
+        normalized_timeline={"events": []},
+        analysis_limitations=[],
+        expert_rules=expert_rules,
+        customer_visible_text=[],
+        coverage_manifest=fully_examined_coverage_manifest,
+    )
+    no_evil_complete_check = next(
+        row
+        for row in no_evil_complete_qa["checks"]
+        if row["check_id"] == "no_evil_is_scoped"
+    )
+
     empty_timeline_check = next(
         row
         for row in empty_qa["checks"]
@@ -248,7 +550,7 @@ def main() -> int:
                 "pool_origin": "A",
                 "mitre_technique": "T1014",
                 "tool_call_id": "tc-psscan",
-                "artifact_path": "memory.img",
+                "artifact_path": "/home/operator/.findevil/cases/case-report-smoke/extracted/disk/disk-extract-abc/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf",
                 "description": "Process-view | divergence with `tick`\nand newline requires expert review.",
             }
         ]
@@ -516,6 +818,16 @@ def main() -> int:
                     ),
                 }
             ],
+            verdict_revisions=[
+                {
+                    "finding_id": "f-flip",
+                    "from_verdict": "CONFIRMED",
+                    "to_verdict": "INFERRED",
+                    "mechanism": "correlation_downgrade",
+                    "trigger_tool_call_id": "tc-correlate",
+                    "reason": "only 1 artifact class; execution needs >=2 with a | pipe.",
+                }
+            ],
             has_attack_story_fig=True,
             host_groups=host_groups,
         )
@@ -528,11 +840,109 @@ def main() -> int:
         # the combined text keeps the existing section-marker assertions valid while
         # the split itself is checked separately below.
         text = main_text + "\n" + internal_text
-        public_text = "\n".join(
+        # ---- Item #19: offline self-verifiable report (embedded audit + grep) ----
+        # (a) The embedded-audit helper round-trips audit.jsonl base64 with no
+        # server, and the injector splices the block in just before </body>.
+        item19_audit_text = (
+            '{"kind":"tool_call_output","payload":{"tool_call_id":"tc-confirmed-19"}}\n'
+            '{"kind":"finding_approved","payload":{"finding_id":"f-confirmed-19"}}\n'
+        )
+        item19_embed = rr.build_offline_audit_embed(item19_audit_text)
+        item19_embed_gt = item19_embed.find(
+            ">", item19_embed.find('id="verdict-embedded-audit-jsonl"')
+        )
+        item19_embed_b64 = item19_embed[
+            item19_embed_gt + 1 : item19_embed.find("</script>", item19_embed_gt)
+        ]
+        try:
+            item19_roundtrip = (
+                base64.b64decode(item19_embed_b64).decode("utf-8") == item19_audit_text
+            )
+        except Exception:
+            item19_roundtrip = False
+        item19_embed_has_download = (
+            'download="audit.jsonl"' in item19_embed
+            and "data:application/x-ndjson;base64," in item19_embed
+        )
+        item19_injected = rr.inject_offline_audit_embed(
+            "<html><body><p>report</p></body></html>", item19_audit_text
+        )
+        item19_inject_before_body = (
+            "verdict-offline-audit" in item19_injected
+            and item19_injected.index("verdict-offline-audit")
+            < item19_injected.index("</body>")
+        )
+        item19_inject_skips_empty = (
+            "verdict-offline-audit"
+            not in rr.inject_offline_audit_embed("<html><body></body></html>", "  ")
+        )
+        # (b) The CONFIRMED grep affordance is emitted only for CONFIRMED findings
+        # with a usable tool_call_id; leads are never dressed up as reproducible.
+        item19_confirmed_aff = rr.confirmed_reverify_affordance(
+            {"confidence": "CONFIRMED", "tool_call_id": "tc-confirmed-19"}
+        )
+        item19_inferred_aff = rr.confirmed_reverify_affordance(
+            {"confidence": "INFERRED", "tool_call_id": "tc-inferred-19"}
+        )
+        item19_missing_tcid_aff = rr.confirmed_reverify_affordance(
+            {"confidence": "CONFIRMED", "tool_call_id": ""}
+        )
+        item19_aff_unit_ok = (
+            len(item19_confirmed_aff) == 1
+            and "grep tc-confirmed-19 audit.jsonl" in item19_confirmed_aff[0]
+            and item19_inferred_aff == []
+            and item19_missing_tcid_aff == []
+        )
+        # Integration: a CONFIRMED finding gets the grep line through write_markdown;
+        # an INFERRED finding in the same report does not.
+        item19_case_dir = case_dir / "item19-confirmed"
+        item19_case_dir.mkdir()
+        item19_md = rr.write_markdown(
+            item19_case_dir,
+            manifest,
             [
-                (REPO / "README.md").read_text(encoding="utf-8"),
-                (REPO / "QUICKSTART.md").read_text(encoding="utf-8"),
-            ]
+                {
+                    "finding_id": "f-confirmed-19",
+                    "confidence": "CONFIRMED",
+                    "pool_origin": "A",
+                    "mitre_technique": "T1059",
+                    "tool_call_id": "tc-confirmed-19",
+                    "artifact_path": "artifact.json",
+                    "description": "Confirmed artifact recorded for review.",
+                },
+                {
+                    "finding_id": "f-inferred-19",
+                    "confidence": "INFERRED",
+                    "pool_origin": "A",
+                    "mitre_technique": "T1070",
+                    "tool_call_id": "tc-inferred-19",
+                    "artifact_path": "artifact.json",
+                    "description": "Inferred lead recorded for review.",
+                },
+            ],
+            contras=0,
+            kept=2,
+            downgraded=0,
+            evidence="memory.img",
+            verdict="SUSPICIOUS",
+            has_psscan=False,
+        )
+        item19_md_text = item19_md.read_text(encoding="utf-8")
+        item19_integration_ok = (
+            "grep tc-confirmed-19 audit.jsonl" in item19_md_text
+            and "grep tc-inferred-19 audit.jsonl" not in item19_md_text
+        )
+        # The existing INFERRED finding (tc-psscan) gets no grep affordance.
+        item19_inferred_no_grep = "grep tc-psscan audit.jsonl" not in main_text
+        public_text = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                REPO / "README.md",
+                REPO / "QUICKSTART.md",
+                REPO / "docs" / "release-surface.md",
+                REPO / "docs" / "release-evidence" / "README.md",
+            )
+            if path.is_file()
         )
         valid_html_text = """<!doctype html><html><body>
             <h1>VERDICT — Forensic Investigation Report</h1>
@@ -546,6 +956,55 @@ def main() -> int:
             <p>stub signatures are dev/offline only; this is an explicit release blocker.</p>
             <p>Evidence-bound report text.</p>
             </body></html>""" + ("x" * 1800)
+        stage_two_good_result = validator.validate_stage_two_judge_packet_text(
+            "The optional harness/demo is the only place a fault injection or "
+            "`fault_injection` record may appear. The primary clean packet contains "
+            "no `fault_injection` records.",
+            "good stage two judge packet",
+        )
+        stage_two_bad_result = validator.validate_stage_two_judge_packet_text(
+            "The primary self-correction proof uses `fault_injection` as organic evidence.",
+            "bad stage two judge packet",
+        )
+        stage_two_bad_hyphen_result = validator.validate_stage_two_judge_packet_text(
+            "The primary self-correction proof uses fault-injection as organic evidence.",
+            "bad hyphenated stage two judge packet",
+        )
+        stage_two_bad_space_result = validator.validate_stage_two_judge_packet_text(
+            "The primary self-correction proof uses fault injection as organic evidence.",
+            "bad spaced stage two judge packet",
+        )
+        stage_two_bad_optional_organic_result = (
+            validator.validate_stage_two_judge_packet_text(
+                "The optional harness/demo `fault_injection` run is organic "
+                "self-correction evidence.",
+                "bad optional-organic stage two judge packet",
+            )
+        )
+        stage_two_bad_optional_primary_result = (
+            validator.validate_stage_two_judge_packet_text(
+                "The optional harness fault injection shows primary "
+                "self-correction proof.",
+                "bad optional-primary stage two judge packet",
+            )
+        )
+        stage_two_bad_negation_window_result = (
+            validator.validate_stage_two_judge_packet_text(
+                "The optional harness/demo is not organic evidence; "
+                "the fault_injection trial is primary evidence.",
+                "bad negation-window stage two judge packet",
+            )
+        )
+        stage_two_bad_cross_negation_result = (
+            validator.validate_stage_two_judge_packet_text(
+                "The optional harness/demo fault_injection run is not natural, "
+                "but it remains organic evidence.",
+                "bad cross-negation stage two judge packet",
+            )
+        )
+        stage_two_actual_result = validator.validate_stage_two_judge_packet(
+            REPO / "docs" / "release-evidence" / "stage-two-judge-packet.md"
+        )
         valid_html = case_dir / "valid-investigation-report.html"
         valid_html.write_text(valid_html_text, encoding="utf-8")
         invalid_html = case_dir / "invalid-investigation-report.html"
@@ -580,8 +1039,495 @@ def main() -> int:
                 "readiness-packet.zip", build_readiness_packet_zip(valid_html_text)
             )
         valid_zip_result = validator.validate_zip(valid_zip)
+        forbidden_extra_zip = case_dir / "forbidden-extra-investigation-report.zip"
+        with zipfile.ZipFile(forbidden_extra_zip, "w") as zf:
+            zf.writestr("README-submission.md", "Find Evil submission package\n")
+            zf.writestr(
+                "benchmark-results.csv",
+                "fixture,source_file,findings_matched,findings_expected\nnist-hacking-case,,1,14\n",
+            )
+            zf.writestr("demo-video-link.txt", "https://example.org/findevil-demo\n")
+            zf.writestr("LICENSE", "Test license fixture\n")
+            zf.writestr("report.html", valid_html_text)
+            zf.writestr(".env", "TOKEN=do-not-ship\n")
+            zf.writestr("evidence/sample-disk.dd", b"raw disk evidence")
+        forbidden_extra_zip_result = validator.validate_zip(forbidden_extra_zip)
+        unknown_extra_zip = case_dir / "unknown-extra-investigation-report.zip"
+        with zipfile.ZipFile(unknown_extra_zip, "w") as zf:
+            zf.writestr("README-submission.md", "Find Evil submission package\n")
+            zf.writestr(
+                "benchmark-results.csv",
+                "fixture,source_file,findings_matched,findings_expected\nnist-hacking-case,,1,14\n",
+            )
+            zf.writestr("demo-video-link.txt", "https://example.org/findevil-demo\n")
+            zf.writestr("LICENSE", "Test license fixture\n")
+            zf.writestr("report.html", valid_html_text)
+            zf.writestr("notes.txt", "operator scratch notes must not ship\n")
+        unknown_extra_zip_result = validator.validate_zip(unknown_extra_zip)
+        finding_packet_audit = (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json","sha256":"'
+            + VERDICT_SHA_TOKEN
+            + '"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+        )
+        ready_finding = {
+            "finding_id": "f-ready",
+            "tool_call_id": "tc-ready",
+            "confidence": "CONFIRMED",
+            "description": "Replay-backed finding.",
+        }
+        tampered_finding = {
+            **ready_finding,
+            "description": "Tampered finding was not audit-approved.",
+        }
+        finding_packet = build_readiness_packet_zip(
+            valid_html_text,
+            audit_jsonl=finding_packet_audit,
+            verdict_overrides={
+                "findings": [
+                    {
+                        "finding_id": "f-ready",
+                        "tool_call_id": "tc-ready",
+                        "confidence": "CONFIRMED",
+                        "description": "Replay-backed finding.",
+                    }
+                ]
+            },
+        )
+        fault_injection_packet_audit = (
+            finding_packet_audit
+            + '{"kind":"fault_injection","payload":{"mode":"verifier_reject_once"}}\n'
+        )
+        fault_injection_packet_result = validator.validate_readiness_packet_bytes(
+            build_readiness_packet_zip(
+                valid_html_text,
+                audit_jsonl=fault_injection_packet_audit,
+            ),
+            "readiness packet with fault-injection demo record",
+        )
+        missing_verifier_packet_result = validator.validate_readiness_packet_bytes(
+            finding_packet, "finding packet missing verifier evidence"
+        )
+        valid_verifier_audit = (
+            finding_packet_audit
+            + '{"kind":"tool_call_start","payload":{"tool_call_id":"tc-ready",'
+            '"tool":"evtx_query"}}\n'
+            + '{"kind":"tool_call_output","payload":{"tool_call_id":"tc-ready",'
+            '"output_hash":"'
+            + ("d" * 64)
+            + '"}}\n'
+            + '{"kind":"verifier_action","payload":{"finding_id":"f-ready",'
+            '"action":"approved","reason":"replay matched",'
+            '"replay_record_sha256":"'
+            + ("c" * 64)
+            + '"}}\n'
+            + '{"kind":"replay","payload":{"finding_id":"f-ready",'
+            '"replay_matched":true,"replay_record_sha256":"'
+            + ("c" * 64)
+            + '"}}\n'
+            + '{"kind":"acp_handoff","payload":{"from_role":"verifier",'
+            '"to_role":"judge","correlation_id":"f-ready",'
+            '"payload":{"finding_id":"f-ready","action":"approved",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}}\n'
+        )
+        valid_bound_finding_audit = (
+            finding_packet_audit
+            + finding_approved_audit_record(ready_finding)
+            + '{"kind":"tool_call_start","payload":{"tool_call_id":"tc-ready",'
+            '"tool":"evtx_query"}}\n'
+            + '{"kind":"tool_call_output","payload":{"tool_call_id":"tc-ready",'
+            '"output_hash":"'
+            + ("d" * 64)
+            + '"}}\n'
+            + '{"kind":"verifier_action","payload":{"finding_id":"f-ready",'
+            '"action":"approved","reason":"replay matched",'
+            '"replay_record_sha256":"'
+            + ("c" * 64)
+            + '"}}\n'
+            + '{"kind":"replay","payload":{"finding_id":"f-ready",'
+            '"replay_matched":true,"replay_record_sha256":"'
+            + ("c" * 64)
+            + '"}}\n'
+            + '{"kind":"acp_handoff","payload":{"from_role":"verifier",'
+            '"to_role":"judge","correlation_id":"f-ready",'
+            '"payload":{"finding_id":"f-ready","action":"approved",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}}\n'
+        )
+        valid_bound_finding_packet_result = validator.validate_readiness_packet_bytes(
+            build_readiness_packet_zip(
+                valid_html_text,
+                audit_jsonl=valid_bound_finding_audit,
+                verdict_overrides={"findings": [ready_finding]},
+            ),
+            "packet with audit-bound final finding",
+        )
+        tampered_verdict_artifact_packet_result = (
+            validator.validate_readiness_packet_bytes(
+                build_readiness_packet_zip(
+                    valid_html_text,
+                    audit_jsonl=finding_packet_audit.replace(
+                        VERDICT_SHA_TOKEN, "0" * 64
+                    ),
+                ),
+                "packet with tampered verdict artifact hash",
+            )
+        )
+        tampered_finding_approved_packet_result = (
+            validator.validate_readiness_packet_bytes(
+                build_readiness_packet_zip(
+                    valid_html_text,
+                    audit_jsonl=valid_bound_finding_audit,
+                    verdict_overrides={"findings": [tampered_finding]},
+                ),
+                "packet with tampered audit-approved finding",
+            )
+        )
+        missing_tool_call_packet_result = validator.validate_readiness_packet_bytes(
+            build_readiness_packet_zip(
+                valid_html_text,
+                audit_jsonl=valid_verifier_audit,
+                verdict_overrides={
+                    "findings": [
+                        {
+                            "finding_id": "f-ready",
+                            "confidence": "CONFIRMED",
+                            "description": "Replay-backed finding without citation.",
+                        }
+                    ]
+                },
+            ),
+            "packet with final finding missing tool_call_id",
+        )
+        ghost_tool_call_packet_result = validator.validate_readiness_packet_bytes(
+            build_readiness_packet_zip(
+                valid_html_text,
+                audit_jsonl=valid_verifier_audit,
+                verdict_overrides={
+                    "findings": [
+                        {
+                            "finding_id": "f-ready",
+                            "tool_call_id": "tc-ghost",
+                            "confidence": "CONFIRMED",
+                            "description": "Replay-backed finding with a ghost citation.",
+                        }
+                    ]
+                },
+            ),
+            "packet with final finding citing ghost tool_call_id",
+        )
+        invalid_output_hash_audit = valid_bound_finding_audit.replace(
+            '"output_hash":"' + ("d" * 64) + '"',
+            '"output_hash":"not-a-sha256"',
+        )
+        invalid_output_hash_packet_result = validator.validate_readiness_packet_bytes(
+            build_readiness_packet_zip(
+                valid_html_text,
+                audit_jsonl=invalid_output_hash_audit,
+                verdict_overrides={"findings": [ready_finding]},
+            ),
+            "packet with final finding citation missing valid output hash",
+        )
+        invalid_verifier_audit = (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json","sha256":"'
+            + VERDICT_SHA_TOKEN
+            + '"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+            '{"kind":"verifier_action","payload":{"finding_id":"f-ready",'
+            '"action":"rejected","reason":"replay mismatch"}}\n'
+            '{"kind":"replay","payload":{"finding_id":"f-ready",'
+            '"replay_matched":false,"replay_record_sha256":"' + ("c" * 64) + '"}}\n'
+            '{"kind":"acp_handoff","payload":{"from_role":"pool_a",'
+            '"to_role":"judge","correlation_id":"f-ready",'
+            '"payload":{"finding_id":"f-ready","action":"rejected",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}}\n'
+        )
+        invalid_verifier_packet_result = validator.validate_readiness_packet_bytes(
+            build_readiness_packet_zip(
+                valid_html_text,
+                audit_jsonl=invalid_verifier_audit,
+                verdict_overrides={
+                    "findings": [
+                        {
+                            "finding_id": "f-ready",
+                            "tool_call_id": "tc-ready",
+                            "confidence": "CONFIRMED",
+                            "description": "Replay-backed finding.",
+                        }
+                    ]
+                },
+            ),
+            "packet with invalid verifier evidence",
+        )
+        mismatched_replay_hash_audit = (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json","sha256":"'
+            + VERDICT_SHA_TOKEN
+            + '"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+            '{"kind":"verifier_action","payload":{"finding_id":"f-ready",'
+            '"action":"approved","reason":"replay matched",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}\n'
+            '{"kind":"replay","payload":{"finding_id":"f-ready",'
+            '"replay_matched":true,"replay_record_sha256":"' + ("d" * 64) + '"}}\n'
+            '{"kind":"acp_handoff","payload":{"from_role":"verifier",'
+            '"to_role":"judge","correlation_id":"f-ready",'
+            '"payload":{"finding_id":"f-ready","action":"approved",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}}\n'
+        )
+        mismatched_replay_hash_packet_result = (
+            validator.validate_readiness_packet_bytes(
+                build_readiness_packet_zip(
+                    valid_html_text,
+                    audit_jsonl=mismatched_replay_hash_audit,
+                    verdict_overrides={
+                        "findings": [
+                            {
+                                "finding_id": "f-ready",
+                                "tool_call_id": "tc-ready",
+                                "confidence": "CONFIRMED",
+                                "description": "Replay-backed finding.",
+                            }
+                        ]
+                    },
+                ),
+                "packet with mismatched verifier replay hashes",
+            )
+        )
+        split_hash_action_audit = (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json","sha256":"'
+            + VERDICT_SHA_TOKEN
+            + '"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+            '{"kind":"verifier_action","payload":{"finding_id":"f-ready",'
+            '"action":"approved","reason":"replay matched",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}\n'
+            '{"kind":"verifier_action","payload":{"finding_id":"f-ready",'
+            '"action":"downgraded","reason":"weaker support",'
+            '"replay_record_sha256":"' + ("d" * 64) + '"}}\n'
+            '{"kind":"replay","payload":{"finding_id":"f-ready",'
+            '"replay_matched":true,"replay_record_sha256":"' + ("c" * 64) + '"}}\n'
+            '{"kind":"acp_handoff","payload":{"from_role":"verifier",'
+            '"to_role":"judge","correlation_id":"f-ready",'
+            '"payload":{"finding_id":"f-ready","action":"downgraded",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}}\n'
+        )
+        split_hash_action_packet_result = validator.validate_readiness_packet_bytes(
+            build_readiness_packet_zip(
+                valid_html_text,
+                audit_jsonl=split_hash_action_audit,
+                verdict_overrides={
+                    "findings": [
+                        {
+                            "finding_id": "f-ready",
+                            "tool_call_id": "tc-ready",
+                            "confidence": "CONFIRMED",
+                            "description": "Replay-backed finding.",
+                        }
+                    ]
+                },
+            ),
+            "packet with split verifier hash/action evidence",
+        )
+        downgraded_not_reflected_audit = (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json","sha256":"'
+            + VERDICT_SHA_TOKEN
+            + '"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+            '{"kind":"verifier_action","payload":{"finding_id":"f-ready",'
+            '"action":"downgraded","reason":"weak replay",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}\n'
+            '{"kind":"replay","payload":{"finding_id":"f-ready",'
+            '"replay_matched":true,"replay_record_sha256":"' + ("c" * 64) + '"}}\n'
+            '{"kind":"acp_handoff","payload":{"from_role":"verifier",'
+            '"to_role":"judge","correlation_id":"f-ready",'
+            '"payload":{"finding_id":"f-ready","action":"downgraded",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}}\n'
+        )
+        downgraded_not_reflected_packet_result = (
+            validator.validate_readiness_packet_bytes(
+                build_readiness_packet_zip(
+                    valid_html_text,
+                    audit_jsonl=downgraded_not_reflected_audit,
+                    verdict_overrides={
+                        "findings": [
+                            {
+                                "finding_id": "f-ready",
+                                "tool_call_id": "tc-ready",
+                                "confidence": "CONFIRMED",
+                                "description": "Downgrade was not reflected.",
+                            }
+                        ]
+                    },
+                ),
+                "packet with unreflected verifier downgrade",
+            )
+        )
+        multi_downgrade_bypass_audit = (
+            '{"kind":"report_qa","payload":{"status":"PASS"}}\n'
+            '{"kind":"customer_release_gate","payload":{"customer_releasable":false}}\n'
+            '{"kind":"verdict_artifact","payload":{"path":"verdict.json","sha256":"'
+            + VERDICT_SHA_TOKEN
+            + '"}}\n'
+            '{"kind":"expert_signoff_packet","payload":{"expert_signoff_sha256":"'
+            + ("b" * 64)
+            + '"}}\n'
+            '{"kind":"tool_call_start","payload":{"tool_call_id":"tc-dg"}}\n'
+            '{"kind":"tool_call_output","payload":{"tool_call_id":"tc-dg",'
+            '"output_hash":"' + ("1" * 64) + '"}}\n'
+            '{"kind":"tool_call_start","payload":{"tool_call_id":"tc-ok"}}\n'
+            '{"kind":"tool_call_output","payload":{"tool_call_id":"tc-ok",'
+            '"output_hash":"' + ("2" * 64) + '"}}\n'
+            '{"kind":"verifier_action","payload":{"finding_id":"f-dg",'
+            '"action":"downgraded","reason":"weak replay",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}\n'
+            '{"kind":"replay","payload":{"finding_id":"f-dg",'
+            '"replay_matched":true,"replay_record_sha256":"' + ("c" * 64) + '"}}\n'
+            '{"kind":"acp_handoff","payload":{"from_role":"verifier",'
+            '"to_role":"judge","correlation_id":"f-dg",'
+            '"payload":{"finding_id":"f-dg","action":"downgraded",'
+            '"replay_record_sha256":"' + ("c" * 64) + '"}}}\n'
+            '{"kind":"verifier_action","payload":{"finding_id":"f-ok",'
+            '"action":"approved","reason":"matched",'
+            '"replay_record_sha256":"' + ("d" * 64) + '"}}\n'
+            '{"kind":"replay","payload":{"finding_id":"f-ok",'
+            '"replay_matched":true,"replay_record_sha256":"' + ("d" * 64) + '"}}\n'
+            '{"kind":"acp_handoff","payload":{"from_role":"verifier",'
+            '"to_role":"judge","correlation_id":"f-ok",'
+            '"payload":{"finding_id":"f-ok","action":"approved",'
+            '"replay_record_sha256":"' + ("d" * 64) + '"}}}\n'
+        )
+        multi_downgrade_bypass_packet_result = (
+            validator.validate_readiness_packet_bytes(
+                build_readiness_packet_zip(
+                    valid_html_text,
+                    audit_jsonl=multi_downgrade_bypass_audit,
+                    verdict_overrides={
+                        "findings": [
+                            {
+                                "finding_id": "f-dg",
+                                "tool_call_id": "tc-dg",
+                                "confidence": "CONFIRMED",
+                                "description": "Downgrade bypass first finding.",
+                            },
+                            {
+                                "finding_id": "f-ok",
+                                "tool_call_id": "tc-ok",
+                                "confidence": "INFERRED",
+                                "description": "Second finding masks stale lookup.",
+                            },
+                        ]
+                    },
+                ),
+                "packet with multi-finding downgrade bypass",
+            )
+        )
+        forged_manifest_packet_result = validator.validate_readiness_packet_bytes(
+            build_readiness_packet_zip(
+                valid_html_text,
+                run_manifest=b'{"case_id":"case-ready","merkle_root_hex":"forged"}\n',
+                manifest_verify={"overall": True, "signature_verified": True},
+            ),
+            "packet with forged manifest verification",
+        )
+        unknown_extra_packet = io.BytesIO()
+        with zipfile.ZipFile(unknown_extra_packet, "w") as zf:
+            with zipfile.ZipFile(
+                io.BytesIO(build_readiness_packet_zip(valid_html_text))
+            ) as source:
+                for info in source.infolist():
+                    zf.writestr(info, source.read(info.filename))
+            zf.writestr("notes.txt", "operator scratch notes must not ship\n")
+        unknown_extra_packet_result = validator.validate_readiness_packet_bytes(
+            unknown_extra_packet.getvalue(), "packet with unknown extra file"
+        )
+        non_image_figure_packet_result = validator.validate_readiness_packet_bytes(
+            add_manifested_packet_file(
+                build_readiness_packet_zip(valid_html_text),
+                "figures/debug.txt",
+                b"debug text must not ship as a figure\n",
+            ),
+            "packet with non-image figure artifact",
+        )
+        unsafe_path_packet = io.BytesIO()
+        with zipfile.ZipFile(unsafe_path_packet, "w") as zf:
+            zf.writestr("../audit.jsonl", "{}\n")
+        unsafe_path_packet_result = validator.validate_readiness_packet_bytes(
+            unsafe_path_packet.getvalue(), "packet with traversal path"
+        )
+        nested_colon_path_packet = io.BytesIO()
+        with zipfile.ZipFile(
+            io.BytesIO(build_readiness_packet_zip(valid_html_text))
+        ) as src:
+            with zipfile.ZipFile(nested_colon_path_packet, "w") as zf:
+                for member in src.infolist():
+                    zf.writestr(member.filename, src.read(member.filename))
+                zf.writestr("safe/C:/REPORT.html", valid_html_text)
+        nested_colon_path_packet_result = validator.validate_readiness_packet_bytes(
+            nested_colon_path_packet.getvalue(), "packet with nested colon path"
+        )
+        symlink_dir_packet = io.BytesIO()
+        with zipfile.ZipFile(
+            io.BytesIO(build_readiness_packet_zip(valid_html_text))
+        ) as src:
+            with zipfile.ZipFile(symlink_dir_packet, "w") as zf:
+                for member in src.infolist():
+                    zf.writestr(member.filename, src.read(member.filename))
+                symlink_dir = zipfile.ZipInfo("linkdir/")
+                symlink_dir.external_attr = (stat.S_IFLNK | 0o777) << 16
+                zf.writestr(symlink_dir, "target")
+        symlink_dir_packet_result = validator.validate_readiness_packet_bytes(
+            symlink_dir_packet.getvalue(), "packet with symlink directory"
+        )
+        unverifiable_signature_packet_result = (
+            validator.validate_readiness_packet_bytes(
+                build_readiness_packet_zip(
+                    valid_html_text,
+                    manifest_verify={
+                        "overall": True,
+                        "signature_present": True,
+                        "signature_verified": False,
+                    },
+                ),
+                "packet with unverified manifest signature",
+            )
+        )
 
     checks = [
+        (
+            "item19 embedded audit.jsonl round-trips offline with download link",
+            item19_roundtrip and item19_embed_has_download,
+        ),
+        (
+            "item19 audit embed injected before </body>, skipped when empty",
+            item19_inject_before_body and item19_inject_skips_empty,
+        ),
+        (
+            "item19 grep affordance emitted only for CONFIRMED + tool_call_id",
+            item19_aff_unit_ok,
+        ),
+        (
+            "item19 CONFIRMED finding renders grep affordance, INFERRED does not",
+            item19_integration_ok and item19_inferred_no_grep,
+        ),
         (
             "expert rules contain report QA claim IDs",
             not missing_claim_rule_ids,
@@ -589,6 +1535,22 @@ def main() -> int:
         (
             "empty findings report QA warns without failing",
             empty_qa["status"] == "WARN" and empty_timeline_check["status"] == "WARN",
+        ),
+        (
+            "coverage gate flags available-but-unexamined artifact class",
+            unexamined_gap_classes == ["evtx"],
+        ),
+        (
+            "coverage gate ignores not-supplied artifact class",
+            fully_examined_gap_classes == [],
+        ),
+        (
+            "NO_EVIL over unexamined available class FAILs no_evil_is_scoped",
+            no_evil_unexamined_check["status"] == "FAIL",
+        ),
+        (
+            "NO_EVIL over fully examined coverage keeps no_evil_is_scoped PASS",
+            no_evil_complete_check["status"] == "PASS",
         ),
         (
             "embedded replay match passes report QA check",
@@ -653,6 +1615,15 @@ def main() -> int:
             "rejected lead marked non-evidentiary",
             "tc-rejected" in text and "excluded_from_final_findings" in text,
         ),
+        ("self-correction heading", "## Self-Correction" in text),
+        (
+            "self-correction renders from->to confidence flip",
+            "CONFIRMED" in text and "INFERRED" in text,
+        ),
+        (
+            "self-correction cites trigger tool call",
+            "tc-correlate" in text,
+        ),
         ("limitations section present", "## Limitations" in text),
         ("coverage manifest section present", "## Coverage Manifest" in text),
         (
@@ -703,6 +1674,12 @@ def main() -> int:
             "![x](file:///etc/passwd)" not in text,
         ),
         (
+            "finding artifact display strips operator path",
+            "/home/operator/.findevil" not in text
+            and "case-extracted://disk-extract-abc/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf"
+            in text,
+        ),
+        (
             "legacy manifest command absent",
             "manifest_verify <run.manifest.json>" not in text,
         ),
@@ -731,6 +1708,42 @@ def main() -> int:
             "signs with sigstore (Rekor inclusion proof)" not in public_text,
         ),
         (
+            "stage two packet allows labeled optional fault-injection appendix",
+            stage_two_good_result.ok,
+        ),
+        (
+            "stage two packet rejects organic fault-injection framing",
+            not stage_two_bad_result.ok,
+        ),
+        (
+            "stage two packet rejects hyphenated organic fault-injection framing",
+            not stage_two_bad_hyphen_result.ok,
+        ),
+        (
+            "stage two packet rejects spaced organic fault injection framing",
+            not stage_two_bad_space_result.ok,
+        ),
+        (
+            "stage two packet rejects optional organic fault-injection framing",
+            not stage_two_bad_optional_organic_result.ok,
+        ),
+        (
+            "stage two packet rejects optional primary fault-injection framing",
+            not stage_two_bad_optional_primary_result.ok,
+        ),
+        (
+            "stage two packet rejects negation-window fault-injection framing",
+            not stage_two_bad_negation_window_result.ok,
+        ),
+        (
+            "stage two packet rejects cross-claim negation fault-injection framing",
+            not stage_two_bad_cross_negation_result.ok,
+        ),
+        (
+            "stage two packet file validates optional harness framing",
+            stage_two_actual_result.ok,
+        ),
+        (
             "case report HTML validator accepts explicit stub blocker",
             valid_report_result.ok,
         ),
@@ -741,6 +1754,95 @@ def main() -> int:
         (
             "zip validator accepts policy-complete investigation report",
             valid_zip_result.ok,
+        ),
+        (
+            "zip validator rejects forbidden extra artifacts",
+            not forbidden_extra_zip_result.ok,
+        ),
+        (
+            "zip validator rejects unknown extra artifacts",
+            not unknown_extra_zip_result.ok,
+        ),
+        (
+            "readiness packet rejects fault-injection demo records",
+            not fault_injection_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects findings without verifier audit evidence",
+            not missing_verifier_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects final findings without tool_call_id",
+            not missing_tool_call_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects unresolved final finding tool_call_id",
+            not ghost_tool_call_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects cited tool_call_id without valid output hash",
+            not invalid_output_hash_packet_result.ok,
+        ),
+        (
+            "readiness packet accepts audit-bound final finding",
+            valid_bound_finding_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects tampered verdict artifact hash",
+            not tampered_verdict_artifact_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects tampered audit-approved finding",
+            not tampered_finding_approved_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects invalid verifier audit evidence",
+            not invalid_verifier_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects mismatched verifier replay hashes",
+            not mismatched_replay_hash_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects split verifier hash/action evidence",
+            not split_hash_action_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects unreflected verifier downgrade",
+            not downgraded_not_reflected_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects multi-finding downgrade bypass",
+            not multi_downgrade_bypass_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects forged manifest verification",
+            not forged_manifest_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects unknown extra files",
+            not unknown_extra_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects non-image figure artifacts",
+            not non_image_figure_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects unsafe ZIP paths",
+            not unsafe_path_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects nested colon ZIP paths",
+            not nested_colon_path_packet_result.ok
+            and "unsafe relative path" in nested_colon_path_packet_result.message,
+        ),
+        (
+            "readiness packet rejects symlink directory ZIP entries",
+            not symlink_dir_packet_result.ok,
+        ),
+        (
+            "readiness packet rejects unverified manifest signature when reported",
+            not unverifiable_signature_packet_result.ok,
         ),
     ]
     print("=" * 60)

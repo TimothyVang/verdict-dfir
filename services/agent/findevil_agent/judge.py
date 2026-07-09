@@ -18,8 +18,8 @@ Formula (per §8.2):
   credibility_X = prior_accuracy_X * (1 + corroboration_bonus_X)
 
   prior_accuracy_X:
-    fraction of Pool X findings the verifier approved (this run).
-    Initialized to 0.5 for both pools.
+    fraction of Pool X findings the verifier accepted as replay-backed
+    (approved or downgraded) this run. Initialized to 0.5 for both pools.
 
   corroboration_bonus_X:
     0.2 if a Pool X finding is corroborated by a tool call from a
@@ -39,6 +39,7 @@ guards against pathological inputs.
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -129,6 +130,18 @@ def judge_findings(
     """
     started = time.monotonic()
 
+    # Opt-in counter-hypothesis discipline (FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS=1,
+    # default-off). When on, a SOLO finding (only one pool raised the claim — the
+    # opposing pool did not corroborate it) is NOT preserved at its drafted tier;
+    # it takes the merged score, so a solo CONFIRMED collapses to INFERRED unless
+    # cross-pool corroboration raises it back. This is the devil's-advocate /
+    # counter-hypothesis stance (project-mantis / vigia): a CONFIRMED claim must
+    # survive the other pool's challenge. DEFAULT-OFF because VERDICT already
+    # covers this via the verifier (which re-ran and accepted the finding) and the
+    # >=2-artifact-class execution gate; enabling it trades recall for a stricter
+    # corroboration bar, so it is a deliberate operator choice, not the default.
+    require_counter_hyp = os.environ.get("FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS") == "1"
+
     cred_a = _credibility(pool_a)
     cred_b = _credibility(pool_b)
 
@@ -200,14 +213,19 @@ def judge_findings(
             # be downgraded purely for lack of cross-pool corroboration. The merge
             # divides a solo finding's score by BOTH pools' credibility
             # (score_a / (cred_a + cred_b)), collapsing 1.0 → ~0.5 (INFERRED). But
-            # the verifier already re-executed and approved this finding before the
-            # judge ran — rejected/downgraded findings never reach here still
-            # labeled CONFIRMED — so the judge's job is to corroborate and *raise*,
+            # the verifier already re-executed and accepted this finding before the
+            # judge ran — rejected findings never reach here, and downgraded
+            # CONFIRMED findings no longer keep that label — so the judge's job is
+            # to corroborate and *raise*,
             # not to re-litigate a confirmed observation (e.g. an EID 1102
             # log-clear). Corroboration across pools can still only push higher.
             is_solo = not (a_finding and b_finding)
-            if is_solo and chosen.confidence == "CONFIRMED":
-                new_label = "CONFIRMED"
+            if (
+                is_solo
+                and chosen.confidence in {"CONFIRMED", "INFERRED"}
+                and not require_counter_hyp
+            ):
+                new_label = chosen.confidence
             merged_finding = chosen.model_copy(
                 update={
                     "confidence": new_label,
@@ -244,8 +262,8 @@ def _prior_accuracy(actions: Iterable[VerifierAction]) -> float:
     actions_list = list(actions)
     if not actions_list:
         return INITIAL_PRIOR_ACCURACY
-    approved = sum(1 for a in actions_list if a.action == "approved")
-    return approved / len(actions_list)
+    replay_backed = sum(1 for a in actions_list if a.action in {"approved", "downgraded"})
+    return replay_backed / len(actions_list)
 
 
 def _claim_id(finding_id: str) -> str:
@@ -318,6 +336,38 @@ def _pick_chosen(a: Finding | None, b: Finding | None) -> tuple[Finding | None, 
     return None, "?"
 
 
+def compute_coverage_discounted_score(
+    confidence_tiers: Iterable[str],
+    applicable_classes: int,
+    consulted_classes: int,
+) -> float:
+    """Case-level confidence in [0, 1] that a thin investigation cannot inflate.
+
+    ``score = mean(CONFIDENCE_VALUE[tier]) * (consulted / applicable)``
+
+    The per-finding confidence mean is discounted by the fraction of *applicable*
+    artifact classes that were actually *consulted*, so a single CONFIRMED finding
+    drawn from one of five available classes scores 0.2, not 1.0 — breadth of
+    investigation, not just the strength of one claim, bounds the headline number.
+
+    ``applicable_classes`` must be the classes available for *this* evidence type
+    (available and not unsupported), supplied by the caller — never a fixed count
+    of all classes, which would permanently cap a complete single-artifact run.
+    Empty findings or zero applicable classes score 0.0. Pure: reads only the
+    confidence tiers, mutates nothing.
+
+    A bare-host mirror of this formula lives in ``scripts/find_evil_auto.py``
+    (``_coverage_discounted_confidence``) because that 3.10 engine cannot import
+    this 3.11 package; keep the two in sync.
+    """
+    tiers = list(confidence_tiers)
+    if applicable_classes <= 0 or not tiers:
+        return 0.0
+    coverage_ratio = min(1.0, consulted_classes / applicable_classes)
+    finding_score = sum(CONFIDENCE_VALUE.get(t, 0.0) for t in tiers) / len(tiers)
+    return round(finding_score * coverage_ratio, 4)
+
+
 __all__ = [
     "CONFIDENCE_VALUE",
     "CORROBORATION_BONUS",
@@ -327,5 +377,6 @@ __all__ = [
     "JudgeBudgetExceeded",
     "MergedFinding",
     "PoolStats",
+    "compute_coverage_discounted_score",
     "judge_findings",
 ]

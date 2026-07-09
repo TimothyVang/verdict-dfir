@@ -5,8 +5,10 @@ name: Competitor Watch
 # Slack only when there's something to report.
 
 on:
-  schedule:
-    - cron: '0 9 * * 1'
+  # Weekly cron paused 2026-06-17 — the SANS deadline (2026-06-15) has passed, so
+  # this runs on demand only. Re-enable the schedule below if finalist tracking resumes.
+  # schedule:
+  #   - cron: '0 9 * * 1'
   workflow_dispatch: {}
 
 permissions:

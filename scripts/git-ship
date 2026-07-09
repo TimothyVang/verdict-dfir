@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+# git-ship — platform-agnostic "push + release" helper.
+#
+# Drop-in command (lives on PATH): invoke as `git ship ...` or `git-ship ...`.
+# Works for ANY project and ANY git host. Free: uses plain git + the platform CLI
+# (gh / glab) when present, or the platform REST API via curl as a fallback. No
+# paid CI runners involved.
+#
+# CI/CD-friendly: fully non-interactive, reads credentials from environment
+# tokens, returns clear exit codes. Drop it into a GitHub Actions / GitLab CI /
+# any pipeline step and it just works as long as a token is exported.
+#
+# Supported platforms (auto-detected from the remote URL host):
+#   - github   -> gh CLI, else GitHub REST API (token: GH_TOKEN / GITHUB_TOKEN)
+#   - gitlab   -> glab CLI, else GitLab REST API (token: GITLAB_TOKEN / CI_JOB_TOKEN)
+#   - generic  -> any other host (Gitea, Codeberg, Bitbucket, self-hosted):
+#                 branch + tag are pushed with plain git; release-object creation
+#                 is skipped with a note (git tags are the portable release unit).
+#
+# Usage:
+#   git ship [options]
+#
+# Options:
+#   --remote NAME       Git remote to push to (default: origin)
+#   --platform NAME     Force github|gitlab|gitea|generic (default: auto-detect)
+#   --branch NAME       Branch to push (default: current branch)
+#   --tag vX.Y.Z        Create + push this tag and a release for it
+#   --notes TEXT        Release notes text (default: auto-generate where supported)
+#   --notes-file FILE   Read release notes from FILE
+#   --create-repo       Create the remote repo if it is missing (github/gitlab CLI)
+#   --visibility V      public|private when creating a repo (default: private)
+#   --slug OWNER/NAME   Repo slug for --create-repo (default: <gh/glab user>/<dir>)
+#   --no-push           Skip the branch push (do a release only)
+#   --dry-run           Print every action, change nothing
+#   -h, --help          Show this help
+#
+# Examples:
+#   git ship                                  # push current branch to origin
+#   git ship --tag v1.2.0                      # push + cut a v1.2.0 release
+#   git ship --create-repo --visibility public # make the repo, then push
+#   GH_TOKEN=*** git ship --tag v1.0.0          # in CI, non-interactive
+set -euo pipefail
+
+REMOTE="origin"
+PLATFORM=""
+BRANCH=""
+TAG=""
+NOTES=""
+NOTES_FILE=""
+CREATE_REPO=0
+VISIBILITY="private"
+SLUG=""
+DO_PUSH=1
+DRY_RUN=0
+
+die() { printf 'git-ship: %s\n' "$*" >&2; exit 1; }
+note() { printf 'git-ship: %s\n' "$*" >&2; }
+run() {
+  if [[ "$DRY_RUN" == 1 ]]; then printf '  [dry-run] %s\n' "$*" >&2; return 0; fi
+  "$@"
+}
+
+usage() { sed -n '2,48p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --remote)     REMOTE="${2:?}"; shift 2;;
+    --platform)   PLATFORM="${2:?}"; shift 2;;
+    --branch)     BRANCH="${2:?}"; shift 2;;
+    --tag)        TAG="${2:?}"; shift 2;;
+    --notes)      NOTES="${2:?}"; shift 2;;
+    --notes-file) NOTES_FILE="${2:?}"; shift 2;;
+    --create-repo) CREATE_REPO=1; shift;;
+    --visibility) VISIBILITY="${2:?}"; shift 2;;
+    --slug)       SLUG="${2:?}"; shift 2;;
+    --no-push)    DO_PUSH=0; shift;;
+    --dry-run)    DRY_RUN=1; shift;;
+    -h|--help)    usage 0;;
+    *)            die "unknown option: $1 (try --help)";;
+  esac
+done
+
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "not inside a git repository"
+[[ -z "$BRANCH" ]] && BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+[[ "$VISIBILITY" =~ ^(public|private)$ ]] || die "--visibility must be public or private"
+
+# --- resolve / create the remote --------------------------------------------
+remote_url=""
+if git remote get-url "$REMOTE" >/dev/null 2>&1; then
+  remote_url="$(git remote get-url "$REMOTE")"
+fi
+
+# Detect platform from the remote host unless forced.
+detect_platform() {
+  local url="$1" host
+  host="$(printf '%s' "$url" | sed -E 's#^[a-z]+://##; s#^[^@]+@##; s#[:/].*$##')"
+  case "$host" in
+    github.com|*.github.com) echo github;;
+    gitlab.com|*.gitlab.*)   echo gitlab;;
+    codeberg.org|*gitea*)    echo gitea;;
+    "")                      echo "";;
+    *)                       echo generic;;
+  esac
+}
+[[ -z "$PLATFORM" && -n "$remote_url" ]] && PLATFORM="$(detect_platform "$remote_url")"
+
+if [[ "$CREATE_REPO" == 1 && -z "$remote_url" ]]; then
+  [[ -z "$SLUG" ]] && SLUG="$(basename "$(git rev-parse --show-toplevel)")"
+  case "${PLATFORM:-github}" in
+    github)
+      command -v gh >/dev/null || die "--create-repo on github needs the gh CLI (or pre-create the repo)"
+      note "creating github repo $SLUG ($VISIBILITY)"
+      run gh repo create "$SLUG" "--$VISIBILITY" --source=. --remote="$REMOTE" --push
+      PLATFORM=github
+      ;;
+    gitlab)
+      command -v glab >/dev/null || die "--create-repo on gitlab needs the glab CLI (or pre-create the repo)"
+      note "creating gitlab repo $SLUG ($VISIBILITY)"
+      run glab repo create "$SLUG" "--$VISIBILITY"
+      run git remote add "$REMOTE" "https://gitlab.com/$SLUG.git" 2>/dev/null || true
+      PLATFORM=gitlab
+      ;;
+    *) die "--create-repo is only automated for github/gitlab; create the repo and add a '$REMOTE' remote first";;
+  esac
+  remote_url="$(git remote get-url "$REMOTE" 2>/dev/null || echo)"
+fi
+
+[[ -n "$remote_url" ]] || die "no '$REMOTE' remote; add one or pass --create-repo"
+[[ -n "$PLATFORM" ]] || PLATFORM="$(detect_platform "$remote_url")"
+note "platform=$PLATFORM remote=$REMOTE branch=$BRANCH${TAG:+ tag=$TAG}"
+
+# --- push branch -------------------------------------------------------------
+if [[ "$DO_PUSH" == 1 ]]; then
+  note "pushing $BRANCH -> $REMOTE"
+  run git push -u "$REMOTE" "$BRANCH"
+fi
+
+# --- tag + release -----------------------------------------------------------
+[[ -z "$TAG" ]] && exit 0
+
+if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+  run git tag -a "$TAG" -m "$TAG"
+fi
+run git push "$REMOTE" "refs/tags/$TAG"
+
+[[ -n "$NOTES_FILE" ]] && NOTES="$(cat "$NOTES_FILE")"
+
+# Owner/name from the remote URL, for API fallbacks.
+slug_from_url() { printf '%s' "$1" | sed -E 's#^[a-z]+://[^/]+/##; s#^[^:]+:##; s#\.git$##'; }
+slug="$(slug_from_url "$remote_url")"
+
+create_release_github() {
+  if command -v gh >/dev/null; then
+    if [[ -n "$NOTES" ]]; then run gh release create "$TAG" --target "$BRANCH" --title "$TAG" --notes "$NOTES"
+    else run gh release create "$TAG" --target "$BRANCH" --title "$TAG" --generate-notes; fi
+    return
+  fi
+  local tok="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+  [[ -n "$tok" ]] || die "github release fallback needs GH_TOKEN or GITHUB_TOKEN (or install gh)"
+  note "no gh CLI; using GitHub REST API"
+  run curl -fsS -X POST "https://api.github.com/repos/$slug/releases" \
+    -H "Authorization: Bearer $tok" -H "Accept: application/vnd.github+json" \
+    -d "$(printf '{"tag_name":"%s","name":"%s","body":%s,"generate_release_notes":%s}' \
+          "$TAG" "$TAG" "$(printf '%s' "${NOTES:-}" | python3 -c 'import json,sys;print(json.dumps(sys.stdin.read()))')" \
+          "$([[ -z "$NOTES" ]] && echo true || echo false)")"
+}
+
+create_release_gitlab() {
+  if command -v glab >/dev/null; then
+    run glab release create "$TAG" ${NOTES:+--notes "$NOTES"}
+    return
+  fi
+  local tok="${GITLAB_TOKEN:-${CI_JOB_TOKEN:-}}"
+  [[ -n "$tok" ]] || die "gitlab release fallback needs GITLAB_TOKEN or CI_JOB_TOKEN (or install glab)"
+  local host proj
+  host="$(printf '%s' "$remote_url" | sed -E 's#^[a-z]+://##; s#^[^@]+@##; s#[:/].*$##')"
+  proj="$(printf '%s' "$slug" | sed 's#/#%2F#g')"
+  note "no glab CLI; using GitLab REST API"
+  run curl -fsS -X POST "https://$host/api/v4/projects/$proj/releases" \
+    -H "PRIVATE-TOKEN: $tok" -H 'Content-Type: application/json' \
+    -d "$(printf '{"tag_name":"%s","name":"%s","description":%s}' \
+          "$TAG" "$TAG" "$(printf '%s' "${NOTES:-$TAG}" | python3 -c 'import json,sys;print(json.dumps(sys.stdin.read()))')")"
+}
+
+case "$PLATFORM" in
+  github) create_release_github;;
+  gitlab) create_release_gitlab;;
+  *) note "release object not automated for '$PLATFORM'; tag $TAG was pushed (the portable release unit). Create the release page manually or add an API call for this host.";;
+esac
+
+note "done."

@@ -1,0 +1,11 @@
+{
+  "case_id": "case-fixture-disk",
+  "attack_story": {"headline": "Disk-only case"},
+  "attack_coverage": {"observed_techniques": ["T1204.002"]},
+  "indicators": {"hosts": ["HOST-D"]},
+  "entity_index": {"hosts": [{"value": "HOST-D"}]},
+  "normalized_timeline": {"events": []},
+  "findings": [
+    {"finding_id": "f-d1", "mitre_technique": "T1204.002", "named_technique": "User execution (T1204.002)", "description": "Prefetch shows run", "host": "HOST-D", "ts": "2020-02-02T00:00:00Z", "confidence": "CONFIRMED", "tool_call_id": "tc-1", "artifact_path": "x.pf"}
+  ]
+}

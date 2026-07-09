@@ -14,4 +14,5 @@
 - [ ] Tests / live test pass
 - [ ] Every new Finding cites a `tool_call_id` (agent-facing changes)
 - [ ] No new MCP verb added; no `execute_shell` introduced
+- [ ] Visual/report/video changes follow `docs/brand.md` and do not change evidence semantics
 - [ ] Conventional Commit messages (`feat:`, `fix:`, `docs:`, `chore:`, …)

@@ -1,0 +1,47 @@
+{
+  "_comment": [
+    "Tool-less NEGATIVE-CONTROL golden. Unlike synthetic-decoy (a clean case with",
+    "ZERO expected findings, which tests that a run does not HALLUCINATE bait), this",
+    "golden DOES enumerate real expected findings — claims a correctly-tooled run",
+    "would surface. The negative control runs the SAME scorer against a run that had",
+    "NO usable tools / empty evidence: such a run can ground nothing, so it MUST",
+    "score recall=0. This proves the harness measures the floor — recall is earned by",
+    "grounded tool output, never assumed. The deliberate-hallucination posture (any",
+    "ungrounded claim a tool-less run still emits) is disclosed SEPARATELY via",
+    "accuracy.negative_control(), never folded into the headline recall/precision.",
+    "Synthetic and evidence-agnostic: the descriptions are generic DFIR signatures,",
+    "not tied to any one image. No raw evidence is committed or required."
+  ],
+  "case_id": "synthetic-toolless",
+  "source_url": "generated negative-control fixture (no raw evidence)",
+  "license": "MIT (generation script)",
+  "verdict": "SUSPICIOUS",
+  "min_recall_percent": 50,
+  "exhaustive": true,
+  "findings": [
+    {
+      "finding_id": "tl-001",
+      "description": "Malicious service installation persistence registered under the system services registry hive",
+      "mitre_technique": "T1543.003",
+      "confidence": "CONFIRMED",
+      "artifact_class": "registry",
+      "artifact_hint": "SYSTEM hive CurrentControlSet Services key with anomalous ImagePath"
+    },
+    {
+      "finding_id": "tl-002",
+      "description": "Encoded PowerShell execution download cradle recorded in process creation logging",
+      "mitre_technique": "T1059.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Security 4688 / Sysmon process create with base64 EncodedCommand"
+    },
+    {
+      "finding_id": "tl-003",
+      "description": "Outbound command-and-control beacon connection to an external listener address",
+      "mitre_technique": "T1071.001",
+      "confidence": "INFERRED",
+      "artifact_class": "network",
+      "artifact_hint": "pcap / netflow showing periodic beacon to a single external host"
+    }
+  ]
+}

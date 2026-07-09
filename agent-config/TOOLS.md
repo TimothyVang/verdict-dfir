@@ -4,12 +4,14 @@ The agent has access to two MCP servers, both auto-spawned by Claude Code via `.
 
 | Server | Lang | Tools |
 |---|---|---|
-| `findevil-mcp` | Rust (`services/mcp/`) | 31 typed DFIR tools |
-| `findevil-agent-mcp` | Python (`services/agent_mcp/`) | 12 crypto + ACH + memory + ACP + expert-feedback tools (post-A5; the `ots_stamp` + `ots_verify` pair was removed) |
+| `findevil-mcp` | Rust (`services/mcp/`) | 42 typed DFIR tools |
+| `findevil-agent-mcp` | Python (`services/agent_mcp/`) | 14 crypto + ACH + memory + ACP + expert-feedback + accuracy + AI-signature tools (post-A5; the `ots_stamp` + `ots_verify` pair was removed) |
 
 Every successful tool call carries `_meta.output_sha256` (hex SHA-256 of the canonical JSON output). Findings cite tool calls by `tool_call_id`. The verifier vetoes any finding that doesn't.
 
-> **This file is the agent read-order catalog of the 43 typed PRODUCT tools** (the only verbs in
+> **Finding-authoring invariant.** Every CONFIRMED execution/intent Finding MUST populate `counter_hypothesis` with the benign explanation considered and discarded (presumption of benignity). Empty on such a Finding is a gate failure under `FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS_FINDING`; the correlator downgrades it and the schema/verifier reject it.
+
+> **This file is the agent read-order catalog of the 46 typed PRODUCT tools** (the only verbs in
 > the audit chain). The *full* set of MCP servers actually registered in `.mcp.json` (incl. the
 > operator-runtime `n8n-mcp`, `playwright`, `puppeteer` that emit no Findings) and the external
 > DFIR binaries + dependency pins are inventoried in
@@ -23,9 +25,9 @@ Every successful tool call carries `_meta.output_sha256` (hex SHA-256 of the can
 
 **Maturity note.** The long-tail verbs `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`,
 `cloud_audit`, `journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`,
-`suricata_eve`, and `indx_parse` are implemented as typed, allow-listed, shell-free tools and
-unit-tested against synthetic fixtures, but they have not yet been exercised on real evidence in a
-committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/YARA/
+`suricata_eve`, `indx_parse`, `thumbcache_parse`, and `hashset_lookup` are implemented as typed,
+allow-listed, shell-free tools and unit-tested against synthetic fixtures, but they have not yet
+been exercised on real evidence in a committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/YARA/
 USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
 
 > **Long-tail tool availability.** `scripts/setup` installs `volatility3`, `hayabusa` (+ Sigma
@@ -43,6 +45,11 @@ USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` pat
 Args: `{image_path: str, expected_sha256?: str, label?: str}`
 Returns: `{id, image_path, image_hash, size_bytes, opened_at}`
 Use when: starting an investigation. **Must be called first** — every subsequent tool needs the `case_id`. The image hash is the first audit-chain leaf; if the agent passes `expected_sha256` and it doesn't match, `case_open` errors before any other tool runs.
+
+### bulk_extract
+Args: `{case_id, image_path, scanners?: enum[], find_regexes?: str[], keyword_file?: str, limit?}`
+Returns: `{bulk_extractor_available, engine_version, scanners_requested[], features[]: {feature_type, offset, feature, context}, features_seen, staged_files[]: {feature_type, path, sha256, line_count}, stderr_tail, note}`
+Use when: a raw/E01 disk image is in scope and you need FEATURES from the whole byte stream — allocated files AND unallocated/free space, slack, and deleted regions the filesystem no longer references. This is the deleted-email / free-space feature-recovery surface that the live-filesystem parsers (`mft_timeline`, `disk_extract_artifacts`) cannot reach: it recovers an email whose directory entry is gone. Wraps `bulk_extractor` (Simson Garfinkel). `scanners[]` is the allow-listed set of real scanner names (`email` — which also emits the rfc822/url/domain recorders — `accts`, `httplogs`, `gps`, `exif`, `json`, `net`, `zip`, `gzip`, `pdf`, `sqlite`, `utmp`, `winlnk`, `winprefetch`, `ntfsusn`, `ntfsmft`, `evtx`, `find`); empty runs bulk_extractor's defaults. Keyword/regex hits come ONLY from `find_regexes[]` or an operator `keyword_file` (or `$FINDEVIL_BULK_KEYWORD_FILE`) — NEVER image-specific literals. DETERMINISTIC for `verify_finding` replay: runs single-threaded (`-j 1`), sorts feature rows in-tool, records case-relative staged paths with per-file SHA-256, and puts the bulk_extractor version (never a wall-clock) in the hashed body. INSTALL-FIRST — degrades to `bulk_extractor_available=false` (custody-only, not an error). `$FINDEVIL_BULK_EXTRACTOR_BIN` then PATH. HONEST SCOPE: a recovered feature CONFIRMS the string was present in the imaged bytes; it does not by itself prove authorship, intent, or a live filesystem path.
 
 ### evtx_query
 Args: `{case_id, evtx_path, eids?: int[], xpath?: str, limit?}`
@@ -107,7 +114,7 @@ Use when: cross-validating `vol_pslist` for DKOM detection. psscan signature-sca
 ### vol_psxview
 Args: `{case_id, memory_path, pid_filter?: int[], limit?}`
 Returns: `{processes[], processes_seen, stderr_tail}` where each process is `{pid, image_name, offset_v?, pslist?, psscan?, thrdproc?, pspcid?, csrss?, session?, deskthrd?, exit_time_iso?}`
-Use when: corroborating DKOM process hiding after `vol_pslist` and `vol_psscan` diverge. `psxview` cross-references multiple process-enumeration views so the analyst can see which views miss a process and which views still recover it. This is the direct follow-up for the SRL-2018 DC finding.
+Use when: corroborating DKOM process hiding after `vol_pslist` and `vol_psscan` diverge. `psxview` cross-references multiple process-enumeration views so the analyst can see which views miss a process and which views still recover it. This is the direct follow-up whenever pslist and psscan disagree on a process.
 
 ### vol_malfind
 Args: `{case_id, memory_path, pid_filter?: int[], limit?}`
@@ -137,7 +144,7 @@ Use when: decoding a carved Windows artifact. `tool` ∈ `{lecmd, jlecmd, amcach
 ### plaso_parse
 Args: `{case_id, parser: str, artifact_path, limit?}`
 Returns: `{parser, events[]: normalized plaso event objects, events_seen, stderr_tail}`
-Use when: a cross-OS log plaso normalizes (`syslog`, `bash_history`, `zsh_extended_history`, `utmp`, `dpkg`, `selinux`, legacy `winevt`/`msiecf`/`winjob`, `recycle_bin`, `viminfo`, macOS `asl_log`/`macwifi`). `parser` validated against the allow-list before argv. Two-stage fixed-argv run (`log2timeline.py` → `psort.py json_line`); `$PLASO_DIR` then PATH. For modern Windows `.evtx`, prefer the in-process `evtx_query`.
+Use when: a cross-OS log plaso normalizes (`syslog`, `bash_history`, `zsh_extended_history`, `utmp`, `dpkg`, `selinux`, legacy `winevt`/`msiecf`/`winjob`, `recycle_bin`, `viminfo`, macOS `asl_log`/`macwifi`). `parser` validated against the allow-list before argv. Two-stage fixed-argv run (`log2timeline.py` → `psort.py json_line`); `$PLASO_DIR` then PATH. For modern Windows `.evtx`, prefer the in-process `evtx_query`. **Deterministic-absence degradation:** plaso is an optional subprocess (absent off the SIFT VM). When `log2timeline.py` is not found, the orchestrator records one `course_correction` (`mechanism=tool_failure_resequence`), marks plaso absent for the run, and **early-stops** — INFO2 recycle-bin routes to `ez_parse:rbcmd`; remaining plaso classes (`legacy_evt`/`ie_history`/`scheduled_task`) are skipped with a recorded coverage-degradation note rather than re-issuing the same doomed call per artifact. The skip is an honest coverage gap, not a silent fallback.
 
 ### mac_triage
 Args: `{case_id, module: str, image_path, limit?}`
@@ -179,6 +186,61 @@ Args: `{case_id, indx_path: str, limit?}`
 Returns: `{rows[]: INDX column maps, rows_seen, stderr_tail}`
 Use when: a carved NTFS `$I30`/INDX stream may hold slack entries for deleted files (anti-forensic-deletion corroboration). Fixed `INDXParse.py <path>` subprocess; parses its `,\t`-delimited table. INSTALL-FIRST (`pip install INDXParse`). `$INDXPARSE_BIN` then PATH.
 
+### oe_dbx_parse
+Args: `{case_id, artifact_path}`
+Returns: `{is_oe_dbx, is_message_store, message_subject_count, subjects[], senders[], newsgroups[], hacking_newsgroups[]}`
+Use when: a carved Outlook Express `.dbx` mail/news store is in scope. **Pure Rust, in-process — no subprocess, no external binary** (no other parser reads DBX). Validates the OE file signature (`CF AD 12 FE`) before walking the store and extracts RFC822 `Subject`/`From`/`Newsgroups` headers. HONEST SCOPE: header-level only — no message bodies and no deleted-message recovery — so a recovered subject or newsgroup CONFIRMS store *content* (a mail/news-artifact fact at header granularity), never execution; intent stays a separate `hypothesis:` layer.
+
+### thumbcache_parse
+Args: `{case_id, thumbcache_path, limit?}`
+Returns: `{format: "olecfb_xp"|"cmmm", entries[]: {index?, cache_entry_hash?, original_filename?, modified_iso?, data_size_bytes, content_sha256?}, entries_seen, parse_errors[]}`
+Use when: a carved XP `Thumbs.db` or Vista+ `thumbcache_*.db` / `iconcache_*.db` (Explorer thumbnail cache) is in scope. **Pure Rust, in-process** (`cfb` crate for the XP OLE container; hand-rolled CMMM records for Vista+). Format detected by magic bytes, never filename. HONEST SCOPE: a cache entry CONFIRMS an image *existed and was rendered by Explorer* (surviving file deletion) — it is viewing/presence evidence at cache granularity, never execution and never proof the user opened the file at a specific time; XP catalog `modified_iso` is the cache's own timestamp. Fixture-tested only until exercised on a real image.
+
+### hashset_lookup
+Args: `{case_id, hashes[] (hex MD5/SHA1/SHA256, ≤10k), hashset_paths?[]: {path, disposition: known_good|known_bad, name?}}`
+Returns: `{results[]: {hash, disposition: known_good|known_bad|unknown, matched_sets[]}, sets_loaded[], hashes_checked}`
+Use when: triaging extracted/recovered file hashes against NSRL known-good or operator known-bad sets. **Pure Rust, in-process** — text sets stream (never loaded whole), SQLite sets (NSRL RDS v3 `FILE` schema or generic `hashes(hash)`) open read-only-immutable, parameterized queries only. Defaults to `$FINDEVIL_HASHSET_DIR/known_good/**` + `known_bad/**`; no sets configured degrades to all-`unknown`, never an error. HONEST SCOPE: `known_good` supports demotion/suppression, `known_bad` is a lead requiring corroboration — a hash match alone is never execution evidence. Fixture-tested only; not yet run against a full NSRL RDS download.
+
+### email_parse
+Args: `{case_id, artifact_path}`
+Returns: `{is_email, format: "eml"|"mbox", message_count, messages[]: {from?, to[], subject?, date?, attachment_names[], attachment_count}, unique_senders[], unique_recipients[], subjects[], attachment_names[]}`
+Use when: a loose `.eml` message or `mbox` archive is in scope (no other tool reads them; `oe_dbx_parse` is Outlook Express `.dbx`). **Pure Rust, in-process** (`mail-parser`). HONEST SCOPE: headers + attachment **filenames** only — it never decodes or writes body/attachment payloads, so a surfaced sender/subject CONFIRMS mail *content* at header granularity, never execution or exfil. Deterministic for replay.
+
+### exif_parse
+Args: `{case_id, artifact_path}`
+Returns: `{has_exif, camera_make?, camera_model?, software?, datetime_original?, datetime?, gps_decimal?: [lat, lon], artist?, copyright?, other_fields[], field_count}`
+Use when: a user-content image (JPEG/TIFF/HEIF/…) may carry EXIF — camera/software fingerprint, capture timestamps, and GPS geolocation. **Pure Rust, in-process** (`kamadak-exif`); reads clean ASCII values (never quoted). HONEST SCOPE: metadata is a device/location LEAD (a photo's GPS is where the shot was taken, not where a person was); no pixel bytes leave the tool. Feeds on carved/extracted images.
+
+### bits_parse
+Args: `{case_id, artifact_path}`
+Returns: `{format: "binary_qmgr"|"ese_qmgr_db"|"unknown", is_bits, ese_requires_external_tool, url_count, urls[], local_path_count, local_paths[], suspicious_url_count}`
+Use when: a Windows BITS state store (`qmgr*.dat` legacy binary, or `qmgr.db` ESE) is in scope — BITS is abused for stealthy download + persistence (MITRE **T1197**). **Pure Rust, in-process**; conservatively extracts embedded UTF-16LE URLs/paths from the legacy format and DETECTS (does not decode) the Win10 1709+ ESE `qmgr.db`. HONEST SCOPE: reports strings actually present (not decoded job state); raw-IPv4 hosts + executable payloads are flagged as T1197 leads, never proof.
+
+### srum_parse
+Args: `{case_id, artifact_path}`
+Returns: `{esedbexport_available, table_found, row_count, rows[]: {app_id, interface_luid?, bytes_sent, bytes_recvd, timestamp?}, total_bytes_sent, total_bytes_recvd, top_talkers[]}`
+Use when: the SRUM database `SRUDB.dat` is in scope — per-app network BytesSent/BytesRecvd per hour, the closest Windows has to a built-in data-transfer-volume ledger. Two-stage: `esedbexport` (libesedb) dumps the ESE tables, then the network table is decoded in Rust. INSTALL-FIRST — degrades to `esedbexport_available=false`. `$FINDEVIL_ESEDBEXPORT_BIN` then PATH. HONEST SCOPE: byte volume is an exfil-VOLUME lead requiring finding-specific corroboration, never proof of exfiltration.
+
+### pst_parse
+Args: `{case_id, artifact_path}`
+Returns: `{pffexport_available, message_count, messages[]: {from?, to[], subject?, delivery_time?, folder?, recovered}, recovered_deleted_count, unique_senders[], subjects[]}`
+Use when: an Outlook `.pst`/`.ost` mail store is in scope (no other tool reads them). `pffexport -m all` (libpff) also RECOVERS deleted/orphaned messages from unallocated PST space. INSTALL-FIRST — degrades to `pffexport_available=false`. `$FINDEVIL_PFFEXPORT_BIN` then PATH. HONEST SCOPE: metadata only (from/to/subject/date/folder + recovered flag), never bodies; a recovered message CONFIRMS mail content at header granularity.
+
+### wmi_persist_parse
+Args: `{case_id, artifact_path}`
+Returns: `{is_wmi_repository, consumer_classes_found[], filter_count, binding_count, command_strings[], script_strings[], persistence_pattern_present}`
+Use when: the WMI CIM repository `OBJECTS.DATA` is in scope — WMI permanent event subscriptions are a fileless persistence primitive (MITRE **T1546.003**). **Pure Rust, in-process, conservative** (no `python-cim` dependency): scans for the persistence class-name signatures (`__EventFilter`, `CommandLineEventConsumer`/`ActiveScriptEventConsumer`, `__FilterToConsumerBinding`) and the command/script strings adjacent to a consumer. HONEST SCOPE: reports strings present (not decoded CIM objects); the consumer+filter+binding triad is flagged as a persistence LEAD, never proof the subscription is active.
+
+### vss_list
+Args: `{case_id, image_path}`
+Returns: `{vshadowinfo_available, has_shadow_store, store_count, stores[]: {store_number, identifier?, creation_time?}}`
+Use when: enumerating Windows Volume Shadow Copies in a volume image — snapshots often still hold a file/registry value deleted or changed on the live volume. `vshadowinfo` (libvshadow). INSTALL-FIRST — degrades to `vshadowinfo_available=false`. `$FINDEVIL_VSHADOWINFO_BIN` then PATH.
+
+### vss_mount
+Args: `{case_id, image_path, mount_point?}`
+Returns: `{vshadowmount_available, mount_id, status, mount_point, shadow_store_paths[], command}`
+Use when: mounting a volume image's shadow copies so a snapshot can be analyzed like any other volume (and diffed against the live one — anti-forensics signal). `vshadowmount` (libvshadow) exposes each snapshot as a `vssN` raw-volume file; returns a case-scoped `mount_id` the normal disk tools read unchanged. Read-only. INSTALL-FIRST — degrades to `vshadowmount_available=false`. `$FINDEVIL_VSHADOWMOUNT_BIN` then PATH.
+
 ---
 
 ## Python crypto + ACH tools (`findevil-agent-mcp`)
@@ -207,6 +269,8 @@ Use when: any third party wants offline verification. Replays the audit chain �
 Args: `{finding, tool_call_index, findevil_mcp_command: list[str]}`
 Returns: `{action, finding_id, reason, replay_tool_name, replay_expected_sha256, replay_actual_sha256, replay_matched, replay_error}`
 Use when: re-running a finding's cited `tool_call_id` to confirm the original output's SHA-256 still matches. The verifier spawns its own short-lived findevil-mcp child process — same binary, same args, same hash, byte-for-byte. Budget 30s/finding per Spec #2 §8.1.
+
+**Fact-fidelity (entailment).** A SHA-match proves the finding points at real, unchanged evidence — NOT that it READ that evidence right. So a CONFIRMED/INFERRED finding MUST declare `asserted_values`: the structured fact(s) it claims, each `{path, expected, match}` where `path` walks the cited tool's output JSON (e.g. `entries[*].values[*].name`, `run_count`) and `match` ∈ `exact | contains | iso_ts | int | record`. After the SHA reproduces, the verifier deterministically **re-extracts** each asserted value from the re-run output; a value that is not actually there — a misread laundered through a valid `tool_call_id` — **rejects** a CONFIRMED finding and **downgrades** a lower tier, the same policy as output drift. The matched evidence value is recorded on the approval, so the chain carries a **server-read fact, not your transcription**. HONEST SCOPE: structured-value fidelity only; an interpretive claim ("this is malicious") has no deterministic ground truth and stays a tiered `hypothesis:` lead.
 
 ### detect_contradictions
 Args: `{case_id, pool_a, pool_b, resolution_required?: bool}`
@@ -243,11 +307,22 @@ Args: `{case_id, finding_id?, edit_type, edit_text, expert_name?, ledger_path}`
 Returns: `{seq, ts, line_hash, prev_hash, github_issue_url?}`
 Use when: a human expert edits the auto-drafted PDF before release. Records a `kind="expert_miss"` line in the hash-chained `expert_misses.jsonl` ledger so corrections become connector, playbook, rule, QA, escalation, or language follow-up work. GitHub issue creation is default-off and only attempted when `FINDEVIL_MISS_GH_ENABLED=1`; `FINDEVIL_MISS_GH_REDACT=1` redacts case IDs in issue text.
 
+### accuracy_compare
+Args: `{case_dir, golden_path?, audit_log_path?, coverage_manifest_path?}`
+Returns: `{case_id, recall_percent, precision_percent, f1, hallucination_rate, negative_coverage, verdict_match, pass, matched[], unmatched[], extra[], false_positives[], ...}`
+Use when: a finished Case's `verdict.json` needs to be scored against a curated golden (TP/FP/FN, precision/recall/F1, hallucination rate). Read-only ground-truth accuracy diagnostic only. HONEST SCOPE: **this is a DIAGNOSTIC, never a Finding** — it emits no `tool_call_id`, satisfies no Finding citation, mutates no evidence, and is never a Merkle leaf; it measures how the run scored against ground truth and never adds to or alters the Verdict.
+
+### find_ai_signatures
+Args: `{case_id, text?, paths?, categories?, limit?, preview_chars?}` — provide at least one of `text` / `paths`
+Returns: `{case_id, confidence_tier: "HYPOTHESIS", lead_only: true, disclaimer, matches[], sources_scanned, chars_scanned, signatures_evaluated, read_errors[], truncated}` where each match is `{signature_id, category, description, source, occurrences, first_offset, preview}`
+Use when: you want to know whether **LLM-assisted tooling or an autonomous agent framework** is fingerprinted in a recovered script, log slice, note, or text artifact. Typed read-only signature scanner (NOT a filesystem/shell surface): it reads only the inline `text` and the explicit `paths` you pass, opens files for read only, and never mutates evidence. The curated GENERAL signature list keys on LLM output boilerplate (refusals, "as an AI language model"), agent-framework module names (LangChain/LangGraph, LlamaIndex, Auto-GPT/BabyAGI, CrewAI, AutoGen, Semantic Kernel), the ReAct scratchpad shape, LLM API-client fingerprints (`api.openai.com`, `api.anthropic.com`, SDK imports, `system_fingerprint`), prompt scaffolding, and general model-family identifiers (`gpt-`/`claude-`/`llama-`/`mistral-`/`gemini-`) — no image-specific values. HONEST SCOPE: every match is a **HYPOTHESIS-tier LEAD** (`confidence_tier="HYPOTHESIS"`, `lead_only=true`). It suggests AI/agent involvement; it is **never** execution proof and **never** an attribution. A signature alone never satisfies the SOUL.md >=2-artifact-class corroboration gate — pair it with an independent artifact class before raising confidence. A file that cannot be read is reported in `read_errors` and skipped.
+
 ---
 
 ## Invariants
 
 - **Every call emits a `tool_call_id`.** Findings cite it. Verifier vetoes uncited.
+- **Every fact-bearing Finding is checkable.** A CONFIRMED finding declares `asserted_values` — the structured value(s) it claims — which the verifier re-extracts from the cited output and rejects on a misread. An INFERRED finding is a cross-fact inference (e.g. DKOM = pslist 0 AND psscan N>0): it has no single re-extractable value, so it either declares `asserted_values` or cites the confirmed facts it rests on (`derived_from`), whose own fidelity is checked. Interpretive claims have no deterministic ground truth — they stay `hypothesis:` and human-owned.
 - **No tool mutates evidence.** All reads operate on read-only mounts; original images stay untouched.
 - **No `execute_shell`.** The narrow typed surface above is the entire verb set. Adding shell pass-through breaks the architectural-guardrail story.
 - **AGPL/GPL backing tools (Hayabusa, Volatility3, Velociraptor, YARA core) are subprocess-only — never linked.** Apache-2.0 license clean.

@@ -99,7 +99,21 @@ class TestClassifyArtifactPath:
                 "ie_history",
                 "plaso_parse",
             ),
-            ("Documents and Settings/Mr. Evil/My Documents/Thumbs.db", "thumbnail", None),
+            (
+                "Documents and Settings/Mr. Evil/My Documents/Thumbs.db",
+                "thumbnail",
+                "thumbcache_parse",
+            ),
+            (
+                "Users/bob/AppData/Local/Microsoft/Windows/Explorer/thumbcache_1024.db",
+                "thumbnail",
+                "thumbcache_parse",
+            ),
+            (
+                "Users/bob/AppData/Local/Microsoft/Windows/Explorer/iconcache_32.db",
+                "thumbnail",
+                "thumbcache_parse",
+            ),
             ("malware.exe", "yara_target", "yara_scan"),
             ("collection.zip", "velociraptor", "vel_collect"),
             ("History", "browser_db", "browser_history"),

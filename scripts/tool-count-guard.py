@@ -11,8 +11,8 @@ from typing import NamedTuple
 
 
 REPO = Path(__file__).resolve().parent.parent
-DEFAULT_EXPECTED_RUST = 31
-DEFAULT_EXPECTED_PYTHON = 12
+DEFAULT_EXPECTED_RUST = 32
+DEFAULT_EXPECTED_PYTHON = 14
 
 
 class DocRule(NamedTuple):
@@ -20,6 +20,9 @@ class DocRule(NamedTuple):
     requires_total: bool = False
     requires_rust: bool = False
     requires_python: bool = False
+    # Optional docs are checked only when present (e.g. a gitignored local
+    # draft); an absent optional doc is skipped instead of failing the guard.
+    optional: bool = False
 
 
 DOC_RULES = (
@@ -46,6 +49,13 @@ DOC_RULES = (
         requires_rust=True,
         requires_python=True,
     ),
+    # Strategy doc (gitignored local draft) — pin only the VERDICT product-total
+    # claim. It is freeform prose citing many rivals' tool counts, so requiring
+    # the Rust/Python sub-counts would false-positive on competitor descriptions;
+    # requires_total catches the "56 product tools" drift that this guard missed.
+    # optional=True: the file is gitignored, so CI runs without it — check it
+    # when the local draft is present, skip when absent.
+    DocRule("docs/competitive-analysis.md", requires_total=True, optional=True),
 )
 
 
@@ -156,7 +166,8 @@ def validate_docs(root: Path, rust: int, python: int) -> list[str]:
     for rule in DOC_RULES:
         path = root / rule.path
         if not path.is_file():
-            errors.append(f"{rule.path}: missing monitored documentation file")
+            if not rule.optional:
+                errors.append(f"{rule.path}: missing monitored documentation file")
             continue
         text = path.read_text(encoding="utf-8")
         errors.extend(_required_count_errors(text, rule, total, rust, python))

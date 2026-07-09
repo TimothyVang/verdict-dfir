@@ -50,18 +50,18 @@ the matching `investigate_*` method too, or the two paths drift.**
 
 ---
 
-## Tool inventory (43 product tools)
+## Tool inventory (45 product tools)
 
 The complete typed surface both paths can drive. Argument/output shapes live in `TOOLS.md`; this is
 the at-a-glance map of *what exists* and *when it runs*.
 
-### Rust `findevil-mcp` (31) — DFIR primitives, read-only on evidence, SHA-256 every output
+### Rust `findevil-mcp` (32) — DFIR primitives, read-only on evidence, SHA-256 every output
 
 | Tool | What | Runs for |
 |---|---|---|
 | `case_open` | SHA-256 the evidence, open the Case, derive `case_id` | **every** run (first call) |
 | `disk_mount` | Loop/EWF-mount a disk image read-only (`ewfmount`+inner volume via TSK) | disk |
-| `disk_extract_artifacts` | Carve MFT/USN/Prefetch/Registry/yara-targets from the mount | disk |
+| `disk_extract_artifacts` | Carve MFT/USN/Prefetch/Registry/yara-targets from the mount; recovers deleted-but-metadata-intact files (`__deleted__/<inode>/`, realloc'd inodes skipped) | disk |
 | `disk_unmount` | Release the mount (finally-block) | disk |
 | `mft_timeline` | `$MFT` timeline, `$SI` vs `$FN` timestomp detection | disk |
 | `usnjrnl_query` | `$UsnJrnl` change log — corroborates MFT, surfaces deletes | disk |
@@ -80,7 +80,7 @@ the at-a-glance map of *what exists* and *when it runs*.
 | `pcap_triage` | PCAP/PCAPNG triage (can drive Zeek internally) | network |
 | `vel_collect` | Velociraptor live-collection (note: velo **zips** are unzipped + re-dispatched locally, not via this tool) | velociraptor |
 
-### Python `findevil-agent-mcp` (12) — reasoning, crypto/custody, memory; run in the reason/seal phase
+### Python `findevil-agent-mcp` (13) — reasoning, crypto/custody, memory; run in the reason/seal phase
 
 | Tool | What | When |
 |---|---|---|
@@ -96,6 +96,7 @@ the at-a-glance map of *what exists* and *when it runs*.
 | `memory_remember` | Remember a CONFIRMED Finding's IOC/TTP for future cases | post-judge, CONFIRMED only |
 | `pool_handoff` | Structured ACP handoff (verifier→judge, pool_a→pool_b) | per handoff |
 | `expert_miss_capture` | Record a 1% expert correction as a future playbook/gate | on expert edit |
+| `accuracy_compare` | Read-only TP/FP/FN + precision/recall/F1/hallucination diagnostic of a finished Case's `verdict.json` vs a curated golden — a **diagnostic, never a Finding** | offline (post-Case QA, not in the in-run flow) |
 
 The 4 **non-product** MCP servers (`n8n-mcp`, `playwright`, `puppeteer`, `qmd`) never touch evidence
 and never emit Findings — they are not in this inventory.
@@ -116,7 +117,7 @@ Note: `scripts/find-evil-auto` intentionally deviates today for raw disk images:
 |---|---|---|---|
 | 1 | `case_open` | SHA-256 + case_id | both |
 | 2 | `disk_mount` | Mount read-only — EWF container via `ewfmount`, then the inner volume via TSK. **Local mode mounts the container only; the inner-volume mount needs the SIFT VM (`--sift`).** | both |
-| 3 | `disk_extract_artifacts` | Carve MFT/USN/Prefetch/Registry (and yara-targets, if any) to the work dir | both |
+| 3 | `disk_extract_artifacts` | Carve MFT/USN/Prefetch/Registry (and yara-targets, if any) to the work dir; deleted-but-metadata-intact files recover under `__deleted__/<inode>/` | both |
 | 4 | `mft_timeline` | Master File Table — what existed when, timestomp detection (`$SI` vs `$FN`) | both |
 | 5 | `prefetch_parse` | Per-binary execution evidence (run_count, last 8 run times) | A |
 | 6 | `usnjrnl_query` | Filesystem mutation log — corroborates MFT, surfaces deletes | both |
@@ -279,5 +280,5 @@ Even in unattended mode, halt and surface to the analyst when:
 ## What this playbook is NOT
 
 - **Not a script.** The supervisor is the agent; this file is its prior. If a case looks weird, deviate.
-- **Not exhaustive of DFIR.** It covers what the 31 typed Rust MCP tools can reach, including the allow-listed `plaso_parse`, `vol_run`, `ez_parse`, `mac_triage`, and `cloud_audit` long-tail verbs. If the case needs broad unstructured carving, a parser outside the allow-lists, or interactive packet reconstruction beyond `pcap_triage` / `zeek_summary` / `suricata_eve`, surface that as a gap to the analyst. (Browser history IS covered now — see `browser_history`.)
+- **Not exhaustive of DFIR.** It covers what the 32 typed Rust MCP tools can reach, including the allow-listed `plaso_parse`, `vol_run`, `ez_parse`, `mac_triage`, and `cloud_audit` long-tail verbs. If the case needs broad unstructured carving, a parser outside the allow-lists, or interactive packet reconstruction beyond `pcap_triage` / `zeek_summary` / `suricata_eve`, surface that as a gap to the analyst. (Browser history IS covered now — see `browser_history`.)
 - **Not a substitute for SOUL.md or AGENTS.md.** Read those first; this file is the operational layer that sits below the epistemic and role-definition layers.

@@ -5,21 +5,28 @@
 //
 // Per A3 plan Task 4.2.
 
+import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import chokidar, { type FSWatcher } from "chokidar";
 
 import type { AgentEvent } from "@/lib/events";
+import { repoRoot } from "@/lib/repo-root";
+import {
+  canonicalizeJson,
+  extractContentRecord,
+  type JsonValue,
+} from "@/lib/verify-chain";
 
 /**
- * Default allow-listed case roots, resolved against the repo root
- * (assumed to be `process.cwd()` — Next.js dev server runs from the
- * repo root, and the dashboard is started via `pnpm --filter
- * @findevil/web dev` from there). The route handler uses
- * isAllowedCasePath() to reject `?case=` paths that don't sit inside
- * one of these roots, closing the path-traversal hole flagged in PR
- * #7's `route.ts` comment + this README's "Path allow-list" section.
+ * Default allow-listed case roots, resolved against the repo root. repoRoot()
+ * honors FINDEVIL_REPO_ROOT when set; otherwise it walks upward from the
+ * dashboard process cwd so `pnpm --dir apps/web` and repo-root launches behave
+ * the same. The route handler uses isAllowedCasePath() to reject `?case=` paths
+ * that don't sit inside one of these roots, closing the path-traversal hole
+ * flagged in PR #7's `route.ts` comment + this README's "Path allow-list"
+ * section.
  *
  *  - `goldens/`        committed test fixtures
  *  - `tmp/auto-runs/`  find-evil-auto headless output
@@ -50,17 +57,17 @@ const DEFAULT_ALLOWED_ROOTS = [
  * itself for a smoke check).
  *
  * Relative default roots resolve against the repo root. `pnpm --filter
- * @findevil/web dev` can run with cwd=apps/web, so the launcher exports
- * `FINDEVIL_REPO_ROOT`; absent that we fall back to process.cwd() (which the
- * unit tests pin).
+ * @findevil/web dev` can run with cwd=apps/web, so repoRoot() walks up to the
+ * repository marker unless `FINDEVIL_REPO_ROOT` is set explicitly.
  */
-function repoRoot(): string {
-  return process.env.FINDEVIL_REPO_ROOT ?? process.cwd();
-}
-
 export function isAllowedCasePath(absPath: string): boolean {
   const resolved = path.resolve(absPath);
-  const base = repoRoot();
+  let base: string;
+  try {
+    base = repoRoot();
+  } catch {
+    return false;
+  }
   const extraRaw = process.env.FINDEVIL_DASHBOARD_EXTRA_ROOTS ?? "";
   const extras = extraRaw
     .split(path.delimiter)
@@ -91,7 +98,12 @@ export interface CaseEntry {
  * an investigator selects a case instead of pasting an absolute path.
  */
 export async function listCases(): Promise<CaseEntry[]> {
-  const base = repoRoot();
+  let base: string;
+  try {
+    base = repoRoot();
+  } catch {
+    return [];
+  }
   const extraRaw = process.env.FINDEVIL_DASHBOARD_EXTRA_ROOTS ?? "";
   const extras = extraRaw
     .split(path.delimiter)
@@ -305,8 +317,11 @@ function parseLine(line: string): AuditLine | null {
       kind,
       ts,
       payload: (obj.payload ?? obj) as AgentEvent | Record<string, unknown>,
+      // On-disk lines carry no line_hash field, so derive the per-line chain
+      // hash here from the shared canonicalizer. A producer that DID embed one
+      // is trusted as-is.
       line_hash:
-        typeof obj.line_hash === "string" ? obj.line_hash : undefined,
+        typeof obj.line_hash === "string" ? obj.line_hash : computeLineHash(obj),
       raw_line: line,
     };
   } catch {
@@ -314,4 +329,19 @@ function parseLine(line: string): AuditLine | null {
     // Future: surface as a `kind=tail_parse_error` synthetic event.
     return null;
   }
+}
+
+/**
+ * SHA-256 of the canonical content-field projection of a parsed audit record —
+ * the per-line hash the custody chain commits to. Shares the JCS canonicalizer
+ * and CONTENT_FIELDS selection with the browser re-verifier
+ * (lib/verify-chain), so the server-streamed line_hash equals what an
+ * in-browser SubtleCrypto re-derivation produces for the same line. Read-only:
+ * it derives a value and never mutates the audit chain.
+ */
+function computeLineHash(obj: Record<string, unknown>): string {
+  const canonical = canonicalizeJson(
+    extractContentRecord(obj as Record<string, JsonValue>),
+  );
+  return createHash("sha256").update(canonical, "utf-8").digest("hex");
 }

@@ -1,0 +1,58 @@
+flowchart TD
+  OP([Analyst]):::op --> ENTRY
+  subgraph ENTRY["Entrypoints &mdash; scripts/"]
+    direction LR
+    V["scripts/verdict<br/>one-shot / fleet"]:::e
+    F["scripts/find-evil<br/>interactive TUI"]:::e
+    TR["scripts/trace-finding<br/>audit replay"]:::e
+  end
+  ENTRY --> AGENT
+  subgraph AGENT["Agent loop &mdash; Claude Code  (Direct Agent Extension)"]
+    SUP["Supervisor + Pool A / Pool B subagents<br/>verifier &middot; judge &middot; correlator"]:::a
+    CFG["agent-config/<br/>SOUL &middot; AGENTS &middot; PLAYBOOK &middot; TOOLS &middot; MEMORY"]:::cfg
+    CFG -. governs .-> SUP
+  end
+  AGENT -->|"typed JSON-RPC &middot; no execute_shell"| MCP
+  subgraph MCP[".mcp.json &mdash; 6 MCP servers"]
+    subgraph PROD["Product surface (audit-chained &middot; 45 tools)"]
+      direction LR
+      R["findevil-mcp<br/>services/mcp/  (Rust &middot; 32 DFIR tools)"]:::p
+      PY["findevil-agent-mcp<br/>services/agent_mcp/ shims &rarr; services/agent/<br/>(Python &middot; 13 crypto/ACH/memory/ACP/expert)"]:::p
+    end
+    CONV["Convenience servers (never emit Findings):<br/>n8n &middot; playwright &middot; puppeteer &middot; qmd"]:::conv
+  end
+  R --> TOOLS
+  subgraph TOOLS["SIFT DFIR tools (read-only subprocess / in-process)"]
+    direction LR
+    SK["Sleuth Kit &middot; libewf<br/>(disk)"]:::t
+    VOL["Volatility 3<br/>(memory)"]:::t
+    LOG["EVTX &middot; Hayabusa<br/>prefetch &middot; registry &middot; MFT"]:::t
+    NET["tshark &middot; Zeek &middot; Suricata<br/>(network)"]:::t
+  end
+  TOOLS -->|read-only| EV[("Evidence vault<br/>SHA-256 at case_open &middot; no write verb")]:::ev
+  R --> AUD
+  PY --> AUD
+  subgraph CUSTODY["Chain of custody (M2)"]
+    AUD["audit.jsonl<br/>hash-chained (prev_hash)"]:::c
+    MAN["manifest_finalize<br/>Merkle root &middot; Ed25519"]:::c
+    MV["manifest_verify<br/>offline"]:::c
+    AUD --> MAN --> MV
+  end
+  AGENT --> OUT
+  subgraph OUT["Outputs &amp; presentation"]
+    direction LR
+    VD["verdict.json<br/>coverage_manifest.json"]:::o
+    REP["REPORT.html / .pdf"]:::o
+    WEB["apps/web/ &mdash; Next.js dashboard<br/>(SSE audit tail)"]:::o
+  end
+  AUD -. live SSE tail .-> WEB
+  classDef op fill:#9b59b6,color:#fff,stroke:#c79be0
+  classDef e fill:#1b2a3a,color:#cfe3ff,stroke:#6f93b8
+  classDef a fill:#2a1b2e,color:#f0d6ff,stroke:#9b59b6
+  classDef cfg fill:#20242c,color:#c9d1d9,stroke:#7fae6e,stroke-dasharray:4 3
+  classDef p fill:#3a2418,color:#ffe6cc,stroke:#c79a4a
+  classDef conv fill:#161b22,color:#8b949e,stroke:#444c56,stroke-dasharray:5 4
+  classDef t fill:#16241b,color:#d6ffd9,stroke:#7fae6e
+  classDef ev fill:#0d1117,color:#cfe3ff,stroke:#6f93b8,stroke-width:3px
+  classDef c fill:#2a2412,color:#fff3cc,stroke:#c79a4a,stroke-width:2px
+  classDef o fill:#1b2a2e,color:#d6f5ff,stroke:#6f93b8

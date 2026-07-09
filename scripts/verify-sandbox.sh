@@ -97,7 +97,7 @@ fi
 # ---------- Goldens ----------
 hr "Goldens"
 missing_goldens=0
-for fixture in nist-hacking-case synthetic-benign; do
+for fixture in nist-hacking-case synthetic-benign synthetic-decoy; do
   if [[ ! -f "goldens/${fixture}/expected-findings.json" ]]; then
     missing_goldens=$((missing_goldens + 1))
     echo "  missing: goldens/${fixture}/expected-findings.json"

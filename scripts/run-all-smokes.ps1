@@ -83,7 +83,7 @@ $python = Get-PythonCommand
 "=========================================="
 
 $rustMcpSmoke = @{
-    Label = "rust-mcp-smoke (31-tool catalog + core error paths)"
+    Label = "rust-mcp-smoke (32-tool catalog + core error paths)"
     Command = { & $python scripts/rust-mcp-smoke.py --release }
     Prereq = {
         $releaseDir = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $repo "target" }
@@ -118,6 +118,7 @@ Invoke-Smoke -Label "install-bootstrap-smoke (--bootstrap gated; default stays f
 Invoke-Smoke -Label "smoke-regex-tests (audit-smoke regex/helper policies)" -Command { & $python scripts/smoke-regex-tests.py } -Prereq { $python }
 Invoke-Smoke -Label "render-binary-smoke (pandoc/chrome resolve via PATH, graceful degrade)" -Command { & $python scripts/render-binary-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "starter-data-smoke (SANS_STARTER_URL contract + goldens stub)" -Command { & $python scripts/starter-data-smoke.py } -Prereq { $python }
+Invoke-Smoke -Label "golden-answer-key-smoke (all expected-findings schemas valid)" -Command { & $python scripts/golden-answer-key-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "verdict-smoke (the one command, --dry-run)" -Command { & $python scripts/verdict-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "make-demo-video-smoke (TTS+ffmpeg video builder, --dry-run)" -Command { & $python scripts/make-demo-video-smoke.py } -Prereq { $python }
 Invoke-Smoke -Label "package-devpost-smoke (submission zip smoke mode)" -Command {

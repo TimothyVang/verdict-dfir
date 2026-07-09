@@ -126,7 +126,7 @@ function TitleCard({ beat, totalBeats }: { beat: Beat; totalBeats: number }) {
   const masterOpacity = Math.min(fadeIn, fadeOut);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0d1117", fontFamily: "'JetBrains Mono', 'Segoe UI', system-ui, sans-serif", opacity: masterOpacity }}>
+    <AbsoluteFill style={{ backgroundColor: "#101426", fontFamily: "'Inter', system-ui, sans-serif", opacity: masterOpacity }}>
       <BackgroundGradient accentColor={beat.accentColor} frame={frame} />
       <div style={{ position: "absolute", inset: 0, opacity: 0.03, backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 140px" }}>
@@ -163,9 +163,9 @@ function BeatContent({ beat, totalBeats }: { beat: Beat; totalBeats: number }) {
     switch (beat.scene) {
       case "concept": return <ConceptCard beat={beat} totalBeats={totalBeats} />;
       case "exhibit": return <ExhibitChapter beat={beat} totalBeats={totalBeats} />;
-      case "tools": return <ToolGrid page={beat.number} total={totalBeats} />;
-      case "arch": return <ArchDiagram page={beat.number} total={totalBeats} />;
-      case "outro": return <OutroScene page={beat.number} total={totalBeats} />;
+      case "tools": return <ToolGrid />;
+      case "arch": return <ArchDiagram />;
+      case "outro": return <OutroScene />;
       case "logo": return <LogoIntro />;
       case "title":
       default: return <TitleCard beat={beat} totalBeats={totalBeats} />;

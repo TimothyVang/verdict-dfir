@@ -1,5 +1,11 @@
 # VERDICT Accuracy Report
 
+*Devpost Required Component #9. Consolidates how VERDICT is measured for accuracy: the scoring
+method, the recall results against published ground truth, the verdict-calibration / false-positive
+posture, and the honest limits. Current source checkouts ship the scoring harness, goldens, and
+compact release-evidence summaries; bulky historical run packets are regenerated locally rather
+than committed.*
+
 VERDICT is evaluated on two axes:
 
 1. Whether it surfaces known reportable activity when supported artifacts are parsed.
@@ -27,6 +33,19 @@ Matching is intentionally conservative: the scorer uses distinctive token overla
 and maximum bipartite matching so one verbose run Finding cannot satisfy several
 expected claims.
 
+The corpus, fetch mechanism, and per-case tiers are in [`DATASET.md`](DATASET.md); the
+false-positive architecture is in [`false-positives.md`](false-positives.md). Some golden files
+still use the legacy scoring label `CONFIRMED_EVIL`; map that to VERDICT's current top-line
+`SUSPICIOUS` when comparing polarity.
+Local drop-zone evidence that has a committed answer key is listed separately in
+[`evidence-answer-keys.md`](evidence-answer-keys.md); those compact EVTX and fleet-host keys are
+calibration cases for fast local live runs, not substitutes for the larger public benchmark batch.
+
+The candidate public corpus backlog in [`DATASET.md`](DATASET.md) is explicitly unscored: a source
+does not enter the accuracy table until a specific fixture is pinned, staged, and paired with a
+verified expected-findings answer key. Until then, backlog entries are practice, parser-validation,
+or needs-walkthrough candidates, not claimed recall coverage.
+
 ## Current Public Corpus
 
 The repository ships small answer-key JSON files in `goldens/`. Large fixtures are
@@ -43,6 +62,58 @@ when the operator wants to run benchmark cases.
 | `synthetic-benign` | Synthetic control | False-positive floor: zero findings should remain `NO_EVIL`. |
 | `sans-starter` | Mixed | SANS starter-case answer-key placeholder for local/eventual scoring. |
 | Additional public cases | Disk, memory, Android, Linux | Regression corpus for parser expansion and confidence calibration. |
+
+## Scored Results
+
+The golden corpus is **10 scoreable cases** (real published ground truth) + 2 live-run-only
+controls. Fixtures and bulky run packets are not committed (license/size);
+`scripts/fetch-fixtures.sh` pulls fixtures and `scripts/verdict` regenerates run artifacts. Status
+as of this report:
+
+| # | Case | Class | Golden outcome | Recall bar | Result | Status |
+|---|---|---|---|---|---|---|
+| 1 | `nitroba` | network (pcap) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 80% | **5/5 = 100%** · run `INDETERMINATE` | **PASS** — committed sample run `docs/sample-run/nitroba/`; custody-verified (`manifest_verify` overall true, replay 9/9) |
+| 2 | `nist-hacking-case` | disk (XP) | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 71% | **10/14 = 71%** · run `SUSPICIOUS` | **PASS** — at the 71% floor; measured 2026-07-01 (`docs/benchmark/RESULTS.md`) and reproduced from `evidence/SCHARDT.dd`. Caveat: SCHARDT is in the golden set, so treat a strong score here as regression signal, not blind generalization |
+| 3 | `nist-data-leakage` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
+| 4 | `alihadi-09-encrypt` | disk (FP control) | **INDETERMINATE** | 50% | — | staged, scheduled (local TSK / SIFT parity) |
+| 5 | `alihadi-01-webserver` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
+| 6 | `dfrws-2008-linux` | memory | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled |
+| 7 | `m57-jean` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 60% | — | staged, scheduled (local TSK / SIFT parity) |
+| 8 | `alihadi-07-sysinternals` | disk | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled (local TSK / SIFT parity) |
+| 9 | `volatility-cridex` | memory | SUSPICIOUS (legacy label: CONFIRMED_EVIL) | 50% | — | staged, scheduled |
+| 10 | `synthetic-benign` | negative control | **NO_EVIL** (0 findings) | 100% | **0/0 = 100%** · run `INDETERMINATE` | **PASS** — committed sample run `docs/sample-run/synthetic-benign/`; custody-verified |
+| 11 | `synthetic-decoy` | decoy / FP control | **NO_EVIL** (0 planted bait asserted) | 100% | **0/0 = 100%**, 0 planted bait · run `INDETERMINATE` | **PASS** — committed sample run `docs/sample-run/synthetic-decoy/`; custody-verified |
+
+**Honest summary:** on the local-runnable corpus (evidence stageable without gated downloads),
+**9 of 9 cases pass** with aggregate recall **23/27 = 85%** (Tier B, goldens-scored; measured
+2026-07-01 in [`benchmark/RESULTS.md`](benchmark/RESULTS.md), `manifest_verify` overall:true on
+every run). `nist-hacking-case` now **passes at its 71% floor (10/14)** — up from the earlier
+36-50% range — and reproduces from `evidence/SCHARDT.dd`. It recalls ten of the golden's fourteen
+canonical claims: recent-search history (ACMru), hacking-tool MFT artifacts, Prefetch execution, IE
+internet history, shellbag and removable-media **LNK** staging traces, **Recycle Bin** staging, the
+**suspiciously-named SAM account** (T1136.001), the **recently-opened-file MRU**, and service-recon
+enumeration. It misses four, each for a documented reason: **nhc-002** (USB insertion history —
+`USBSTOR` is queried but returns empty on this image), **nhc-003** (recovered deleted email —
+deleted-file carve gap), **nhc-012** (logon events — the golden's `SecEvent.Evt` is empty, so it is
+unsatisfiable from the evidence), and **nhc-013** (thumbcache — this image ships no `Thumbs.db`). To
+reproduce: run `scripts/verdict evidence/SCHARDT.dd`, then score the run dir with
+`scripts/score-recall.py --golden goldens/nist-hacking-case`. The larger gated disk/memory cases
+(rows 3-9) remain fixture-staged and **not yet run** — scheduled, not measured. We publish the gap,
+and the progress, rather than hide either. The adversarial posture is tracked in
+[`red-team-challenge.md`](red-team-challenge.md): unsupported artifact evil, benign admin activity,
+single-source execution traps, log clearing, DKOM-vs-smear, exfil-without-network, and parser-failure
+cases are expected to pass by staying scoped, preserving limitations, and producing replayable
+citations — not by always finding evil.
+
+`nitroba` is the strongest single result, and it is reproducible by rerunning the fixture and
+scoring with `--golden goldens/nitroba` (historical result: 5/5 PASS): against a
+5-claim network answer key it surfaced all five — anonymous-email contact, source host
+`192.168.15.4`, Gmail-cookie attribution, the authenticated Facebook login, and the
+send-vs-browsing timeline correlation — at 100% recall over an 80% bar. The run verdict is
+`INDETERMINATE` (not a contradiction with 100% recall: recall measures whether the golden *facts*
+were surfaced; the verdict measures whether *evil is confirmed* — network metadata yields
+`HYPOTHESIS`-level attribution facts, which is honest, so the recall is full while the verdict stays
+scoped).
 
 ## False Positives
 
@@ -71,11 +142,16 @@ per scored case when a trustworthy answer key and completed run output exist.
 Misses are documented explicitly so partial coverage cannot be mistaken for
 clearance:
 
-- `nist-hacking-case` currently recalls 7/14 expected claims (50%), below the
-  71% bar. The unmatched IDs are `nhc-001`, `nhc-002`, `nhc-003`, `nhc-006`,
-  `nhc-012`, `nhc-013`, and `nhc-014`, covering artifacts not yet parsed in the
-  committed run: ACMru/search history, USB history, email carving,
-  `index.dat`/browser history, XP `.evt`, thumbcache, and named-pipe enum.
+- `nist-hacking-case` recalls **10/14 expected claims (71%)**, at the 71% bar, and reproduces at
+  10/14 across repeat runs from `evidence/SCHARDT.dd`. The ten matched: `nhc-001` (ACMru
+  recent-search history), `nhc-004` (hacking-tool files in the MFT), `nhc-005` (Prefetch execution),
+  `nhc-006` (IE internet history), `nhc-007` (shellbag removable-media navigation), `nhc-008` (LNK
+  removable-media traces), `nhc-009` (Recycle Bin staging), `nhc-010` (suspiciously-named SAM
+  account, T1136.001), `nhc-011` (OpenSaveMRU installers), and `nhc-014` (service / named-pipe
+  recon). The four unmatched, each with a documented cause: `nhc-002` (USB insertion history —
+  `USBSTOR` is queried but returns empty on this image), `nhc-003` (recovered deleted email —
+  deleted-file carve gap), `nhc-012` (logon events — the golden's `SecEvent.Evt` is empty, so it is
+  unsatisfiable from the evidence), and `nhc-013` (thumbcache — this image ships no `Thumbs.db`).
 - Large or gated datasets remain marked `staged, run pending evidence` until the
   exact fixture is available and scored. No recall number is fabricated for
   those rows.
@@ -105,6 +181,27 @@ was overclaiming from thin evidence. The controls and observed fixes are:
   operator wording tries to claim execution from a single weak artifact, report
   QA and the correlator keep that claim at `HYPOTHESIS`, downgrade it, or block
   customer-ready output.
+- **Live memory run — the smear-vs-DKOM call on first pass** ([`docs/sample-run/memory-dc/`](sample-run/memory-dc/)):
+  a fresh `base-dc-memory.img` run reproduced the exact dangerous signature — `vol_pslist` = 0 vs
+  `vol_psscan` = 124 — and held it at **HYPOTHESIS (acquisition smear)** *without* any post-run
+  reconciliation. The engine recognized core OS singletons (csrss/lsass/services/smss) recovered
+  only by `psscan` and a duplicate `System` (PID 4) as a kernel-read failure a rootkit cannot
+  produce, re-sequenced to `vol_psxview` to cross-check, and scoped the verdict to `INDETERMINATE`.
+  The supervisor's reasoning is in the audit chain as `agent_message` records, and the run is
+  ed25519-signed and offline-verifiable (`scripts/trace-finding docs/sample-run/memory-dc`). This is
+  the calibration working in code on a first-pass run, not a doc edit.
+- **SRL-2018 22-host fleet** (historical generated report path:
+  `docs/reports/2026-04-26-srl2018-dc-investigation.pdf`):
+  the same `vol_pslist` = 0 vs `vol_psscan` = 124 divergence
+  now stands in the report as **HYPOTHESIS** (acquisition smear). Full honesty about how it got
+  there: the original run over-claimed it as confirmed DKOM, and post-run expert review reconciled
+  it (commit `cd075c9`) — the caught-hallucination case study below, and the reason the engine now
+  carries the smear-disambiguation rule and `vol_psxview`. The live memory run above is the same
+  doctrine catching the same trap *before* it reaches the report.
+- **Single-class downgrades** — across the correlator's 11 tests
+  (`services/agent/tests/test_correlator.py`), an Amcache-only, MFT-only, or EVTX-only execution
+  claim is downgraded `CONFIRMED → INFERRED → HYPOTHESIS`; a run-wide *different* artifact class does
+  **not** rescue it (corroboration must be the finding's own evidence).
 
 No current release packet includes a hallucinated, uncited Finding as a valid
 Finding. When uncertain coverage remains, it is represented as a warning,
@@ -118,10 +215,11 @@ exercise. The checks we expect judges to run are:
 - **False positives found:** `alihadi-09-encrypt` remains an explicit control for
   benign or dual-use encryption-tool presence. The correct answer is scoped
   `INDETERMINATE`, not a confident suspicious verdict from tool presence alone.
-- **Missed artifacts:** the public NIST Hacking Case score is still 7/14 recall.
-  The missing ACMru/search history, USB history, email carving, browser history,
-  XP `.evt`, thumbcache, and named-pipe artifacts are published as misses rather
-  than hidden behind a broad accuracy claim.
+- **Missed artifacts:** the public NIST Hacking Case score is **10/14 recall (71%)**, at its floor.
+  The four remaining misses — USB insertion history (`nhc-002`), recovered deleted email
+  (`nhc-003`), logon events (`nhc-012`, unsatisfiable: the golden's `SecEvent.Evt` is empty), and
+  thumbcache (`nhc-013`, no `Thumbs.db` on this image) — are published as misses rather than hidden
+  behind a broad accuracy claim.
 - **Hallucination and overclaim classes caught:** uncited Findings, replay hash
   drift, unsupported execution wording, single-source execution claims, and
   unsupported exfiltration claims are vetoed, downgraded, or held as warnings by
@@ -136,7 +234,83 @@ exercise. The checks we expect judges to run are:
   failure, it must not be described as organic self-correction. The injected
   verifier re-dispatch run is optional harness/demo evidence only.
 
+### Hallucinations caught during testing (specific, not aspirational)
+
+LLM agents confidently assert findings the evidence doesn't support. These are the concrete
+instances we caught — each reproducible from a committed artifact, and each honest about *which
+layer* did the catching (in-run machinery vs. post-run expert review; both are part of the
+product's 99%-automation / 1%-expert-signoff doctrine, `agent-config/EXPERT.md`):
+
+1. **A corrupted verification caught and retried, in-run** — in
+   [`docs/sample-run/fault-injection-redispatch/`](sample-run/fault-injection-redispatch/) the
+   verifier rejected a deliberately-corrupted replay (`unknown tool: __fault_injected__…`),
+   re-dispatched once, and approved on clean evidence — the declared-fault demonstration that the
+   catch-and-retry path works on demand.
+2. **Honest scope under natural failure, in-run** — in
+   [`docs/sample-run/natural-self-correction/`](sample-run/natural-self-correction/) six genuine
+   tool failures (truncated `RegBack` hives) ended in a HEARTBEAT-escalated **partial verdict with
+   the skipped work named in `analysis_limitations`** — the run records what it did *not* examine
+   instead of letting absence of evidence read as absence of evil.
+3. **Cross-pool contradictions surfaced before merge, in-run** — the committed `nitroba` chain
+   contains **14 `contradiction_resolved` records** (`docs/sample-run/nitroba/audit.jsonl`):
+   Pool A vs Pool B disagreements that `detect_contradictions` forced into the open before the
+   judge merged. Honest caveat: those committed records carry `contradiction_id: "unknown"` —
+   an engine key bug (reading `id` where the tool emits `contradiction_id`) found by our own
+   pre-submission audit and since fixed (`4dc81f3`), so newer runs name each contradiction; the
+   committed nitroba records prove detection fired, not which pair each record settled.
+4. **The SRL-2018 "rootkit" that wasn't — caught by expert review, not in-run.** The original
+   fleet investigation **over-claimed**: it headlined the `vol_pslist` = 0 vs `vol_psscan` = 124
+   divergence as confirmed DKOM/T1014. Post-run expert review detonated the claim — with
+   `KeNumberProcessors` = 0, OS singletons recovered *only* by `psscan`, and a duplicate `System`
+   EPROCESS, the evidence is an acquisition smear / kernel-global read failure, which a rootkit
+   cannot produce. The report was reconciled to **HYPOTHESIS (acquisition smear)** (commit
+   `cd075c9`, ~6 weeks after the run — the git history shows the correction, on purpose), and the
+   miss was converted into engine code: the smear-disambiguation rule and the `vol_psxview`
+   cross-view tool now in the typed surface, so the same over-claim cannot survive a current run
+   Historical generated report path:
+   `docs/reports/2026-04-26-srl2018-dc-investigation.pdf`.
+   This is precisely the failure mode this report exists to document: a confident wrong answer,
+   caught, corrected in the open, and engineered against.
+
 ## Evidence Integrity
+
+### Fact-fidelity rejection rate (measured, not anecdotal)
+
+The four cases above are caught *instances*. This is the same fence graded as a *rate*. Scope first,
+so it is not over-read: this measures the **deterministic structured-value entailment check**
+(`services/agent/findevil_agent/entailment.py`) over **recorded tool-output fixtures** spanning the
+production artifact classes (registry Run-key, prefetch, command-line rows). It is **not** a live
+end-to-end run; it grades the fence that stops a misread fact from reaching a verdict, which is the
+layer most prone to a confident-but-wrong assertion.
+
+`scripts/fact-fidelity-rate.py` seeds deliberately-**false** asserted values — each a known-wrong
+mutation of a value that genuinely matches the evidence, plus the structural cases (a path that
+resolves to nothing, a malformed path) — across every match mode (`exact`, `contains`, `int`,
+`iso_ts`, `record`), then runs each through the real `check_entailment` and counts how many are
+rejected. The fabrications are false **by construction** (ground truth), and the check is run
+independently, so the number is not tautological. A control axis confirms the **true** values are
+still accepted (a check that rejected everything would trivially score 1.0 on rejection).
+
+Latest run (regenerate with the command below):
+
+| Axis | Result | Target |
+|---|---|---|
+| Seeded false values **rejected** | **15 / 15 = 100%** | 1.0 |
+| True values **accepted** (control) | **5 / 5 = 100%** | 1.0 |
+| Match modes exercised | `exact, contains, int, iso_ts, record` (all 5) | all |
+
+Any rejection escape (a false value the check accepts) is a verifier bug and fails the gate; the
+gate also fails on an empty corpus, so zero coverage cannot read as a pass. The metric is wired into
+`scripts/run-all-smokes.sh` as a standing check.
+
+```bash
+uv run --directory services/agent python ../../scripts/fact-fidelity-rate.py --json tmp/fact-fidelity-rate.json
+```
+
+This complements, and does not replace, the recall axis (§2): recall asks *did it surface the real
+evil*; this asks *can a structured fact that is not in the evidence reach the report* (target: no).
+
+---
 
 Evidence integrity is enforced architecturally rather than only by prompt text:
 
@@ -195,6 +369,13 @@ bash scripts/run-all-smokes.sh
 - Accuracy should be reported per case and per artifact class, not as a broad
   product-wide clean-bill statement.
 
+For the validation-scope caveats — what a score does NOT measure and the
+per-`validation_class` (synthetic / public-documented / held-out) training-data
+contamination caveat — see [`LIMITATIONS.md`](LIMITATIONS.md). Every
+`accuracy_compare` diagnostic now carries `validation_class`, `corpus_identity`,
+`contamination_caveat`, and a `does_not_measure` block inline with the score.
+
 Related docs: [`DATASET.md`](DATASET.md), [`false-positives.md`](false-positives.md),
+[`LIMITATIONS.md`](LIMITATIONS.md),
 [`cryptographic-attestation.md`](cryptographic-attestation.md), and
 [`live-test-matrix.md`](live-test-matrix.md).

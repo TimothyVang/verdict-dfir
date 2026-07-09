@@ -32,6 +32,8 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 from pydantic import ValidationError
 
+from findevil_agent_mcp import injection_ledger
+from findevil_agent_mcp.sanitize import sanitize_str, sanitize_value
 from findevil_agent_mcp.tools import all_specs
 from findevil_agent_mcp.tools._base import ToolSpec
 
@@ -72,12 +74,13 @@ def _build_specs_index() -> dict[str, ToolSpec]:
     return {spec.name: spec for spec in all_specs()}
 
 
-def _to_text_content(payload: Any) -> list[TextContent]:
+def _to_text_content(payload: Any, *, tool: str | None = None) -> list[TextContent]:
     """Wrap a Pydantic model (or dict) as a single MCP ``TextContent``.
 
     The MCP wire format expects ``content[0].text`` to be a string;
     we always emit canonical JSON so downstream agents can ``json.loads``
-    deterministically.
+    deterministically. ``tool`` is the dispatched tool name, recorded as
+    context in the injection-alert ledger when something was neutralized.
     """
     if hasattr(payload, "model_dump"):
         body = payload.model_dump()
@@ -85,7 +88,23 @@ def _to_text_content(payload: Any) -> list[TextContent]:
         body = payload
     else:
         body = {"value": payload}
+    # Neutralize attacker-controlled evidence text (chat/role tokens, invisible
+    # Unicode) before it crosses the boundary to the model -- the Python half of
+    # the MCP-output->LLM sanitizer (mirrors services/mcp/src/sanitize.rs). Log
+    # what was neutralized as counts only, never the payload.
+    body, sanitized = sanitize_value(body)
     text = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    if sanitized:
+        structlog.get_logger(SERVER_NAME).warning(
+            "agent_mcp_sanitized_tool_output",
+            patterns=sanitized,
+            total=sum(sanitized.values()),
+        )
+        # Mirror the warning into the counts-only injection-alert ledger (a
+        # best-effort SIDECAR, never the audit chain). output_text is the already
+        # -sanitized canonical JSON, so its digest matches what the model saw and
+        # is the correlation key the judge escalation maps back to a tool_call_id.
+        injection_ledger.record_neutralization(sanitized, tool=tool, output_text=text)
     return [TextContent(type="text", text=text)]
 
 
@@ -97,7 +116,20 @@ def _error_content(message: str, *, kind: str) -> list[TextContent]:
       - ``"unknown_tool"``: name not in the registry.
       - ``"handler"``: the handler raised an unexpected exception.
     """
-    payload = {"error": {"kind": kind, "message": message}}
+    # Error messages interpolate exception/validation text that can echo raw
+    # evidence bytes, so the error path is an injection channel just like a
+    # successful tool body. The success path neutralizes via ``_to_text_content``;
+    # route the human-readable message through the SAME sanitizer here so
+    # attacker-controlled chat/role tokens and invisible Unicode never reach the
+    # model un-neutralized (mirrors ``make_error_response`` in
+    # services/mcp/src/server.rs). Only the message string is sanitized -- the
+    # ``kind`` and the error shape are unchanged, and a JSON-RPC error is a
+    # protocol error, not a hashed tool output, so no audit-chain or
+    # ``_meta.sanitized`` accounting is touched. The tally is intentionally
+    # discarded.
+    counts: dict[str, int] = {}
+    safe_message = sanitize_str(message, counts)
+    payload = {"error": {"kind": kind, "message": safe_message}}
     return [
         TextContent(
             type="text",
@@ -163,7 +195,7 @@ def build_server() -> tuple[Server, dict[str, ToolSpec]]:
             )
             return _error_content(f"{type(exc).__name__}: {exc}", kind="handler")
 
-        return _to_text_content(result)
+        return _to_text_content(result, tool=name)
 
     return server, specs
 

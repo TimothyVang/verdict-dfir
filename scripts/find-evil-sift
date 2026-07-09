@@ -8,9 +8,8 @@
 # VMware Tools, sync .mcp.json.sift to that IP, swap configs, launch
 # Claude Code.
 #
-# Hypervisor preference: VMware Workstation (vmrun) → VirtualBox
-# (VBoxManage). The bootstrap is VMware-only today; VirtualBox path
-# is a stub for future extension.
+# Hypervisor: VMware Workstation (vmrun, Windows/WSL/Linux) or KVM/libvirt
+# (virsh, Linux fallback). VirtualBox is not supported.
 #
 # Knobs (env): VM_NAME, SSH_KEY, GUEST_USER, GUEST_REPO_PATH.
 

@@ -25,7 +25,11 @@ investigation in-process; the external DFIR binaries are needed for memory/disk/
 
 > **Node-version note:** the product/dashboard are pinned to **Node 20**. The optional
 > `qmd` MCP launcher is inert unless `FINDEVIL_ENABLE_QMD=1` is set and an operator
-> supplies a local `obsidian-mind/` vault plus matching Node/QMD toolchain.
+> supplies a local `obsidian-mind/` vault plus matching Node/QMD toolchain. The optional
+> **obsidian-mind memory layer** (QMD + lifecycle hooks) needs **Node 22+** — installed
+> side-by-side via nvm and used only for that layer. Reduced source checkouts may omit the
+> obsidian-mind runbook; it is optional operator memory, never evidence, and never audit-chain
+> input.
 
 ### Credential modes (Amendment A1 — one of three, detected by `install.sh`)
 

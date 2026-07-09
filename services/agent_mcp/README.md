@@ -31,6 +31,12 @@ on session start.
 | `detect_contradictions` | `contradiction.detect_contradictions` | Pairwise scan Pool A vs Pool B. |
 | `judge_findings` | `judge.judge_findings` | Credibility-weighted merge of pool findings. |
 | `correlate_findings` | `correlator.correlate` | SOUL.md cross-artifact rule enforcement. |
+| `memory_remember` | `MemoryStore.remember` | Hermes-pattern cross-case memory write (A3 §2.2). Never evidence. |
+| `memory_recall` | `MemoryStore.recall` | Hermes-pattern cross-case memory query (A3 §2.2). Appends a record that a recall happened. |
+| `pool_handoff` | `acp.handoff.handoff` | IBM-ACP agent-to-agent handoff record (A3 §2.3). |
+| `expert_miss_capture` | `AuditLog.append` (`expert_miss`) | Append expert edits to the hash-chained miss ledger (`expert_misses.jsonl`). |
+| `accuracy_compare` | `accuracy.score` | Read-only ground-truth accuracy diagnostic (TP/FP/FN, precision/recall/F1, hallucination rate) vs a curated golden. A DIAGNOSTIC, never a Finding. |
+| `find_ai_signatures` | `ai_signatures.scan` | Read-only scan for AI/agent-tradecraft signatures (LLM-assisted tooling / agent-framework fingerprints) on supplied text/artifacts; emits HYPOTHESIS-tier LEADS under the 2-class gate, never a conclusion. |
 
 Each tool has a Pydantic input model with `extra="forbid"` (deny
 unknown fields) and a Pydantic output model. JSON schemas are

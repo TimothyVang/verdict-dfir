@@ -1,0 +1,43 @@
+# Release-on-tag for GitHub Actions, driven by the platform-agnostic `git-ship` tool.
+#
+# COST: FREE on public repositories — this is a single short step on a standard
+# GitHub-hosted runner, and standard-runner minutes are unlimited/free for public
+# repos. On PRIVATE repos it consumes only the Actions minutes for this one step
+# (a checkout + one `git push`/release call — typically well under a minute).
+#
+# TRIGGER: fires whenever a tag matching `v*` is pushed (e.g. `git tag v1.2.0 &&
+# git push origin v1.2.0`). The job hands `git-ship` the tag name; `git-ship`
+# pushes the tag and creates the GitHub release (via the `gh` CLI if present,
+# otherwise the GitHub REST API using GH_TOKEN).
+#
+# PREREQUISITE: the repo must ship the tool at `scripts/git-ship`. Install once with:
+#   cp ~/.local/bin/git-ship scripts/git-ship && chmod +x scripts/git-ship
+# then commit `scripts/git-ship`.
+
+name: release-on-tag
+
+on:
+  push:
+    tags:
+      - "v*"
+
+# `git-ship` creates a release object, which writes repo content.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v4
+        with:
+          # Full history + tags so release-note generation has commits to work with.
+          fetch-depth: 0
+
+      - name: Ship release
+        env:
+          # GitHub injects this automatically; `git-ship` reads GH_TOKEN for both
+          # the `gh` CLI and its REST API fallback.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/git-ship --tag "${GITHUB_REF_NAME}"

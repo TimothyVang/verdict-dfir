@@ -4,9 +4,9 @@ import { C, MARGIN, SERIF } from "./shared/editorial";
 import { Scene } from "./shared/Scene";
 import { EvidenceTag, Kicker, KineticHeadline, PullQuote, RuleLine, Stamp } from "./shared/editorial-ui";
 
-// Beat 1 — cold open masthead. A forensic case file opening, not a dev-tool
-// splash: editorial logotype in Fraunces, a serif pull-line, a CASE OPENED
-// stamp, and the epistemic spine (CONFIRMED > INFERRED > HYPOTHESIS) as tags.
+// Beat 1 — cold open masthead. A forensic evidence-lab opening, not a dev-tool
+// splash: bold editorial logotype, a brand-bible pull-line, a CASE OPENED stamp,
+// and the epistemic spine (CONFIRMED > INFERRED > HYPOTHESIS) as tags.
 export function LogoIntro() {
   const frame = useCurrentFrame();
   return (
@@ -19,7 +19,7 @@ export function LogoIntro() {
         <KineticHeadline text="VERDICT" frame={frame} delay={20} size={300} weight={900} style={{ letterSpacing: -6 }} />
         <div style={{ marginTop: 12, maxWidth: 1000 }}>
           <PullQuote frame={frame} delay={48} size={48} color={C.inkMuted}>
-            <span style={{ fontStyle: "italic" }}>Proof,</span> at machine speed.
+            Show Me the Evidence.
           </PullQuote>
         </div>
       </div>
@@ -31,7 +31,7 @@ export function LogoIntro() {
 
       {/* The epistemic spine, sitting above the lower rule */}
       <div style={{ position: "absolute", left: MARGIN, bottom: 110, display: "flex", alignItems: "center", gap: 16 }}>
-        <span style={{ fontFamily: SERIF, fontSize: 22, color: C.inkFaint, fontStyle: "italic", marginRight: 6 }}>the discipline —</span>
+        <span style={{ fontFamily: SERIF, fontSize: 22, color: C.inkFaint, marginRight: 6 }}>the discipline —</span>
         <EvidenceTag label="Confirmed" tier="CONFIRMED" frame={frame} delay={92} />
         <span style={{ color: C.inkFaint }}>›</span>
         <EvidenceTag label="Inferred" tier="INFERRED" frame={frame} delay={100} />

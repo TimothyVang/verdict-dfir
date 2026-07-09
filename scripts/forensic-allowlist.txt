@@ -1,0 +1,72 @@
+# forensic-allowlist.txt — single source of truth for the OPTIONAL OS-level
+# PreToolUse deny-hook (scripts/pretooluse-deny-hook.sh).
+#
+# This is a defense-in-depth layer BELOW VERDICT's in-process typed-MCP
+# boundary, NOT a replacement for it. It defaults OFF; an operator opts in by
+# wiring scripts/pretooluse-deny-hook.sh as a Claude Code Bash PreToolUse hook
+# (see docs/sandbox/optional-os-hardening.md). When enabled, the hook hard-exits
+# nonzero unless the FIRST invoked binary of a Bash command is on this list.
+#
+# The list is exactly the legitimate forensic binaries the typed MCP wrappers
+# shell out to (grepped from services/mcp/src/tools/*). Adding a binary here is
+# a reviewed, deliberate widening of the allowed OS surface — keep it minimal.
+#
+# Format: one binary basename per line. Blank lines and lines starting with '#'
+# are ignored. Comparison is on the command's argv[0] basename, so both a bare
+# name (`vol`) and an absolute path (`/usr/bin/vol`) match the same entry.
+# Names ending in `.py`/`.exe` are matched as written (the wrappers invoke them
+# by that exact basename).
+
+# --- Volatility 3 (vol_run / vol_pslist / vol_psscan / vol_psxview / vol_malfind) ---
+vol
+vol.py
+volatility3
+volatility
+
+# --- Plaso timeline (plaso_parse) ---
+log2timeline.py
+psort.py
+
+# --- Eric Zimmerman tools (ez_parse / prefetch_parse / mft_timeline / registry_query / evtx_query) ---
+AmcacheParser
+AppCompatCacheParser
+JLECmd
+LECmd
+RBCmd
+SBECmd
+WxTCmd
+
+# --- Hayabusa Sigma scanner (hayabusa_scan) ---
+hayabusa
+hayabusa-mcp
+
+# --- Sleuth Kit + libewf disk handling (disk_mount / disk_extract_artifacts / disk_unmount) ---
+mmls
+fls
+icat
+ewfmount
+mount
+umount
+# privilege wrapper the disk verbs use for mount/ewfmount/mmls (sudo -n ...)
+sudo
+
+# --- Network triage (pcap_triage / zeek_summary / suricata_eve / nfdump_query) ---
+tshark
+zeek
+suricata
+nfdump
+
+# --- macOS supertool (mac_triage) ---
+mac_apt.py
+mac_apt
+
+# --- INDX record parser (indx_parse / usnjrnl_query) ---
+INDXParse.py
+
+# --- Velociraptor collection (vel_collect) ---
+velociraptor
+
+# --- Linux audit/login accounting (ausearch / journalctl_query / login_accounting) ---
+ausearch
+journalctl
+last

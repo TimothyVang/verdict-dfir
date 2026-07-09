@@ -77,13 +77,42 @@ struct FakeTsk {
 impl FakeTsk {
     fn install(dir: &std::path::Path, files: &[(&str, &str, &[u8])]) -> Self {
         use std::fmt::Write as _;
-        use std::os::unix::fs::PermissionsExt;
-        let blobs = dir.join("blobs");
-        fs::create_dir_all(&blobs).unwrap();
         let mut listing = String::new();
+        let mut blobs: Vec<(&str, &[u8])> = Vec::new();
         for (inode, path, bytes) in files {
             // fls -p line shape: `r/r <inode>:\t<relative/path>`.
             writeln!(listing, "r/r {inode}:\t{path}").unwrap();
+            blobs.push((inode, bytes));
+        }
+        Self::install_raw(dir, &listing, &blobs)
+    }
+
+    /// Like [`FakeTsk::install`], but takes pre-formed `fls -p` listing text so
+    /// tests can exercise deleted (`*`) and `(realloc)` markers directly.
+    /// `blobs` maps inode -> the bytes the fake `icat` serves for it.
+    fn install_raw(dir: &std::path::Path, listing: &str, files: &[(&str, &[u8])]) -> Self {
+        Self::install_raw_inner(dir, listing, files, None)
+    }
+
+    fn install_raw_with_arg_log(
+        dir: &std::path::Path,
+        listing: &str,
+        files: &[(&str, &[u8])],
+        arg_log: &std::path::Path,
+    ) -> Self {
+        Self::install_raw_inner(dir, listing, files, Some(arg_log))
+    }
+
+    fn install_raw_inner(
+        dir: &std::path::Path,
+        listing: &str,
+        files: &[(&str, &[u8])],
+        arg_log: Option<&std::path::Path>,
+    ) -> Self {
+        use std::os::unix::fs::PermissionsExt;
+        let blobs = dir.join("blobs");
+        fs::create_dir_all(&blobs).unwrap();
+        for (inode, bytes) in files {
             fs::write(blobs.join(format!("{inode}.bin")), bytes).unwrap();
         }
         let fls_txt = dir.join("fls.txt");
@@ -93,12 +122,27 @@ impl FakeTsk {
         // last argument (the inode) from `<image> <inode>` and streams that
         // blob, mirroring how `disk_extract_artifacts` invokes them.
         let fls = dir.join("fake_fls.sh");
-        fs::write(&fls, format!("#!/bin/sh\ncat '{}'\n", fls_txt.display())).unwrap();
+        let fls_log = arg_log
+            .map(|path| {
+                format!(
+                    "for a in \"$@\"; do printf 'fls\\t%s\\n' \"$a\" >> '{}'; done\n",
+                    path.display()
+                )
+            })
+            .unwrap_or_default();
+        fs::write(
+            &fls,
+            format!("#!/bin/sh\n{fls_log}cat '{}'\n", fls_txt.display()),
+        )
+        .unwrap();
         let icat = dir.join("fake_icat.sh");
+        let icat_log = arg_log
+            .map(|path| format!("printf 'icat\\t%s\\n' \"$@\" >> '{}'\n", path.display()))
+            .unwrap_or_default();
         fs::write(
             &icat,
             format!(
-                "#!/bin/sh\nfor a in \"$@\"; do last=\"$a\"; done\ncat '{}'/\"$last\".bin\n",
+                "#!/bin/sh\n{icat_log}for a in \"$@\"; do last=\"$a\"; done\ncat '{}'/\"$last\".bin\n",
                 blobs.display()
             ),
         )
@@ -208,6 +252,28 @@ fn case_open_rejects_mismatched_expected_hash() {
         }
         other => panic!("expected ImageHashMismatch, got {other:?}"),
     }
+}
+
+#[test]
+fn case_open_rejects_visible_split_ewf_segment_gap() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let _home = HomeGuard::set(tmp.path());
+
+    let first = tmp.path().join("split.E01");
+    let third = tmp.path().join("split.E03");
+    fs::write(&first, b"first segment").unwrap();
+    fs::write(&third, b"third segment").unwrap();
+
+    let err = case_open(&CaseOpenInput {
+        image_path: first,
+        expected_sha256: None,
+        label: None,
+    })
+    .expect_err("visible EWF segment gaps must not open as clean evidence");
+    assert!(
+        err.to_string().contains("missing split EWF segment"),
+        "gap error should be explicit, got: {err}"
+    );
 }
 
 #[test]
@@ -351,6 +417,7 @@ fn disk_mount_extract_unmount_uses_session_resource_ledger_in_mock_mode() {
         artifact_kinds: vec![],
         limit: 20,
         max_artifact_bytes: 1024,
+        recover_deleted: true,
     })
     .expect("extract artifacts");
     let classes: Vec<&str> = extracted
@@ -380,6 +447,72 @@ fn disk_mount_extract_unmount_uses_session_resource_ledger_in_mock_mode() {
     assert!(ledger_text.contains("disk_mount"));
     assert!(ledger_text.contains("disk_extract_artifacts"));
     assert!(ledger_text.contains("unmounted"));
+}
+
+#[test]
+#[cfg(unix)]
+fn disk_extract_artifacts_passes_split_ewf_segments_to_tsk() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let _home = HomeGuard::set(tmp.path());
+    let first = tmp.path().join("case.E01");
+    let second = tmp.path().join("case.E02");
+    fs::write(&first, b"first segment bytes").unwrap();
+    fs::write(&second, b"second segment bytes").unwrap();
+
+    let handle = case_open(&CaseOpenInput {
+        image_path: first.clone(),
+        expected_sha256: None,
+        label: Some("split-ewf".to_string()),
+    })
+    .expect("case_open ok");
+
+    let arg_log = tmp.path().join("tsk-args.log");
+    let _tsk = FakeTsk::install_raw_with_arg_log(
+        tmp.path(),
+        "r/r 100:\tWindows/Prefetch/CMD.EXE-12345678.pf\n",
+        &[("100", b"pf bytes".as_slice())],
+        &arg_log,
+    );
+
+    let mounted = disk_mount(&DiskMountInput {
+        case_id: handle.id.clone(),
+        image_path: first.clone(),
+        mount_point: None,
+        mode: DiskMode::Mock,
+    })
+    .expect("mock mount succeeds");
+
+    let extracted = disk_extract_artifacts(&DiskExtractArtifactsInput {
+        case_id: handle.id,
+        mount_id: mounted.mount_id,
+        artifact_kinds: vec![],
+        limit: 20,
+        max_artifact_bytes: 1024,
+        recover_deleted: true,
+    })
+    .expect("extract artifacts");
+    assert_eq!(extracted.artifacts.len(), 1);
+
+    let log = fs::read_to_string(arg_log).expect("read fake TSK argv log");
+    let first_arg = first.to_string_lossy();
+    let second_arg = second.to_string_lossy();
+    assert!(
+        log.lines().any(|line| line == format!("fls\t{first_arg}")),
+        "fls argv omitted first segment: {log}"
+    );
+    assert!(
+        log.lines().any(|line| line == format!("fls\t{second_arg}")),
+        "fls argv omitted second segment: {log}"
+    );
+    assert!(
+        log.lines().any(|line| line == format!("icat\t{first_arg}")),
+        "icat argv omitted first segment: {log}"
+    );
+    assert!(
+        log.lines()
+            .any(|line| line == format!("icat\t{second_arg}")),
+        "icat argv omitted second segment: {log}"
+    );
 }
 
 #[test]
@@ -423,6 +556,7 @@ fn disk_extract_artifacts_skips_oversized_yara_targets() {
         artifact_kinds: vec![],
         limit: 20,
         max_artifact_bytes: 8,
+        recover_deleted: true,
     })
     .expect("extract artifacts");
 
@@ -441,4 +575,107 @@ fn disk_extract_artifacts_skips_oversized_yara_targets() {
             .all(|artifact| artifact.source_path != large),
         "oversized YARA target should not be copied"
     );
+}
+
+#[test]
+#[cfg(unix)]
+fn disk_extract_artifacts_recovers_deleted_entries_and_skips_realloc() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let _home = HomeGuard::set(tmp.path());
+    let image = write_evidence_image(tmp.path(), b"fake disk image bytes");
+    let handle = case_open(&CaseOpenInput {
+        image_path: image.clone(),
+        expected_sha256: None,
+        label: Some("disk-deleted-recovery".to_string()),
+    })
+    .expect("case_open ok");
+
+    // One live prefetch, one recoverable deleted registry hive, one deleted
+    // entry whose inode was reallocated (must be skipped — icat would return
+    // the reusing live file's bytes), and one deleted entry whose content run
+    // is gone (fake icat serves zero bytes -> failed recovery).
+    let listing = "r/r 100:\tWindows/Prefetch/CMD.EXE-11111111.pf\n\
+                   r/r * 200:\tWindows/System32/config/SOFTWARE\n\
+                   -/r * 300(realloc):\tWindows/Prefetch/GONE.EXE-22222222.pf\n\
+                   r/r * 400:\tWindows/System32/config/SAM\n";
+    let _tsk = FakeTsk::install_raw(
+        tmp.path(),
+        listing,
+        &[
+            ("100", b"pf bytes".as_slice()),
+            ("200", b"recovered hive bytes".as_slice()),
+            ("400", b"".as_slice()),
+        ],
+    );
+
+    let mounted = disk_mount(&DiskMountInput {
+        case_id: handle.id.clone(),
+        image_path: image,
+        mount_point: None,
+        mode: DiskMode::Mock,
+    })
+    .expect("mock mount succeeds");
+
+    let extracted = disk_extract_artifacts(&DiskExtractArtifactsInput {
+        case_id: handle.id.clone(),
+        mount_id: mounted.mount_id.clone(),
+        artifact_kinds: vec![],
+        limit: 20,
+        max_artifact_bytes: 1024,
+        recover_deleted: true,
+    })
+    .expect("extract artifacts");
+
+    assert_eq!(extracted.deleted_entries_seen, 3);
+    assert_eq!(extracted.deleted_skipped_realloc, 1);
+    assert_eq!(extracted.deleted_recovered, 1);
+    assert_eq!(extracted.deleted_recovery_failed, 1);
+
+    let recovered = extracted
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.recovered_deleted)
+        .expect("one recovered-deleted artifact");
+    assert_eq!(recovered.artifact_class, "registry");
+    assert!(
+        recovered
+            .extracted_path
+            .to_string_lossy()
+            .contains("/registry/__deleted__/200/"),
+        "recovered content must stage under __deleted__/<inode>: {:?}",
+        recovered.extracted_path
+    );
+    assert_eq!(
+        fs::read(&recovered.extracted_path).unwrap(),
+        b"recovered hive bytes"
+    );
+    assert!(
+        extracted
+            .artifacts
+            .iter()
+            .all(|artifact| !artifact.source_path.to_string_lossy().contains("GONE")),
+        "reallocated inode must never be extracted"
+    );
+    let live = extracted
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.artifact_class == "prefetch")
+        .expect("live prefetch extracted");
+    assert!(!live.recovered_deleted);
+
+    // Opting out keeps the counters honest but recovers nothing.
+    let opted_out = disk_extract_artifacts(&DiskExtractArtifactsInput {
+        case_id: handle.id,
+        mount_id: mounted.mount_id,
+        artifact_kinds: vec![],
+        limit: 20,
+        max_artifact_bytes: 1024,
+        recover_deleted: false,
+    })
+    .expect("extract artifacts without recovery");
+    assert_eq!(opted_out.deleted_entries_seen, 3);
+    assert_eq!(opted_out.deleted_skipped_realloc, 1);
+    assert_eq!(opted_out.deleted_recovered, 0);
+    assert_eq!(opted_out.deleted_recovery_failed, 0);
+    assert!(opted_out.artifacts.iter().all(|a| !a.recovered_deleted));
 }

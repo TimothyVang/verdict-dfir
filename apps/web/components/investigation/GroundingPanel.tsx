@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   VERDICT,
+  BODY,
   MONO,
   GROTESK,
   RADIUS,
@@ -268,7 +269,7 @@ function ClaimCard({ claim }: { claim: GroundingClaim }) {
       ) : null}
 
       {claim.rationale ? (
-        <p style={{ margin: "8px 0 0", fontFamily: MONO, fontSize: 12.5, lineHeight: 1.6, color: VERDICT.text }}>
+        <p style={{ margin: "8px 0 0", fontFamily: BODY, fontSize: 12.5, lineHeight: 1.6, color: VERDICT.text }}>
           {claim.rationale}
         </p>
       ) : null}
@@ -306,7 +307,7 @@ function CveRow({ item }: { item: CveGrounding }) {
         ) : null}
       </div>
       {item.rationale ? (
-        <p style={{ margin: "6px 0 0", fontFamily: MONO, fontSize: 12, lineHeight: 1.55, color: VERDICT.text }}>
+        <p style={{ margin: "6px 0 0", fontFamily: BODY, fontSize: 12, lineHeight: 1.55, color: VERDICT.text }}>
           {item.rationale}
         </p>
       ) : null}
@@ -365,7 +366,7 @@ function IocRow({ ioc }: { ioc: IocGrounding }) {
         </div>
       ) : null}
       {ioc.rationale ? (
-        <p style={{ margin: "6px 0 0", fontFamily: MONO, fontSize: 12, lineHeight: 1.55, color: VERDICT.text }}>
+        <p style={{ margin: "6px 0 0", fontFamily: BODY, fontSize: 12, lineHeight: 1.55, color: VERDICT.text }}>
           {ioc.rationale}
         </p>
       ) : null}
@@ -389,7 +390,7 @@ function ActionRow({ item }: { item: ActionItem }) {
           </code>
         ) : null}
       </div>
-      <div style={{ marginTop: 4, fontFamily: MONO, fontSize: 12.5, lineHeight: 1.55, color: VERDICT.text }}>
+      <div style={{ marginTop: 4, fontFamily: BODY, fontSize: 12.5, lineHeight: 1.55, color: VERDICT.text }}>
         {item.action}
       </div>
       {item.why ? (
@@ -418,7 +419,7 @@ function OpenWebRow({ item }: { item: OpenWebItem }) {
         </span>
       </div>
       {item.note ? (
-        <p style={{ margin: "6px 0 0", fontFamily: MONO, fontSize: 12, lineHeight: 1.55, color: VERDICT.text }}>
+        <p style={{ margin: "6px 0 0", fontFamily: BODY, fontSize: 12, lineHeight: 1.55, color: VERDICT.text }}>
           {item.note}
         </p>
       ) : null}
@@ -555,7 +556,7 @@ export function GroundingPanel({ caseDir }: { caseDir: string }) {
           ))}
         </div>
       ) : (
-        <div style={{ fontFamily: MONO, fontSize: 13, color: VERDICT.muted, marginTop: 6 }}>
+        <div style={{ fontFamily: BODY, fontSize: 13, color: VERDICT.muted, marginTop: 6 }}>
           No finding-asserted technique claims to ground.
         </div>
       )}

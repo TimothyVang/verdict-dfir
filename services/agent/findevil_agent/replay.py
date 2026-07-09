@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
+from findevil_agent.case_paths import rewrite_arguments_for_replay
 from findevil_agent.mcp_client import McpClient, McpRpcError, ToolCallResult
 
 DriftClass = Literal[
@@ -22,6 +24,11 @@ DriftClass = Literal[
     "replay_error",
     "missing_citation",
     "missing_audit_record",
+    # Preflight vetoes (raised before replay): the model's claimed artifact does
+    # not match what the cited tool_call read, or a CONFIRMED finding arrived
+    # without the benign alternative it must have ruled out.
+    "artifact_rebind_mismatch",
+    "counter_hypothesis_missing",
 ]
 
 
@@ -42,6 +49,15 @@ class ReplayArtifact(BaseModel):
     error: str | None = None
     replay_tool_call_id: str | None = None
     wall_clock_ms: int | None = None
+    # Re-run output JSON, held in-memory for the verifier's entailment check.
+    # Excluded from serialization so it never bloats reports or the audit log
+    # (only the minimal asserted slice below is persisted into the signed chain).
+    parsed_output: dict[str, Any] | None = Field(default=None, exclude=True, repr=False)
+    # The minimal entailment slice (entailment_slice()): the value the parser
+    # re-extracted from the evidence for each asserted value, plus the pass flag.
+    # Serialized — it rides into the signed audit chain so manifest_verify can
+    # re-confirm the facts offline. None when the finding asserts nothing.
+    entailment: dict[str, Any] | None = None
 
 
 def canonical_sha256(value: Any) -> str:
@@ -104,6 +120,7 @@ def build_replay_artifact(
         error=error,
         replay_tool_call_id=result.tool_call_id if result else None,
         wall_clock_ms=result.wall_clock_ms if result else None,
+        parsed_output=result.parsed if result else None,
     )
 
 
@@ -153,11 +170,19 @@ def replay_tool_call(
     mcp: McpClient,
     replay_pool: ReplayPool | None = None,
     force_fresh: bool = False,
+    env: os._Environ[str] | dict[str, str] | None = None,
 ) -> ReplayArtifact:
-    """Replay one audit tool-call record and return a structured artifact."""
+    """Replay one audit tool-call record and return a structured artifact.
+
+    Extracted-artifact ``*_path`` arguments are recorded RELATIVE to ``case_home``
+    so the signed audit chain stays /home-free (see ``case_paths``). Before
+    re-dispatch they are resolved back to their absolute on-disk form so the tool
+    re-opens the real file and ``output_sha256`` reproduces; the chain record is
+    never mutated. ``/evidence/`` and other absolute paths pass through unchanged.
+    """
 
     tool_name = str(record.get("tool_name", ""))
-    arguments = dict(record.get("arguments") or {})
+    arguments = rewrite_arguments_for_replay(dict(record.get("arguments") or {}), env=env)
     expected = str(record.get("output_sha256", ""))
     try:
         result = (

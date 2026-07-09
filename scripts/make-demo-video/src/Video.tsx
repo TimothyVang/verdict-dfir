@@ -23,7 +23,7 @@ interface FilmProps {
 // contributor films) is just this wrapper over a different beats array.
 export function FilmFromBeats({ beats, audioPrefix }: FilmProps) {
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0d1117" }}>
+    <AbsoluteFill style={{ backgroundColor: "#101426" }}>
       <Series>
         {beats.map((beat) => (
           <Series.Sequence

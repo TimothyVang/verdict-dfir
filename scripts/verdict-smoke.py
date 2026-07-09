@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -614,6 +615,139 @@ def test_sift_fingerprint_fails_closed_on_unreadable_directories() -> None:
     ), "verdict fingerprint helper should fail closed on unreadable subtrees"
 
 
+def test_sift_mounted_evidence_selftest() -> None:
+    env = {**os.environ, "FINDEVIL_VERDICT_SELFTEST": "sift-mounted-evidence"}
+    result = subprocess.run(
+        ["bash", str(SCRIPT)], capture_output=True, text=True, timeout=10, env=env
+    )
+    assert (
+        result.returncode == 0
+    ), f"SIFT mounted evidence selftest failed: stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert (
+        "sift mounted evidence selftest OK" in result.stdout
+    ), f"SIFT mounted evidence selftest did not confirm success: {result.stdout!r}"
+
+
+def test_sift_mounted_evidence_env_contract_present() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert (
+        "FINDEVIL_SIFT_HOST_EVIDENCE_ROOT" in text
+    ), "verdict should expose a host evidence root env for SIFT mount mapping"
+    assert (
+        "FINDEVIL_SIFT_GUEST_EVIDENCE_ROOT" in text
+    ), "verdict should expose a guest evidence root env for SIFT mount mapping"
+    assert (
+        "map_sift_mounted_evidence" in text
+    ), "verdict should map host evidence paths to read-only guest mount paths"
+
+
+def test_sift_mapped_paths_verify_guest_and_skip_scp() -> None:
+    # The SIFT host-path branch detects guest-mounted evidence and validates it
+    # read-only in the VM *before* falling back to scp copy-staging. This replaced
+    # the older map_sift_mounted_evidence/mounted_remote orchestration; the
+    # in-VM validation detail is covered by
+    # test_guest_mounted_evidence_bypasses_copy_staging.
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert (
+        'is_guest_mounted_evidence "${EVIDENCE}"' in text
+    ), "verdict should detect guest-mounted evidence in the SIFT host-path branch"
+    assert (
+        'validate_guest_mounted_evidence "${EVIDENCE}"' in text
+    ), "guest-mounted SIFT evidence must be validated in the VM before use"
+    assert (
+        "using read-only in-VM path without copy staging" in text
+    ), "verdict should log when it uses mounted SIFT evidence without copying"
+    assert text.index('is_guest_mounted_evidence "${EVIDENCE}"') < text.index(
+        "into the VM temp"
+    ), "verdict should try mounted evidence before scp copy-staging"
+
+
+def test_sift_directory_identity_uses_file_manifest_not_directory_bytes() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    identity_fn = text.split("verify_sift_guest_evidence_identity() {", 1)[1].split(
+        "\n}", 1
+    )[0]
+    local_helper = text.split("sift_local_evidence_identity() {", 1)[1].split("\n}", 1)[
+        0
+    ]
+    remote_helper = text.split("sift_remote_evidence_identity() {", 1)[1].split(
+        "\n}", 1
+    )[0]
+    assert (
+        "sift_local_evidence_identity" in text
+    ), "verdict should compute host identity through a dedicated file manifest helper"
+    assert (
+        "sift_remote_evidence_identity" in text
+    ), "verdict should compute guest identity through the same file manifest semantics"
+    assert (
+        "du -sb" not in identity_fn
+    ), "directory identity should not depend on filesystem-specific directory entry sizes"
+    assert (
+        "_evidence_size" not in identity_fn
+    ), "directory identity should not reuse debounce-size totals for evidence comparison"
+    for helper in (local_helper, remote_helper):
+        assert (
+            "du -sb" not in helper
+        ), "manifest helpers should not use raw directory allocation size"
+        assert "hash_file(" in helper, "manifest helpers should hash file contents"
+        assert (
+            "onerror=fail_walk" in helper
+        ), "manifest helpers should fail on traversal errors"
+        assert (
+            "digest.update" in helper
+        ), "manifest helpers should hash relative path/size entries"
+        assert (
+            "relative_to(path).as_posix()" in helper
+        ), "manifest helpers should use relative paths, not absolute host or guest paths"
+        assert "lstat()" in helper, "manifest helpers should avoid following symlinks"
+        assert "S_ISLNK" in helper, "manifest helpers should reject symlinks"
+
+
+def test_sift_fallback_staging_does_not_reuse_size_only_remote_files() -> None:
+    # When evidence is on the host (not guest-mounted), it is copied into a fresh,
+    # run-owned staging root and verified by content fingerprint — never reused by
+    # byte-size alone. This replaced the older .verdict-staging /
+    # host_identity_output size-compare fallback.
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert (
+        "run-owned SIFT staging root already exists" in text
+    ), "SIFT staging must fail closed on an existing root, never reuse it"
+    assert (
+        "local_evidence_fingerprint" in text and "remote_evidence_fingerprint" in text
+    ), "SIFT staging must verify by content fingerprint, not byte size"
+    assert (
+        'tfingerprint="$(remote_evidence_fingerprint' in text
+    ), "staged guest evidence must be fingerprint-verified after the copy"
+    assert (
+        "promote_staged_directory" in text
+    ), "SIFT staging should promote a verified temp copy into place atomically"
+    assert (
+        "evidence already staged" not in text
+    ), "SIFT staging must not skip the copy based on an existing remote basename"
+
+
+def test_sift_direct_guest_paths_are_verified() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    guest_branch = "treating it as an in-VM path"
+    assert guest_branch in text, "verdict should keep direct in-VM path support"
+    assert (
+        'verify_sift_guest_evidence_readable "${EVIDENCE}" 1' in text
+    ), "direct in-VM SIFT evidence paths should require read-only guest mount verification"
+    assert (
+        'sift_remote_evidence_identity "${EVIDENCE}" >/dev/null' in text
+    ), "direct in-VM SIFT directories should run nested symlink/non-regular validation"
+    assert text.index(
+        'verify_sift_guest_evidence_readable "${EVIDENCE}" 1'
+    ) < text.index(
+        guest_branch
+    ), "verdict should verify direct in-VM paths before continuing"
+    assert text.index(
+        'sift_remote_evidence_identity "${EVIDENCE}" >/dev/null'
+    ) < text.index(
+        guest_branch
+    ), "verdict should validate direct in-VM tree contents before continuing"
+
+
 def test_dry_run_produces_no_investigation() -> None:
     result = subprocess.run(
         ["bash", str(SCRIPT), "--dry-run"], capture_output=True, text=True, timeout=10
@@ -636,6 +770,30 @@ def test_dry_run_with_skip_build() -> None:
         timeout=10,
     )
     assert result.returncode == 0, f"--skip-build failed: {result.stderr}"
+
+
+def test_run_summary_rejects_evidence_contamination() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        evidence_dir = Path(tmp) / "evidence"
+        evidence_dir.mkdir()
+        evidence = evidence_dir / "sample.evtx"
+        evidence.write_text("sample", encoding="utf-8")
+        result = subprocess.run(
+            [
+                "bash",
+                str(SCRIPT),
+                str(evidence),
+                "--run-summary",
+                str(evidence_dir / "summary.json"),
+                "--dry-run",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    assert result.returncode != 0, "verdict should reject run summaries inside evidence"
+    assert "--run-summary" in result.stderr, result.stderr
+    assert "evidence" in result.stderr, result.stderr
 
 
 def main() -> int:
@@ -742,8 +900,33 @@ def main() -> int:
             "sift_fingerprint_fails_closed_on_unreadable_directories",
             test_sift_fingerprint_fails_closed_on_unreadable_directories,
         ),
+        ("sift_mounted_evidence_selftest", test_sift_mounted_evidence_selftest),
+        (
+            "sift_mounted_evidence_env_contract_present",
+            test_sift_mounted_evidence_env_contract_present,
+        ),
+        (
+            "sift_mapped_paths_verify_guest_and_skip_scp",
+            test_sift_mapped_paths_verify_guest_and_skip_scp,
+        ),
+        (
+            "sift_directory_identity_uses_file_manifest_not_directory_bytes",
+            test_sift_directory_identity_uses_file_manifest_not_directory_bytes,
+        ),
+        (
+            "sift_fallback_staging_does_not_reuse_size_only_remote_files",
+            test_sift_fallback_staging_does_not_reuse_size_only_remote_files,
+        ),
+        (
+            "sift_direct_guest_paths_are_verified",
+            test_sift_direct_guest_paths_are_verified,
+        ),
         ("dry_run_produces_no_investigation", test_dry_run_produces_no_investigation),
         ("dry_run_with_skip_build", test_dry_run_with_skip_build),
+        (
+            "run_summary_rejects_evidence_contamination",
+            test_run_summary_rejects_evidence_contamination,
+        ),
     ]
     passed = failed = 0
     for name, fn in tests:

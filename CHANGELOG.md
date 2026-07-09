@@ -6,19 +6,396 @@ submission release tag is `v-submit`; later entries in `[Unreleased]` document
 work that has landed after that release and should be merged through the
 canonical GitHub repo before any refreshed release.
 
-> **Release repo:** use `TimothyVang/verdict-dfir` / the local `release` remote
-> for GitHub release, Devpost, and public-doc work. The older
-> `TimothyVang/sans-hackathon` remote is superseded for release operations.
+> **Dev-first release flow:** push review branches to `TimothyVang/dev-verdict-github`
+> / `origin` first. Promote only the reviewed commit or a controlled cherry-pick
+> to `TimothyVang/verdict-dfir` / `release` after approval.
 
 ## [Unreleased]
+
+## [v0.5.0-beta.14] - 2026-07-09
+
+nhc-003 **partial** SCHARDT probe (`STATUS=PARTIAL_PROBE_UNMEASURED`). **No recall %.**
+**Toolkit-only.** Golden nhc-003 match still open.
+
+### Changed
+
+- **`scripts/nhc003-carve-status.sh`** — samples first `NHC003_PROBE_MB` of large
+  images (default 512) so SCHARDT.dd can be probed without a full-disk score;
+  reports `PARTIAL_PROBE_UNMEASURED` when the partial find probe finishes.
+  (PR #180)
+
+## [v0.5.0-beta.13] - 2026-07-09
+
+nhc-003 measurement scaffold (honest UNMEASURED). **No recall number.**
+**Toolkit-only.**
+
+### Added
+
+- **`scripts/nhc003-carve-status.sh`** — reports bulk_extractor + SCHARDT image
+  presence; optional bounded probe; always STATUS=UNMEASURED until a real golden
+  score exists. Wired into run-all-smokes. (PR #179)
+
+
+## [v0.5.0-beta.12] - 2026-07-09
+
+L1 smoke wiring for offline seal-proof + optional Spark endpoint probe.
+**Toolkit-only.** **SCHARDT/nhc-003 unmeasured.** Live Spark agent seal is
+covered by caseforge PR #12 (separate repo), not this tarball.
+
+### Added
+
+- **`scripts/spark-endpoint-smoke.sh`** — GET Spark/Ollama `/api/tags`; PASS or
+  SKIP (never fail offline). Wired into `run-all-smokes.sh`. (PR #178)
+- **`local-ed25519-seal-proof` registered** in `run-all-smokes.sh` (PR #178)
+
+
+## [v0.5.0-beta.11] - 2026-07-09
+
+Operator seal-proof path for real local ed25519 custody. **Still toolkit-only.**
+**SCHARDT/nhc-003 recall unmeasured. Live Spark agent seal not claimed.**
+
+### Added
+
+- **`scripts/local-ed25519-seal-proof.sh`** — one-command uv gate for ed25519
+  finalize+verify and stub-coerce (PR #177). Proves the custody path offline;
+  does not run a live LLM on Spark.
+
+
+## [v0.5.0-beta.10] - 2026-07-09
+
+Synthetic free-space carve recovery smoke. **Still toolkit-only.** **SCHARDT/nhc-003 recall remains unmeasured.**
+
+### Added
+
+- **Synthetic carve fixture test** for `bulk_extract` — when `bulk_extractor` is on
+  PATH, plants `VERDICT_SYNTH_CARVE_MARKER_nhc003_v1` in a 256 KiB raw image and
+  asserts recovery + deterministic re-run. Skips when the binary is absent.
+  Mechanism only; not a NIST recall number. (PR #176)
+
+
+## [v0.5.0-beta.9] - 2026-07-09
+
+Local-LLM seal hardening: reject agent `signer:"stub"` unless explicitly opted
+in. **Still toolkit-only.** **nhc-003 recall remains unmeasured.**
+
+### Fixed
+
+- **`manifest_finalize` coerces `signer:"stub"` → `ed25519`** unless
+  `FINDEVIL_ALLOW_STUB_SIGNER=1` (tests only). A weak model can no longer
+  request a non-proof stub seal by default; the coerce reason is recorded in
+  `fallback_reason`. (PR #175)
+
+### Notes
+
+- CaseForge prompt companions (EVTX survey + forbid stub) already on caseforge
+  `main` (PR #9). This release is the toolkit half of the seal story.
+
+## [v0.5.0-beta.8] - 2026-07-09
+
+Local-LLM seal fragility follow-up. **Still toolkit-only** (no CaseForge /
+opencode embed). CaseForge prompt-side companions live in caseforge-core PR #9.
+
+### Fixed
+
+- **`manifest_verify` accepts `path` as an alias for `manifest_path`** — local
+  tool-calling models routinely emit `{"path": ...}`; under `extra="forbid"` that
+  hard-failed mid-seal. A before-validator maps the alias, rejects ambiguous
+  both-keys-differ calls, and keeps every other unexpected key forbidden.
+  (PR #173)
+
+### Notes
+
+- Crypto default was already `ed25519` for `manifest_finalize`; no signer default
+  change in that release.
+
+## [v0.5.0-beta.7] - 2026-07-09
+
+Security hardening follow-up to beta.6. **Still toolkit-only** (no CaseForge /
+opencode embed). **nhc-003 recall remains unmeasured.**
+
+### Fixed
+
+- **Systemic `case_id` path-segment validation** — shared `is_valid_case_id`
+  (`[A-Za-z0-9_-]+`) gates `$FINDEVIL_HOME/cases/<case_id>` joins in `disk`,
+  `pst_parse`, and `srum_parse` (plus the existing `bulk_extract` path) so
+  traversal ids cannot reach create/delete under the case sandbox. (PR #174,
+  closes #172)
+
+### Notes
+
+- Merged on local gates (fmt, unit, clippy); hosted Actions may still be
+  billing-gated on the private dev repo.
+
+## [v0.5.0-beta.6] - 2026-07-09
+
+Toolkit snapshot from `develop` after bulk free-space feature recovery and
+multi-segment EWF preservation. **Does not include** CaseForge or
+verdict-opencode (those ship from their own repos).
+
+### Added
+
+- **`bulk_extract` MCP tool** (findevil-mcp) — wraps `bulk_extractor` for
+  disk-wide keyword/regex and unallocated-space feature recovery with custody
+  hashing (`output_sha256`), single-threaded deterministic scan (`-j 1`),
+  closed scanner allowlist, and honest degradation when the binary is absent
+  (`bulk_extractor_available: false`, sealed empty result — never fabricated).
+  Security guards: argv end-of-options for image paths, reject dash-leading
+  image names, `case_id` path-segment validation before staging
+  create/delete. (PR #171)
+
+### Fixed
+
+- **Split EWF segment sets** — multi-segment `.E01`/`.E02`… handling preserves
+  the full set instead of under-extracting. (PR #170)
+
+### Not proven this release
+
+- **nhc-003 recall is unmeasured.** No committed carving fixture ties a
+  recoverable deleted intrusion-plan email to the golden; `bulk_extract` is
+  the mechanism only. Do not treat this beta as a measured NIST-hacking-case
+  recall improvement.
+
+### Notes
+
+- Dev GitHub Actions remain account/billing-gated; merge gates for #170/#171
+  were local receipts, not hosted CI.
+
+## [v0.4.0-beta.1] - 2026-07-04
+
+Attack-flow visualization: a presentation-only layer that turns a finished case's
+signed `verdict.json` into offline, on-brand visual artifacts, and makes the
+analyst report open with an at-a-glance technique summary. Live-verified in a real
+`scripts/verdict` run and guarded by render/interaction + host-python smokes.
+
+### Added — attack-flow visualization
+
+- **Seven canonical artifacts** per case under `tmp/auto-runs/<case>/attack-flow/`:
+  `attack-summary.html` (technique-grouped, Confirmed-first), `timeline.html`
+  (branded forensic timeline), `process-tree.html` (interactive collapsible tree),
+  STIX 2.1 `incident.attack-flow.json` (opens in MITRE Attack Flow Builder),
+  `attack-flow.mmd` (GitHub-native Mermaid), `navigator-layer.json`, and an
+  `attack-flow.md` index. Emitted by a new deterministic, offline package
+  (`services/agent/findevil_agent/attackflow/`) plus the standalone
+  `scripts/attack-flow <case-dir>`.
+- **Report leads with the summary** — the analyst report now opens with the
+  technique-grouped attack-flow summary (right after the title), with pointers to
+  the timeline, the process tree, and Attack Flow Builder.
+- **Forensic timeline** — full event stream on a real UTC axis with a
+  confidence-stacked activity-density histogram, a brushable time axis, faceted
+  filters (confidence + significance), and collapsible days. Brand fonts (Archivo
+  Narrow / Inter / JetBrains Mono / Caveat, OFL) are vendored and inlined, so the
+  artifact is fully self-contained and offline.
+
+### Guarantees & guards
+
+- Presentation only: never creates a Finding, never mints a `tool_call_id`, makes
+  no network/LLM calls, reads only the case dir's own JSON. Deterministic (uuid5
+  ids, sorted output), evidence-agnostic, and every evidence-derived string is
+  HTML-escaped in context.
+- New smokes wired into `run-all-smokes.sh`: `attackflow-smoke` (emits the 7),
+  `attackflow-hostpy-smoke` (drives the report hook under the engine's host python
+  — guards the regression below), and `attackflow-render-smoke` (drives the emitted
+  HTML in headless Chrome — histogram height, facet filtering, brush, tree
+  expand — and skips cleanly where no browser exists).
+
+### Fixed
+
+- **Attack-flow visualization was silently inert in the live pipeline.** The
+  engine runs under host python (may be 3.10), where importing the 3.11-only
+  `findevil_agent` package fails; the report hook swallowed the error and emitted
+  nothing. The hook now imports `attackflow` as a top-level package. Guarded by
+  `attackflow-hostpy-smoke`.
+
+## [v0.3.0-beta.1] - 2026-07-02
+
+The v2 brand system plus a large round of detection, custody, and report-QA
+hardening that landed since beta.2. (`ship-beta` snapshots the whole tree, so
+this covers every change since v0.2.0-beta.2, not only the brand work.)
+
+### Added — detection & correlation
+
+- **`find_ai_signatures`** — a typed, read-only lead tool for AI-tradecraft
+  signatures. Product tool surface is now 46 Rust + 14 Python.
+- **Correlator false-positive suppression family** — benign-exoneration library,
+  cross-host hygiene (suppress OS-signed / too-common pivots, no attribution),
+  a per-technique corroboration gate family, per-claim confidence ceilings,
+  counter-evidence suppressors, and demote-only temporal-coupling checks. The
+  correlator is split into focused submodules behind a facade.
+- **Contradiction & grounding** — named cross-source anti-forensics detector
+  family, cross-citation same-entity contradiction, suppression-funnel +
+  untested-surface ledger, and categorical-impossibility pre-gate lints.
+- **Judge** — injection-affected findings route to human review.
+
+### Added — custody & verification
+
+- **Path relativization** — all display `*_path` values are relativized, so no
+  host paths appear in released args, tool output, or reports.
+- **Stdlib-only offline manifest verifier** (`scripts/manifest-verify-offline.py`)
+  — re-derives the hash chain, Merkle root, leaf count, and Ed25519 signature
+  with zero production imports.
+- **Deterministic evidence-traceability index** — a no-LLM finding→audit join.
+- **Browser-side custody re-verifier** — the dashboard independently re-derives
+  the chain (JCS + SHA-256 + Merkle + Ed25519) client-side.
+
+### Added — accuracy & evaluation
+
+- **Measured ATT&CK coverage matrix** from YAML golden assertions, per-tactic
+  recall breakdown, and false negatives surfaced by name.
+- **Content-addressed replay scorer** + model-free scorer guard; an
+  evidence-agnostic artifact-identifier normalizer for matching.
+- **Fact-fidelity** — a blind held-out adversarial validation arm.
+- `docs/LIMITATIONS.md` and scoped caveats folded into the accuracy report.
+
+### Added — report & report-QA
+
+- **Self-verifiable offline `REPORT.html`** — embedded `audit.jsonl` with a
+  per-CONFIRMED grep so a reader can re-check offline.
+- **Report-QA hard gates** — parse-quality gate (a failed parse cannot clear a
+  case), reverse-coverage audits, and a conditional key-question gate for
+  false-negative leads.
+- **Restricted-conclusions linter** for banned escalation terms, a
+  Self-Correction narrative rendered from `verdict_revision` records, and typed
+  INDETERMINATE / ABSTAIN reason-codes.
+
+### Added — MCP & security
+
+- **Injection-alert sidecar ledger** (counts-only) and error-channel
+  sanitization in both product servers.
+- **Subprocess-tree reaping on timeout** (positive-PID group reap) for
+  `vol_run` / `plaso_parse`.
+
+### Changed — v2 brand system
+
+- **Dashboard** rebranded to the v2 editorial system — Inter body, filled
+  confidence chips, condensed headings, a case-file stamp; monospace is now
+  data-only.
+- **Analyst report** — light Paper-Cream annotated case-file theme, with light
+  fleet-report figures.
+- **Demo video** — v2 type roles, Midnight Ink backgrounds, self-hosted fonts
+  (no `fonts.gstatic.com` at render time), and a re-captured clean dashboard clip.
+- **Docs/showcase** — v2 type-role documentation (`docs/brand.md`) and
+  regenerated screenshots.
+
+### Fixed
+
+- Dashboard clip and a stray orphan showcase asset had host paths baked into the
+  pixels; the clip was re-captured from a `/home`-free case and the orphan asset
+  was removed.
+
+## [v0.2.0-beta.2] - 2026-06-24
+
+Project containment + portability. The project is now self-contained and
+clone-and-go: runtime, toolchain, and agent file actions stay inside the project
+folder, derived at runtime so a fresh clone works on any machine.
+
+### Added — runtime + agent containment
+
+- **`scripts/lib/project-env.sh`** — redirects `TMPDIR`, the `FINDEVIL_HOME` case
+  store, `XDG_*`, the npm/npx cache, and the Rust/uv/pnpm toolchain caches into a
+  gitignored `.project-local/`. Sourced by every `scripts/run-mcp-*.sh` launcher
+  (incl. new `n8n`/`playwright`/`puppeteer` wrappers) and by `scripts/verdict`, so
+  nothing escapes the folder regardless of the caller's CWD.
+- **Repo-layout + agent guardrails** — `scripts/repo-layout-smoke.py` keeps the
+  root to config + public docs only; `scripts/hooks/guard-root-writes.py` and
+  `scripts/hooks/guard-outside-project.py` (PreToolUse hooks) block stray root
+  files and confine the agent's built-in `Write`/`Edit` to the project.
+- **`scripts/containment-smoke.py`** — regression lock; fails if any launcher,
+  `scripts/verdict`, `.mcp.json`, or project hook stops being contained.
+- **Portable per-machine setup** — `scripts/setup-containment.sh` regenerates the
+  agent env block from the runtime-derived root; wired into `scripts/setup`.
+- **`.claude/settings.json`** — shared, committed agent-containment config
+  (path-guard hooks; no secrets/machine paths). `settings.local.json` stays
+  machine-local and private.
+- **Docs** — `docs/repo-layout.md`, `docs/agent-containment.md`; portability +
+  containment rules added to `CLAUDE.md` and `AGENTS.md`.
+
+### Fixed
+
+- **plaso run-logs no longer litter the repo root** — `log2timeline`/`psort` now
+  write their per-stage logs to `TMPDIR` via `--logfile` (`plaso_parse.rs`),
+  instead of dropping `log2timeline-*.log.gz` / `psort-*.log.gz` in the CWD.
+- Removed an invalid `npm_config_store_dir` env key that emitted a `store-dir`
+  warning on every npm invocation.
+
+### Changed — release surface
+
+- `.gitignore`/`.gitattributes` narrowed so `.claude/settings.json` ships (shared
+  rules) while `.claude/settings.local.json` never does; `docs/superpowers/**`
+  (operator design scratch) is export-ignored.
+- `scripts/ship-beta.sh` audit updated to allow `.claude/settings.json` and to
+  guard `docs/superpowers/` as private.
+
+## [v0.2.0-beta.1] - 2026-06-22
+
+First public beta. Headline changes since `v0.1.5`:
+
+### Added — opt-in agent mode + provider-agnostic backend
+
+- **`scripts/verdict --agent`** — opt-in Stage B LLM agent investigation loop (Pool A /
+  Pool B) behind the default-on fact-fidelity gate; the deterministic engine stays the
+  default. Backend defaults to Claude (headless `claude_cli`, no API key); provider-
+  agnostic via `--agent-provider {anthropic,openai,openrouter,local,dgx}` over any
+  OpenAI-compatible endpoint (`local`/`dgx` on-prem, no egress ack). Live-verified on
+  single-artifact evidence at report-QA parity with the deterministic engine; not yet
+  scaled to disk.
+- **Fact-fidelity (entailment) gate is now ON by default** — a CONFIRMED finding must
+  declare re-extractable `asserted_values`; a non-LLM check rejects a misread laundered
+  through a valid `tool_call_id`. Mechanical claim-discipline + gate-safe composed
+  finding descriptions on the agent path.
+
+### Changed — dev repo renamed
+
+- Dev remote/repo `sans-hackathon` → **`dev-verdict-github`** (the `verdict-dfir` release
+  repo is unchanged).
+
+### Added — community response
+
+- **`docs/community-response.md`** — launch feedback from r/computerforensics /
+  r/digitalforensics / r/rust, preserved verbatim and answered point by point with what
+  shipped (honest about what is done vs opt-in vs partial).
+
+### Added — recall surface: Outlook Express, network recon, accuracy diagnostic
+
+- **`oe_dbx_parse` (32nd Rust tool)** — reads an Outlook Express `.dbx` mail/news
+  store (OE-signature-validated; extracts RFC822 `Subject`/`From`/`Newsgroups`
+  headers), the artifact no other parser covered. Drives an Outlook Express
+  newsgroup-affiliation Finding. The product surface is now **45 audit-chained
+  product tools (32 Rust DFIR + 13 Python)**.
+- **`accuracy_compare` (13th Python tool)** — read-only ground-truth accuracy
+  diagnostic (TP/FP/FN, precision/recall/F1, hallucination rate) for a finished
+  Case vs a curated golden. A DIAGNOSTIC, never a Finding.
+- **T1046 network-reconnaissance Finding** from System-log Service Control Manager
+  events, anchored on executed discovery tooling (SCM events alone are never recon).
+- **RecentDocs, service-recon, logon, and IE-history Findings** on the disk path
+  (registry triage + plaso `winevt`/`msiecf`).
+
+### Changed
+
+- **Evidence-agnostic by hard rule.** Detection keys on general DFIR signatures,
+  never per-image names/misspellings; a new `scripts/evidence-agnostic-smoke.py`
+  gate fails on image-specific literals in production code.
+- **plaso Findings now survive the pipeline** — `plaso_parse` stderr is normalized
+  for deterministic `verify_finding` replay, and per-file finding IDs keep the batch
+  from being collapsed at judge time.
+
+### Fixed
+
+- verdict-smoke SIFT checks and the sample-run REPORT.md doc policy — stale
+  references to a replaced SIFT-staging design and to a removed submission doc.
+
+### Removed
+
+- **`SUBMISSION_COMPLIANCE.md`** (the Devpost submission checklist) — release
+  hygiene; the REPORT.md-presence qualifier it carried now lives in
+  `docs/sample-run/README.md`.
 
 ### Changed — release polish: brand mark, dashboard focus, showcase media
 
 - **Post-`v-submit` developer/release docs refresh.** Current active docs now
   distinguish the historical `v-submit` submission snapshot from the post-tag
-  working tree, route release work to the `release` remote /
-  `TimothyVang/verdict-dfir`, and keep the shipped product-surface count at
-  **43 audit-chained product tools** (**31 Rust DFIR + 12 Python
+  working tree, document the dev-first `origin` review flow before curated
+  `release` promotion, and keep the shipped product-surface count at
+  **45 audit-chained product tools** (**32 Rust DFIR + 13 Python
   crypto/ACH/memory/ACP/expert-feedback**).
 
 - **New brand mark: check-as-V.** Replaced the three-object circle (gavel +
@@ -32,9 +409,8 @@ canonical GitHub repo before any refreshed release.
   The post-verdict n8n scripts still run host-side, off the default path,
   writing the out-of-band `automation.json` sidecar — never in the audit chain.
 - **Showcase media** (`docs/showcase/`): browser-framed screenshots
-  (verdict hero, tool-cited findings, signed report) plus an animated
-  `dashboard-live.gif` of the live stream — all captured from a real
-  SUSPICIOUS run (NIST SCHARDT.dd, 8 confirmed findings) on the current UI.
+  (verdict hero, tool-cited findings, signed report) plus the investigation
+  GIFs in the showcase gallery, all captured from real runs on the current UI.
   README hero + gallery rewired to these; stale `assets/screenshots/demo.gif`
   and `dashboard.png` removed.
 - **Doc tool-count reconciled to the shipped 43-tool surface (31 Rust + 12

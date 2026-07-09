@@ -4,9 +4,15 @@ Thanks for helping improve VERDICT. This guide covers how to build, test, and su
 to the project? Start with [INSTALL.md](INSTALL.md); for the design, read
 [CLAUDE.md](CLAUDE.md) and [docs/architecture.md](docs/architecture.md).
 
+**Looking for something to work on?** [docs/help-wanted.md](docs/help-wanted.md) is the plain-language
+map of what VERDICT is, the open problems (including the hard one — keeping the AI honest), and where
+contributors can plug in.
+
 VERDICT is a DFIR agent where **Claude Code is the engine** (Amendment A2). It is three subsystems:
-a Rust MCP server (`services/mcp/`, 31 DFIR tools), a Python MCP server
-(`services/agent_mcp/`, 12 crypto/ACH/memory tools), and a Next.js dashboard (`apps/web/`).
+a Rust MCP server (`services/mcp/`, 32 DFIR tools), a Python MCP server
+(`services/agent_mcp/`, 13 crypto/ACH/memory tools), and a Next.js dashboard (`apps/web/`). The two
+MCP servers are standard MCP, so any MCP-capable agent can drive the tool surface — Claude Code is the
+reference agent, not the only one.
 
 ---
 
@@ -28,7 +34,8 @@ will be blocked. Full list: [CLAUDE.md §3](CLAUDE.md).
 ## Build and test
 
 Install the toolchain once with `bash scripts/setup` (see [INSTALL.md](INSTALL.md)). The commands
-below mirror exactly what CI runs, so green locally means green in CI.
+below **are** the gates — run them locally before you open a PR; a reviewer runs the same commands
+on your branch.
 
 ### Rust (`services/mcp/`) — Rust 1.88 (pinned in `rust-toolchain.toml`)
 
@@ -96,7 +103,9 @@ New behavior follows **TDD**: write the failing test (RED), implement (GREEN), r
 
 ## Submitting changes
 
-- **Branch** off `master`; never commit to `master` directly.
+- **Fork and branch.** Fork this repo, branch off **`develop`**, and open your PR against `develop`
+  (not `main`). `main` is the published release snapshot; `develop` is the contribution line that is
+  never overwritten by a publish.
 - **Conventional Commits.** `feat(scope):`, `fix(scope):`, `test(scope):`, `docs(scope):`,
   `chore(scope):`, `refactor(scope):`. Active scopes include `mcp`, `agent`, `verdict`, `fleet`,
   `sandbox`, `ci`, `tooling`, `deps`, `plan`. One logical change per commit.
@@ -107,7 +116,14 @@ New behavior follows **TDD**: write the failing test (RED), implement (GREEN), r
   [CLAUDE.md §7](CLAUDE.md) for the carve-outs.
 - **Surgical diffs.** Touch only what the change requires; match the surrounding style; don't
   refactor adjacent code.
-- Open a PR with a clear summary and a test plan. Ensure L0 + L1 are green and the branch is current
-  with `master` before requesting review.
+- **Run the gates locally before you open the PR** — `bash scripts/run-all-smokes.sh` plus the
+  per-language suites above. The project does **not** depend on GitHub Actions runners: a
+  maintainer runs these same commands on your branch and reviews the diff. Two approvals (including a
+  maintainer / code-owner) auto-merge it into `develop`.
+- Open a PR with a clear summary and a test plan, and keep the branch current with `develop` before
+  requesting review.
+
+Maintainers integrate `develop` and cut releases with `git ship` (push + tag + GitHub Release over
+plain `git` + the platform CLI — no CI runners). See [docs/releasing.md](docs/releasing.md).
 
 Unsure about a term? See [docs/glossary.md](docs/glossary.md).

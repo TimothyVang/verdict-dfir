@@ -39,13 +39,13 @@ dependencies = [
   # manifest signer is local Ed25519 and verifies offline.
   # opentimestamps-client was removed in Amendment A5 along with
   # the OpenTimestamps + Bitcoin tier of the custody chain.
-  "sigstore==3.*",
+  "sigstore>=3,<5",
 
   # L1 DuckDB per case.
   "duckdb>=0.10",
 
   # MITRE ATT&CK technique lookup (official maintainer).
-  "mitreattack-python>=5.4,<6.0",
+  "mitreattack-python>=5.4,<7.0",
 
   # Structured logging.
   "structlog>=24.4",
@@ -59,6 +59,25 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=5.0",
+  "ruff>=0.7.4",
+  "mypy>=1.11",
+  "respx>=0.21",
+]
+
+# PEP 735 dependency group — uv installs the `dev` group BY DEFAULT on a bare
+# `uv run` / `uv sync` (unlike the `[project.optional-dependencies]` extra above,
+# which only installs under `--extra dev`). Without this, the documented test
+# command `uv run --directory services/agent pytest` would NOT install pytest
+# into the venv, fall through PATH to a user-global pytest shebanged to the
+# system Python, and import the system `cryptography` (missing `_cffi_backend`)
+# instead of the venv copy — failing every crypto signer/manifest test in a
+# fresh worktree. Keeping both the extra (for `--extra dev` / install.sh / pip)
+# and this group (for default `uv run`) keeps the documented command honest.
+[dependency-groups]
 dev = [
   "pytest>=8.3",
   "pytest-asyncio>=0.24",

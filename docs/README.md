@@ -16,6 +16,7 @@ fresh clone of `TimothyVang/verdict-dfir`.
 | Interpret Verdict words safely | [`verdict-semantics.md`](verdict-semantics.md) |
 | Inspect the MCP/tool surface | [`reference/mcp-and-tools.md`](reference/mcp-and-tools.md) |
 | Check release evidence policy | [`release-surface.md`](release-surface.md) |
+| Use the visual system | [`brand.md`](brand.md) |
 
 ## Core Docs
 
@@ -23,6 +24,7 @@ fresh clone of `TimothyVang/verdict-dfir`.
 |---|---|
 | `architecture.md` | Runtime architecture, trust boundaries, and prompt-vs-structural guardrails. |
 | `artifact-semantics.md` | What each artifact type can and cannot prove. |
+| `brand.md` | v2 brand bible, palette, voice, and visual implementation surfaces. |
 | `cryptographic-attestation.md` | Audit hash chain, Merkle root, signature, and offline verification model. |
 | `false-positives.md` | Conservative confidence taxonomy and overclaim prevention. |
 | `investigation-phases.md` | Case lifecycle from `case_open` through report finalization. |

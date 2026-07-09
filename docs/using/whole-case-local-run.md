@@ -68,9 +68,10 @@ scripts/run-whole-case-local.sh evidence/cases/srl-2018
 ```
 
 Enumerates and runs `scripts/verdict` on:
-- `hosts/<host>/` — each memory image,
+- `hosts/<host>/` — each staged memory-image directory,
 - `disks/*.E01` — each disk image,
-- `_xartifact/base-file/` — base-file's disk + memory together (cross-artifact case).
+- root-level `base-file-cdrive.E01` and `base-file-memory.img` as standalone targets when present,
+- `<out>/_xartifact/base-file/` — a derived base-file disk+memory cross-artifact case staged under the output directory, not under the evidence root.
 
 It is **resumable** (skips hosts whose run-summary already exists) and prints a final table of
 `verdict` + offline `manifest_verify` per host. Output lands in
@@ -78,15 +79,18 @@ It is **resumable** (skips hosts whose run-summary already exists) and prints a 
 
 ---
 
-## Worked result — SRL-2018 (28 targets)
+## Worked result — SRL-2018 partial local run
 
 Full corpus staged and integrity-verified: **7 disk E01s** (EVF-magic verified) + **22 memory
 images** (21/22 MD5-matched to their `dc3dd` hashes; `base-wkstn-01-mem.zip` shipped without an
-embedded MD5). Every one of the 28 targets ran end to end:
+embedded MD5). The historical local result captured 28 completed rows, but target accounting was
+incomplete: standalone `disk:base-file-cdrive` and `mem:base-file-memory` must not be replaced by
+the optional `xart:base-file` combined case. Current accounting is 29 standalone source artifacts,
+plus the optional derived `xart:base-file` target when cross-artifact review is desired.
 
 ```
 verdict tally:  INDETERMINATE 25 · NO_EVIL 3
-manifest_ok:    28 / 28     (every run hash-chained + offline-verifiable)
+manifest_ok:    all 28 recorded rows in that historical run
 ```
 
 - **NO_EVIL** (scoped-clean disks): `base-dc`, `base-wkstn-05`, `dmz-ftp`.
@@ -95,9 +99,10 @@ manifest_ok:    28 / 28     (every run hash-chained + offline-verifiable)
   Example lead: `base-file` memory flagged uncommon processes incl. `Rar.exe` and
   `subject_srv.ex` (staging/exfil signals) — honest leads to corroborate, not confirmed evil.
 
-Every Finding cites a `tool_call_id`; every run's `manifest_verify.overall` is `true`. This is
-the whole-estate automation proof: 28 hosts, two evidence classes, zero manual analysis, all
-cryptographically attestable offline.
+Every Finding in those recorded rows cites a `tool_call_id`; each recorded row's
+`manifest_verify.overall` is `true`. Treat that run as a partial local automation artifact, not a
+customer-release proof, until the missing standalone base-file targets and report-QA blockers are
+rerun and reviewed.
 
 ### Gotcha — disk pipeline prerequisites
 

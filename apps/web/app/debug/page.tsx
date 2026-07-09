@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DashboardNav } from "@/components/DashboardNav";
 import {
   VERDICT,
+  BODY,
   MONO,
   GROTESK,
   RADIUS,
@@ -136,7 +137,7 @@ export default function DebugPage() {
   const buttonBase = {
     borderRadius: RADIUS.pill,
     padding: "10px 18px",
-    fontFamily: MONO,
+    fontFamily: BODY,
     fontWeight: 700,
     cursor: "pointer",
   } as const;
@@ -254,7 +255,7 @@ export default function DebugPage() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                fontFamily: MONO,
+                fontFamily: BODY,
                 fontSize: 13,
                 color: VERDICT.muted,
               }}
@@ -279,7 +280,7 @@ export default function DebugPage() {
               borderColor={VERDICT.alertRed}
               style={{ color: VERDICT.alertRed, marginTop: 16, padding: 14 }}
             >
-              <p style={{ fontFamily: MONO, fontSize: 13, margin: 0 }}>
+              <p style={{ fontFamily: BODY, fontSize: 13, margin: 0 }}>
                 <strong>error:</strong> {errorMsg}
               </p>
             </Surface>
@@ -290,7 +291,7 @@ export default function DebugPage() {
       <div className="max-w-4xl mx-auto mt-6 space-y-3">
         {events.length === 0 ? (
           <Surface tone="inset" style={{ padding: 14 }}>
-            <p style={{ fontFamily: MONO, fontSize: 13, color: VERDICT.muted, margin: 0 }}>
+            <p style={{ fontFamily: BODY, fontSize: 13, color: VERDICT.muted, margin: 0 }}>
               No events yet.{" "}
               {conn === "live"
                 ? "Stream is live — waiting for the next audit append."

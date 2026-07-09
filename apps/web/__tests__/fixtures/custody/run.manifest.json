@@ -1,0 +1,37 @@
+{
+  "audit_log_final_hash": "483c538b82e972512f9ae4862e9b73fe3b430cd6a11c4817b9791c0b85756ab0",
+  "audit_log_path": "audit.jsonl",
+  "audit_log_record_count": 5,
+  "case_id": "fixture-case",
+  "extra": {
+    "image_path": "fixtures/custody.evtx",
+    "model": "fixture"
+  },
+  "finalized_at": "2026-06-30T20:37:20Z",
+  "leaf_count": 2,
+  "leaves": [
+    {
+      "digest_hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "kind": "tool_call_output",
+      "record_id": "tc-1",
+      "seq": 2
+    },
+    {
+      "digest_hex": "6d53c350e18b7e8fa07563979ac83e19d80f41c448d3dbe8ad28831776ebeb89",
+      "kind": "finding",
+      "record_id": "f-1",
+      "seq": 3
+    }
+  ],
+  "merkle_root_hex": "3917d9cb7002ce8851600c107b238332e16ba28b3223d1e6533e7adaf0e5eb29",
+  "run_id": "fixture-run",
+  "signature": {
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiNzRjYWVmZjE4MGMzNjNkYjg1NGJjMTBlOGE4Zjg3NmYzNDQ1Nzc0NjI2ODM0NWY2ZDllMzRkYzkwYzcwOTE0ZSIsImtpbmQiOiJlZDI1NTE5IiwicGF5bG9hZF9zaGEyNTYiOiI0NTA1ODU5MzBlYzY0YmM5NThiYjkwYTg1ODQzZjFmNjhhYjExOTk2MmQzM2U3MTVhYjNkYWUxYjYxZTQyYWE3IiwicHVibGljX2tleV9iNjQiOiJqamkxeGd3MVBXWlVkYW5uRGR6M3BDUU95Tk1TN2RROEEySFBhZHlUdDRVPSIsInNpZ25hdHVyZV9iNjQiOiI0NFNPS1BXNzN2U3JpS2hpakdDNjdsakw0bGZjWDBFSklaQmlmL0trSmlRNXVlUFQ1blNVWmI5UGNmN01PQ2w5NUFtTjN0WnY5TWlQRTA1d2l3K3hDdz09In0=",
+    "cert_fingerprint": "74caeff180c363db854bc10e8a8f876f34457746268345f6d9e34dc90c70914e",
+    "kind": "ed25519",
+    "payload_sha256": "450585930ec64bc958bb90a85843f1f68ab119962d33e715ab3dae1b61e42aa7",
+    "signed_at": "2026-06-30T20:37:20Z"
+  },
+  "started_at": "2026-06-30T00:00:00Z",
+  "version": "1"
+}

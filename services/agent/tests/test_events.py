@@ -281,6 +281,242 @@ class TestFindingPriorObservations:
             po.confidence = 0.1  # type: ignore[misc]
 
 
+class TestAssertedValuesGate:
+    """Phase 2a schema gate: under FIND_EVIL_REQUIRE_ASSERTED_VALUES=1, a
+    fact-bearing (CONFIRMED/INFERRED) Finding must declare the structured
+    value(s) it asserts, so nothing reaches the verifier without facts the
+    entailment check can re-extract. Default ON (Stage A, 2026-06-22); opt out
+    with ``FIND_EVIL_REQUIRE_ASSERTED_VALUES=0``.
+    """
+
+    _GATE = "FIND_EVIL_REQUIRE_ASSERTED_VALUES"
+
+    def _finding(self, confidence: str, **overrides: object) -> Finding:
+        base: dict[str, object] = {
+            "case_id": "c-1",
+            "finding_id": "f-1",
+            "tool_call_id": "tc-1",
+            "artifact_path": "x",
+            "confidence": confidence,
+            "description": "y",
+        }
+        base.update(overrides)
+        return Finding(**base)  # type: ignore[arg-type]
+
+    def test_confirmed_without_asserted_values_allowed_when_flag_zero(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Explicit opt-out: =0 disables the gate (debugging / legacy escape hatch).
+        monkeypatch.setenv(self._GATE, "0")
+        f = self._finding("CONFIRMED")
+        assert f.asserted_values == []
+
+    def test_confirmed_without_asserted_values_rejected_by_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Stage A: the gate is ON by default — a CONFIRMED finding declaring no
+        # asserted_values cannot be built unless the flag is explicitly =0.
+        monkeypatch.delenv(self._GATE, raising=False)
+        with pytest.raises(ValidationError) as exc:
+            self._finding("CONFIRMED")
+        assert "asserted_values" in str(exc.value)
+
+    def test_confirmed_without_asserted_values_rejected_when_flag_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(self._GATE, "1")
+        with pytest.raises(ValidationError) as exc:
+            self._finding("CONFIRMED")
+        assert "asserted_values" in str(exc.value)
+
+    def test_inferred_with_derived_from_allowed_when_flag_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # An INFERRED finding is a cross-fact inference (e.g. DKOM = pslist 0 AND
+        # psscan N>0). It has no single re-extractable value; its fidelity is the
+        # CONFIRMED facts it derives from, so citing derived_from satisfies the
+        # gate without forcing a dishonest single-value assertion.
+        monkeypatch.setenv(self._GATE, "1")
+        f = self._finding("INFERRED", derived_from=["tc-1", "tc-2"])
+        assert f.derived_from == ["tc-1", "tc-2"]
+
+    def test_inferred_with_neither_asserted_nor_derived_rejected_when_flag_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(self._GATE, "1")
+        with pytest.raises(ValidationError):
+            self._finding("INFERRED")
+
+    def test_hypothesis_without_asserted_values_allowed_when_flag_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # HYPOTHESIS is a lead, not an asserted fact — exempt from the gate.
+        monkeypatch.setenv(self._GATE, "1")
+        f = self._finding("HYPOTHESIS")
+        assert f.asserted_values == []
+
+    def test_confirmed_with_asserted_values_allowed_when_flag_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(self._GATE, "1")
+        f = self._finding(
+            "CONFIRMED",
+            asserted_values=[{"path": "entries[*].values[*].name", "expected": "Updater"}],
+        )
+        assert len(f.asserted_values) == 1
+
+
+class TestCounterHypothesisGate:
+    """Anti-coherence "too clean" schema gate: under
+    FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS_FINDING=1, a CONFIRMED Finding must
+    carry a populated ``counter_hypothesis`` (the benign explanation it ruled
+    out). A confident finding that lists no alternative it considered is the
+    "too clean" tell. Default OFF — backward compatible. Complements the
+    judge.py counter-hypothesis discipline (FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS).
+    """
+
+    _GATE = "FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS_FINDING"
+
+    def _finding(self, confidence: str, **overrides: object) -> Finding:
+        base: dict[str, object] = {
+            "case_id": "c-1",
+            "finding_id": "f-1",
+            "tool_call_id": "tc-1",
+            "artifact_path": "x",
+            "confidence": confidence,
+            "description": "y",
+        }
+        base.update(overrides)
+        return Finding(**base)  # type: ignore[arg-type]
+
+    def test_counter_hypothesis_defaults_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv(self._GATE, raising=False)
+        f = self._finding("CONFIRMED")
+        assert f.counter_hypothesis is None
+
+    def test_confirmed_without_counter_hypothesis_allowed_when_flag_off(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Default behavior (no flag): the not-yet-wired emitters still build
+        # CONFIRMED findings without a counter_hypothesis, so the gate is opt-in.
+        monkeypatch.delenv(self._GATE, raising=False)
+        f = self._finding("CONFIRMED")
+        assert f.counter_hypothesis is None
+
+    def test_confirmed_without_counter_hypothesis_rejected_when_flag_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(self._GATE, "1")
+        with pytest.raises(ValidationError) as exc:
+            self._finding("CONFIRMED")
+        assert "counter_hypothesis" in str(exc.value)
+
+    def test_confirmed_with_blank_counter_hypothesis_rejected_when_flag_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A whitespace-only string is not a real alternative considered.
+        monkeypatch.setenv(self._GATE, "1")
+        with pytest.raises(ValidationError):
+            self._finding("CONFIRMED", counter_hypothesis="   ")
+
+    def test_confirmed_with_populated_counter_hypothesis_allowed_when_flag_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(self._GATE, "1")
+        f = self._finding(
+            "CONFIRMED",
+            counter_hypothesis="benign admin task: scheduled task is a vendor updater",
+        )
+        assert f.counter_hypothesis is not None
+
+    def test_inferred_without_counter_hypothesis_allowed_when_flag_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The gate only binds CONFIRMED — the strongest tier, where a missing
+        # alternative is most suspicious. INFERRED/HYPOTHESIS stay exempt.
+        monkeypatch.setenv(self._GATE, "1")
+        f = self._finding("INFERRED", derived_from=["tc-1", "tc-2"])
+        assert f.counter_hypothesis is None
+
+    def test_hypothesis_without_counter_hypothesis_allowed_when_flag_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(self._GATE, "1")
+        f = self._finding("HYPOTHESIS")
+        assert f.counter_hypothesis is None
+
+
+class TestToolCallIdAnchorGate:
+    """Evidence-anchor schema firewall: a CONFIRMED/INFERRED Finding cannot be
+    *constructed* with a blank ``tool_call_id``. The evidence anchor must be
+    present at construction time, not merely vetoed later by the verifier — so a
+    blank-cited anchored finding can never exist as a Finding object. HYPOTHESIS
+    is a lead, not an asserted fact, so it stays exempt. Default ON; opt out with
+    ``FIND_EVIL_REQUIRE_TOOL_CALL_ID=0``. The verifier preflight (verifier.py)
+    stays as defense-in-depth for findings built via ``model_construct``.
+    """
+
+    _GATE = "FIND_EVIL_REQUIRE_TOOL_CALL_ID"
+
+    def _finding(self, confidence: str, tool_call_id: str = "tc-1", **overrides: object) -> Finding:
+        base: dict[str, object] = {
+            "case_id": "c-1",
+            "finding_id": "f-1",
+            "tool_call_id": tool_call_id,
+            "artifact_path": "x",
+            "confidence": confidence,
+            "description": "y",
+        }
+        base.update(overrides)
+        return Finding(**base)  # type: ignore[arg-type]
+
+    def test_confirmed_blank_tool_call_id_rejected_by_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(self._GATE, raising=False)
+        with pytest.raises(ValidationError) as exc:
+            self._finding("CONFIRMED", tool_call_id="")
+        assert "tool_call_id" in str(exc.value)
+
+    def test_inferred_blank_tool_call_id_rejected_by_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(self._GATE, raising=False)
+        with pytest.raises(ValidationError) as exc:
+            self._finding("INFERRED", tool_call_id="", derived_from=["tc-a", "tc-b"])
+        assert "tool_call_id" in str(exc.value)
+
+    def test_whitespace_only_tool_call_id_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # A whitespace-only anchor is not a citation.
+        monkeypatch.delenv(self._GATE, raising=False)
+        with pytest.raises(ValidationError):
+            self._finding("CONFIRMED", tool_call_id="   ")
+
+    def test_hypothesis_blank_tool_call_id_allowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # HYPOTHESIS is a lead and may legitimately lack a tool-call anchor.
+        monkeypatch.delenv(self._GATE, raising=False)
+        f = self._finding("HYPOTHESIS", tool_call_id="")
+        assert f.tool_call_id == ""
+
+    def test_confirmed_valid_tool_call_id_allowed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv(self._GATE, raising=False)
+        f = self._finding("CONFIRMED")
+        assert f.tool_call_id == "tc-1"
+
+    def test_derived_from_does_not_satisfy_anchor(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # derived_from cites OTHER facts; it is orthogonal to the finding's own
+        # tool-call anchor and does not exempt an INFERRED finding from it.
+        monkeypatch.delenv(self._GATE, raising=False)
+        with pytest.raises(ValidationError):
+            self._finding("INFERRED", tool_call_id="", derived_from=["tc-a", "tc-b"])
+
+    def test_opt_out_allows_blank(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Escape hatch parity with the asserted-values gate.
+        monkeypatch.setenv(self._GATE, "0")
+        f = self._finding("CONFIRMED", tool_call_id="")
+        assert f.tool_call_id == ""
+
+
 class TestHypothesisUpdate:
     def test_pool_must_be_a_or_b(self) -> None:
         HypothesisUpdate(

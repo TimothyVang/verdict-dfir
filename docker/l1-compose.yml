@@ -165,6 +165,26 @@ services:
           echo "-- skipping agent-mcp-smoke (services/agent_mcp or script absent) --"
         fi
 
+        # Lock the Finding evidence-anchor firewall (P0-4): a CONFIRMED/INFERRED
+        # finding cannot be constructed with a blank tool_call_id.
+        if [ -d services/agent ] && [ -f scripts/finding-schema-smoke.py ]; then
+          echo "== scripts/finding-schema-smoke.py (tool_call_id evidence-anchor firewall) =="
+          UV_PROJECT_ENVIRONMENT="/home/dev/.cache/uv/venvs/services-agent" \
+            uv run --directory services/agent python ../../scripts/finding-schema-smoke.py
+        else
+          echo "-- skipping finding-schema-smoke (services/agent or script absent) --"
+        fi
+
+        # P0-5a: benign-explanation gate (opt-in) — doctrine taught + schema/correlator
+        # downgrade an execution/intent claim missing counter_hypothesis when on.
+        if [ -d services/agent ] && [ -f scripts/benign-gate-smoke.py ]; then
+          echo "== scripts/benign-gate-smoke.py (counter_hypothesis gate) =="
+          UV_PROJECT_ENVIRONMENT="/home/dev/.cache/uv/venvs/services-agent" \
+            uv run --directory services/agent python ../../scripts/benign-gate-smoke.py
+        else
+          echo "-- skipping benign-gate-smoke (services/agent or script absent) --"
+        fi
+
         # Lock in the compute_verdict policy. The verdict semantics
         # (SUSPICIOUS / INDETERMINATE / NO_EVIL triggers) are
         # documented in docs/verdict-semantics.md and implemented in
@@ -173,6 +193,20 @@ services:
         if [ -f scripts/verdict-policy-smoke.py ]; then
           echo "== scripts/verdict-policy-smoke.py (compute_verdict policy lock) =="
           python3 scripts/verdict-policy-smoke.py
+        fi
+
+        # P0-3: the investigation engine must never read the golden answer key
+        # (only the post-run scorer may), or accuracy numbers become self-graded.
+        if [ -f scripts/goldens-keyblind-smoke.py ]; then
+          echo "== scripts/goldens-keyblind-smoke.py (run engine is key-blind) =="
+          python3 scripts/goldens-keyblind-smoke.py
+        fi
+
+        # P0-1/2: committed accuracy report stays two-axis (recall vs grounding,
+        # never blended) and names each caught false-positive.
+        if [ -f scripts/accuracy-report-smoke.py ]; then
+          echo "== scripts/accuracy-report-smoke.py (two-axis accuracy report) =="
+          python3 scripts/accuracy-report-smoke.py
         fi
 
         # Same idea for fleet_correlate's COMMON_WIN_PROCS filter +

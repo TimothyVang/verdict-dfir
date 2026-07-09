@@ -193,6 +193,114 @@ SMOKE_LABEL_POLICY_FILES = [
     "scripts/run-all-smokes.sh",
 ]
 
+STALE_RELEASE_DOC_PATTERNS = [
+    (
+        "SRL fixed 28-target heading",
+        "SRL-2018 (28 targets)",
+    ),
+    (
+        "SRL fixed 28-target completion claim",
+        "Every one of the 28 targets",
+    ),
+    (
+        "SRL fixed 28/28 manifest claim",
+        "manifest_ok:    28 / 28",
+    ),
+    (
+        "release-only remote flow",
+        "push to the `release` remote and open a PR in `TimothyVang/verdict-dfir`; do not use `origin`",
+    ),
+    (
+        "sans-hackathon marked superseded for release operations",
+        "`TimothyVang/dev-verdict-github` remote is superseded for release operations",
+    ),
+    (
+        "branch protection individual l0 workflow context",
+        "required_status_checks[contexts][]=l0-static / workflow-lint",
+    ),
+    (
+        "ci checklist individual required context list",
+        "returns the full list: `l0-static / workflow-lint`",
+    ),
+]
+
+RELEASE_DOC_POLICY_FILES = [
+    ".github/CODEOWNERS",
+    "CHANGELOG.md",
+    "docs/runbooks/ci-smoke-checklist.md",
+    "docs/runbooks/github-remote-bootstrap.md",
+    "docs/using/whole-case-local-run.md",
+    "scripts/setup-branch-protection.sh",
+]
+
+RELEASE_POLICY_REQUIRED_STRINGS = [
+    (
+        "branch protection requires code owner reviews",
+        "scripts/setup-branch-protection.sh",
+        "required_pull_request_reviews[require_code_owner_reviews]=true",
+    ),
+    (
+        "CODEOWNERS protects workflow changes",
+        ".github/CODEOWNERS",
+        ".github/workflows/** @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects L1 compose gates",
+        ".github/CODEOWNERS",
+        "docker/l1-compose.yml @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects L1 Dockerfile gate",
+        ".github/CODEOWNERS",
+        "docker/*.Dockerfile @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects smoke policy checks",
+        ".github/CODEOWNERS",
+        "scripts/*smoke*.py @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects readiness gate implementation",
+        ".github/CODEOWNERS",
+        "scripts/readiness-gate.ps1 @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects CODEOWNERS policy",
+        ".github/CODEOWNERS",
+        ".github/CODEOWNERS @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects L3 evidence validator",
+        ".github/CODEOWNERS",
+        "scripts/validate-l3-evidence.py @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects L3 golden runner",
+        ".github/CODEOWNERS",
+        "scripts/l3-run-goldens.sh @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects submission validator",
+        ".github/CODEOWNERS",
+        "scripts/validate-submission-assets.py @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects benchmark conversion",
+        ".github/CODEOWNERS",
+        "scripts/json-to-benchmark-csv.py @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects tool count guard",
+        ".github/CODEOWNERS",
+        "scripts/tool-count-guard.py @TimothyVang",
+    ),
+    (
+        "CODEOWNERS protects release evidence docs",
+        ".github/CODEOWNERS",
+        "docs/release-evidence/** @TimothyVang",
+    ),
+]
+
 PATH_EXISTENCE_ALLOW_CASES = [
     # (label, candidate, expected_allowed)
     ("URL is allowed", "https://example.com/x/y", True),
@@ -274,6 +382,32 @@ READINESS_PACKET_FORBIDDEN_DOC_STRINGS = [
     "findings.json           ",
     "report.md               ",
     "└── readiness-packet-manifest.json",
+]
+
+ARCHITECTURE_REQUIRED_FLOW_STRINGS = [
+    "Contradiction --> Verifier",
+    "Verifier --> Judge",
+    "Judge --> Correlator",
+]
+
+ARCHITECTURE_FORBIDDEN_FLOW_STRINGS = [
+    "Contradiction --> Judge",
+    "Judge --> Verifier",
+]
+
+GLOSSARY_FORBIDDEN_STRINGS = [
+    "**`tool_call_id`** | A SHA-256 over a tool's raw output.",
+]
+
+GLOSSARY_REQUIRED_STRINGS = [
+    "**`tool_call_id`** | Opaque current-case tool execution identifier",
+    "**`output_hash` / `_meta.output_sha256`** | SHA-256 digest of the tool's raw output",
+]
+
+SAMPLE_RUN_DOC_FORBIDDEN_STRINGS = [
+    "All six runs return `overall: true`",
+    "The heavy render artifacts (`REPORT.pdf`, `REPORT.html`, `figures/`, `timeline.*`) are omitted",
+    "their\n> `audit.jsonl`, `run.manifest.json`, `verdict.json`, `manifest_verify.json`, and `REPORT.md`",
 ]
 
 
@@ -535,6 +669,33 @@ def _run_smoke_label_policy_cases() -> list[tuple[str, str]]:
     return failures
 
 
+def _run_release_doc_policy_cases() -> list[tuple[str, str]]:
+    failures = []
+    source_texts = [
+        (rel, (REPO / rel).read_text(encoding="utf-8"))
+        for rel in RELEASE_DOC_POLICY_FILES
+    ]
+    for label, needle in STALE_RELEASE_DOC_PATTERNS:
+        matches = [rel for rel, text in source_texts if needle in text]
+        if matches:
+            failures.append(
+                (
+                    label,
+                    f"unexpected stale release-doc claim {needle!r} in {', '.join(matches)}",
+                )
+            )
+    for label, rel, needle in RELEASE_POLICY_REQUIRED_STRINGS:
+        text = (REPO / rel).read_text(encoding="utf-8")
+        if needle not in text:
+            failures.append(
+                (
+                    label,
+                    f"expected release policy string {needle!r} in {rel}",
+                )
+            )
+    return failures
+
+
 def _run_path_existence_cases(pes_smoke) -> list[tuple[str, str]]:
     failures = []
     for label, candidate, expected_allowed in PATH_EXISTENCE_ALLOW_CASES:
@@ -568,6 +729,107 @@ def _run_readiness_packet_doc_cases() -> list[tuple[str, str]]:
                 (
                     f"readiness packet docs omit stale {needle.strip()}",
                     "expected Windows runbook not to list stale packet paths",
+                )
+            )
+    return failures
+
+
+def _run_architecture_flow_policy_cases() -> list[tuple[str, str]]:
+    failures = []
+    architecture = (REPO / "docs/architecture.md").read_text(encoding="utf-8")
+    for needle in ARCHITECTURE_REQUIRED_FLOW_STRINGS:
+        if needle not in architecture:
+            failures.append(
+                (
+                    f"architecture diagram includes {needle}",
+                    "expected verifier to run before judge in the public trust-boundary diagram",
+                )
+            )
+    for needle in ARCHITECTURE_FORBIDDEN_FLOW_STRINGS:
+        if needle in architecture:
+            failures.append(
+                (
+                    f"architecture diagram omits stale {needle}",
+                    "expected diagram not to place judge before verifier",
+                )
+            )
+    return failures
+
+
+def _run_sample_run_doc_cases() -> list[tuple[str, str]]:
+    failures = []
+    sample_readme_path = REPO / "docs/sample-run/README.md"
+    compliance_path = REPO / "SUBMISSION_COMPLIANCE.md"
+    if not sample_readme_path.exists() and not compliance_path.exists():
+        release_surface = (REPO / "docs/release-surface.md").read_text(encoding="utf-8")
+        for needle in ("`docs/sample-run/`", "`docs/reports/`"):
+            if needle not in release_surface:
+                failures.append(
+                    (
+                        f"release surface documents omitted {needle}",
+                        "expected reduced source layout to explain generated artifact omissions",
+                    )
+                )
+        return failures
+
+    sample_readme = (
+        sample_readme_path.read_text(encoding="utf-8")
+        if sample_readme_path.exists()
+        else ""
+    )
+    compliance = (
+        compliance_path.read_text(encoding="utf-8") if compliance_path.exists() else ""
+    )
+    combined = f"{sample_readme}\n{compliance}"
+    for needle in SAMPLE_RUN_DOC_FORBIDDEN_STRINGS:
+        if needle in combined:
+            failures.append(
+                (
+                    f"sample-run docs omit stale phrase {needle[:48]!r}",
+                    "expected sample-run inventory and report-presence wording to match committed artifacts",
+                )
+            )
+    if "All seven runs return `overall: true`" not in sample_readme:
+        failures.append(
+            (
+                "sample-run README uses seven-run verification count",
+                "expected all-seven wording for committed individual runs",
+            )
+        )
+    # SUBMISSION_COMPLIANCE.md (a Devpost-submission artifact) was removed from the
+    # public release; the REPORT.md-presence qualification now lives in the committed
+    # sample-run README. Assert it across the combined sample-run docs (case-folded,
+    # since the phrase opens a sentence: "Partial runs can omit it by policy.").
+    if (
+        "`REPORT.md`" not in combined
+        or "partial runs can omit it by policy" not in combined.lower()
+    ):
+        failures.append(
+            (
+                "sample-run docs qualify REPORT.md presence",
+                "expected committed sample-run layout to avoid claiming every run has REPORT.md",
+            )
+        )
+    return failures
+
+
+def _run_glossary_tool_call_id_policy_cases() -> list[tuple[str, str]]:
+    failures = []
+    glossary = (REPO / "docs/glossary.md").read_text(encoding="utf-8")
+    for needle in GLOSSARY_FORBIDDEN_STRINGS:
+        if needle in glossary:
+            failures.append(
+                (
+                    "glossary does not define tool_call_id as content hash",
+                    f"unexpected stale glossary definition {needle!r}",
+                )
+            )
+    for needle in GLOSSARY_REQUIRED_STRINGS:
+        if needle not in glossary:
+            failures.append(
+                (
+                    f"glossary includes {needle.split('|', 1)[0].strip()}",
+                    "expected separate opaque id and output hash definitions",
                 )
             )
     return failures
@@ -715,6 +977,15 @@ def main() -> int:
     for label, err in smoke_label_failures:
         all_failures.append(("smoke-label policies", label, err))
 
+    release_doc_failures = _run_release_doc_policy_cases()
+    print(
+        f"release-doc policies:    "
+        f"{len(STALE_RELEASE_DOC_PATTERNS) + len(RELEASE_POLICY_REQUIRED_STRINGS) - len(release_doc_failures)}"
+        f" / {len(STALE_RELEASE_DOC_PATTERNS) + len(RELEASE_POLICY_REQUIRED_STRINGS)} passed"
+    )
+    for label, err in release_doc_failures:
+        all_failures.append(("release-doc policies", label, err))
+
     pes_failures = _run_path_existence_cases(pes_smoke)
     print(
         f"path-existence-smoke allow-list: "
@@ -734,6 +1005,36 @@ def main() -> int:
     )
     for label, err in readiness_doc_failures:
         all_failures.append(("readiness-packet docs", label, err))
+
+    architecture_flow_failures = _run_architecture_flow_policy_cases()
+    architecture_flow_total = len(ARCHITECTURE_REQUIRED_FLOW_STRINGS) + len(
+        ARCHITECTURE_FORBIDDEN_FLOW_STRINGS
+    )
+    print(
+        f"architecture verifier/judge flow: "
+        f"{architecture_flow_total - len(architecture_flow_failures)}"
+        f" / {architecture_flow_total} passed"
+    )
+    for label, err in architecture_flow_failures:
+        all_failures.append(("architecture verifier/judge flow", label, err))
+
+    glossary_failures = _run_glossary_tool_call_id_policy_cases()
+    glossary_total = len(GLOSSARY_FORBIDDEN_STRINGS) + len(GLOSSARY_REQUIRED_STRINGS)
+    print(
+        f"glossary tool_call_id policy: "
+        f"{glossary_total - len(glossary_failures)} / {glossary_total} passed"
+    )
+    for label, err in glossary_failures:
+        all_failures.append(("glossary tool_call_id policy", label, err))
+
+    sample_doc_failures = _run_sample_run_doc_cases()
+    sample_total = len(SAMPLE_RUN_DOC_FORBIDDEN_STRINGS) + 2
+    print(
+        f"sample-run doc policies:     "
+        f"{sample_total - len(sample_doc_failures)} / {sample_total} passed"
+    )
+    for label, err in sample_doc_failures:
+        all_failures.append(("sample-run doc policies", label, err))
 
     tool_count_failures = _run_tool_count_guard_cases(tool_count_guard)
     tool_count_total = 3
@@ -760,8 +1061,13 @@ def main() -> int:
         len(DIVERGENCE_CASES)
         + n_launcher
         + len(STALE_SMOKE_LABEL_PATTERNS)
+        + len(STALE_RELEASE_DOC_PATTERNS)
+        + len(RELEASE_POLICY_REQUIRED_STRINGS)
         + len(PATH_EXISTENCE_ALLOW_CASES)
         + readiness_total
+        + architecture_flow_total
+        + glossary_total
+        + sample_total
         + tool_count_total
     )
     print("=" * 60)

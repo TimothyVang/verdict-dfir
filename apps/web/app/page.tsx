@@ -28,7 +28,7 @@ import { StageRail } from "@/components/investigation/StageRail";
 import { VerdictSummary } from "@/components/investigation/VerdictSummary";
 import { deriveEvidenceMeta } from "@/lib/evidence-meta";
 import { deriveStageStates } from "@/lib/stage-state";
-import { BrandMark, Kicker, MONO, RuleLine, SerifHeadline, VERDICT } from "@/lib/verdict-ui";
+import { BODY, BrandMark, Kicker, RuleLine, SerifHeadline, VERDICT } from "@/lib/verdict-ui";
 
 // Mirror /debug's local AuditLine shape — importing from @/lib/audit-tail
 // would drag node:fs + chokidar into the client bundle. Keep in sync with
@@ -212,7 +212,7 @@ export default function DashboardPage() {
         minHeight: "100vh",
         background: "transparent",
         color: VERDICT.text,
-        fontFamily: MONO,
+        fontFamily: BODY,
         overflowX: "hidden",
       }}
     >
@@ -303,20 +303,22 @@ export default function DashboardPage() {
           >
             Case — pick an investigation to open ({cases.length} available)
           </label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, minWidth: 0 }}>
             <select
               id="case-select"
               value={casePath}
               onChange={(e) => setCasePath(e.target.value)}
               disabled={conn !== "disconnected"}
               style={{
-                flex: "1 1 360px",
+                flex: "1 1 260px",
+                minWidth: 0,
+                maxWidth: "100%",
                 background: VERDICT.bg,
                 border: `1px solid ${VERDICT.border}`,
                 borderRadius: 8,
                 padding: "10px 14px",
                 color: VERDICT.text,
-                fontFamily: MONO,
+                fontFamily: BODY,
                 fontSize: 14,
                 outline: "none",
                 cursor: conn !== "disconnected" ? "default" : "pointer",
@@ -344,7 +346,7 @@ export default function DashboardPage() {
                   color: VERDICT.accentPurpleLight,
                   borderRadius: 8,
                   padding: "10px 24px",
-                  fontFamily: MONO,
+                  fontFamily: BODY,
                   fontWeight: 700,
                   fontSize: 14,
                   cursor: "pointer",
@@ -362,7 +364,7 @@ export default function DashboardPage() {
                   color: VERDICT.alertRed,
                   borderRadius: 8,
                   padding: "10px 24px",
-                  fontFamily: MONO,
+                  fontFamily: BODY,
                   fontWeight: 700,
                   fontSize: 14,
                   cursor: "pointer",

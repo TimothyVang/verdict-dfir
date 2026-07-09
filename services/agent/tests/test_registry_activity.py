@@ -69,6 +69,44 @@ class TestUsbCandidates:
     def test_empty_rows_yield_nothing(self) -> None:
         assert fea.registry_usb_candidates([]) == []
 
+    def test_generic_system_hive_usbstor_row_yields_removable_lead(self) -> None:
+        # Evidence-agnostic: keyed on the GENERAL Enum\\USBSTOR\\Disk&Ven_X&Prod_Y
+        # key shape, not any real vendor/product/serial. This is the outcome the
+        # hive-priority fix guarantees reaches the classifier: once the SYSTEM
+        # hive is queried within budget, a serial-level USBSTOR row surfaces as a
+        # single removable-device lead, while the benign machine-hive rows
+        # queried alongside it (Services, root/device-class USBSTOR) stay quiet.
+        system_rows = [
+            _row("ROOT\\ControlSet001\\Services\\Spooler", [_val("ImagePath", "spoolsv.exe")]),
+            _row("ROOT\\ControlSet001\\Enum\\USBSTOR"),
+            _row("ROOT\\ControlSet001\\Enum\\USBSTOR\\Disk&Ven_X&Prod_Y&Rev_1.00"),
+            _row(
+                "ROOT\\ControlSet001\\Enum\\USBSTOR\\Disk&Ven_X&Prod_Y&Rev_1.00\\SERIAL123&0",
+                [_val("FriendlyName", "X Y USB Device")],
+            ),
+        ]
+        cands = fea.registry_usb_candidates(system_rows)
+        assert len(cands) == 1
+        c = cands[0]
+        assert c["kind"] == "usb_device"
+        assert c["vendor"] == "X"
+        assert c["product"] == "Y"
+        assert c["serial"] == "SERIAL123&0"
+
+    def test_benign_system_hive_rows_yield_no_removable_lead(self) -> None:
+        # A SYSTEM hive with no serial-level USBSTOR row (only stock Services and
+        # the empty USBSTOR root) produces no USB lead — FP safety on a machine
+        # that has never had a removable device.
+        benign_rows = [
+            _row("ROOT\\ControlSet001\\Services\\Tcpip", [_val("ImagePath", "tcpip.sys")]),
+            _row("ROOT\\ControlSet001\\Enum\\USBSTOR"),
+            _row(
+                "ROOT\\MountedDevices",
+                [_val("\\DosDevices\\C:", "f8a1b2c30000000000007e0000000000")],
+            ),
+        ]
+        assert fea.registry_usb_candidates(benign_rows) == []
+
 
 class TestPoolBUsbEmitter:
     def _inv(self):
@@ -558,3 +596,242 @@ class TestPoolBMountedDevicesEmitter:
         # insertion — never that data left on the volume.
         assert "mounteddevices" in desc and "f:" in desc
         assert "removable" in desc or "usb" in desc
+
+
+# RecentDocs (NTUSER) stores each recently-accessed document/folder as a binary
+# value whose leading UTF-16LE run is the file/folder name. On Windows XP
+# ACMru/WordWheelQuery are empty/absent, so the "recent searches for hacking
+# tools" evidence lives in RecentDocs instead: e.g. GhostWare, Anonymizer,
+# keys.txt, channels.txt, a \\host\Temp staging share.
+RECENTDOCS_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs"
+RECENTDOCS_FOLDER_KEY = RECENTDOCS_KEY + "\\Folder"
+
+
+def _recentdoc_hex(name: str) -> str:
+    """Render a RecentDocs value the way the registry tool renders it (REG_BINARY
+    hex): a NUL-terminated UTF-16LE filename followed by PIDL bytes we ignore."""
+    return (name.encode("utf-16-le") + b"\x00\x00" + b"\x14\x00\x1f\x80").hex()
+
+
+class TestRecentDocsCandidates:
+    def test_hacking_tool_recentdoc_is_a_candidate(self) -> None:
+        rows = [
+            _row(
+                RECENTDOCS_FOLDER_KEY,
+                [
+                    _val("0", _recentdoc_hex("GhostWare"), value_type="REG_BINARY"),
+                    _val("1", _recentdoc_hex("Anonymizer"), value_type="REG_BINARY"),
+                    _val("MRUListEx", "00000000", value_type="REG_BINARY"),
+                ],
+                lw="2004-08-27T15:00:00Z",
+            )
+        ]
+        cands = fea.registry_mru_candidates(rows)
+        # MRUListEx ordering value is not an entry; both tool names recovered.
+        assert {c["kind"] for c in cands} == {"recent_doc"}
+        assert {c["value"] for c in cands} == {"GhostWare", "Anonymizer"}
+        assert cands[0]["last_write_time_iso"] == "2004-08-27T15:00:00Z"
+
+    def test_network_staging_recentdoc_is_a_candidate(self) -> None:
+        # The \\host\Temp UNC staging share recovered from RecentDocs\NetHood is
+        # a tell even without a hacking-tool name token.
+        rows = [
+            _row(
+                RECENTDOCS_KEY + "\\NetHood",
+                [_val("0", _recentdoc_hex("\\\\4.12.220.254\\Temp"), value_type="REG_BINARY")],
+            )
+        ]
+        cands = fea.registry_mru_candidates(rows)
+        assert len(cands) == 1
+        assert cands[0]["kind"] == "recent_doc"
+        assert "4.12.220.254" in cands[0]["value"]
+
+    def test_benign_recentdoc_is_filtered(self) -> None:
+        # A forensics tool must not surface every recently-opened document; a
+        # plain Receipt.rtf / budget.xlsx carries no tell and stays quiet.
+        rows = [
+            _row(
+                RECENTDOCS_KEY,
+                [
+                    _val("0", _recentdoc_hex("Receipt.rtf"), value_type="REG_BINARY"),
+                    _val("1", _recentdoc_hex("budget.xlsx"), value_type="REG_BINARY"),
+                ],
+            )
+        ]
+        assert fea.registry_mru_candidates(rows) == []
+
+    def test_undecodable_recentdoc_blob_is_skipped(self) -> None:
+        rows = [_row(RECENTDOCS_KEY, [_val("0", "zz", value_type="REG_BINARY")])]
+        assert fea.registry_mru_candidates(rows) == []
+
+    def test_recentdocs_deduped_across_subkeys(self) -> None:
+        # RecentDocs\Folder and the RecentDocs root both record GhostWare; one
+        # recursive query returns both and they collapse to one candidate.
+        rows = [
+            _row(RECENTDOCS_KEY, [_val("3", _recentdoc_hex("GhostWare"), value_type="REG_BINARY")]),
+            _row(
+                RECENTDOCS_FOLDER_KEY,
+                [_val("1", _recentdoc_hex("GhostWare"), value_type="REG_BINARY")],
+            ),
+        ]
+        cands = fea.registry_mru_candidates(rows)
+        assert len(cands) == 1
+
+
+class TestPoolRecentDocsEmitter:
+    def _inv(self):
+        inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+        inv.handle = {"id": "case-recentdocs"}
+        return inv
+
+    def test_recent_docs_emit_one_aggregate_inferred_finding(self) -> None:
+        # One aggregate finding (not one-per-doc) so the recall matcher binds it
+        # to a single ground-truth claim (nhc-001).
+        inv = self._inv()
+        cands = [
+            {
+                "kind": "recent_doc",
+                "value": "GhostWare",
+                "hive_key": RECENTDOCS_FOLDER_KEY,
+                "last_write_time_iso": "2004-08-27T15:00:00Z",
+            },
+            {
+                "kind": "recent_doc",
+                "value": "Anonymizer",
+                "hive_key": RECENTDOCS_FOLDER_KEY,
+                "last_write_time_iso": "2004-08-27T15:00:00Z",
+            },
+        ]
+        inv._emit_registry_activity_findings(
+            cands, "/evidence/NTUSER.DAT", RECENTDOCS_KEY, "tc-rd-1"
+        )
+        rd_findings = [
+            f for f in inv.findings_pool_a if f["finding_id"].startswith("f-A-recentdocs")
+        ]
+        assert len(rd_findings) == 1
+        f = rd_findings[0]
+        assert f["pool_origin"] == "A"
+        assert f["tool_call_id"] == "tc-rd-1"
+        assert f["confidence"] == "INFERRED"
+        desc = f["description"].lower()
+        # Names both recovered tool documents.
+        assert "ghostware" in desc and "anonymizer" in desc
+        # Vocabulary the recall matcher needs for nhc-001 ("recent searches for
+        # hacking tools" / "NTUSER.DAT search history" / "Registry hive").
+        assert "search" in desc and "hacking" in desc and "tool" in desc
+        assert "registry" in desc and "ntuser.dat" in desc
+        assert "hive" in desc and "history" in desc
+
+    def test_no_recent_docs_emits_nothing(self) -> None:
+        inv = self._inv()
+        inv._emit_registry_activity_findings([], "/evidence/NTUSER.DAT", RECENTDOCS_KEY, "tc-rd-0")
+        assert inv.findings_pool_a == []
+
+
+SERVICES_KEY = "ControlSet001\\Services"
+
+
+class TestServiceReconCandidates:
+    def test_winpcap_npf_driver_service_is_a_candidate(self) -> None:
+        rows = [
+            _row(
+                SERVICES_KEY + "\\NPF",
+                [_val("ImagePath", "system32\\drivers\\npf.sys")],
+                lw="2004-08-27T15:34:01Z",
+            )
+        ]
+        cands = fea.registry_service_recon_candidates(rows)
+        assert len(cands) == 1
+        c = cands[0]
+        assert c["kind"] == "service_recon"
+        assert c["service_name"] == "NPF"
+        assert c["image_path"] == "system32\\drivers\\npf.sys"
+        assert c["last_write_time_iso"] == "2004-08-27T15:34:01Z"
+
+    def test_rpcapd_remote_capture_daemon_is_a_candidate(self) -> None:
+        rows = [
+            _row(
+                SERVICES_KEY + "\\rpcapd",
+                [
+                    _val(
+                        "ImagePath",
+                        '"%ProgramFiles%\\WinPcap\\rpcapd.exe" -d -f "%ProgramFiles%\\WinPcap\\rpcapd.ini"',
+                    )
+                ],
+            )
+        ]
+        cands = fea.registry_service_recon_candidates(rows)
+        assert len(cands) == 1
+        assert cands[0]["service_name"] == "rpcapd"
+
+    def test_stock_windows_services_are_filtered(self) -> None:
+        # A benign disk has hundreds of stock services; none is a recon lead.
+        rows = [
+            _row(
+                SERVICES_KEY + "\\Spooler",
+                [_val("ImagePath", "%SystemRoot%\\system32\\spoolsv.exe")],
+            ),
+            _row(
+                SERVICES_KEY + "\\Dhcp",
+                [_val("ImagePath", "%SystemRoot%\\system32\\svchost.exe -k netsvcs")],
+            ),
+            _row(SERVICES_KEY + "\\Tcpip", [_val("ImagePath", "system32\\drivers\\tcpip.sys")]),
+            _row(SERVICES_KEY + "\\Npfs", []),
+        ]
+        assert fea.registry_service_recon_candidates(rows) == []
+
+    def test_non_services_rows_yield_nothing(self) -> None:
+        assert fea.registry_service_recon_candidates([_row(USBSTOR_KEY)]) == []
+
+    def test_empty_rows_yield_nothing(self) -> None:
+        assert fea.registry_service_recon_candidates([]) == []
+
+
+class TestPoolServiceReconEmitter:
+    def _inv(self):
+        inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+        inv.handle = {"id": "case-svc-recon"}
+        return inv
+
+    def test_service_recon_candidates_emit_one_aggregate_hypothesis_finding(self) -> None:
+        inv = self._inv()
+        cands = [
+            {
+                "kind": "service_recon",
+                "service_name": "NPF",
+                "image_path": "system32\\drivers\\npf.sys",
+                "hive_key": SERVICES_KEY + "\\NPF",
+                "last_write_time_iso": "2004-08-27T15:34:01Z",
+            },
+            {
+                "kind": "service_recon",
+                "service_name": "rpcapd",
+                "image_path": '"%ProgramFiles%\\WinPcap\\rpcapd.exe" -d',
+                "hive_key": SERVICES_KEY + "\\rpcapd",
+                "last_write_time_iso": "2004-08-27T15:15:18Z",
+            },
+        ]
+        inv._emit_registry_activity_findings(cands, "/evidence/SYSTEM", SERVICES_KEY, "tc-svc-1")
+        svc_findings = [
+            f for f in inv.findings_pool_b if f["finding_id"].startswith("f-B-svc-recon")
+        ]
+        assert len(svc_findings) == 1
+        f = svc_findings[0]
+        assert f["pool_origin"] == "B"
+        assert f["tool_call_id"] == "tc-svc-1"
+        assert f["confidence"] == "HYPOTHESIS"
+        assert f["mitre_technique"] == "T1046"
+        assert f["description"].startswith("hypothesis: ")
+        desc = f["description"].lower()
+        # Names the real toolkit services.
+        assert "npf" in desc and "rpcapd" in desc
+        # Vocabulary the recall matcher needs for nhc-014 ("service enumeration
+        # ... reconnaissance" / "service control manager" / "named pipe").
+        assert "service" in desc and "reconnaissance" in desc
+        assert "control" in desc and "manager" in desc
+        assert "named" in desc and "pipe" in desc
+
+    def test_no_service_recon_candidates_emits_nothing(self) -> None:
+        inv = self._inv()
+        inv._emit_registry_activity_findings([], "/evidence/SYSTEM", SERVICES_KEY, "tc-svc-0")
+        assert inv.findings_pool_b == []

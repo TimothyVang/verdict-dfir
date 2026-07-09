@@ -1,0 +1,39 @@
+{
+  "_comment": [
+    "Answer key for evidence/attack-samples/.",
+    "The Chrome logon sample in that folder is not itself scored as a bad finding here; the expected bad facts are the log clear, service install, and WMI execution leads.",
+    "Run with: bash scripts/verdict evidence/attack-samples",
+    "Local-only until upstream EVTX sample provenance is documented."
+  ],
+  "case_id": "evtx-attack-samples",
+  "source_url": "local-only EVTX attack-sample training folder; raw fixtures not redistributed",
+  "license": "VERDICT-authored answer key; raw EVTX provenance must be verified before publishing or redistributing the fixtures",
+  "verdict": "SUSPICIOUS",
+  "min_recall_percent": 100,
+  "findings": [
+    {
+      "finding_id": "eas-001",
+      "description": "Windows Security audit log was cleared, producing Event ID 1102 anti-forensics evidence",
+      "mitre_technique": "T1070.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "evtx",
+      "artifact_hint": "DE_1102_security_log_cleared.evtx contains Security EID 1102"
+    },
+    {
+      "finding_id": "eas-002",
+      "description": "EVTX EID 7045 records installation of service spoolfool with image cmd.exe",
+      "mitre_technique": "T1543.003",
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "evtx",
+      "artifact_hint": "LM_Remote_Service02_7045.evtx contains EID 7045 service-install evidence for spoolfool cmd.exe"
+    },
+    {
+      "finding_id": "eas-003",
+      "description": "Remote WMI process execution appears in Security Event ID 4688 with WmiPrvSE.exe as the parent process",
+      "mitre_technique": "T1047",
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "evtx",
+      "artifact_hint": "LM_WMI_4624_4688_TargetHost.evtx contains WmiPrvSE-parent process creation and network logon context"
+    }
+  ]
+}

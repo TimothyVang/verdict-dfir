@@ -11,11 +11,14 @@ Standard fields on every event: ``case_id`` (UUID4), ``event_id``
 
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from findevil_agent.verdict_reasons import IndeterminateReason
 
 # ---------------------------------------------------------------------------
 # Shared base.
@@ -96,6 +99,41 @@ class PriorObservation(BaseModel):
     confidence: float = Field(..., description="BM25 x recency-decayed recall confidence, 0.0-1.0")
 
 
+class AssertedValue(BaseModel):
+    """A structured value a :class:`Finding` claims is present in its cited output.
+
+    The verifier's entailment check re-extracts ``path`` from the re-run tool
+    output and confirms ``expected`` is actually there. This is what stops a
+    model from misreading real evidence and laundering it through a valid
+    ``tool_call_id``: a non-LLM check confirms the specific value, not the
+    model. ``path`` is a dotted/wildcard path into the tool's output JSON, e.g.
+    ``entries[*].values[*].data_str``, ``run_count``, ``rows[0].FILENAME``.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    path: str = Field(..., description="Dotted/wildcard path into the cited tool's output JSON")
+    expected: str = Field(
+        ...,
+        description=(
+            "The value the finding claims is present at path. For match='record' "
+            "this is a JSON object of {field: substring} constraints that must all "
+            "hold within ONE record reached by path (co-location)."
+        ),
+    )
+    match: Literal["exact", "contains", "iso_ts", "int", "record"] = "exact"
+    # Multiplicity guard: a count claim ("two variants", "N entries", "3
+    # sessions") must be backed by at least this many ENTAILED leaves under a
+    # wildcard path. When set >1 and fewer leaves actually entail, the verifier
+    # demotes the finding below CONFIRMED — the one real line is genuine, the
+    # over-count is not. Default None means "singular claim, no count gate".
+    count: int | None = Field(
+        default=None,
+        ge=1,
+        description="Minimum entailed leaves a multiplicity claim must back (>=1)",
+    )
+
+
 class Finding(_BaseEvent):
     event_type: Literal["Finding"] = "Finding"
     finding_id: str
@@ -116,6 +154,40 @@ class Finding(_BaseEvent):
     # artifact-class rule, never a Merkle leaf. Default empty so findings
     # drafted without recall stay backward-compatible.
     prior_observations: list[PriorObservation] = Field(default_factory=list)
+    # Structured values this finding claims are present in the cited tool
+    # output. The verifier re-extracts each (entailment check) and rejects /
+    # downgrades the finding if the value is not actually there — closing the
+    # "model misread real evidence behind a valid citation" gap. Default empty
+    # keeps existing findings backward-compatible (the check is a no-op when
+    # absent); the opt-in gate below makes it required for CONFIRMED/INFERRED.
+    asserted_values: list[AssertedValue] = Field(default_factory=list)
+    # The benign/alternative explanation this finding ruled out — the
+    # devil's-advocate stance recorded ON the finding (JUDGING.md §"counter
+    # hypothesis"; complements the judge.py counter-hypothesis discipline). A
+    # CONFIRMED claim that considered NO alternative is the anti-coherence "too
+    # clean" tell. Optional + default None so findings drafted before this field
+    # stay backward-compatible; the opt-in gate below makes it required for
+    # CONFIRMED, and the verifier preflight rejects a CONFIRMED finding that
+    # arrives without it.
+    counter_hypothesis: str | None = None
+    # A falsifiable PREDICTION the pool commits to when proposing this finding: a
+    # single refutable observation the verifier can later check against the cited
+    # output. Inverse polarity of asserted_values — an AssertedValue is REFUTED
+    # when its value is ABSENT; an expectation is REFUTED only when the cited
+    # output reaches its path and holds a leaf that CONTRADICTS the prediction
+    # (a present-but-conflicting value). Path-absent = no contradicting evidence
+    # = not refuted. Reuses the AssertedValue shape (path/expected/match) rather
+    # than a new model. Optional + default-None so existing findings stay valid;
+    # the refutation gate is opt-in via FIND_EVIL_REQUIRE_EXPECTATION=1.
+    expectation: AssertedValue | None = None
+    # "Why not a higher tier?" — the deterministic anti-overclaim rationale a
+    # finding records to justify why it stops where it does rather than claiming
+    # more (e.g. "lateral-movement: no Logon Type 3/10 on the destination, so
+    # capped at INFERRED"). Pairs with the correlator's per-claim-type confidence
+    # CEILING table (see correlator.apply_confidence_ceiling). Optional + default
+    # None so existing findings stay valid; the gate that requires it on every
+    # INFERRED finding is opt-in via FIND_EVIL_REQUIRE_WHY_NOT_HIGHER=1.
+    why_not_higher: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -131,6 +203,98 @@ class Finding(_BaseEvent):
             if isinstance(desc, str) and not desc.lstrip().lower().startswith("hypothesis:"):
                 data = {**data, "description": f"hypothesis: {desc.lstrip()}"}
         return data
+
+    @model_validator(mode="after")
+    def _require_asserted_values(self) -> Finding:
+        """Fact-fidelity gate, **default-on**; opt out via ``FIND_EVIL_REQUIRE_ASSERTED_VALUES=0``.
+
+        * CONFIRMED asserts a specific tool-backed value, so it MUST declare the
+          structured value(s) it claims — the verifier re-extracts each from the
+          cited output (entailment check) and kills a misread behind a valid
+          ``tool_call_id``.
+        * INFERRED is a cross-fact inference (e.g. DKOM = pslist 0 AND psscan
+          N>0): it has no single re-extractable value, so it may EITHER declare
+          asserted_values OR cite the CONFIRMED facts it rests on
+          (``derived_from``), whose own fidelity is checked. Forcing a single
+          value on an inference would be dishonest.
+        * HYPOTHESIS is a lead, not an asserted fact — exempt.
+
+        Default-ON (Stage A, 2026-06-22): the gate is active unless explicitly
+        disabled with ``FIND_EVIL_REQUIRE_ASSERTED_VALUES=0``. Validated by a live
+        full-coverage run on real evidence — recall held, 0 gate rejections,
+        manifest_verify overall true (receipt in docs/fact-fidelity.md).
+        """
+        if os.environ.get("FIND_EVIL_REQUIRE_ASSERTED_VALUES") == "0":
+            return self
+        if self.confidence == "CONFIRMED" and not self.asserted_values:
+            raise ValueError(
+                f"CONFIRMED finding {self.finding_id} declares no asserted_values; "
+                "a CONFIRMED fact must declare the structured value(s) it asserts "
+                "so the entailment check can re-extract them from the cited output"
+            )
+        if self.confidence == "INFERRED" and not self.asserted_values and not self.derived_from:
+            raise ValueError(
+                f"INFERRED finding {self.finding_id} declares neither asserted_values "
+                "nor derived_from; an inference must either declare its re-extractable "
+                "value or cite the confirmed facts it rests on"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _require_counter_hypothesis(self) -> Finding:
+        """Anti-coherence "too clean" gate, opt-in via
+        ``FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS_FINDING=1``.
+
+        A CONFIRMED finding is the strongest claim VERDICT makes; a confident
+        claim that ruled out NO benign alternative is the coherence tell that
+        the model talked itself into a clean story. When the flag is on, a
+        CONFIRMED finding MUST carry a non-blank ``counter_hypothesis`` (the
+        alternative it considered and discarded). INFERRED/HYPOTHESIS are leads
+        or cross-fact inferences and stay exempt.
+
+        Default-OFF: emitters not yet wired, and findings built before this
+        field existed, stay valid until the rollout flips the flag on. Mirrors
+        :meth:`_require_asserted_values`. The verifier preflight enforces the
+        same rule at re-verify time for findings that reach it from elsewhere.
+        """
+        if os.environ.get("FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS_FINDING") != "1":
+            return self
+        if self.confidence == "CONFIRMED" and not (self.counter_hypothesis or "").strip():
+            raise ValueError(
+                f"CONFIRMED finding {self.finding_id} declares no counter_hypothesis; "
+                "a CONFIRMED claim must record the benign/alternative explanation it "
+                "ruled out (anti-coherence 'too clean' gate)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _require_tool_call_id_for_anchored(self) -> Finding:
+        """Evidence-anchor firewall, **default-on**; opt out via
+        ``FIND_EVIL_REQUIRE_TOOL_CALL_ID=0``.
+
+        ``tool_call_id`` is already a required field, but Pydantic accepts an
+        empty string. A CONFIRMED/INFERRED finding is an asserted fact (or an
+        inference over facts), so it MUST carry a non-blank tool-call anchor at
+        construction time — a blank-cited anchored finding can never exist as a
+        Finding object, closing the window between construction and the verifier
+        veto. HYPOTHESIS is a lead, not an asserted fact, so it is exempt.
+
+        Unlike :meth:`_require_asserted_values`, a blank anchor has no legitimate
+        use, so this is unconditional except for the ``=0`` escape hatch kept for
+        parity. The verifier preflight (``verifier.py``) stays as defense-in-depth
+        for findings that arrive via ``model_construct`` or the MCP wire; the
+        ``verify_finding`` tool turns this ValidationError into a graceful
+        ``rejected`` action at that untrusted-input boundary.
+        """
+        if os.environ.get("FIND_EVIL_REQUIRE_TOOL_CALL_ID") == "0":
+            return self
+        if self.confidence in ("CONFIRMED", "INFERRED") and not (self.tool_call_id or "").strip():
+            raise ValueError(
+                f"{self.confidence} finding {self.finding_id} has a blank tool_call_id; "
+                "a CONFIRMED/INFERRED finding must cite a tool call as its evidence "
+                "anchor (HYPOTHESIS leads are exempt)"
+            )
+        return self
 
 
 class VerifierAction(_BaseEvent):
@@ -161,9 +325,20 @@ class RunVerdict(_BaseEvent):
     event_type: Literal["RunVerdict"] = "RunVerdict"
     verdict: Literal["CONFIRMED_EVIL", "SUSPICIOUS", "BENIGN", "INCONCLUSIVE"]
     confidence_score: float  # 0.0 to 1.0
+    # Human-readable breakdown of how confidence_score was reached — the
+    # evidence-type-weighted components plus any named bonuses (e.g.
+    # "base 0.90 direct (f-2) +0.05 lateral-movement corroboration = 0.95").
+    # Default-empty so verdicts produced before scoring was wired stay valid.
+    score_basis: str = ""
     finding_count: int
     manifest_path: str
     manifest_verify_path: str | None = None
+    # Additive, custody-neutral annotation: typed reason-code(s) for a
+    # non-committal (INDETERMINATE/abstain) verdict. Empty for a committed
+    # SUSPICIOUS / scoped NO_EVIL word. Derived deterministically by
+    # ``verdict_reasons.derive_indeterminate_reasons`` — never changes the
+    # verdict WORD, the audit chain, or any scoring math.
+    reason_codes: list[IndeterminateReason] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

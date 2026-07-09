@@ -1,5 +1,5 @@
 site_name: VERDICT DFIR Documentation
-site_description: VERDICT — evidence-bound DFIR with signed, offline-verifiable verdicts
+site_description: "VERDICT — DFIR for agents: typed, read-only, audit-chained forensic MCP tools any AI agent can drive, with signed, offline-verifiable verdicts"
 site_url: https://timothyvang.github.io/verdict-dfir/
 repo_url: https://github.com/TimothyVang/verdict-dfir
 repo_name: TimothyVang/verdict-dfir
@@ -7,6 +7,7 @@ edit_uri: edit/master/docs/
 
 exclude_docs: |
   /README.md
+  README.md
   analyst/**
   artifact-semantics.md
   codex-compatibility.md
@@ -59,7 +60,9 @@ nav:
   - Quickstart: https://github.com/TimothyVang/verdict-dfir/blob/master/QUICKSTART.md
   - Running VERDICT: using/running-verdict.md
   - Architecture: architecture.md
-  - Accuracy: accuracy-report.md
+  - Accuracy:
+      - Accuracy Report: accuracy-report.md
+      - Evidence Answer Keys: evidence-answer-keys.md
   - Trust Model:
       - Cryptographic Attestation: cryptographic-attestation.md
       - Verdict Semantics: verdict-semantics.md
@@ -76,6 +79,9 @@ nav:
       - Evidence Intake: using/evidence-intake.md
       - Reports: using/reports.md
       - Troubleshooting: troubleshooting.md
+  - Contributing:
+      - Contribution Model: contribution-model.md
+      - Help Wanted: help-wanted.md
   - Release:
       - Release Surface: release-surface.md
       - Release Evidence: release-evidence/README.md

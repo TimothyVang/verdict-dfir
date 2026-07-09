@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "Answer key for a single EVTX WMI execution sample used by evidence/cases/mini-fleet/hosts/host-02/.",
+    "The evidence is EVTX-only, so the expected finding remains HYPOTHESIS and the honest top-line verdict is INDETERMINATE unless another artifact class corroborates it.",
+    "Run with: bash scripts/verdict evidence/cases/mini-fleet/hosts/host-02/",
+    "Local-only until upstream EVTX sample provenance is documented."
+  ],
+  "case_id": "wmi-execution",
+  "source_url": "local-only EVTX attack-sample training case; raw fixture not redistributed",
+  "license": "VERDICT-authored answer key; raw EVTX provenance must be verified before publishing or redistributing the fixture",
+  "verdict": "INDETERMINATE",
+  "min_recall_percent": 100,
+  "findings": [
+    {
+      "finding_id": "wmi-001",
+      "description": "Remote WMI process execution appears in Security Event ID 4688 with WmiPrvSE.exe as the parent process",
+      "mitre_technique": "T1047",
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "evtx",
+      "artifact_hint": "Security EVTX EID 4688 child process under WmiPrvSE.exe, with related network logon context"
+    }
+  ]
+}

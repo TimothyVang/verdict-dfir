@@ -24,7 +24,7 @@ from findevil_agent.events import Finding
 from findevil_agent.mcp_client import McpClient, StdioMcpClient
 from findevil_agent.replay import ReplayArtifact
 from findevil_agent.verifier import reverify_finding
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from findevil_agent_mcp.tools._base import ToolSpec
 
@@ -37,7 +37,13 @@ class VerifyFindingInput(BaseModel):
         description=(
             "The Finding to re-verify, as a dict matching the Finding "
             "AgentEvent schema (case_id, finding_id, tool_call_id, "
-            "artifact_path, confidence, description, etc.)."
+            "artifact_path, confidence, description, etc.). A CONFIRMED/"
+            "INFERRED finding SHOULD carry asserted_values "
+            "[{path, expected, match, count?}] — the structured fact(s) it "
+            "claims; after the cited output reproduces, the verifier re-extracts "
+            "each from that output (entailment check) and rejects a misread. A "
+            "wrong hard IDENTITY anchor (hash/IP) is rejected outright; a count "
+            "claim (set count>1) backed by fewer entailed lines is demoted."
         ),
     )
     tool_call_index: dict[str, dict[str, Any]] = Field(
@@ -106,7 +112,29 @@ def _make_mcp_client(command: list[str]) -> McpClient:
 
 async def _handle(inp: BaseModel) -> VerifyFindingOutput:
     assert isinstance(inp, VerifyFindingInput)
-    finding = Finding.model_validate(inp.finding)
+    # Untrusted-input boundary: the finding dict comes from the model. A schema
+    # violation here (e.g. the evidence-anchor firewall in
+    # Finding._require_tool_call_id_for_anchored rejecting a blank-cited
+    # CONFIRMED/INFERRED finding) is a malformed claim, not a tool fault — turn it
+    # into a structured 'rejected' action so it is logged to the audit chain as a
+    # veto rather than crashing the run loop. This preserves the graceful veto the
+    # verifier gave for blank citations before the schema firewall existed.
+    try:
+        finding = Finding.model_validate(inp.finding)
+    except ValidationError as exc:
+        finding_id = ""
+        if isinstance(inp.finding, dict):
+            finding_id = str(inp.finding.get("finding_id") or "")
+        return VerifyFindingOutput(
+            action="rejected",
+            finding_id=finding_id,
+            reason=f"schema rejected before replay: {exc.errors()[0].get('msg', str(exc))}",
+            replay_tool_name=None,
+            replay_expected_sha256=None,
+            replay_actual_sha256=None,
+            replay_matched=None,
+            replay_error=None,
+        )
     client = _make_mcp_client(list(inp.findevil_mcp_command))
     try:
         action, replay = reverify_finding(

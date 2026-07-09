@@ -22,12 +22,24 @@ use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::tools::proc_runner::{run_with_timeout, timeout_from_env, RunError};
+
 const DEFAULT_LIMIT: usize = 10_000;
+
+/// Env var that overrides the per-stage plaso wall-clock budget (seconds).
+const TIMEOUT_ENV: &str = "FINDEVIL_PLASO_TIMEOUT_SECS";
+
+/// Default wall-clock budget applied to *each* plaso stage (log2timeline, psort).
+/// Generous — plaso parses can legitimately run long — but bounded so a wedged
+/// stage can no longer block the MCP server indefinitely. Override with
+/// [`TIMEOUT_ENV`].
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(3600);
 
 /// Allow-listed plaso parser names. Curated from the parser-coverage roadmap's
 /// log section — the cross-OS text/binary logs plaso normalizes well. These are
@@ -115,6 +127,12 @@ pub enum PlasoParseError {
         stderr: String,
     },
 
+    #[error(
+        "{stage} exceeded its {seconds} s time budget and was killed \
+         (raise $FINDEVIL_PLASO_TIMEOUT_SECS for legitimately long parses)"
+    )]
+    Timeout { stage: String, seconds: u64 },
+
     #[error("could not read plaso output: {0}")]
     OutputRead(String),
 }
@@ -126,10 +144,23 @@ pub fn is_allowed_parser(parser: &str) -> bool {
 }
 
 /// Build the `log2timeline.py` argv. Pure + unit-tested.
-fn build_l2t_args(parser: &str, storage_file: &Path, artifact: &Path) -> Vec<OsString> {
+///
+/// `log_file` pins plaso's run-log to an explicit path. Without `--logfile`,
+/// plaso drops a timestamped `log2timeline-<ts>.log.gz` into the process CWD
+/// (the repo root for the MCP server) on every invocation — junk that
+/// accumulated 195+ files at the root. Routing it to a temp path that the
+/// caller cleans up keeps the working tree clean.
+fn build_l2t_args(
+    parser: &str,
+    storage_file: &Path,
+    artifact: &Path,
+    log_file: &Path,
+) -> Vec<OsString> {
     vec![
         "--status-view".into(),
         "none".into(),
+        "--logfile".into(),
+        log_file.as_os_str().to_os_string(),
         "--parsers".into(),
         parser.into(),
         "--storage-file".into(),
@@ -139,10 +170,15 @@ fn build_l2t_args(parser: &str, storage_file: &Path, artifact: &Path) -> Vec<OsS
 }
 
 /// Build the `psort.py` argv (JSON-line export). Pure + unit-tested.
-fn build_psort_args(storage_file: &Path, out_file: &Path) -> Vec<OsString> {
+///
+/// `log_file` pins psort's run-log to an explicit path for the same reason as
+/// [`build_l2t_args`]: psort otherwise writes a `psort-<ts>.log.gz` into the CWD.
+fn build_psort_args(storage_file: &Path, out_file: &Path, log_file: &Path) -> Vec<OsString> {
     vec![
         "--status-view".into(),
         "none".into(),
+        "--logfile".into(),
+        log_file.as_os_str().to_os_string(),
         "-o".into(),
         "json_line".into(),
         "-w".into(),
@@ -181,32 +217,50 @@ pub fn plaso_parse(input: &PlasoParseInput) -> Result<PlasoParseOutput, PlasoPar
     let tag = format!("{}-{}", std::process::id(), nanosecond_tag());
     let storage = std::env::temp_dir().join(format!("plaso-{}-{tag}.plaso", input.parser));
     let out_file = std::env::temp_dir().join(format!("plaso-{}-{tag}.jsonl", input.parser));
+    // Pin plaso's per-stage run-logs to temp instead of the process CWD (the repo
+    // root), then clean them up — otherwise each parse litters the working tree
+    // with log2timeline-<ts>.log.gz / psort-<ts>.log.gz.
+    let l2t_log = std::env::temp_dir().join(format!("plaso-{}-{tag}.l2t.log.gz", input.parser));
+    let psort_log = std::env::temp_dir().join(format!("plaso-{}-{tag}.psort.log.gz", input.parser));
 
     let l2t_stderr = run_stage(
         &l2t,
-        &build_l2t_args(&input.parser, &storage, &input.artifact_path),
+        &build_l2t_args(&input.parser, &storage, &input.artifact_path, &l2t_log),
         "log2timeline.py",
     );
     let l2t_stderr = match l2t_stderr {
         Ok(s) => s,
         Err(e) => {
-            cleanup(&[&storage, &out_file]);
+            cleanup(&[&storage, &out_file, &l2t_log, &psort_log]);
             return Err(e);
         }
     };
 
-    let psort_stderr = run_stage(&psort, &build_psort_args(&storage, &out_file), "psort.py");
+    let psort_stderr = run_stage(
+        &psort,
+        &build_psort_args(&storage, &out_file, &psort_log),
+        "psort.py",
+    );
     let psort_stderr = match psort_stderr {
         Ok(s) => s,
         Err(e) => {
-            cleanup(&[&storage, &out_file]);
+            cleanup(&[&storage, &out_file, &l2t_log, &psort_log]);
             return Err(e);
         }
     };
 
     let stderr_tail = truncate_to(format!("{l2t_stderr}{psort_stderr}"), 4096);
-    let result = read_json_lines(&out_file, &input.parser, limit, stderr_tail);
-    cleanup(&[&storage, &out_file]);
+    let result = read_json_lines(&out_file, &input.parser, limit, stderr_tail).map(|mut out| {
+        // Make events reproducible (and /home-free): plaso embeds the absolute
+        // source path in display_name/filename/pathspec, which carries a per-run
+        // case + disk-extract UUID and the operator's /home prefix. Verbatim, it
+        // makes output_sha256 non-reproducible across runs (verify_finding replay
+        // drift) and leaks /home into the hashed output. Canonicalizing to the
+        // artifact basename makes the events evidence-determined, not run-determined.
+        canonicalize_event_paths(&mut out.events, &input.artifact_path);
+        out
+    });
+    cleanup(&[&storage, &out_file, &l2t_log, &psort_log]);
     result
 }
 
@@ -302,20 +356,56 @@ fn collect_path_strings(runs: &[String], paths: &mut BTreeSet<String>) {
 
 /// Run one plaso stage with fixed argv; return its stderr tail or a typed error.
 fn run_stage(binary: &Path, args: &[OsString], stage: &str) -> Result<String, PlasoParseError> {
-    let proc = Command::new(binary).args(args).output().map_err(|err| {
-        if err.kind() == std::io::ErrorKind::NotFound {
-            PlasoParseError::BinaryNotFound {
-                binary: stage.to_string(),
-            }
-        } else {
-            PlasoParseError::SubprocessFailed {
-                stage: stage.to_string(),
-                exit_code: -1,
-                stderr: format!("spawn failed: {err}"),
-            }
+    // Defense-in-depth pre-spawn gate: refuse a poisoned $PLASO_DIR that resolves
+    // to a denied binary, and reject NUL bytes in the artifact/storage paths.
+    crate::tools::argsafe::guard_spawn(binary, args).map_err(|e| {
+        PlasoParseError::SubprocessFailed {
+            stage: stage.to_string(),
+            exit_code: -1,
+            stderr: e.to_string(),
         }
     })?;
-    let stderr_tail = truncate_to(String::from_utf8_lossy(&proc.stderr).into_owned(), 2048);
+    let mut cmd = Command::new(binary);
+    cmd.args(args);
+    // Run in its own process group under a per-stage wall-clock budget so a hung
+    // log2timeline/psort is force-killed and reaped instead of blocking forever.
+    let proc =
+        run_with_timeout(cmd, timeout_from_env(TIMEOUT_ENV, DEFAULT_TIMEOUT)).map_err(|err| {
+            match err {
+                RunError::Spawn(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    PlasoParseError::BinaryNotFound {
+                        binary: stage.to_string(),
+                    }
+                }
+                RunError::Spawn(e) => PlasoParseError::SubprocessFailed {
+                    stage: stage.to_string(),
+                    exit_code: -1,
+                    stderr: format!("spawn failed: {e}"),
+                },
+                RunError::Io(e) => PlasoParseError::SubprocessFailed {
+                    stage: stage.to_string(),
+                    exit_code: -1,
+                    stderr: format!("io error: {e}"),
+                },
+                RunError::Timeout(d) => PlasoParseError::Timeout {
+                    stage: stage.to_string(),
+                    seconds: d.as_secs(),
+                },
+                RunError::ReaderPanicked => PlasoParseError::SubprocessFailed {
+                    stage: stage.to_string(),
+                    exit_code: -1,
+                    stderr: "plaso output reader thread panicked".to_string(),
+                },
+            }
+        })?;
+    // Normalize plaso's run-varying log tokens (timestamp + PID) at the point of
+    // capture so BOTH the success `stderr_tail` and the `SubprocessFailed` error
+    // are reproducible — a `verify_finding` replay must recompute the same
+    // `output_sha256` (see `normalize_plaso_stderr`).
+    let stderr_tail = truncate_to(
+        normalize_plaso_stderr(&String::from_utf8_lossy(&proc.stderr)),
+        2048,
+    );
     if !proc.status.success() {
         return Err(PlasoParseError::SubprocessFailed {
             stage: stage.to_string(),
@@ -424,9 +514,207 @@ fn nanosecond_tag() -> u128 {
         .map_or(0, |d| d.as_nanos())
 }
 
+/// Width of a plaso log timestamp `YYYY-MM-DD HH:MM:SS,mmm`.
+const LOG_TS_LEN: usize = 23;
+
+/// Byte offsets within a [`LOG_TS_LEN`]-wide stamp that must be ASCII digits.
+const LOG_TS_DIGIT_OFFSETS: [usize; 17] =
+    [0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18, 20, 21, 22];
+
+/// Collapse the two run-varying tokens in plaso's stderr so the captured output
+/// is byte-identical across runs.
+///
+/// plaso logs to stderr with Python `logging` lines whose leading timestamp and
+/// PID change on every invocation, e.g.
+/// `2026-06-20 19:18:13,552 [INFO] (MainProcess) PID:412041 <mod> message`.
+/// The parsed events are deterministic; this diagnostic prefix is the only
+/// volatile part. Left raw in [`PlasoParseOutput::stderr_tail`], it makes the
+/// whole tool output non-reproducible, so a `verify_finding` replay computes a
+/// different `output_sha256` and the audit chain (fail-closed) drops the
+/// Finding. Replace the timestamp and `PID:<n>` with fixed placeholders — stable
+/// across runs and still human-readable. Hand-rolled (no regex dependency),
+/// matching the dependency-light style of `sanitize.rs`.
+fn normalize_plaso_stderr(stderr: &str) -> String {
+    replace_pid_tokens(&replace_log_timestamps(stderr))
+}
+
+/// Replace every `PID:<digits>` with `PID:<pid>`. UTF-8 safe: all matched tokens
+/// are ASCII, so slice boundaries stay char-aligned.
+fn replace_pid_tokens(s: &str) -> String {
+    const MARKER: &str = "PID:";
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(pos) = rest.find(MARKER) {
+        out.push_str(&rest[..pos]);
+        let after = &rest[pos + MARKER.len()..];
+        let digits = after
+            .find(|c: char| !c.is_ascii_digit())
+            .unwrap_or(after.len());
+        if digits > 0 {
+            out.push_str("PID:<pid>");
+            rest = &after[digits..];
+        } else {
+            // `PID:` not followed by a digit: leave it literal, advance past it.
+            out.push_str(MARKER);
+            rest = after;
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Replace every plaso log timestamp `YYYY-MM-DD HH:MM:SS,mmm` with `<ts>`.
+fn replace_log_timestamps(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while !rest.is_empty() {
+        let bytes = rest.as_bytes();
+        let mut hit = None;
+        let mut i = 0;
+        while i + LOG_TS_LEN <= bytes.len() {
+            if is_log_timestamp(&bytes[i..i + LOG_TS_LEN]) {
+                hit = Some(i);
+                break;
+            }
+            i += 1;
+        }
+        // No stamp left: copy the remainder and stop.
+        let Some(pos) = hit else {
+            out.push_str(rest);
+            break;
+        };
+        // A stamp is all-ASCII, so `pos` and `pos + LOG_TS_LEN` are char boundaries.
+        out.push_str(&rest[..pos]);
+        out.push_str("<ts>");
+        rest = &rest[pos + LOG_TS_LEN..];
+    }
+    out
+}
+
+/// True if `s` (exactly 23 bytes) is `YYYY-MM-DD HH:MM:SS,mmm`.
+fn is_log_timestamp(s: &[u8]) -> bool {
+    if s.len() != LOG_TS_LEN {
+        return false;
+    }
+    LOG_TS_DIGIT_OFFSETS.iter().all(|&k| s[k].is_ascii_digit())
+        && s[4] == b'-'
+        && s[7] == b'-'
+        && s[10] == b' '
+        && s[13] == b':'
+        && s[16] == b':'
+        && s[19] == b','
+}
+
+/// Replace the absolute source path that plaso embeds in event fields
+/// (`display_name`, `filename`, the nested `pathspec` location, ...) with the
+/// artifact basename. The extracted-artifact path carries a per-run case +
+/// disk-extract UUID and the operator's `/home` prefix; embedded verbatim it
+/// makes `output_sha256` non-reproducible across runs (`verify_finding` replay
+/// drift) and leaks the operator path into the hashed output. The verifier
+/// replays by re-running the tool against the artifact at its (new) extract path,
+/// so a path-independent basename is what makes the replay reproduce.
+fn canonicalize_event_paths(
+    events: &mut [serde_json::Map<String, serde_json::Value>],
+    artifact: &Path,
+) {
+    let abs = artifact.to_string_lossy().into_owned();
+    if abs.is_empty() {
+        return;
+    }
+    let basename = artifact
+        .file_name()
+        .map_or_else(|| abs.clone(), |n| n.to_string_lossy().into_owned());
+    for event in events.iter_mut() {
+        for value in event.values_mut() {
+            replace_substring_in_value(value, &abs, &basename);
+        }
+    }
+}
+
+/// Recursively replace every occurrence of `needle` with `repl` in every string
+/// value of a JSON value (objects, arrays, and leaf strings).
+fn replace_substring_in_value(value: &mut serde_json::Value, needle: &str, repl: &str) {
+    match value {
+        serde_json::Value::String(s) => {
+            if s.contains(needle) {
+                *s = s.replace(needle, repl);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items.iter_mut() {
+                replace_substring_in_value(item, needle, repl);
+            }
+        }
+        serde_json::Value::Object(map) => {
+            for v in map.values_mut() {
+                replace_substring_in_value(v, needle, repl);
+            }
+        }
+        _ => {}
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn canonicalize_event_paths_strips_volatile_source_path() {
+        let artifact = Path::new(
+            "/home/op/.findevil/cases/abc/extracted/disk/disk-extract-XYZ/ie/u/index.dat",
+        );
+        let mut events = vec![{
+            let mut m = serde_json::Map::new();
+            m.insert(
+                "display_name".into(),
+                serde_json::Value::String(format!("OS:{}", artifact.display())),
+            );
+            m.insert(
+                "filename".into(),
+                serde_json::Value::String(artifact.display().to_string()),
+            );
+            m.insert(
+                "message".into(),
+                serde_json::Value::String("Visited http://example.test/".into()),
+            );
+            m
+        }];
+        canonicalize_event_paths(&mut events, artifact);
+        let e = &events[0];
+        assert_eq!(e["display_name"], serde_json::json!("OS:index.dat"));
+        assert_eq!(e["filename"], serde_json::json!("index.dat"));
+        // Forensic (non-path) content is untouched, and no /home leaks.
+        assert_eq!(
+            e["message"],
+            serde_json::json!("Visited http://example.test/")
+        );
+        assert!(!serde_json::to_string(e).unwrap().contains("/home/"));
+    }
+
+    #[test]
+    fn canonicalize_event_paths_is_replay_stable_across_extract_uuids() {
+        // The same evidence file, extracted to two different per-run UUID dirs
+        // (and even a different operator home), must canonicalize to identical
+        // events so a verify_finding replay reproduces the same output_sha256.
+        let a =
+            Path::new("/home/op/.findevil/cases/c1/extracted/disk/disk-extract-AAA/ie/index.dat");
+        let b = Path::new(
+            "/home/other/.findevil/cases/c1/extracted/disk/disk-extract-BBB/ie/index.dat",
+        );
+        let mk = |p: &Path| {
+            let mut m = serde_json::Map::new();
+            m.insert(
+                "display_name".into(),
+                serde_json::Value::String(format!("OS:{}", p.display())),
+            );
+            m
+        };
+        let mut ea = vec![mk(a)];
+        let mut eb = vec![mk(b)];
+        canonicalize_event_paths(&mut ea, a);
+        canonicalize_event_paths(&mut eb, b);
+        assert_eq!(ea, eb);
+    }
 
     fn as_strings(args: &[OsString]) -> Vec<String> {
         args.iter()
@@ -465,6 +753,7 @@ mod tests {
             "syslog",
             Path::new("/t/s.plaso"),
             Path::new("/var/log/syslog"),
+            Path::new("/t/l2t.log.gz"),
         );
         let s = as_strings(&args);
         assert_eq!(
@@ -472,6 +761,8 @@ mod tests {
             vec![
                 "--status-view",
                 "none",
+                "--logfile",
+                "/t/l2t.log.gz",
                 "--parsers",
                 "syslog",
                 "--storage-file",
@@ -483,11 +774,18 @@ mod tests {
 
     #[test]
     fn build_psort_args_exports_json_line() {
-        let args = build_psort_args(Path::new("/t/s.plaso"), Path::new("/t/o.jsonl"));
+        let args = build_psort_args(
+            Path::new("/t/s.plaso"),
+            Path::new("/t/o.jsonl"),
+            Path::new("/t/psort.log.gz"),
+        );
         let s = as_strings(&args);
         assert!(s.contains(&"json_line".to_string()), "{s:?}");
         let w = s.iter().position(|a| a == "-w").unwrap();
         assert_eq!(s[w + 1], "/t/o.jsonl");
+        // run-log is pinned to an explicit path (not the CWD).
+        let lf = s.iter().position(|a| a == "--logfile").unwrap();
+        assert_eq!(s[lf + 1], "/t/psort.log.gz");
         // storage file is the trailing positional.
         assert_eq!(s.last().unwrap(), "/t/s.plaso");
     }
@@ -518,11 +816,63 @@ mod tests {
 
     #[test]
     fn native_info2_path_fallback_extracts_deleted_paths() {
-        let raw = b"\0\0C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup.exe\0junk";
+        let raw =
+            b"\0\0C:\\Documents and Settings\\Suspect User\\Desktop\\ethereal-setup.exe\0junk";
         let paths = extract_windows_paths(raw);
         assert_eq!(
             paths,
-            vec!["C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup.exe"]
+            vec!["C:\\Documents and Settings\\Suspect User\\Desktop\\ethereal-setup.exe"]
         );
+    }
+
+    #[test]
+    fn normalize_plaso_stderr_collapses_timestamp_and_pid_for_stable_replay() {
+        // Two real plaso stderr lines from running the SAME parser on the SAME
+        // artifact twice: they differ ONLY in the log timestamp and PID (observed
+        // live — this drift dropped finding f-B-ie-history-illicit on a real case).
+        let run_a = "2026-06-20 19:18:13,552 [INFO] (MainProcess) PID:412041 \
+                     <artifact_definitions> Determined path: /usr/share/artifacts\n";
+        let run_b = "2026-06-20 19:18:16,851 [INFO] (MainProcess) PID:412049 \
+                     <artifact_definitions> Determined path: /usr/share/artifacts\n";
+        assert_ne!(run_a, run_b, "raw plaso stderr drifts run-to-run");
+        assert_eq!(
+            normalize_plaso_stderr(run_a),
+            normalize_plaso_stderr(run_b),
+            "normalized stderr must be byte-identical so a verify_finding replay \
+             reproduces output_sha256",
+        );
+    }
+
+    #[test]
+    fn normalize_plaso_stderr_preserves_evidentiary_content() {
+        let line = "2026-06-20 19:18:13,552 [INFO] (MainProcess) PID:412041 \
+                    <msiecf> parsed 2352 events\n";
+        let n = normalize_plaso_stderr(line);
+        assert!(n.contains("<ts>"), "{n}");
+        assert!(n.contains("PID:<pid>"), "{n}");
+        assert!(
+            n.contains("parsed 2352 events"),
+            "stable message survives: {n}"
+        );
+        assert!(!n.contains("412041"), "volatile PID removed: {n}");
+        assert!(!n.contains("19:18:13"), "volatile timestamp removed: {n}");
+    }
+
+    #[test]
+    fn normalize_plaso_stderr_leaves_clean_text_untouched() {
+        // No volatile tokens: identity — never mangle a plain diagnostic message.
+        let s = "native INFO2 path-string fallback; deletion timestamps unavailable";
+        assert_eq!(normalize_plaso_stderr(s), s);
+    }
+
+    #[test]
+    fn replace_pid_tokens_only_touches_pid_followed_by_digits() {
+        // A bare "PID:" with no digits, and unrelated text, are left intact.
+        assert_eq!(replace_pid_tokens("PID: none here"), "PID: none here");
+        assert_eq!(
+            replace_pid_tokens("worker PID:7 done"),
+            "worker PID:<pid> done"
+        );
+        assert_eq!(replace_pid_tokens("no token"), "no token");
     }
 }

@@ -78,10 +78,10 @@ const BOUNDARIES: Boundary[] = [
     body: (
       <div style={{ display: "flex", gap: 38, flexWrap: "wrap" }}>
         <Mono color={C.ink}>
-          <b style={{ color: C.accent }}>findevil-mcp</b>&nbsp;· 31 Rust DFIR tools
+          <b style={{ color: C.accent }}>findevil-mcp</b>&nbsp;· 32 Rust DFIR tools
         </Mono>
         <Mono color={C.ink}>
-          <b style={{ color: C.accent }}>findevil-agent-mcp</b>&nbsp;· 12 Python crypto / ACH
+          <b style={{ color: C.accent }}>findevil-agent-mcp</b>&nbsp;· 14 Python crypto / ACH
         </Mono>
       </div>
     ),
@@ -283,7 +283,7 @@ function Stamp() {
         textAlign: "center",
       }}
     >
-      <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>43 TYPED</div>
+      <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: 1, lineHeight: 1 }}>46 TYPED</div>
       <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: 1, lineHeight: 1.1 }}>READ-ONLY TOOLS</div>
       <div style={{ fontSize: 14, letterSpacing: 2, marginTop: 6, color: C.inkMuted }}>NO EXECUTE_SHELL</div>
     </div>

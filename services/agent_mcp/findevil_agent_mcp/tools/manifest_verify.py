@@ -8,9 +8,10 @@ sanity check, and the signature presence check. Stays offline.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from findevil_agent.crypto.manifest import verify_manifest
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from findevil_agent_mcp.tools._base import ToolSpec
 
@@ -27,6 +28,26 @@ class ManifestVerifyInput(BaseModel):
         ),
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_path_alias(cls, data: Any) -> Any:
+        # Local models routinely call this tool with {"path": ...} instead of
+        # the canonical {"manifest_path": ...}. Under extra="forbid" that hard-
+        # fails and derails the seal sequence, forcing the deterministic
+        # fallback. Accept `path` as an alias so one arg slip does not cost a
+        # tool call — while still rejecting an ambiguous both-keys-differ call
+        # and every other unexpected key.
+        if not isinstance(data, dict) or "path" not in data:
+            return data
+        alias = data["path"]
+        canonical = data.get("manifest_path")
+        if canonical is not None and canonical != alias:
+            raise ValueError(
+                "pass either manifest_path or path (they are aliases), "
+                "not both with different values"
+            )
+        return {**{k: v for k, v in data.items() if k != "path"}, "manifest_path": alias}
+
 
 class ManifestVerifyOutput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -42,6 +63,10 @@ class ManifestVerifyOutput(BaseModel):
     signature_kind: str
     signature_verified: bool
     signature_verified_detail: str | None
+    entailment_ok: bool
+    entailment_ok_detail: str | None
+    transparency_ok: bool
+    transparency_ok_detail: str | None
 
 
 async def _handle(inp: BaseModel) -> ManifestVerifyOutput:
@@ -60,6 +85,8 @@ async def _handle(inp: BaseModel) -> ManifestVerifyOutput:
     merkle_ok, merkle_detail = _split(result.merkle_root_ok)
     count_ok, count_detail = _split(result.leaf_count_ok)
     sig_verified, sig_verified_detail = _split(result.signature_verified)
+    entail_ok, entail_detail = _split(result.entailment_ok)
+    transparency_ok, transparency_detail = _split(result.transparency_ok)
     return ManifestVerifyOutput(
         overall=result.overall,
         audit_chain_ok=audit_ok,
@@ -72,6 +99,10 @@ async def _handle(inp: BaseModel) -> ManifestVerifyOutput:
         signature_kind=result.signature_kind,
         signature_verified=sig_verified,
         signature_verified_detail=sig_verified_detail,
+        entailment_ok=entail_ok,
+        entailment_ok_detail=entail_detail,
+        transparency_ok=transparency_ok,
+        transparency_ok_detail=transparency_detail,
     )
 
 
@@ -88,7 +119,10 @@ SPEC = ToolSpec(
         "only when the manifest carries an offline-verified Ed25519 signature. "
         "Sigstore bundles are recorded for identity-policy-aware verification, while "
         "stub bundles are dev placeholders. overall=True only if the chain, Merkle, "
-        "leaf-count, and signature-presence checks pass. "
+        "leaf-count, and signature-presence checks pass. transparency_ok is a "
+        "separate non-gating side-signal: True when the optional Sigstore Rekor / "
+        "RFC-3161 anchor of the Merkle root verifies offline, and vacuously True "
+        "when a run carries no anchor (absent by default) — it never gates overall. "
         "If the manifest was moved/renamed, pass audit_log_path explicitly to override "
         "the path embedded in the manifest. "
         "On verify failure: the per-field detail string identifies which check failed "

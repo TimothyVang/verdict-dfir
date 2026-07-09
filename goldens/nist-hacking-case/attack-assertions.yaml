@@ -1,0 +1,27 @@
+# Measured ATT&CK coverage assertions for the nist-hacking-case golden.
+#
+# Each technique below names an ATT&CK target the attack_coverage matrix in
+# verdict.json is expected to surface for this case, plus the minimum number of
+# distinct artifact classes that must be OBSERVED (cited tool output) before the
+# technique counts as `covered`. Techniques observed with fewer classes than the
+# minimum are reported `under_corroborated`; techniques absent from the matrix are
+# reported `missing`.
+#
+# The minimum encodes the product corroboration doctrine: claims that need
+# cross-artifact-class corroboration (e.g. execution / credential access) set
+# min_artifact_classes: 2 so a single-class hit cannot read as proof. Single-class
+# host-artifact techniques (autorun persistence) set 1. This file is a graded
+# fixture under goldens/; it is never an input to the live investigation pipeline.
+case_id: nist-hacking-case
+description: ATT&CK coverage matrix assertions for the SCHARDT disk image golden.
+techniques:
+  # Registry Run Keys / Startup Folder autorun persistence lives in the registry
+  # hives on the disk image — a single disk/filesystem class is sufficient.
+  - technique_id: T1547.001
+    technique_name: Registry Run Keys / Startup Folder
+    min_artifact_classes: 1
+  # Valid Accounts is a persistence/defense-evasion signal corroborated across the
+  # event log and on-disk account artifacts, so it requires two artifact classes.
+  - technique_id: T1078
+    technique_name: Valid Accounts
+    min_artifact_classes: 2

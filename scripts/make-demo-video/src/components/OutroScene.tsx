@@ -6,7 +6,8 @@ import { Scene } from "./shared/Scene";
 
 // Beat 9 (colophon) — "Case closed." The closing page set as a magazine
 // colophon: a Case Closed stamp hit over the disposition, the VERDICT logotype
-// small in Fraunces, and the credits run as a left-aligned grotesque/mono
+// small in the v2 heavy editorial sans, and the credits run as a left-aligned
+// grotesque/mono
 // colophon block under a RuleLine. No centered metadata stack, no tech-grid.
 
 // Real credit lines preserved from the prior scene — set as label/value pairs
@@ -16,10 +17,10 @@ const CREDITS: Credit[] = [
   { label: "Source", value: "github.com/TimothyVang/verdict-dfir", mono: true },
   { label: "License", value: "Apache-2.0" },
   { label: "Continuous integration", value: "L0 · L1 · L2 · L3 — all green", tone: C.confirmed },
-  { label: "Tool surface", value: "31 Rust · 12 Python", mono: true },
+  { label: "Tool surface", value: "32 Rust · 13 Python", mono: true },
 ];
 
-export function OutroScene({ page = 10, total = 10 }: { page?: number; total?: number } = {}) {
+export function OutroScene() {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -28,7 +29,7 @@ export function OutroScene({ page = 10, total = 10 }: { page?: number; total?: n
 
   return (
     <div style={{ opacity: fadeOut, width: "100%", height: "100%" }}>
-      <Scene page={page} caption="Colophon" total={total}>
+      <Scene page={10} caption="Colophon">
         {/* Left column — the imprint: stamp + logotype + creed */}
         <div style={{ position: "absolute", left: MARGIN, top: 232, width: 760 }}>
           <Kicker frame={frame} delay={6} color={C.accent}>End of File</Kicker>
@@ -37,7 +38,7 @@ export function OutroScene({ page = 10, total = 10 }: { page?: number; total?: n
             <Stamp label="Case Closed" frame={frame} delay={14} color={C.alert} rotate={-6} size={34} />
           </div>
 
-          {/* The VERDICT logotype — Fraunces, small, with its creed beneath. */}
+          {/* The VERDICT logotype — v2 heavy editorial sans with its creed beneath. */}
           <div style={{ marginTop: 8 }}>
             <KineticHeadline text="Verdict" frame={frame} delay={26} size={108} weight={900} />
           </div>
@@ -46,14 +47,13 @@ export function OutroScene({ page = 10, total = 10 }: { page?: number; total?: n
               marginTop: 14,
               opacity: interpolate(frame - 48, [0, 16], [0, 1], clampOpts),
               fontFamily: SERIF,
-              fontStyle: "italic",
               fontSize: 32,
-              fontWeight: 400,
+              fontWeight: 700,
               color: C.inkMuted,
               letterSpacing: -0.3,
             }}
           >
-            DFIR at machine speed.
+            Evidence, not assumption.
           </div>
 
           {/* The creed, set as small caps grotesque furniture. */}
@@ -70,7 +70,7 @@ export function OutroScene({ page = 10, total = 10 }: { page?: number; total?: n
                 color: C.ink,
               }}
             >
-              Investigate · Verify · Prove
+              Trace it · Test it · Trust it
             </span>
           </div>
         </div>

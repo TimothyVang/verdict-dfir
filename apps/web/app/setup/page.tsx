@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { DashboardNav } from "@/components/DashboardNav";
-import { BrandMark, Kicker, MONO, RADIUS, RuleLine, SerifHeadline, VERDICT } from "@/lib/verdict-ui";
+import { BODY, BrandMark, Kicker, MONO, RADIUS, RuleLine, SerifHeadline, VERDICT } from "@/lib/verdict-ui";
 
 interface Check {
   group: string;
@@ -57,7 +57,7 @@ function CopyButton({ text }: { text: string }) {
         color: copied ? VERDICT.confirmed : VERDICT.muted,
         borderRadius: RADIUS.pill,
         padding: "2px 10px",
-        fontFamily: MONO,
+        fontFamily: BODY,
         fontSize: 11,
         cursor: "pointer",
         whiteSpace: "nowrap",
@@ -119,7 +119,7 @@ export default function SetupPage() {
         minHeight: "100vh",
         background: "transparent",
         color: VERDICT.text,
-        fontFamily: MONO,
+        fontFamily: BODY,
         overflowX: "hidden",
       }}
     >
@@ -172,7 +172,7 @@ export default function SetupPage() {
                 color: VERDICT.accentPurpleLight,
                 borderRadius: RADIUS.pill,
                 padding: "8px 18px",
-                fontFamily: MONO,
+                fontFamily: BODY,
                 fontWeight: 700,
                 fontSize: 13,
                 cursor: "pointer",
@@ -197,10 +197,10 @@ export default function SetupPage() {
           >
             <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>Next: drop evidence</div>
             <div style={{ fontSize: 13, color: VERDICT.muted, lineHeight: 1.6 }}>
-              Drop a <code style={{ color: VERDICT.accentPurpleLight }}>pcap</code> / disk image /{" "}
-              <code style={{ color: VERDICT.accentPurpleLight }}>.evtx</code> / memory image into{" "}
-              <code style={{ color: VERDICT.accentPurpleLight }}>./evidence/</code>, then run{" "}
-              <code style={{ color: VERDICT.accentPurpleLight }}>python3 scripts/find-evil-live</code> — it
+              Drop a <code style={{ fontFamily: MONO, color: VERDICT.accentPurpleLight }}>pcap</code> / disk image /{" "}
+              <code style={{ fontFamily: MONO, color: VERDICT.accentPurpleLight }}>.evtx</code> / memory image into{" "}
+              <code style={{ fontFamily: MONO, color: VERDICT.accentPurpleLight }}>./evidence/</code>, then run{" "}
+              <code style={{ fontFamily: MONO, color: VERDICT.accentPurpleLight }}>python3 scripts/find-evil-live</code> — it
               opens the live dashboard and investigates on drop.
             </div>
             <Link
@@ -279,6 +279,7 @@ export default function SetupPage() {
                     <code
                       style={{
                         flex: 1,
+                        fontFamily: MONO,
                         background: VERDICT.surfaceInset,
                         border: `1px solid ${VERDICT.borderSubtle}`,
                         borderRadius: RADIUS.tile,

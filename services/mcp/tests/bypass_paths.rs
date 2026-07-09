@@ -19,6 +19,34 @@
 //! analyst's own privileges, so a `..` path is not a privilege boundary to escape
 //! — it simply resolves to a file that is or isn't there. We assert it resolves
 //! cleanly to a typed `NotFound` rather than crashing or being interpreted.
+//!
+//! Rejected-and-contained contract. Every hostile input below must be both
+//! REJECTED (a typed error) OR handled as an inert literal (read as bytes, no
+//! re-interpretation), AND CONTAINED (no shell ran, so no payload side-effect
+//! file appears). `assert_contained` pins the containment half explicitly so a
+//! future regression that started shelling out would fail loudly even if the
+//! typed error were preserved.
+//!
+//! Where the "is it logged?" assertion lives. The audit RECORD for a rejected
+//! attempt — the `tool_call_output` row that proves the rejection was observed
+//! and chained — is written by the CALLER, not by these Rust tool functions. In
+//! the product that caller is `scripts/find_evil_auto.py`, whose `call_tool`
+//! records the tool output (success OR error envelope) before the engine acts on
+//! it. At the Rust unit-test level there is no audit log to inspect; the
+//! assertable rejection signal is the typed error / inert handling. So these
+//! tests pin the containment contract the Rust layer actually owns; the
+//! "rejected attempt is logged" assertion belongs in the `find_evil_auto` /
+//! server caller-layer tests, not here.
+//!
+//! Extract -> secondary-parser escape. `disk_extract_artifacts` stages a set of
+//! carved artifacts under a run/output dir, and the secondary parsers
+//! (`ez_parse`, `plaso_parse`, `mft_timeline`, ...) are then pointed at members
+//! of that set. A hostile artifact path containing `..` traversal that resolves
+//! OUTSIDE the staged extract set must not let a parser quietly read or act on a
+//! file beyond the set: it is either a typed `NotFound` (the escaped target is
+//! not in the set) or, if the escaped path happens to hit a real file, that file
+//! is read as inert parser input and rejected by content (wrong magic), never
+//! executed. The `*_escape_*` tests below pin both halves of that boundary.
 
 use std::fs;
 use std::path::PathBuf;
@@ -73,6 +101,19 @@ impl Drop for HomeGuard {
     }
 }
 
+/// The containment half of the rejected-and-contained contract: if any tool had
+/// shelled out, the `SHELL_PAYLOAD*` strings would have run `touch HACKED`, so a
+/// `HACKED` file would appear. Assert no such side-effect artifact exists under
+/// the test's scratch root. Pinned in one place so the contract reads the same at
+/// every call site and a regression fails with a clear message.
+fn assert_contained(scratch: &std::path::Path) {
+    assert!(
+        !scratch.join("HACKED").exists(),
+        "no shell executed the payload — nothing should write HACKED under {}",
+        scratch.display()
+    );
+}
+
 #[test]
 fn case_open_reads_shell_payload_filename_as_a_literal_file() {
     // A real evidence file whose NAME is a shell-injection payload. case_open
@@ -100,10 +141,7 @@ fn case_open_reads_shell_payload_filename_as_a_literal_file() {
     assert_eq!(handle.image_hash.len(), 64);
     // The payload's `touch HACKED` never ran: nothing shelled out, so no stray
     // file appeared next to the evidence.
-    assert!(
-        !tmp.path().join("HACKED").exists(),
-        "no shell executed the payload"
-    );
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -121,7 +159,7 @@ fn evtx_query_treats_shell_payload_path_as_missing_file() {
     .expect_err("a non-existent hostile path must error, not execute");
 
     assert!(matches!(err, EvtxError::EvtxNotFound(_)));
-    assert!(!tmp.path().join("HACKED").exists());
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -143,6 +181,7 @@ fn prefetch_parse_treats_traversal_path_as_missing_file() {
     .expect_err("traversal to a missing file must be a clean typed error");
 
     assert!(matches!(err, PrefetchError::NotFound(_)));
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -169,7 +208,7 @@ fn vol_run_rejects_shell_payload_plugin_before_any_subprocess() {
         matches!(err, VolRunError::PluginNotAllowed(_)),
         "got {err:?}"
     );
-    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -194,7 +233,7 @@ fn ez_parse_rejects_shell_payload_tool_before_any_subprocess() {
         matches!(err, EzParseError::ToolNotAllowed(_)),
         "got {err:?}"
     );
-    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -219,7 +258,7 @@ fn plaso_parse_rejects_shell_payload_parser_before_any_subprocess() {
         matches!(err, PlasoParseError::ParserNotAllowed(_)),
         "got {err:?}"
     );
-    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -242,7 +281,7 @@ fn mac_triage_rejects_shell_payload_module_before_any_subprocess() {
         matches!(err, MacTriageError::ModuleNotAllowed(_)),
         "got {err:?}"
     );
-    assert!(!tmp.path().join("HACKED").exists(), "no shell executed");
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -262,6 +301,7 @@ fn mft_timeline_treats_flag_looking_path_as_a_literal_path() {
     .expect_err("flag-looking missing path must be a clean typed error");
 
     assert!(matches!(err, MftError::MftNotFound(_)));
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -282,7 +322,7 @@ fn journalctl_query_treats_shell_payload_path_as_missing_file() {
     .expect_err("a non-existent hostile path must error, not execute");
 
     assert!(matches!(err, JournalctlQueryError::NotFound(_)));
-    assert!(!tmp.path().join("HACKED").exists());
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -300,7 +340,7 @@ fn login_accounting_treats_flag_looking_path_as_a_literal_path() {
     .expect_err("flag-looking missing path must be a clean typed error");
 
     assert!(matches!(err, LoginAccountingError::NotFound(_)));
-    assert!(!tmp.path().join("HACKED").exists());
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -323,6 +363,7 @@ fn ausearch_treats_traversal_path_as_missing_file() {
     .expect_err("traversal to a missing file must be a clean typed error");
 
     assert!(matches!(err, AusearchError::NotFound(_)));
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -342,7 +383,7 @@ fn nfdump_query_treats_shell_payload_path_as_missing_file() {
     .expect_err("a non-existent hostile path must error, not execute");
 
     assert!(matches!(err, NfdumpQueryError::FlowNotFound(_)));
-    assert!(!tmp.path().join("HACKED").exists());
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -360,7 +401,7 @@ fn suricata_eve_treats_shell_payload_path_as_missing_file() {
     .expect_err("a non-existent hostile path must error, not execute");
 
     assert!(matches!(err, SuricataEveError::PcapNotFound(_)));
-    assert!(!tmp.path().join("HACKED").exists());
+    assert_contained(tmp.path());
 }
 
 #[test]
@@ -378,5 +419,108 @@ fn indx_parse_treats_shell_payload_path_as_missing_file() {
     .expect_err("a non-existent hostile path must error, not execute");
 
     assert!(matches!(err, IndxError::NotFound(_)));
-    assert!(!tmp.path().join("HACKED").exists());
+    assert_contained(tmp.path());
+}
+
+// ---------------------------------------------------------------------------
+// Extract -> secondary-parser path-escape boundary.
+//
+// `disk_extract_artifacts` stages carved artifacts under a run/output dir; the
+// secondary parsers are then pointed at members of that set. These tests model
+// that layout: `<root>/extracted/` is the staged set, and a sibling file lives
+// OUTSIDE it. A mount-relative `..` path handed to a parser tries to escape the
+// set. We assert the escape is contained — a typed error, with the outside file
+// either never read (it is not in the set) or read only as inert parser input
+// and rejected by content, never executed.
+// ---------------------------------------------------------------------------
+
+/// Build a staged extract layout and an escaping path. Returns
+/// `(root, escaping_path)` where `escaping_path` starts inside
+/// `<root>/extracted/` and walks `..` back out to `<root>/<outside_name>` —
+/// outside the staged set. The `extracted` dir is created; the outside target
+/// is NOT created here (callers plant it when they want the "real file" case).
+fn staged_escape(outside_name: &str) -> (tempfile::TempDir, PathBuf) {
+    let root = tempfile::tempdir().expect("tempdir");
+    let extracted = root.path().join("extracted");
+    fs::create_dir_all(&extracted).expect("stage extract dir");
+    // From inside the staged set, `..` climbs back to the run root, escaping the
+    // set to a sibling the extractor never placed there.
+    let escaping = extracted.join("..").join(outside_name);
+    (root, escaping)
+}
+
+#[test]
+fn ez_parse_escape_outside_staged_extract_is_not_found() {
+    // A mount-relative `..` artifact path that resolves OUTSIDE the staged
+    // extract set, to a target the extractor never produced. ez_parse checks
+    // existence after the allow-list, so the escaped (non-existent) target is a
+    // typed ArtifactNotFound BEFORE any subprocess — the parser never reaches
+    // outside the set, with or without the EZ binary installed.
+    let (root, escaping) = staged_escape("outside-secret.lnk");
+
+    let err = ez_parse(&EzParseInput {
+        case_id: "c".to_string(),
+        tool: "lecmd".to_string(),
+        artifact_path: escaping,
+        limit: None,
+    })
+    .expect_err("an escaping path outside the staged set must be a typed error");
+
+    assert!(
+        matches!(err, EzParseError::ArtifactNotFound(_)),
+        "got {err:?}"
+    );
+    assert_contained(root.path());
+}
+
+#[test]
+fn plaso_parse_escape_outside_staged_extract_is_not_found() {
+    // Same boundary for plaso_parse: an allow-listed parser given a `..` path
+    // that escapes the staged set to a non-existent sibling is a typed
+    // ArtifactNotFound before log2timeline ever runs.
+    let (root, escaping) = staged_escape("outside-secret.log");
+
+    let err = plaso_parse(&PlasoParseInput {
+        case_id: "c".to_string(),
+        parser: "syslog".to_string(),
+        artifact_path: escaping,
+        limit: None,
+    })
+    .expect_err("an escaping path outside the staged set must be a typed error");
+
+    assert!(
+        matches!(err, PlasoParseError::ArtifactNotFound(_)),
+        "got {err:?}"
+    );
+    assert_contained(root.path());
+}
+
+#[test]
+fn mft_timeline_escape_to_real_file_outside_set_reads_inert_then_rejects() {
+    // The harder half: the escaping `..` path resolves to a REAL file that lives
+    // outside the staged extract set (a planted secret the extractor never carved
+    // as an MFT). mft_timeline must NOT treat it as a valid artifact — it opens
+    // the bytes as MFT input, finds the wrong magic, and returns a typed MftOpen.
+    // The secret's content is read only as inert parser input; nothing executes
+    // and no entries are produced from outside the set.
+    let (root, escaping) = staged_escape("outside-secret.bin");
+    // Plant the real outside file the escape points at.
+    let resolved = root.path().join("outside-secret.bin");
+    fs::write(
+        &resolved,
+        b"not an MFT - secret bytes outside the staged extract set",
+    )
+    .expect("plant outside secret");
+
+    let err = mft_timeline(&MftInput {
+        case_id: "c".to_string(),
+        mft_path: escaping,
+        since_iso: None,
+        until_iso: None,
+        limit: None,
+    })
+    .expect_err("a non-MFT file reached via escape must be rejected by content");
+
+    assert!(matches!(err, MftError::MftOpen { .. }), "got {err:?}");
+    assert_contained(root.path());
 }

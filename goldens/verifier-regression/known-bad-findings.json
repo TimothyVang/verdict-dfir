@@ -1,0 +1,170 @@
+{
+  "_comment": [
+    "Verifier-regression corpus: a small set of KNOWN-BAD findings that the",
+    "VERDICT verification pipeline MUST catch (reject or downgrade), plus benign",
+    "CONTROLS it must leave alone. tests/test_verifier_regression.py runs each",
+    "entry through the real verifier path (findevil_agent.verifier.reverify_finding)",
+    "and the real correlator gate family (findevil_agent.correlator.correlate) and",
+    "asserts a minimum catch-rate, so a future edit that silently weakens a gate",
+    "drops the catch-rate below the floor and fails the gate.",
+    "",
+    "Evidence-agnostic: every value here is synthetic (PID 6666, tool.exe,",
+    "archive.zip, APT-Synthetic-Group, jdoe, 203.0.113.50 from TEST-NET-3). No",
+    "image-specific username/hostname/image-name/golden-id appears. The corpus is",
+    "self-contained: each entry carries the parsed tool output the cited call",
+    "reproduces on replay, so the test needs no live MCP server or real evidence.",
+    "",
+    "Each known-bad entry names the guardrail it violates (CLAUDE.md /",
+    "agent-config/SOUL.md) and which stage is expected to catch it:",
+    "  - 'verifier'   : the entailment / claim-fidelity check in reverify_finding",
+    "                   (a value asserted but absent from the cited tool output).",
+    "  - 'correlator' : the per-technique corroboration gate family",
+    "                   (e.g. an execution claim from a single artifact class)."
+  ],
+  "schema_version": "1",
+  "min_catch_rate": 1.0,
+  "known_bad": [
+    {
+      "id": "phantom-nonexistent-pid",
+      "category": "phantom/nonexistent PID",
+      "guardrail": "Every Finding must assert only values actually present in its cited evidence (fact-fidelity); a PID that is not in the cited process listing is a fabricated value.",
+      "expected_catcher": "verifier",
+      "expected_action": "rejected",
+      "finding": {
+        "case_id": "verifier-regression",
+        "finding_id": "kb-phantom-pid",
+        "tool_call_id": "tc-phantom-pid",
+        "artifact_path": "memory.raw",
+        "confidence": "CONFIRMED",
+        "description": "Malicious process running under PID 6666 was observed in the live process listing.",
+        "counter_hypothesis": "Considered a benign service occupying that PID; ruled out.",
+        "asserted_values": [
+          { "path": "processes[*].pid", "expected": "6666", "match": "int" }
+        ]
+      },
+      "replay": {
+        "tool_name": "vol_pslist",
+        "arguments": { "case_id": "verifier-regression" },
+        "parsed_output": {
+          "processes": [
+            { "pid": 4, "name": "System" },
+            { "pid": 508, "name": "smss.exe" },
+            { "pid": 624, "name": "csrss.exe" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "attribution-overclaim",
+      "category": "attribution overclaim",
+      "guardrail": "Do not assert attribution / actor identity from host artifacts; host evidence never entails an actor-group identity, so the asserted attribution value is absent from the cited output.",
+      "expected_catcher": "verifier",
+      "expected_action": "rejected",
+      "finding": {
+        "case_id": "verifier-regression",
+        "finding_id": "kb-attribution-overclaim",
+        "tool_call_id": "tc-attribution",
+        "artifact_path": "Security.evtx",
+        "confidence": "CONFIRMED",
+        "description": "Activity attributed to threat group APT-Synthetic-Group based on the logon record.",
+        "counter_hypothesis": "Considered an unattributed local logon; ruled out (incorrectly).",
+        "asserted_values": [
+          { "path": "events[*].attribution", "expected": "APT-Synthetic-Group", "match": "contains" }
+        ]
+      },
+      "replay": {
+        "tool_name": "evtx_query",
+        "arguments": { "case_id": "verifier-regression" },
+        "parsed_output": {
+          "events": [
+            { "event_id": 4624, "account": "jdoe", "logon_type": 3 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "single-citation-confirmed-execution",
+      "category": "single-citation CONFIRMED execution",
+      "guardrail": "Execution claims require at least two current-case artifact classes; Amcache alone (registration, not run) cannot sustain a CONFIRMED execution claim.",
+      "expected_catcher": "correlator",
+      "expected_action": "downgraded",
+      "finding": {
+        "case_id": "verifier-regression",
+        "finding_id": "kb-single-class-execution",
+        "tool_call_id": "tc-amcache-only",
+        "artifact_path": "Amcache.hve",
+        "confidence": "CONFIRMED",
+        "description": "Execution of the tool is confirmed: the Amcache entry shows the program was run on the host.",
+        "counter_hypothesis": "Considered Amcache being catalog-registration only; ruled out (incorrectly).",
+        "asserted_values": [
+          { "path": "entries[*].path", "expected": "tool.exe", "match": "contains" }
+        ]
+      },
+      "replay": {
+        "tool_name": "registry_query",
+        "arguments": { "case_id": "verifier-regression" },
+        "parsed_output": {
+          "entries": [
+            { "path": "C:\\Users\\Public\\tool.exe", "last_modified": "2026-01-01T00:00:00Z" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "exfil-without-staging",
+      "category": "exfil-without-staging",
+      "guardrail": "Exfiltration claims require finding-specific collection or staging PLUS network/data-movement evidence; the asserted staging artifact is absent from the cited network-only output.",
+      "expected_catcher": "verifier",
+      "expected_action": "rejected",
+      "finding": {
+        "case_id": "verifier-regression",
+        "finding_id": "kb-exfil-no-staging",
+        "tool_call_id": "tc-netflow-only",
+        "artifact_path": "conn.log",
+        "confidence": "CONFIRMED",
+        "description": "Data exfiltration confirmed: sensitive files were staged into an archive and sent to the external host.",
+        "counter_hypothesis": "Considered benign outbound TLS with no staging; ruled out (incorrectly).",
+        "asserted_values": [
+          { "path": "flows[*].staged_archive", "expected": "archive.zip", "match": "contains" }
+        ]
+      },
+      "replay": {
+        "tool_name": "zeek_summary",
+        "arguments": { "case_id": "verifier-regression" },
+        "parsed_output": {
+          "flows": [
+            { "dst_ip": "203.0.113.50", "bytes": 1048576, "service": "ssl" }
+          ]
+        }
+      }
+    }
+  ],
+  "controls": [
+    {
+      "id": "corroborated-execution-truthful",
+      "category": "benign control — legitimately corroborated execution",
+      "guardrail": "A CONFIRMED execution claim backed by two independent artifact classes (Prefetch + Amcache) whose asserted value is actually present must NOT be caught.",
+      "finding": {
+        "case_id": "verifier-regression",
+        "finding_id": "ctrl-corroborated-execution",
+        "tool_call_id": "tc-prefetch",
+        "artifact_path": "TOOL.EXE.pf",
+        "confidence": "CONFIRMED",
+        "description": "Execution corroborated by Prefetch and an Amcache entry for the same binary.",
+        "counter_hypothesis": "Considered a benign signed binary; ruled out via the two corroborating classes.",
+        "asserted_values": [
+          { "path": "entries[*].name", "expected": "tool.exe", "match": "contains" }
+        ]
+      },
+      "replay": {
+        "tool_name": "prefetch_parse",
+        "arguments": { "case_id": "verifier-regression" },
+        "parsed_output": {
+          "entries": [
+            { "name": "TOOL.EXE", "run_count": 3 }
+          ]
+        }
+      }
+    }
+  ]
+}

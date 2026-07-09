@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/draft/schema.json",
+  "_comment": "Docker-transport variant — the container analog of .mcp.json.sift. Activated by scripts/verdict --docker (or scripts/run-dfir-container.sh), which builds docker/dfir.Dockerfile, starts a long-lived 'findevil-dfir' container with the repo bind-mounted read-write at /workspace and evidence read-only at /evidence, builds the MCP servers inside it, then copies this file over .mcp.json. Both servers run INSIDE the container over 'docker exec -i' (stdio JSON-RPC), the same pipe 'ssh -T' gives in sift mode. Tool env vars (HAYABUSA_BIN, TSHARK_BIN, ...) are baked into the image, so they need not be repeated here. Container name is fixed; do not hand-edit.",
+  "mcpServers": {
+    "findevil-mcp": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "findevil-dfir",
+        "/workspace/target/release/findevil-mcp"
+      ]
+    },
+    "findevil-agent-mcp": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "-w",
+        "/workspace/services/agent_mcp",
+        "findevil-dfir",
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "findevil_agent_mcp.server"
+      ]
+    }
+  }
+}

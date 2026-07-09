@@ -121,6 +121,44 @@ class TestErrorPaths:
             t.inclusion_proof(-1)
 
 
+class TestFrozenCrossLanguageVector:
+    """Frozen cross-language Merkle vectors (C4/C5 drift guard).
+
+    The Python ``merkle.py`` and the Rust ``services/mcp/src/crypto/merkle.rs``
+    mirror are kept in sync by review, not a build guard. These hex roots are
+    FROZEN constants computed once over fixed inputs; the identical constants
+    are asserted by a ``#[test]`` in ``merkle.rs``. If either canonicalization
+    (leaf order, ``H(left || right)`` concat, duplicate-last odd-tier rule, or
+    the SHA-256 primitive) ever drifts on one side, that side's frozen test
+    fails red and the silent-divergence risk surfaces in CI instead of in a
+    third-party manifest verification.
+
+    Do NOT recompute these constants from the implementation under test to
+    "fix" a failure: a changed root means the canonicalization changed, which
+    is exactly what the guard exists to catch. Each value below was also
+    hand-derived from ``hashlib.sha256`` outside ``MerkleTree``.
+    """
+
+    # 3-leaf vector: SHA-256(b"a"), b"b", b"c". Mirrored by the Rust
+    # `cross_lang_three_leaf_root_matches_python` test.
+    FROZEN_THREE_LEAF_ROOT = "d31a37ef6ac14a2db1470c4316beb5592e6afd4465022339adafda76a18ffabe"
+    # 5-leaf vector: exercises the duplicate-last odd-tier rule at TWO tiers
+    # (5 -> 6 -> 3 -> 4 -> 2 -> 1), a stronger drift probe than the 3-leaf case.
+    FROZEN_FIVE_LEAF_ROOT = "305b1e31a691e2aef1c9734f73e5d92936f51fa552d87cbca23a50955b84f42b"
+
+    def test_three_leaf_frozen_root(self) -> None:
+        t = MerkleTree()
+        for leaf in (b"a", b"b", b"c"):
+            t.append(sha(leaf))
+        assert t.root_hex() == self.FROZEN_THREE_LEAF_ROOT
+
+    def test_five_leaf_frozen_root(self) -> None:
+        t = MerkleTree()
+        for leaf in (b"alpha", b"bravo", b"charlie", b"delta", b"echo"):
+            t.append(sha(leaf))
+        assert t.root_hex() == self.FROZEN_FIVE_LEAF_ROOT
+
+
 class TestDeterminism:
     def test_two_trees_same_input_same_root(self) -> None:
         leaves = [sha(f"d-{i}".encode()) for i in range(13)]

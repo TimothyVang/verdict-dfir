@@ -1,0 +1,256 @@
+{
+  "_doc": [
+    "Adversarial held-out validation set for the deterministic fact-fidelity",
+    "(entailment) detector in services/agent/findevil_agent/entailment.py.",
+    "Each entry is a synthetic finding: the structured value(s) it asserts plus",
+    "the cited tool output the verifier would re-extract from. 'label' is the",
+    "ground truth ('grounded' = every asserted value is genuinely present;",
+    "'hallucinated' = at least one asserted value is absent / conflicting).",
+    "Two arms are scored SEPARATELY: 'calibration' is the in-design seed set;",
+    "'held_out' is a blind red-team set of unseen adversarial cases. Every case",
+    "is IN SCOPE for the detector (structured-value claims with a parser oracle)",
+    "-- the set deliberately does NOT test interpretive hallucination, which the",
+    "entailment layer does not claim to catch. All values are synthetic and",
+    "evidence-agnostic (RFC 5737 TEST-NET ranges, example.test domains).",
+    "Frozen: committed, not generated at run time, so scoring is deterministic."
+  ],
+  "fixtures": [
+    {
+      "id": "cal-grounded-runkey-record",
+      "arm": "calibration",
+      "label": "grounded",
+      "note": "registry Run-key co-location: name AND data in one record",
+      "asserted_values": [
+        {
+          "path": "entries[*].values[*]",
+          "expected": "{\"name\": \"Updater\", \"data_str\": \"svc.exe\"}",
+          "match": "record"
+        }
+      ],
+      "parsed_output": {
+        "entries": [{"values": [{"name": "Updater", "data_str": "C:\\ProgramData\\svc.exe"}]}]
+      }
+    },
+    {
+      "id": "cal-grounded-runcount-int",
+      "arm": "calibration",
+      "label": "grounded",
+      "note": "integer run_count present exactly",
+      "asserted_values": [{"path": "run_count", "expected": "3", "match": "int"}],
+      "parsed_output": {"run_count": 3}
+    },
+    {
+      "id": "cal-grounded-contains-path",
+      "arm": "calibration",
+      "label": "grounded",
+      "note": "asserted substring is part of the evidence value",
+      "asserted_values": [
+        {"path": "rows[*].full_path", "expected": "payload.dll", "match": "contains"}
+      ],
+      "parsed_output": {"rows": [{"full_path": "C:\\Users\\Public\\payload.dll"}]}
+    },
+    {
+      "id": "cal-grounded-iso-ts",
+      "arm": "calibration",
+      "label": "grounded",
+      "note": "same instant, different precision/zone notation",
+      "asserted_values": [
+        {"path": "last_run_iso", "expected": "2026-02-01T08:00:00Z", "match": "iso_ts"}
+      ],
+      "parsed_output": {"last_run_iso": "2026-02-01T08:00:00.000+00:00"}
+    },
+    {
+      "id": "cal-halluc-runcount-mismatch",
+      "arm": "calibration",
+      "label": "hallucinated",
+      "note": "model inflated run_count 3 -> 8",
+      "asserted_values": [{"path": "run_count", "expected": "8", "match": "int"}],
+      "parsed_output": {"run_count": 3}
+    },
+    {
+      "id": "cal-halluc-absent-hash",
+      "arm": "calibration",
+      "label": "hallucinated",
+      "note": "asserted sha256 appears in no cited row (identity anchor)",
+      "asserted_values": [
+        {"path": "rows[*].sha256", "expected": "deadbeef00000000000000000000000000000000000000000000000000000000"}
+      ],
+      "parsed_output": {
+        "rows": [
+          {"sha256": "1111111111111111111111111111111111111111111111111111111111111111"},
+          {"sha256": "2222222222222222222222222222222222222222222222222222222222222222"}
+        ]
+      }
+    },
+    {
+      "id": "cal-halluc-absent-ip",
+      "arm": "calibration",
+      "label": "hallucinated",
+      "note": "asserted destination IP not present",
+      "asserted_values": [{"path": "conns[*].dst", "expected": "203.0.113.50"}],
+      "parsed_output": {"conns": [{"dst": "198.51.100.7"}, {"dst": "198.51.100.8"}]}
+    },
+    {
+      "id": "cal-halluc-record-split",
+      "arm": "calibration",
+      "label": "hallucinated",
+      "note": "cross-row launder: name in one value, target in another",
+      "asserted_values": [
+        {
+          "path": "entries[*].values[*]",
+          "expected": "{\"name\": \"Updater\", \"data_str\": \"evil.exe\"}",
+          "match": "record"
+        }
+      ],
+      "parsed_output": {
+        "entries": [
+          {
+            "values": [
+              {"name": "Updater", "data_str": "C:\\Windows\\good.exe"},
+              {"name": "OneDrive", "data_str": "C:\\x\\evil.exe"}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cal-halluc-absent-filename",
+      "arm": "calibration",
+      "label": "hallucinated",
+      "note": "asserted filename (hard anchor) absent from prefetch names",
+      "asserted_values": [{"path": "prefetch[*].name", "expected": "ransom.exe"}],
+      "parsed_output": {"prefetch": [{"name": "notepad.exe"}, {"name": "cmd.exe"}]}
+    },
+    {
+      "id": "cal-halluc-path-absent",
+      "arm": "calibration",
+      "label": "hallucinated",
+      "note": "asserted path resolves to nothing in the output",
+      "asserted_values": [{"path": "rows[0].SID", "expected": "S-1-5-21-0-0-0-1001"}],
+      "parsed_output": {"rows": [{"username": "alice"}]}
+    },
+
+    {
+      "id": "ho-grounded-hash-exact",
+      "arm": "held_out",
+      "label": "grounded",
+      "note": "exact sha256 present in a cited row",
+      "asserted_values": [
+        {"path": "rows[*].sha256", "expected": "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcab"}
+      ],
+      "parsed_output": {
+        "rows": [
+          {"sha256": "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcab"}
+        ]
+      }
+    },
+    {
+      "id": "ho-grounded-ip-present",
+      "arm": "held_out",
+      "label": "grounded",
+      "note": "destination IP present in the connection list",
+      "asserted_values": [{"path": "conns[*].dst", "expected": "203.0.113.200"}],
+      "parsed_output": {"conns": [{"dst": "203.0.113.200"}, {"dst": "198.51.100.9"}]}
+    },
+    {
+      "id": "ho-grounded-nested-wildcard",
+      "arm": "held_out",
+      "label": "grounded",
+      "note": "value reached through a nested wildcard path",
+      "asserted_values": [
+        {"path": "hosts[*].services[*].image_path", "expected": "drv64.sys", "match": "contains"}
+      ],
+      "parsed_output": {
+        "hosts": [
+          {"services": [{"image_path": "C:\\Windows\\System32\\drivers\\drv64.sys"}]}
+        ]
+      }
+    },
+    {
+      "id": "ho-grounded-count-met",
+      "arm": "held_out",
+      "label": "grounded",
+      "note": "multiplicity claim of 2 backed by 2 entailed leaves",
+      "asserted_values": [
+        {"path": "sessions[*].user", "expected": "svc-acct", "match": "exact", "count": 2}
+      ],
+      "parsed_output": {
+        "sessions": [{"user": "svc-acct"}, {"user": "svc-acct"}, {"user": "admin"}]
+      }
+    },
+    {
+      "id": "ho-halluc-nearmiss-hash",
+      "arm": "held_out",
+      "label": "hallucinated",
+      "note": "sha256 off by the final nibble (laundered identity anchor)",
+      "asserted_values": [
+        {"path": "rows[*].sha256", "expected": "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcac"}
+      ],
+      "parsed_output": {
+        "rows": [
+          {"sha256": "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcab"}
+        ]
+      }
+    },
+    {
+      "id": "ho-halluc-nearmiss-ip",
+      "arm": "held_out",
+      "label": "hallucinated",
+      "note": "destination IP last octet changed",
+      "asserted_values": [{"path": "conns[*].dst", "expected": "203.0.113.201"}],
+      "parsed_output": {"conns": [{"dst": "203.0.113.200"}]}
+    },
+    {
+      "id": "ho-halluc-injected-filename",
+      "arm": "held_out",
+      "label": "hallucinated",
+      "note": "filename anchor not present though a real path exists nearby",
+      "asserted_values": [{"path": "rows[*].full_path", "expected": "beacon.exe", "match": "contains"}],
+      "parsed_output": {"rows": [{"full_path": "C:\\Users\\Public\\payload.dll"}]}
+    },
+    {
+      "id": "ho-halluc-hex-mismatch",
+      "arm": "held_out",
+      "label": "hallucinated",
+      "note": "integer (hex) value conflicts with the evidence",
+      "asserted_values": [{"path": "flags", "expected": "0x20", "match": "int"}],
+      "parsed_output": {"flags": 16}
+    },
+    {
+      "id": "ho-halluc-ts-wrong-hour",
+      "arm": "held_out",
+      "label": "hallucinated",
+      "note": "timestamp off by one hour",
+      "asserted_values": [
+        {"path": "si_modified_iso", "expected": "2026-02-01T08:00:00Z", "match": "iso_ts"}
+      ],
+      "parsed_output": {"si_modified_iso": "2026-02-01T09:00:00Z"}
+    },
+    {
+      "id": "ho-halluc-record-missing-field",
+      "arm": "held_out",
+      "label": "hallucinated",
+      "note": "co-location record missing a required field",
+      "asserted_values": [
+        {
+          "path": "entries[*].values[*]",
+          "expected": "{\"name\": \"Backdoor\", \"data_str\": \"c2.exe\"}",
+          "match": "record"
+        }
+      ],
+      "parsed_output": {
+        "entries": [{"values": [{"name": "Backdoor"}]}]
+      }
+    },
+    {
+      "id": "ho-halluc-count-overclaim",
+      "arm": "held_out",
+      "label": "hallucinated",
+      "note": "claims 3 sessions but only 1 entailed leaf (multiplicity demotion)",
+      "asserted_values": [
+        {"path": "sessions[*].user", "expected": "svc-acct", "match": "exact", "count": 3}
+      ],
+      "parsed_output": {"sessions": [{"user": "svc-acct"}, {"user": "admin"}]}
+    }
+  ]
+}

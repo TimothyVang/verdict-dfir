@@ -43,7 +43,9 @@ def nested(data: dict[str, Any], *keys: str) -> Any:
     return current
 
 
-def validate_evidence(data: dict[str, Any]) -> list[str]:
+def validate_evidence(
+    data: dict[str, Any], expected_commit: str | None = None
+) -> list[str]:
     errors: list[str] = []
 
     if data.get("version") != 1:
@@ -60,10 +62,18 @@ def validate_evidence(data: dict[str, Any]) -> list[str]:
     product_commit = str(data.get("product_commit") or "")
     if not HEX40.fullmatch(product_commit):
         errors.append("product_commit must be a 40-character lowercase hex SHA")
+    if expected_commit is not None:
+        expected = expected_commit.strip().lower()
+        if not HEX40.fullmatch(expected):
+            errors.append("expected_commit must be a 40-character hex SHA")
+        elif product_commit != expected:
+            errors.append("product_commit must match expected commit")
 
     image_sha = nested(data, "nist_image", "sha256")
     if image_sha != EXPECTED_NIST_SHA256:
-        errors.append("nist_image.sha256 does not match assembled SCHARDT.dd")
+        errors.append(
+            "nist_image.sha256 does not match the expected fixture disk image"
+        )
     if positive_int(nested(data, "nist_image", "size_bytes")) is None:
         errors.append("nist_image.size_bytes must be positive")
 
@@ -91,12 +101,50 @@ def validate_evidence(data: dict[str, Any]) -> list[str]:
         recall = {}
     expected_n = positive_int(recall.get("expected_n"))
     recalled_n = positive_int(recall.get("recalled_n"))
+    recall_percent = positive_int(recall.get("recall_percent"))
+    min_recall_percent = positive_int(recall.get("min_recall_percent"))
     if expected_n != 14:
         errors.append("recall.expected_n must be 14")
     if recalled_n is None:
         errors.append("recall.recalled_n must be positive")
     elif expected_n is not None and recalled_n > expected_n:
         errors.append("recall.recalled_n must not exceed recall.expected_n")
+    computed_recall_percent = None
+    if expected_n is not None and recalled_n is not None:
+        computed_recall_percent = round(recalled_n * 100 / expected_n)
+        if recall_percent is not None and recall_percent != computed_recall_percent:
+            errors.append("recall.recall_percent must match recalled_n / expected_n")
+    threshold_recall_percent = (
+        computed_recall_percent
+        if computed_recall_percent is not None
+        else recall_percent
+    )
+    if recall.get("pass") is not True:
+        errors.append("recall.pass must be true")
+    if recall_percent is None:
+        errors.append("recall.recall_percent must be positive")
+    if min_recall_percent is None:
+        errors.append("recall.min_recall_percent must be positive")
+    if (
+        threshold_recall_percent is not None
+        and min_recall_percent is not None
+        and threshold_recall_percent < min_recall_percent
+    ):
+        errors.append("recall.recall_percent must be >= recall.min_recall_percent")
+    matched_ids = recall.get("matched_ids")
+    if not isinstance(matched_ids, list):
+        errors.append("recall.matched_ids must be a list")
+    elif recalled_n is not None and len(matched_ids) != recalled_n:
+        errors.append("recall.matched_ids length must equal recall.recalled_n")
+    unmatched_ids = recall.get("unmatched_ids")
+    if not isinstance(unmatched_ids, list):
+        errors.append("recall.unmatched_ids must be a list")
+    elif (
+        expected_n is not None
+        and recalled_n is not None
+        and len(unmatched_ids) != expected_n - recalled_n
+    ):
+        errors.append("recall.unmatched_ids length must equal expected_n - recalled_n")
     if (
         finding_count is not None
         and recalled_n is not None
@@ -166,6 +214,7 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("evidence", type=Path)
     parser.add_argument("--emit", type=Path, help="write benchmark verdict JSON")
+    parser.add_argument("--expected-commit", help="expected product commit SHA")
     args = parser.parse_args(argv)
 
     try:
@@ -177,7 +226,7 @@ def main(argv: list[str]) -> int:
         print("[l3-evidence] evidence root must be an object", file=sys.stderr)
         return 2
 
-    errors = validate_evidence(data)
+    errors = validate_evidence(data, expected_commit=args.expected_commit)
     if errors:
         for error in errors:
             print(f"[l3-evidence] ERROR: {error}", file=sys.stderr)

@@ -66,6 +66,11 @@ EXCLUDED_PATH_PARTS = (
     ".venv",
     "__pycache__",
     ".git",
+    # Contained runtime + toolchain state (gitignored; see docs/agent-containment.md).
+    # Holds the Rust/uv/pnpm/npm caches and the case store — tens of GB / hundreds of
+    # thousands of files. A fresh CI checkout has none, but a built local tree does,
+    # and walking it makes this smoke effectively never finish locally.
+    ".project-local",
     # Claude Code subagent worktrees created under the project-local
     # .claude directory. These are ignored runtime checkouts, not part
     # of the active publication tree, and can legitimately contain
@@ -82,6 +87,7 @@ EXCLUDED_PATH_PARTS = (
     # Generated artifacts (PDFs, HTML have embedded assets that
     # can grep-match the wrong-pattern coincidentally).
     "graphify-out",
+    "site",
     "tmp",
     "site",
     # Pre-Phase-2 (2026-05-02), the historical specs + plans lived
@@ -173,7 +179,7 @@ DIVERGENCES = [
     },
     {
         "id": "#4",
-        "label": "Rust MCP tool count is 31 (long-tail typed wrappers included)",
+        "label": "Rust MCP tool count is 32 (long-tail typed wrappers included)",
         "regex": re.compile(
             r"(?:1[12]\s+typed\s+Rust|"
             r"1[12]\s+DFIR\s+tools|"
@@ -183,17 +189,17 @@ DIVERGENCES = [
             r"20-tool\s+(?:dispatch|catalog|surface)|"
             r"20/20\s+shipped|"
             r"twenty\s+real\s+forensic\s+tools\s+in\s+Rust|"
-            r"\b32\s+(?:narrow,\s+schema-validated\s+|typed,\s+read-only\s+|typed\s+read-only\s+)?(?:product\s+)?tools\b|"
-            r"\b32-tool\s+surface\b|"
-            r"\b32-tool\s+(?:typed\s+)?product\b|"
-            r"\b32-tool\s+count\b|"
+            r"\b31\s+(?:narrow,\s+schema-validated\s+|typed,\s+read-only\s+|typed\s+read-only\s+)?Rust(?:\s+DFIR)?\s+tools\b|"
+            r"\b31-tool\s+surface\b|"
+            r"\b31-tool\s+(?:typed\s+)?product\b|"
+            r"\b31-tool\s+count\b|"
             r"all\s+1[12]\s+Rust|"
             r"findevil-mcp.*?\(1[12]\s+(?:typed|DFIR|tools))"
         ),
         "allowed_in_path": (),
         "remediation": (
-            "The current product surface is 43 tools: 31 Rust DFIR "
-            "tools plus 12 Python crypto/ACH/memory/ACP/expert tools. "
+            "The current product surface is 45 tools: 32 Rust DFIR "
+            "tools plus 13 Python crypto/ACH/memory/ACP/expert tools. "
             "See CLAUDE.md 'Spec/code divergences' §4."
         ),
     },

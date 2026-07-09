@@ -27,6 +27,8 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 use uuid::Uuid;
 
+use super::ewf_segments::segment_paths_for_image;
+
 const SHA_BUFFER_SIZE: usize = 1 << 20; // 1 MiB — good streaming tradeoff
 
 /// Agent-supplied input.
@@ -67,11 +69,18 @@ pub struct CaseHandle {
     /// tool but the canonical location is reserved here.
     pub db_path: PathBuf,
 
-    /// SHA-256 hex (lowercase) of the evidence image bytes.
+    /// SHA-256 hex (lowercase) over the full evidence input. For split EWF,
+    /// this is the concatenated segment stream in segment order.
     pub image_hash: String,
 
-    /// Evidence image size in bytes.
+    /// Evidence input size in bytes. For split EWF, this is the sum of all
+    /// contiguous segment files discovered beside the first segment.
     pub image_size_bytes: u64,
+
+    /// Segment paths included in the custody hash for split EWF evidence.
+    /// Empty for single-file evidence to preserve the original shape.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub image_segments: Vec<PathBuf>,
 
     /// UTC ISO-8601 timestamp of registration (trailing `Z`).
     pub registered_at: String,
@@ -96,6 +105,9 @@ pub enum CaseOpenError {
 
     #[error("image hash mismatch: expected {expected}, got {actual}")]
     ImageHashMismatch { expected: String, actual: String },
+
+    #[error("{0}")]
+    EwfSegmentSet(String),
 
     #[error("could not determine FINDEVIL_HOME (no HOME, no override)")]
     NoFindEvilHome,
@@ -137,8 +149,23 @@ pub fn case_open(input: &CaseOpenInput) -> Result<CaseHandle, CaseOpenError> {
         return Err(CaseOpenError::ImageNotRegular(image_path.clone()));
     }
 
-    // 2. Stream-hash the image.
-    let actual_hash = sha256_file(image_path)?;
+    let image_segments = segment_paths_for_image(image_path)
+        .map_err(|err| CaseOpenError::EwfSegmentSet(err.to_string()))?;
+    let image_size_bytes =
+        image_segments
+            .iter()
+            .skip(1)
+            .try_fold(meta.len(), |total, segment| {
+                let segment_meta = fs::symlink_metadata(segment)
+                    .map_err(|_| CaseOpenError::ImageNotFound(segment.clone()))?;
+                if !segment_meta.is_file() {
+                    return Err(CaseOpenError::ImageNotRegular(segment.clone()));
+                }
+                Ok(total.saturating_add(segment_meta.len()))
+            })?;
+
+    // 2. Stream-hash the full evidence input.
+    let actual_hash = sha256_files(&image_segments)?;
     if let Some(expected) = &input.expected_sha256 {
         if expected.eq_ignore_ascii_case(&actual_hash) {
             // ok — match
@@ -171,7 +198,12 @@ pub fn case_open(input: &CaseOpenInput) -> Result<CaseHandle, CaseOpenError> {
         case_dir: case_dir.clone(),
         db_path,
         image_hash: actual_hash,
-        image_size_bytes: meta.len(),
+        image_size_bytes,
+        image_segments: if image_segments.len() > 1 {
+            image_segments
+        } else {
+            Vec::new()
+        },
         registered_at,
     };
 
@@ -192,6 +224,8 @@ struct CaseManifest<'a> {
     image_path: &'a Path,
     image_hash: &'a str,
     image_size_bytes: u64,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    image_segments: &'a Vec<PathBuf>,
     registered_at: &'a str,
     label: &'a Option<String>,
 }
@@ -203,31 +237,34 @@ impl<'a> CaseManifest<'a> {
             image_path: &inp.image_path,
             image_hash: &h.image_hash,
             image_size_bytes: h.image_size_bytes,
+            image_segments: &h.image_segments,
             registered_at: &h.registered_at,
             label: &inp.label,
         }
     }
 }
 
-fn sha256_file(path: &Path) -> Result<String, CaseOpenError> {
-    let file = File::open(path).map_err(|source| CaseOpenError::ImageUnreadable {
-        path: path.to_path_buf(),
-        source,
-    })?;
-    let mut reader = BufReader::with_capacity(SHA_BUFFER_SIZE, file);
+fn sha256_files(paths: &[PathBuf]) -> Result<String, CaseOpenError> {
     let mut hasher = Sha256::new();
     let mut buf = vec![0u8; SHA_BUFFER_SIZE];
-    loop {
-        let n = reader
-            .read(&mut buf)
-            .map_err(|source| CaseOpenError::ImageUnreadable {
-                path: path.to_path_buf(),
-                source,
-            })?;
-        if n == 0 {
-            break;
+    for path in paths {
+        let file = File::open(path).map_err(|source| CaseOpenError::ImageUnreadable {
+            path: path.clone(),
+            source,
+        })?;
+        let mut reader = BufReader::with_capacity(SHA_BUFFER_SIZE, file);
+        loop {
+            let n = reader
+                .read(&mut buf)
+                .map_err(|source| CaseOpenError::ImageUnreadable {
+                    path: path.clone(),
+                    source,
+                })?;
+            if n == 0 {
+                break;
+            }
+            hasher.update(&buf[..n]);
         }
-        hasher.update(&buf[..n]);
     }
     let digest = hasher.finalize();
     Ok(hex_encode(&digest))

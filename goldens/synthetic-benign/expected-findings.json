@@ -10,5 +10,15 @@
   "license": "MIT (generation script)",
   "verdict": "NO_EVIL",
   "min_recall_percent": 100,
+  "exhaustive": true,
+  "named_claim_denylist": [
+    "cobalt strike",
+    "mimikatz",
+    "ransomware",
+    "keylogger",
+    "lsass dump",
+    "c2 beacon",
+    "data exfiltration"
+  ],
   "findings": []
 }

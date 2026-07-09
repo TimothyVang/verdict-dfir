@@ -1,0 +1,25 @@
+{
+  "$comment": "SHARED project containment for Claude Code \u2014 committed so every contributor who installs this repo gets the same rules. Machine-specific bits (absolute paths, personal allow-list) belong in the gitignored .claude/settings.local.json. See docs/repo-layout.md and docs/agent-containment.md. NOTE: the PreToolUse hooks auto-run scripts/hooks/*.py for everyone who opens this repo in Claude Code (in-repo, reviewable, path-guard only).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/hooks/guard-root-writes.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/hooks/guard-outside-project.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

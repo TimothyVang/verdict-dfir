@@ -173,6 +173,7 @@ jobs:
                      docs/verdict-semantics.md \
                      docs/false-positives.md \
                      docs/glossary.md \
+                     docs/evidence-answer-keys.md \
                      docs/release-surface.md \
                      docs/reference/mcp-and-tools.md \
                      docs/reference/dependencies.md \
@@ -217,13 +218,21 @@ jobs:
       - uses: actions/checkout@v4
       - name: dropped Python orchestrator files must not reappear
         run: |
-          # VERDICT keeps the Amendment A2 invariant: the custom Python
-          # orchestrator (graph.py / api.py / cli.py / supervisor.py /
-          # specialists/) with Claude Code itself driving the typed MCP
-          # surface. If a future contributor regenerates any of these
-          # files (e.g. by re-running an old TDD plan), the architectural
-          # claim "Direct Agent Extension §1 + Custom MCP Server §2"
-          # silently becomes false. Catch it at L0.
+          # VERDICT keeps the Amendment A2 invariant: the original custom
+          # Python orchestrator (graph.py / api.py / cli.py / supervisor.py
+          # / specialists/) stays dropped, with the deterministic
+          # scripts/find_evil_auto.py engine as the default and Claude Code
+          # itself driving the typed MCP surface. If a future contributor
+          # regenerates any of those files (e.g. by re-running an old TDD
+          # plan), the architectural claim "Direct Agent Extension §1 +
+          # Custom MCP Server §2" silently becomes false. Catch it at L0.
+          #
+          # ALLOWED: the strictly opt-in agent loop under
+          # services/agent/findevil_agent/agentloop/ (exposed via
+          # `scripts/verdict --agent`) is NOT a resurrection of the dropped
+          # surfaces and is deliberately absent from the banned list below.
+          # The content check that follows still forbids langgraph/fastapi
+          # imports anywhere under findevil_agent/, including agentloop/.
           #
           # See docs/architecture.md for the public architecture contract.
           banned=(

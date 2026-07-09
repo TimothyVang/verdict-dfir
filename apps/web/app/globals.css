@@ -1,37 +1,38 @@
 /* Tailwind v4 — CSS-first import. */
 @import "tailwindcss";
 
-/* Editorial "forensic case file" theme tokens (mirror lib/verdict-ui.tsx +
- * scripts/make-demo-video editorial.ts). Exposed as Tailwind utilities for the
- * surfaces still styled with classes (/codex, DashboardNav): bg-paper, text-ink,
- * border-hairline, text-accent, font-serif/grotesk/mono, etc. The hexes are the
- * canonical VERDICT mapping — keep in sync with lib/verdict-ui.tsx. */
+/* VERDICT v2 brand tokens (mirror lib/verdict-ui.tsx + Remotion editorial.ts).
+ * Exposed as Tailwind utilities for the surfaces still styled with classes
+ * (/codex, DashboardNav): bg-paper, text-ink, border-hairline, text-accent,
+ * font-serif/grotesk/mono, etc. */
 @theme {
-  --color-paper: #0e0c10;
-  --color-paper-edge: #060507;
-  --color-surface: #161318;
-  --color-ink: #ece6da;
-  --color-ink-muted: #8c8576;
-  --color-ink-faint: #544f48;
-  --color-hairline: #2b2620;
-  --color-accent: #9b59b6;
-  --color-alert: #d6452f;
-  --color-confirmed: #7fae6e;
-  --color-inferred: #c79a4a;
-  --color-hypothesis: #6f93b8;
+  --color-paper: #101426;
+  --color-paper-edge: #080b18;
+  --color-surface: #12131a;
+  --color-ink: #f5f1e8;
+  --color-ink-muted: #b8a8ff;
+  --color-ink-faint: #7f789c;
+  --color-hairline: #27304a;
+  --color-accent: #4d5dff;
+  --color-alert: #ff6257;
+  --color-confirmed: #73d9c2;
+  --color-inferred: #ffd76a;
+  --color-hypothesis: #4d5dff;
 
-  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;
+  --font-condensed: var(--font-anarrow), "Archivo Narrow", "Arial Narrow", system-ui, sans-serif;
+  --font-serif: var(--font-archivo), Impact, system-ui, sans-serif;
   --font-grotesk: var(--font-archivo), system-ui, sans-serif;
+  --font-hand: var(--font-caveat), "Caveat", cursive;
   --font-mono: var(--font-jbm), "JetBrains Mono", monospace;
 }
 
-/* Warm-paper base so first paint (and any unstyled fallback) reads as the case
- * file, never a white flash. JetBrains Mono is the base; serif/grotesk are
- * applied per-element via the design tokens. */
+/* Midnight base so first paint reads as the brand-bible evidence lab, never a
+ * white flash. JetBrains Mono is the base; display/grotesk are applied per token. */
 body {
-  background: #0e0c10;
-  color: #ece6da;
-  font-family: var(--font-jbm), "JetBrains Mono", "Courier New", monospace;
+  background: #101426;
+  color: #f5f1e8;
+  font-family: var(--font-inter), "Inter", system-ui, -apple-system, sans-serif;
 }
 
 /* Subtle editorial reveal for page containers / panels. Mirrors the demo's

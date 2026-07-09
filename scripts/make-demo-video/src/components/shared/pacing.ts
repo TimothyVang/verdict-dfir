@@ -13,7 +13,7 @@ export function spread(
   rawMax: number,
   durationInFrames: number,
   startFrame = 24,
-  holdFrames = 50,
+  holdFrames = 200,
 ): number {
   if (rawMax <= rawMin) return startFrame;
   const end = Math.max(startFrame + 1, durationInFrames - holdFrames);

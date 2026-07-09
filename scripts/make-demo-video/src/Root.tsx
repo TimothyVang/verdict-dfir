@@ -2,6 +2,7 @@ import React from "react";
 import { Composition, registerRoot } from "remotion";
 import { FilmFromBeats, FindEvilDemo } from "./Video";
 import { ArchPoster } from "./components/ArchPoster";
+import { BrandProof } from "./components/BrandProof";
 import { BEATS, FPS, HEIGHT, TOTAL_FRAMES, WIDTH, type Beat } from "./beats/beats-data";
 import { EXPLAINER_BEATS } from "./beats/explainer-beats";
 import { DEEPDIVE_BEATS } from "./beats/deepdive-beats";
@@ -76,6 +77,17 @@ function RemotionRoot() {
         fps={30}
         width={1920}
         height={1480}
+      />
+
+      {/* Brand-system duotone proof — render as a still to validate the v2 editorial
+          direction (light Paper-Cream + dark Midnight, real tactile assets). */}
+      <Composition
+        id="BrandProof"
+        component={BrandProof}
+        durationInFrames={1}
+        fps={30}
+        width={1920}
+        height={1080}
       />
 
       {/* One composition per beat for iterating during development */}

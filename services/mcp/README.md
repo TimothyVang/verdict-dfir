@@ -10,9 +10,9 @@ Typed Rust MCP server for Find Evil! per the public architecture contract.
 | Component | Status |
 |---|---|
 | Workspace + crate scaffold | ✅ |
-| All 31 typed DFIR tools | ✅ shipped |
+| All 32 typed DFIR tools | ✅ shipped |
 | Hand-rolled JSON-RPC 2.0 stdio server (MCP 2024-11-05) | ✅ in `src/server.rs` |
-| End-to-end stdio smoke (`scripts/rust-mcp-smoke.py`) | ✅ all 31 tools dispatch over the wire |
+| End-to-end stdio smoke (`scripts/rust-mcp-smoke.py`) | ✅ all 32 tools dispatch over the wire |
 | M2 sigstore + rs_merkle integration | partial (rs_merkle live; sigstore lives in `services/agent_mcp/`) |
 
 ## Quick start
@@ -24,7 +24,7 @@ cargo test --workspace --locked
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-## Tool surface (31/31 shipped)
+## Tool surface (32/32 shipped)
 
 Per Spec #2 §6 (which enumerates 11) plus memory cross-validation, disk mount/extract session-resource tools, browser history, allow-listed long-tail wrappers, and Linux/network/NTFS triage additions — see CLAUDE.md "Spec/code divergences" for the rationale. All tools are registered in `src/tools/mod.rs`, advertised in `tools/list`, and dispatchable via `tools/call`. Each successful response carries `_meta.output_sha256`.
 
@@ -61,6 +61,7 @@ Per Spec #2 §6 (which enumerates 11) plus memory cross-validation, disk mount/e
 | `sysmon_network_query` | `tools/sysmon_network_query.rs` | in-process: `evtx = 0.11.2` | B (network) |
 | `zeek_summary` | `tools/zeek_summary.rs` | in-process TSV parser | B (network) |
 | `pcap_triage` | `tools/pcap_triage.rs` | fixed subprocess: `tshark` or `zeek` | B (network) |
+| `oe_dbx_parse` | `tools/oe_dbx_parse.rs` | in-process: OE-signature-validated DBX reader (RFC822 headers) | A/B (mail/news store) |
 
 The `vol_pslist` + `vol_psscan` pair is deliberately redundant — pslist walks the kernel's `PsActiveProcessHead` linked list, psscan signature-scans EPROCESS pool memory. Divergence between the two outputs IS the forensic finding (T1014/Rootkit, DKOM unlink). `vol_psxview` is the follow-up cross-view corroborator; do not fold these tools together.
 

@@ -1,0 +1,8 @@
+{
+  "_comment": "Regression FLOOR (not the 71% golden target in expected-findings.json). NIST recall is run-dependent: 5/14=36% on leaner 19-finding runs, 7/14=50% on the richer 27-finding SCHARDT runs. The floor is the conservative leaner-run number reproduced 2026-06-18; the guard fires only on a genuine drop below what the system currently ships. Tighten toward 50 only once the richer run is the committed default.",
+  "min_recall_percent": 36,
+  "min_precision_percent": 90,
+  "max_hallucination_rate": 0.0,
+  "max_fp_planted": 0,
+  "require_verdict_match": true
+}

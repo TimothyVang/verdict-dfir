@@ -215,8 +215,20 @@ pub fn ez_parse(input: &EzParseInput) -> Result<EzParseOutput, EzParseError> {
         )));
     }
 
+    let args = build_ez_args(spec, &input.artifact_path, &outdir);
+    // Defense-in-depth pre-spawn gate: refuse a poisoned $EZTOOLS_DIR that
+    // resolves to a denied binary, and reject NUL bytes in the artifact path.
+    if let Err(e) = crate::tools::argsafe::guard_spawn(&binary, &args) {
+        let _ = std::fs::remove_dir_all(&outdir);
+        return Err(EzParseError::SubprocessFailed {
+            binary: spec.binary.to_string(),
+            exit_code: -1,
+            stderr: e.to_string(),
+        });
+    }
+
     let mut cmd = Command::new(&binary);
-    cmd.args(build_ez_args(spec, &input.artifact_path, &outdir));
+    cmd.args(args);
 
     let proc = cmd.output().map_err(|err| {
         if err.kind() == std::io::ErrorKind::NotFound {
@@ -254,9 +266,6 @@ fn native_lecmd_path_fallback(artifact: &Path, limit: usize, binary: &str) -> Ez
     let normalized = display.to_lowercase().replace('\\', "/");
     let path_context = (normalized.contains("/recent/") || normalized.contains("/nethood/"))
         && [
-            "temp on",
-            "cd drive",
-            "4.12.",
             "channels",
             "keys",
             "ghostware",
@@ -540,9 +549,7 @@ mod tests {
     #[test]
     fn native_lecmd_path_fallback_surfaces_recent_nethood_context_only() {
         let hit = native_lecmd_path_fallback(
-            Path::new(
-                "/case/lnk/Documents and Settings/Mr. Evil/Recent/Temp on m1200 (4.12.220.254).lnk",
-            ),
+            Path::new("/case/lnk/Documents and Settings/Suspect User/Recent/Staged on USB (E).lnk"),
             10,
             "LECmd",
         );

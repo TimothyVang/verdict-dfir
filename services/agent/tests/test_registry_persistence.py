@@ -16,6 +16,9 @@ if str(_SCRIPTS) not in sys.path:
 
 import find_evil_auto as fea  # noqa: E402
 
+from findevil_agent.entailment import check_entailment  # noqa: E402
+from findevil_agent.events import AssertedValue  # noqa: E402
+
 RUN_KEY = "ROOT\\Microsoft\\Windows\\CurrentVersion\\Run"
 SVC_KEY = "ROOT\\ControlSet001\\Services"
 
@@ -173,3 +176,79 @@ class TestPoolAEmitter:
         assert f["confidence"] == "HYPOTHESIS"
         assert f["description"].startswith("hypothesis: ")
         assert f["mitre_technique"] == "T1543.003"
+
+
+def _registry_output(
+    value_name: str,
+    data_str: str,
+    key_path: str = RUN_KEY,
+    lw: str = "2018-09-06T19:00:00Z",
+) -> dict:
+    """A registry_query parsed output the emitted finding cites, shaped exactly
+    like the real Rust tool: ``{"entries": [{"key_path", "last_write_time_iso",
+    "values": [{"name", "data_str"}]}]}``."""
+    return {
+        "entries": [_row(key_path, [_val(value_name, data_str)], lw)],
+        "keys_visited": 1,
+        "parse_errors": 0,
+    }
+
+
+class TestPoolAEmitterAssertedValues:
+    """Phase 2a: a CONFIRMED registry finding must declare the structured
+    value(s) it asserts, so the deterministic entailment check can re-extract
+    them from the cited output and kill a misread behind a valid citation."""
+
+    def _inv(self):
+        inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+        inv.handle = {"id": "case-regtest"}
+        return inv
+
+    def _emit_run_key(self, inv, value_name: str, target: str) -> dict:
+        cand = {
+            "kind": "run_key",
+            "value_name": value_name,
+            "target": target,
+            "hive_key": RUN_KEY,
+            "last_write_time_iso": "2018-09-06T19:00:00Z",
+        }
+        inv._emit_registry_persistence_findings(
+            [cand], "/evidence/SOFTWARE", RUN_KEY, "tc-reg-1", {}
+        )
+        return inv.findings_pool_a[0]
+
+    def test_run_key_finding_declares_a_colocated_record_assertion(self) -> None:
+        import json
+
+        inv = self._inv()
+        f = self._emit_run_key(inv, "Updater", "C:\\Users\\bob\\AppData\\Roaming\\evil.exe")
+        avs = f.get("asserted_values", [])
+        assert len(avs) == 1, "CONFIRMED run_key finding must declare one record assertion"
+        av = avs[0]
+        # Co-located: name AND target must share one entries[].values[] record,
+        # so the claim cannot be assembled from two different rows.
+        assert av["match"] == "record"
+        assert av["path"] == "entries[*].values[*]"
+        constraints = json.loads(av["expected"])
+        assert constraints["name"] == "Updater"
+        assert "evil.exe" in constraints["data_str"].lower()
+
+    def test_asserted_values_pass_entailment_against_the_cited_output(self) -> None:
+        inv = self._inv()
+        target = "C:\\Users\\bob\\AppData\\Roaming\\evil.exe"
+        f = self._emit_run_key(inv, "Updater", target)
+        avs = [AssertedValue(**av) for av in f["asserted_values"]]
+        out = _registry_output("Updater", target)
+        result = check_entailment(avs, out)
+        assert result.passed, result.reason
+
+    def test_misread_is_caught_when_value_absent_from_cited_output(self) -> None:
+        # The finding asserts the Run value "Updater" -> evil.exe, but the cited
+        # output actually holds a different, benign value. A misread laundered
+        # through a valid tool_call_id: the asserted facts are NOT entailed.
+        inv = self._inv()
+        f = self._emit_run_key(inv, "Updater", "C:\\Users\\bob\\AppData\\Roaming\\evil.exe")
+        avs = [AssertedValue(**av) for av in f["asserted_values"]]
+        out = _registry_output("OneDrive", "C:\\Program Files\\Microsoft OneDrive\\OneDrive.exe")
+        result = check_entailment(avs, out)
+        assert not result.passed, "entailment must reject a value absent from the output"

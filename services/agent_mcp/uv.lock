@@ -422,7 +422,7 @@ requires-dist = [
     { name = "duckdb", specifier = ">=0.10" },
     { name = "esperanto", specifier = ">=2.0,<3.0" },
     { name = "httpx", specifier = ">=0.27" },
-    { name = "mitreattack-python", specifier = ">=5.4,<6.0" },
+    { name = "mitreattack-python", specifier = ">=5.4,<7.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },
     { name = "pydantic", specifier = ">=2.7,<3.0" },
     { name = "pydantic-to-typescript", specifier = ">=2.0" },
@@ -431,10 +431,20 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7.4" },
-    { name = "sigstore", specifier = "==3.*" },
+    { name = "sigstore", specifier = ">=3,<5" },
     { name = "structlog", specifier = ">=24.4" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "respx", specifier = ">=0.21" },
+    { name = "ruff", specifier = ">=0.7.4" },
+]
 
 [[package]]
 name = "findevil-agent-mcp"
@@ -466,7 +476,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
-    { name = "python-dotenv", specifier = ">=1.0,<1.2" },
+    { name = "python-dotenv", specifier = ">=1.0,<1.3" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.7.4" },
     { name = "structlog", specifier = ">=24.4" },
 ]

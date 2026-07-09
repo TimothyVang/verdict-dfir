@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# attack-flow — render MITRE Attack Flow + process-tree panels from a finished case.
+# Presentation only: pure offline transform of case-dir output (no API calls).
+#
+# Usage: scripts/attack-flow <case-dir>
+set -euo pipefail
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ "$#" -ne 1 ]; then
+  echo "usage: scripts/attack-flow <case-dir>" >&2
+  exit 2
+fi
+# `uv run --directory` changes the process CWD, so resolve a relative case path
+# against the caller's CWD before handing it off (keep absolute paths as-is).
+case "$1" in
+  /*) CASE_ABS="$1" ;;
+  *)  CASE_ABS="$PWD/$1" ;;
+esac
+exec uv run --directory "${REPO_ROOT}/services/agent" \
+  python -m findevil_agent.attackflow "$CASE_ABS"

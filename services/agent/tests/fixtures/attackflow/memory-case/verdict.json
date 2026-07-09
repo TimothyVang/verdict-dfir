@@ -1,0 +1,14 @@
+{
+  "case_id": "case-fixture-mem",
+  "attack_story": {"headline": "Suspicious service install then log clear", "attack_chain": "install -> clear"},
+  "attack_coverage": {"observed_techniques": ["T1543.003", "T1070.001"]},
+  "indicators": {"hosts": ["HOST-A"], "accounts": ["user1"], "processes": ["C:\\Windows\\System32\\svc.exe"], "ip_addresses": []},
+  "entity_index": {"hosts": [{"value": "HOST-A"}], "processes": [{"value": "C:\\Windows\\System32\\svc.exe"}]},
+  "normalized_timeline": {"events": [
+    {"event_id": "t-1", "timestamp_utc": "2020-01-01T00:00:00Z", "attck_techniques": ["T1543.003"], "entities": {"host": "HOST-A", "pid": 1200}, "summary": "Service installed", "tool_call_id": "tc-003", "linked_finding_ids": ["f-1"]}
+  ]},
+  "findings": [
+    {"finding_id": "f-1", "mitre_technique": "T1543.003", "named_technique": "Service install (T1543.003)", "description": "Service installed", "host": "HOST-A", "ts": "2020-01-01T00:00:00Z", "confidence": "CONFIRMED", "tool_call_id": "tc-003", "artifact_path": "svc.evtx"},
+    {"finding_id": "f-2", "mitre_technique": "T1070.001", "named_technique": "Log clear (T1070.001)", "description": "Security log cleared", "host": "HOST-A", "ts": "2020-01-01T00:05:00Z", "confidence": "CONFIRMED", "tool_call_id": "tc-004", "artifact_path": "sec.evtx"}
+  ]
+}

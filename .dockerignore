@@ -38,6 +38,9 @@ goldens/**/*.raw
 
 # --- Build outputs (rebuilt deterministically inside the image) ---
 target/
+tmp/
+.project-local/
+n8n-references/
 **/*.rs.bk
 node_modules/
 .pnpm-store/

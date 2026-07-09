@@ -11,12 +11,18 @@ import {
 } from "@/lib/verdict-summary-policy";
 import {
   VERDICT,
-  MONO,
   SERIF,
   GROTESK,
+  BODY,
   EvidenceTag,
   Kicker,
+  Stamp,
 } from "@/lib/verdict-ui";
+import {
+  verifyCustodyChain,
+  type CustodyVerification,
+  type JsonValue,
+} from "@/lib/verify-chain";
 
 // Keep in sync with apps/web/app/page.tsx:AuditLine (importing from
 // lib/audit-tail would drag node:fs into the client bundle).
@@ -58,6 +64,66 @@ interface VerdictSummaryProps {
   caseDir: string;
   manifestDone: boolean;
   evidenceName?: string;
+}
+
+interface CustodyBadge {
+  label: string;
+  color: string;
+  detail: string;
+}
+
+/**
+ * Turn the browser re-verification result into a small, honest badge. PASS
+ * means a second, in-browser implementation re-derived the chain + Merkle root
+ * + leaf count and (for ed25519) re-checked the signature — it does not
+ * upgrade the verdict or replace the authoritative manifest_verify.json.
+ */
+function describeCustody(
+  custody: CustodyVerification | null,
+  custodyError: string | null,
+): CustodyBadge {
+  if (custodyError) {
+    return {
+      label: "Browser re-verify unavailable",
+      color: VERDICT.muted,
+      detail: custodyError,
+    };
+  }
+  if (!custody) {
+    return {
+      label: "Re-verifying in browser…",
+      color: VERDICT.muted,
+      detail: "Recomputing the custody chain with Web Crypto.",
+    };
+  }
+  if (custody.overall) {
+    const sig =
+      custody.signatureVerified === true
+        ? `${custody.signatureKind} signature verified`
+        : `${custody.signatureKind} signature (advisory)`;
+    return {
+      label: "Independent browser re-verify: PASS",
+      color: VERDICT.confirmed,
+      detail: `Chain, Merkle root, and leaf count re-derived offline; ${sig}.`,
+    };
+  }
+  const fails: string[] = [];
+  if (custody.auditChainOk !== true) fails.push(`chain (${custody.auditChainOk})`);
+  if (custody.merkleRootOk !== true) fails.push(`Merkle (${custody.merkleRootOk})`);
+  if (custody.leafCountOk !== true) fails.push(`leaf count (${custody.leafCountOk})`);
+  if (!custody.signaturePresent) {
+    fails.push("signature absent");
+  } else if (
+    !["stub", "sigstore"].includes(custody.signatureKind) &&
+    custody.signatureVerified !== true
+  ) {
+    fails.push(`signature (${custody.signatureVerified})`);
+  }
+  return {
+    label: "Independent browser re-verify: FAILED",
+    color: VERDICT.alertRed,
+    detail: fails.join("; ") || "custody re-derivation did not match the manifest",
+  };
 }
 
 /**
@@ -121,6 +187,43 @@ export function VerdictSummary({
     };
   }, [manifestDone, caseDir]);
 
+  // Independent, browser-side custody re-verification. Once the run is sealed,
+  // re-derive the chain from the audit tail + signed manifest with Web Crypto
+  // (lib/verify-chain) — a second implementation of the offline manifest_verify
+  // path — instead of trusting the displayed values. PURE READ-SIDE: it only
+  // fetches the two artifacts and recomputes; it never mutates anything.
+  const [custody, setCustody] = useState<CustodyVerification | null>(null);
+  const [custodyError, setCustodyError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!manifestDone || !caseDir) return;
+    let cancelled = false;
+    const reverify = async () => {
+      try {
+        const base = `/api/report?case=${encodeURIComponent(caseDir)}`;
+        const [auditRes, manifestRes] = await Promise.all([
+          fetch(`${base}&file=audit.jsonl`),
+          fetch(`${base}&file=run.manifest.json`),
+        ]);
+        if (!auditRes.ok || !manifestRes.ok) return;
+        const auditText = await auditRes.text();
+        const manifest = (await manifestRes.json()) as Record<string, JsonValue>;
+        const result = await verifyCustodyChain({ auditText, manifest });
+        if (!cancelled) {
+          setCustody(result);
+          setCustodyError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setCustodyError(err instanceof Error ? err.message : String(err));
+        }
+      }
+    };
+    void reverify();
+    return () => {
+      cancelled = true;
+    };
+  }, [manifestDone, caseDir]);
+
   const verdict = useMemo(
     () => deriveVerdictWord(verdictPayload?.verdict, tally, manifestDone),
     [verdictPayload, tally, manifestDone],
@@ -141,6 +244,7 @@ export function VerdictSummary({
     evidenceName,
     caveats,
   );
+  const custodyBadge = describeCustody(custody, custodyError);
 
   return (
     <section
@@ -177,7 +281,7 @@ export function VerdictSummary({
         </div>
         <div
           style={{
-            fontFamily: GROTESK,
+            fontFamily: BODY,
             fontSize: 17,
             lineHeight: 1.5,
             color: VERDICT.text,
@@ -200,7 +304,7 @@ export function VerdictSummary({
               <span
                 key={caveat}
                 style={{
-                  fontFamily: MONO,
+                  fontFamily: BODY,
                   fontSize: 11,
                   color: VERDICT.inferred,
                   border: `1px solid ${VERDICT.inferred}`,
@@ -226,6 +330,15 @@ export function VerdictSummary({
           alignItems: "flex-end",
         }}
       >
+        {/* Case-file stamp — brand tactile accent, mirroring the video's
+            CASE OPENED / CASE CLOSED letterpress stamps. */}
+        <Stamp
+          label={manifestDone ? "Case Closed" : "Case Open"}
+          color={manifestDone ? VERDICT.confirmed : VERDICT.accentPurpleLight}
+          rotate={-6}
+          fontSize={13}
+          style={{ marginBottom: 2 }}
+        />
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "flex-end" }}>
           {tally.confirmed > 0 && (
             <EvidenceTag label={`${tally.confirmed} confirmed`} tier="CONFIRMED" />
@@ -237,7 +350,7 @@ export function VerdictSummary({
             <EvidenceTag label={`${tally.hypothesis} hypothesis`} tier="HYPOTHESIS" />
           )}
           {tally.total === 0 && (
-            <span style={{ fontFamily: MONO, fontSize: 13, color: VERDICT.muted }}>
+            <span style={{ fontFamily: BODY, fontSize: 13, color: VERDICT.muted }}>
               no findings yet
             </span>
           )}
@@ -266,6 +379,31 @@ export function VerdictSummary({
           />
           {manifestDone ? "Signed · verifiable offline" : "Investigation running"}
         </span>
+        {manifestDone ? (
+          <span
+            aria-label="independent browser custody re-verification"
+            title={custodyBadge.detail}
+            style={{
+              fontFamily: BODY,
+              fontSize: 11,
+              color: custodyBadge.color,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: custodyBadge.color,
+              }}
+            />
+            {custodyBadge.label}
+          </span>
+        ) : null}
       </div>
     </section>
   );

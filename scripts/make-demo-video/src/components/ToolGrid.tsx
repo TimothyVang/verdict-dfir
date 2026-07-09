@@ -5,7 +5,7 @@ import { Scene } from "./shared/Scene";
 import { Kicker, KineticHeadline, PullQuote, RuleLine, Stamp } from "./shared/editorial-ui";
 import { spread } from "./shared/pacing";
 
-// Beat 4 — "The toolbox." VERDICT's 43 forensic tools as a grouped instrument
+// Beat 4 — "The toolbox." VERDICT's 45 forensic tools as a grouped instrument
 // tray: four plain-English questions, each a GROTESK header + a count badge that
 // counts up (mirrors FleetScene's big-numeral reveal) + a wrapped row of MONO
 // tool-name chips. Groups reveal left→right; chips stagger in with spring. The
@@ -20,12 +20,12 @@ interface ToolGroup {
   tools: string[];
 }
 
-// The 43-tool surface, verbatim: 31 Rust DFIR tools + 12 Python crypto/ACH
+// The 45-tool surface, verbatim: 32 Rust DFIR tools + 13 Python crypto/ACH
 // tools, regrouped by the question each answers.
 const GROUPS: ToolGroup[] = [
   {
     question: "What ran on this machine?",
-    count: 18,
+    count: 19,
     tools: [
       "case_open",
       "disk_mount",
@@ -39,6 +39,7 @@ const GROUPS: ToolGroup[] = [
       "ez_parse",
       "plaso_parse",
       "indx_parse",
+      "oe_dbx_parse",
       "vol_pslist",
       "vol_psscan",
       "vol_psxview",
@@ -68,7 +69,7 @@ const GROUPS: ToolGroup[] = [
   },
   {
     question: "Can we prove it?",
-    count: 12,
+    count: 13,
     tools: [
       "audit_append",
       "audit_verify",
@@ -82,6 +83,8 @@ const GROUPS: ToolGroup[] = [
       "memory_recall",
       "pool_handoff",
       "expert_miss_capture",
+      "accuracy_compare",
+      "find_ai_signatures",
     ],
   },
 ];
@@ -142,7 +145,7 @@ function ToolChip({ name, delay, tone }: { name: string; delay: number; tone: st
   );
 }
 
-export function ToolGrid({ page = 4, total = 10 }: { page?: number; total?: number } = {}) {
+export function ToolGrid() {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
 
@@ -158,14 +161,14 @@ export function ToolGrid({ page = 4, total = 10 }: { page?: number; total?: numb
   const groupTone = (i: number) => (i === GROUPS.length - 1 ? C.confirmed : C.ink);
 
   return (
-    <Scene page={page} caption="The tools" total={total}>
+    <Scene page={4} caption="The tools" total={10}>
       {/* Left column — the story */}
       <div style={{ position: "absolute", left: MARGIN, top: 168, width: 560 }}>
         <Kicker frame={frame} delay={sd(2)} color={C.accent}>
           Exhibit D · Inside the SANS SIFT Workstation
         </Kicker>
         <div style={{ marginTop: 18 }}>
-          <KineticHeadline text="Forty-three" frame={frame} delay={sd(6)} size={92} />
+          <KineticHeadline text="Forty-five" frame={frame} delay={sd(6)} size={92} />
           <KineticHeadline text="tools." frame={frame} delay={sd(11)} size={92} />
           <KineticHeadline text="Zero shells." frame={frame} delay={sd(16)} size={92} italic color={C.alert} />
         </div>
@@ -212,7 +215,7 @@ export function ToolGrid({ page = 4, total = 10 }: { page?: number; total?: numb
           }}
         >
           <span>Exhibit D-1 — Tool Surface</span>
-          <span style={{ color: C.inkFaint }}>31 rust · 12 python · 43 typed</span>
+          <span style={{ color: C.inkFaint }}>32 rust · 13 python · 45 typed</span>
         </div>
         <RuleLine frame={frame} delay={sd(20)} color={C.hairline} />
 
@@ -298,7 +301,7 @@ export function ToolGrid({ page = 4, total = 10 }: { page?: number; total?: numb
             opacity: interpolate(frame - sd(92), [0, 16], [0, 1], clampOpts),
           }}
         >
-          <span style={{ color: C.inkMuted }}>Four questions · forty-three answers</span>
+          <span style={{ color: C.inkMuted }}>Four questions · forty-five answers</span>
           <span style={{ color: C.alert }}>Zero shells</span>
         </div>
       </div>

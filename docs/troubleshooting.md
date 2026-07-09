@@ -83,8 +83,10 @@ re-dispatched.
 | SSH probe times out with the default IP | default `FIND_EVIL_GUEST_IP` may not match your VM's network | `export FIND_EVIL_GUEST_IP=<your VM's IP>` (NAT setups commonly land on `192.168.137.x`); also `FIND_EVIL_GUEST_USER` / `FIND_EVIL_GUEST_REPO` if non-default |
 
 **You do not need SIFT mode for every case.** Local mode handles memory, EVTX, PCAP,
-Velociraptor collections, and supported disk artifacts when Sleuth Kit/libewf prerequisites are
-available. The 9.3 GB gated SIFT OVA is recommended when you need VM-isolated disk-image parity.
+Velociraptor collections, and supported disk artifacts (Prefetch + registry/UserAssist) via
+Sleuth Kit direct-read when Sleuth Kit/libewf prerequisites are available. The 9.3 GB gated SIFT
+OVA is recommended when you need VM-isolated disk mount/extract (disk-image) parity; the compact
+historical NIST receipt is in `docs/release-evidence/l3-local-sift.json`.
 
 ## 6. Dashboard
 
@@ -106,5 +108,5 @@ available. The 9.3 GB gated SIFT OVA is recommended when you need VM-isolated di
 
 | Symptom | Meaning | Fix |
 |---|---|---|
-| `manifest_verify` returns `overall: false` on a **copied** case dir | the manifest embeds the original run's `audit_log_path` | Pass the local log explicitly: `manifest_verify(manifest_path=..., audit_log_path=<copied audit.jsonl>)` |
+| `manifest_verify` returns `overall: false` on a **copied** case dir | the manifest embeds the original run's `audit_log_path` | Pass the local log explicitly: `manifest_verify(manifest_path=..., audit_log_path=<copied audit.jsonl>)` — see `docs/cryptographic-attestation.md` |
 | `scripts/trace-finding <run-dir>` exits non-zero | a hash-chain link or Merkle leaf failed to resolve | That is the tool working: a single flipped bit anywhere in `audit.jsonl` breaks the chain. Diff against the original run dir |

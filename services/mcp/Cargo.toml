@@ -32,7 +32,7 @@ path = "src/main.rs"
 
 # Hashing — stdlib-friendly sha2 crate. No pin across workspace
 # since this is a transitive of downstream tools too.
-sha2 = "0.10"
+sha2 = "0.11"
 
 # omerbenamram's EVTX parser — MIT/Apache-2.0, ~1600x faster than
 # python-evtx. Linked in-process per Spec #2 §16. Pinned exact per
@@ -73,13 +73,34 @@ yara-x-proto = "=1.12.0"
 # usnjrnl-forensic — MIT, NTFS USN Journal parser with full-path
 # reconstruction via journal rewind. Used by `usnjrnl_query` to
 # detect file create/delete/rename activity over an incident window.
-usnjrnl-forensic = "=0.6.0"
+usnjrnl-forensic = "=0.7.3"
 
 # rusqlite (MIT) parses browser-history SQLite DBs (Chrome/Edge `History`,
 # Firefox `places.sqlite`) read-only in the `browser_history` tool. `bundled`
 # vendors SQLite from source so a judge's fresh build needs no system
 # libsqlite3-dev (fully reproducible). Already resolved at 0.32.1 in the lock.
 rusqlite = { version = "=0.32.1", features = ["bundled"] }
+
+# cfb — MIT, pure-Rust Compound File Binary (OLE2/CFB) reader.
+# Used by `thumbcache_parse` to read XP-era `Thumbs.db` thumbnail caches
+# (the `Catalog` stream + per-index thumbnail streams). Runtime use is
+# read-only; the crate's write face is used only by tests to synthesize
+# fixtures. Pinned exact per the spec's library pin discipline; MSRV 1.74
+# (toolchain is pinned at 1.88).
+cfb = "=0.14.0"
+
+# kamadak-exif — BSD-2/Apache-2, pure-Rust EXIF metadata reader. Used by
+# `exif_parse` to read camera/GPS/timestamp/software tags from user-content
+# images (JPEG/TIFF/HEIF/PNG/WebP containers). Read-only; no image bytes leave
+# the tool, only structured tag values. Pinned exact per the library-pin
+# discipline.
+kamadak-exif = "=0.6.1"
+
+# mail-parser — Apache-2/MIT, pure-Rust RFC 5322 / MIME reader. Used by
+# `email_parse` to read `.eml` single messages and `.mbox` archives (headers +
+# attachment metadata; never decodes/exports body payloads to disk). Deterministic
+# structured output. Pinned exact.
+mail-parser = "=0.11.4"
 
 # UUID v4 for deterministic case_id generation.
 uuid = { version = "1", features = ["v4", "serde"] }
@@ -97,7 +118,7 @@ serde_json = "1"
 schemars = { version = "1", features = ["preserve_order"] }
 
 # thiserror for structured, documented error types.
-thiserror = "1"
+thiserror = "2"
 
 # Async runtime. Used by tool modules that benefit from async
 # subprocess management (vol_*, hayabusa_scan, vel_collect) and by

@@ -214,3 +214,77 @@ def test_fault_fires_at_most_once_per_run(monkeypatch) -> None:
     assert py.kinds().count("fault_injection") == 1
     assert len(py.verify_calls("f-aa-1")) == 2  # faulted + re-dispatched
     assert len(py.verify_calls("f-aa-2")) == 1  # untouched
+
+
+# --- entailment_misread_once: break the READ, not the citation ---------------
+# The two modes above corrupt the citation/SHA. This mode corrupts the value the
+# finding asserts so it no longer matches the (reproducing) evidence — a
+# reproducible "the model misread the evidence" fault, which the deterministic
+# entailment check must catch. This is the mutation test behind the demo clip.
+
+from findevil_agent.entailment import check_entailment  # noqa: E402
+from findevil_agent.events import AssertedValue  # noqa: E402
+
+_RUN_KEY = "ROOT\\Microsoft\\Windows\\CurrentVersion\\Run"
+
+
+def _registry_output(value_name: str, data_str: str) -> dict:
+    return {
+        "entries": [
+            {
+                "key_path": _RUN_KEY,
+                "last_write_time_iso": "2018-09-06T19:00:00Z",
+                "values": [{"name": value_name, "value_type": "RegSz", "data_str": data_str}],
+            }
+        ],
+        "keys_visited": 1,
+        "parse_errors": 0,
+    }
+
+
+def test_misread_mode_is_recognized_by_the_spec(monkeypatch) -> None:
+    monkeypatch.setenv("FIND_EVIL_FAULT_INJECT", "entailment_misread_once:f-reg")
+    assert fea.fault_inject_spec() == ("entailment_misread_once", "f-reg")
+
+
+def test_fault_inject_misread_breaks_a_record_assertion_without_mutating_input() -> None:
+    original_expected = '{"name": "Updater", "data_str": "evil.exe"}'
+    finding = {
+        "finding_id": "f-1",
+        "confidence": "CONFIRMED",
+        "asserted_values": [
+            {"path": "entries[*].values[*]", "expected": original_expected, "match": "record"}
+        ],
+    }
+    faulted = fea.fault_inject_misread(finding)
+    # immutability: the original finding is untouched
+    assert finding["asserted_values"][0]["expected"] == original_expected
+    # the faulted assertion no longer matches the evidence it used to
+    out = _registry_output("Updater", "C:\\Users\\bob\\evil.exe")
+    avs = [AssertedValue(**av) for av in faulted["asserted_values"]]
+    assert check_entailment(avs, out).passed is False
+
+
+def test_misread_injection_kills_a_real_registry_finding() -> None:
+    # Mutation test on the REAL emitter path: build a CONFIRMED registry
+    # finding, confirm its declared fact is entailed by the cited output, then
+    # inject the misread and confirm the same output no longer entails it.
+    inv = fea.Investigation("memory.img", unattended=True, with_report=False)
+    inv.handle = {"id": "case-fault"}
+    cand = {
+        "kind": "run_key",
+        "value_name": "Updater",
+        "target": "C:\\Users\\bob\\AppData\\Roaming\\evil.exe",
+        "hive_key": _RUN_KEY,
+        "last_write_time_iso": "2018-09-06T19:00:00Z",
+    }
+    inv._emit_registry_persistence_findings([cand], "/evidence/SOFTWARE", _RUN_KEY, "tc-1", {})
+    finding = inv.findings_pool_a[0]
+    out = _registry_output("Updater", "C:\\Users\\bob\\AppData\\Roaming\\evil.exe")
+
+    truthful = [AssertedValue(**av) for av in finding["asserted_values"]]
+    assert check_entailment(truthful, out).passed is True  # honest finding: entailed
+
+    faulted = fea.fault_inject_misread(finding)
+    misread = [AssertedValue(**av) for av in faulted["asserted_values"]]
+    assert check_entailment(misread, out).passed is False  # injected misread: caught

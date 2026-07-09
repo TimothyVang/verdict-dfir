@@ -38,11 +38,14 @@ class TestLnkRemovableMediaCandidates:
         assert fea.lnk_removable_media_candidates(rows) == []
 
     def test_path_only_recent_nethood_fallback_is_candidate(self) -> None:
+        # A NetHood shortcut to a network staging share, recovered from path text
+        # only (LECmd could not decode target metadata). The generic "staging"
+        # tell keys the candidacy on any host.
         rows = [
             {
                 "Source File": (
-                    "Documents and Settings\\Mr. Evil\\NetHood\\"
-                    "Temp on m1200 (4.12.220.254)\\target.lnk"
+                    "Documents and Settings\\Suspect User\\NetHood\\"
+                    "staging share on fileserver\\target.lnk"
                 ),
                 "Fallback Basis": "path_name",
                 "Fallback Warning": "LECmd not found; target metadata was not decoded.",
@@ -57,14 +60,16 @@ class TestLnkRemovableMediaCandidates:
         assert not cands[0]["volume_serial"]
 
     def test_lnk_triage_prioritizes_recent_and_nethood(self) -> None:
+        # A Recent/NetHood shortcut carrying a staging tell ranks ahead of a
+        # generic All Users Start Menu shortcut on any Windows host.
         entries = [
             {
                 "path": "/case/lnk/Documents and Settings/All Users/Start Menu/Programs/Calculator.lnk"
             },
             {
                 "path": (
-                    "/case/lnk/Documents and Settings/Mr. Evil/NetHood/"
-                    "Temp on m1200 (4.12.220.254)/target.lnk"
+                    "/case/lnk/Documents and Settings/Suspect User/NetHood/"
+                    "staging share on fileserver/target.lnk"
                 )
             },
         ]

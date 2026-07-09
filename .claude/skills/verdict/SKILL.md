@@ -76,6 +76,8 @@ Use default parallel execution. Pass `--no-dashboard` only when the operator exp
 
 SIFT mode should prefer read-only guest-mounted evidence paths such as `/mnt/hgfs/evidence/<artifact>`; these are referenced directly and are not copied. If the operator supplies a host-only path in `--sift` mode, the launcher fails closed unless `FINDEVIL_SIFT_CASE_STAGING_ROOT` points to a guest-visible project case staging directory, typically ending in `staging/sift`. Current-run SIFT staging is marker-guarded and removed after a successful run unless `--keep-sift-staging` is set. Do not ask the operator to manually remove current-run staging after a successful `scripts/verdict --sift` run; if disk pressure remains, distinguish automatic current-run cleanup from legacy root-level staging that predates this lifecycle and requires explicit approval before deletion.
 
+Keep `--run-summary` outputs outside evidence paths. Use `tmp/...` or another non-evidence output directory; the launcher rejects summary paths inside the evidence directory or configured host evidence roots.
+
 ### 4. Locate Case Outputs
 
 Use the case path printed by `scripts/verdict`. Prefer the case-local run summary:

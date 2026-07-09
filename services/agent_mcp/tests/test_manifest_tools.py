@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from findevil_agent_mcp.tools.manifest_finalize import (
     SPEC as FINALIZE_SPEC,
 )
@@ -158,6 +160,48 @@ class TestManifestVerify:
         assert result.leaf_count_ok is True
         assert result.signature_present is True
 
+    async def test_path_is_accepted_as_alias_for_manifest_path(
+        self, seeded_audit_log: Path, tmp_path: Path
+    ) -> None:
+        # Local models routinely call manifest_verify with {"path": ...} instead
+        # of {"manifest_path": ...}. With extra="forbid" that used to hard-fail
+        # ('path' was unexpected), derailing the seal sequence and forcing the
+        # deterministic fallback. Accept `path` as an alias so one arg slip does
+        # not cost a tool call.
+        out_path = tmp_path / "run.manifest.json"
+        await FINALIZE_SPEC.handler(
+            ManifestFinalizeInput(
+                case_id="case-alias",
+                run_id="run-alias",
+                started_at="2026-04-25T00:00:00Z",
+                audit_log_path=str(seeded_audit_log),
+                output_path=str(out_path),
+                signer="stub",
+            )
+        )
+        # `path` alias must resolve to the same field.
+        aliased = ManifestVerifyInput(path=str(out_path))
+        assert aliased.manifest_path == str(out_path)
+        result = await VERIFY_SPEC.handler(aliased)
+        assert result.overall is True
+
+    def test_manifest_path_and_path_conflict_is_rejected(self, tmp_path: Path) -> None:
+        import pytest
+        from pydantic import ValidationError
+
+        # Supplying both keys with different values is ambiguous — reject it
+        # rather than silently pick one.
+        with pytest.raises(ValidationError):
+            ManifestVerifyInput(manifest_path="/a/run.manifest.json", path="/b/run.manifest.json")
+
+    def test_unrelated_extra_field_still_rejected(self, tmp_path: Path) -> None:
+        import pytest
+        from pydantic import ValidationError
+
+        # The alias must not open the door to arbitrary extra keys.
+        with pytest.raises(ValidationError):
+            ManifestVerifyInput(manifest_path="/a/run.manifest.json", bogus="x")
+
     async def test_tampered_merkle_root_caught(
         self, seeded_audit_log: Path, tmp_path: Path
     ) -> None:
@@ -181,6 +225,32 @@ class TestManifestVerify:
         assert result.merkle_root_ok is False
         assert result.merkle_root_detail is not None
         assert "ff" in result.merkle_root_detail
+
+
+class TestStubSignerCoercion:
+    async def test_stub_coerced_to_ed25519_without_allow_env(
+        self,
+        seeded_audit_log: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Agent-supplied signer:stub must not produce a non-proof seal by default."""
+        monkeypatch.delenv("FINDEVIL_ALLOW_STUB_SIGNER", raising=False)
+        out_path = tmp_path / "run.manifest.json"
+        result = await FINALIZE_SPEC.handler(
+            ManifestFinalizeInput(
+                case_id="case-coerce",
+                run_id="run-coerce",
+                started_at="2026-04-25T00:00:00Z",
+                audit_log_path=str(seeded_audit_log),
+                output_path=str(out_path),
+                signer="stub",
+            )
+        )
+        assert result.signer_effective == "ed25519"
+        assert result.fallback_reason is not None
+        assert "stub coerced to ed25519" in result.fallback_reason
+        assert out_path.is_file()
 
 
 class TestCitationGateAtToolBoundary:

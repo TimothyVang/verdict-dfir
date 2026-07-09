@@ -21,7 +21,10 @@ Usage:
     [finding_id]  trace only this finding (default: every finding in verdict.json)
 
 Exit code 0 iff the audit chain is intact AND every traced finding resolves to a
-tool execution and a Merkle leaf; 1 otherwise.
+tool execution and a Merkle leaf; 1 otherwise. A run with zero findings is OK when
+its verdict does not assert evil (a scoped NO_EVIL / INDETERMINATE control whose
+custody value is exactly that the chain, manifest, and verdict verify with nothing
+to trace); a SUSPICIOUS verdict with zero findings stays INCOMPLETE.
 """
 
 from __future__ import annotations
@@ -344,12 +347,28 @@ def main(argv: list[str]) -> int:
         1 for f in findings if _trace_one(f, tool_calls, leaf_ids, approved_finding_ids)
     )
 
-    print(
-        f"\nTRACE {'OK' if traced_ok == len(findings) and findings else 'INCOMPLETE'}: "
-        f"{traced_ok}/{len(findings)} findings resolve to an approved finding, "
-        "tool execution, and Merkle leaves."
-    )
-    return 0 if (traced_ok == len(findings) and findings) else 1
+    # A run with zero findings is correctly traceable when it does not assert evil:
+    # a scoped NO_EVIL / INDETERMINATE control's custody value IS that the chain,
+    # manifest, and verdict all verify with nothing to trace. Only a verdict that
+    # asserts evil (SUSPICIOUS) with zero findings is inconsistent and stays INCOMPLETE.
+    verdict_word = str(verdict.get("verdict", "")).upper()
+    all_resolve = traced_ok == len(findings)
+    no_finding_control = not findings and verdict_word in {"NO_EVIL", "INDETERMINATE"}
+    ok = (all_resolve and bool(findings)) or (all_resolve and no_finding_control)
+
+    if no_finding_control:
+        print(
+            f"\nTRACE {'OK' if ok else 'INCOMPLETE'}: 0/0 findings -- scoped "
+            f"{verdict_word} control; chain, manifest, and verdict all verify with "
+            "nothing to trace."
+        )
+    else:
+        print(
+            f"\nTRACE {'OK' if ok else 'INCOMPLETE'}: "
+            f"{traced_ok}/{len(findings)} findings resolve to an approved finding, "
+            "tool execution, and Merkle leaves."
+        )
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from findevil_agent_mcp.tools.correlate_findings import (
     SPEC as CORRELATE_SPEC,
 )
@@ -41,6 +43,15 @@ def _finding(**overrides: Any) -> dict[str, Any]:
     }
     base.update(overrides)
     return base
+
+
+def _verifier_action(finding_id: str = "f-1", action: str = "approved") -> dict[str, Any]:
+    return {
+        "case_id": "case-001",
+        "finding_id": finding_id,
+        "action": action,
+        "reason": "tool re-run output_sha256 matches audit log",
+    }
 
 
 class TestDetectContradictions:
@@ -82,10 +93,97 @@ class TestDetectContradictions:
 
 
 class TestJudgeFindings:
+    async def test_rejects_findings_without_verifier_actions(self) -> None:
+        with pytest.raises(ValueError, match="verifier_actions"):
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A")],
+                pool_b_findings=[],
+            )
+
+    async def test_rejects_findings_without_matching_verifier_actions(self) -> None:
+        with pytest.raises(ValueError, match="missing verifier action"):
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A")],
+                pool_a_verifier_actions=[_verifier_action("f-other")],
+                pool_b_findings=[],
+            )
+
+    async def test_applies_downgraded_verifier_action_before_judging(self) -> None:
+        result = await JUDGE_SPEC.handler(
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A", confidence="CONFIRMED")],
+                pool_a_verifier_actions=[_verifier_action("f-1", "downgraded")],
+                pool_b_findings=[],
+            )
+        )
+
+        assert result.merged[0].finding["confidence"] == "INFERRED"
+
+    async def test_rejects_duplicate_verifier_actions(self) -> None:
+        with pytest.raises(ValueError, match="duplicate verifier action"):
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A", confidence="CONFIRMED")],
+                pool_a_verifier_actions=[
+                    _verifier_action("f-1", "rejected"),
+                    _verifier_action("f-1", "approved"),
+                ],
+                pool_b_findings=[],
+            )
+
+    async def test_rejects_extra_verifier_actions(self) -> None:
+        with pytest.raises(ValueError, match="without matching finding"):
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A")],
+                pool_a_verifier_actions=[
+                    _verifier_action("f-1"),
+                    _verifier_action("f-other"),
+                ],
+                pool_b_findings=[],
+            )
+
+    async def test_rejects_extra_rejected_verifier_actions(self) -> None:
+        with pytest.raises(ValueError, match="without matching finding"):
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A", confidence="CONFIRMED")],
+                pool_a_verifier_actions=[
+                    _verifier_action("f-1", "approved"),
+                    _verifier_action("f-rejected", "rejected"),
+                ],
+                pool_b_findings=[],
+            )
+
+    async def test_rejects_orphan_verifier_actions_when_pool_empty(self) -> None:
+        with pytest.raises(ValueError, match="without matching finding"):
+            JudgeFindingsInput(
+                pool_a_findings=[],
+                pool_a_verifier_actions=[_verifier_action("f-orphan", "approved")],
+                pool_b_findings=[],
+            )
+
+    async def test_rejects_orphan_rejected_verifier_actions_when_pool_empty(self) -> None:
+        with pytest.raises(ValueError, match="without matching finding"):
+            JudgeFindingsInput(
+                pool_a_findings=[],
+                pool_a_verifier_actions=[_verifier_action("f-orphan", "rejected")],
+                pool_b_findings=[],
+            )
+
+    async def test_rejected_verifier_action_filters_finding_before_judging(self) -> None:
+        result = await JUDGE_SPEC.handler(
+            JudgeFindingsInput(
+                pool_a_findings=[_finding(pool_origin="A", confidence="CONFIRMED")],
+                pool_a_verifier_actions=[_verifier_action("f-1", "rejected")],
+                pool_b_findings=[],
+            )
+        )
+
+        assert result.merged == []
+
     async def test_pure_pool_a_yields_pool_a_only_results(self) -> None:
         result = await JUDGE_SPEC.handler(
             JudgeFindingsInput(
                 pool_a_findings=[_finding(pool_origin="A")],
+                pool_a_verifier_actions=[_verifier_action("f-1")],
                 pool_b_findings=[],
             )
         )
@@ -122,7 +220,12 @@ class TestJudgeFindings:
         result = await JUDGE_SPEC.handler(
             JudgeFindingsInput(
                 pool_a_findings=[a_main, a_other],
+                pool_a_verifier_actions=[
+                    _verifier_action("f-A-1"),
+                    _verifier_action("f-A-2"),
+                ],
                 pool_b_findings=[b_main],
+                pool_b_verifier_actions=[_verifier_action("f-B-1")],
             )
         )
         assert isinstance(result, JudgeFindingsOutput)
@@ -139,14 +242,15 @@ class TestJudgeFindings:
 
 class TestCorrelateFindings:
     async def test_non_execution_claim_kept(self) -> None:
-        # T1071 = application-layer protocol; not an execution technique
-        # per the correlator's whitelist, so this finding stays as-is.
+        # A non-execution finding that binds to no corroboration gate (no
+        # execution claim, no tactic prefix/prose) stays as-is. (T1071 is no
+        # longer a neutral example — it now binds to the COMMAND_AND_CONTROL gate.)
         result = await CORRELATE_SPEC.handler(
             CorrelateFindingsInput(
                 findings=[
                     _finding(
-                        description="Network connection observed",
-                        mitre_technique="T1071.001",
+                        description="User profile directory observed on disk",
+                        mitre_technique=None,
                         confidence="CONFIRMED",
                     )
                 ]
@@ -156,6 +260,27 @@ class TestCorrelateFindings:
         assert len(result.outcomes) == 1
         assert result.outcomes[0].action == "kept"
         assert result.refined[0]["confidence"] == "CONFIRMED"
+
+    async def test_no_gate_record_keeps_neutral_defaults(self) -> None:
+        # A finding that matched no corroboration gate leaves the additive
+        # structured fields at their neutral defaults — old consumers reading only
+        # finding_id/action/reason are unaffected.
+        result = await CORRELATE_SPEC.handler(
+            CorrelateFindingsInput(
+                findings=[
+                    _finding(
+                        description="User profile directory observed on disk",
+                        mitre_technique=None,
+                        confidence="CONFIRMED",
+                    )
+                ]
+            )
+        )
+        outcome = result.outcomes[0]
+        assert outcome.gate is None
+        assert outcome.severity is None
+        assert outcome.required_pairs == []
+        assert outcome.missing_classes == []
 
     async def test_amcache_only_execution_downgraded(self) -> None:
         # T1059 (command interpreter) makes this an execution claim; the
@@ -175,3 +300,49 @@ class TestCorrelateFindings:
         assert result.outcomes[0].action == "downgraded"
         assert "Amcache" in result.outcomes[0].reason
         assert result.refined[0]["confidence"] == "INFERRED"
+
+    async def test_execution_gate_record_surfaced(self) -> None:
+        # The execution gate fires on this Amcache-only execution claim; the shim
+        # must surface the structured gate record the correlator computed, so
+        # verdict.json's findings_summary.correlation_outcomes records which class
+        # would corroborate.
+        result = await CORRELATE_SPEC.handler(
+            CorrelateFindingsInput(
+                findings=[
+                    _finding(
+                        description="Amcache shows the binary executed at 10:42",
+                        mitre_technique="T1059.001",
+                        confidence="CONFIRMED",
+                    )
+                ]
+            )
+        )
+        outcome = result.outcomes[0]
+        assert outcome.gate == "EXECUTION"
+        assert outcome.severity == "high"
+        # Any one of these independent pairs satisfies the execution gate.
+        assert outcome.required_pairs
+        assert all(isinstance(p, str) for p in outcome.required_pairs)
+        # Prefetch is the closest missing class for an Amcache-only claim.
+        assert "prefetch" in outcome.missing_classes
+
+    async def test_gate_record_serializes_into_output_dict(self) -> None:
+        # The fields must survive JSON serialization (the verdict.json path), not
+        # just be present on the Pydantic instance.
+        result = await CORRELATE_SPEC.handler(
+            CorrelateFindingsInput(
+                findings=[
+                    _finding(
+                        description="Amcache shows the binary executed at 10:42",
+                        mitre_technique="T1059.001",
+                        confidence="CONFIRMED",
+                    )
+                ]
+            )
+        )
+        dumped = result.model_dump()["outcomes"][0]
+        assert dumped["gate"] == "EXECUTION"
+        assert dumped["severity"] == "high"
+        assert isinstance(dumped["required_pairs"], list)
+        assert isinstance(dumped["missing_classes"], list)
+        assert "prefetch" in dumped["missing_classes"]

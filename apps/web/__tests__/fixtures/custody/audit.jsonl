@@ -1,0 +1,5 @@
+{"kind":"agent_message","payload":{"content":"begin custody fixture","elapsed_s":50.396626,"role":"supervisor"},"prev_hash":"","seq":0,"ts":"2026-06-30T00:00:00Z"}
+{"kind":"tool_call_start","payload":{"note":"unic\u00f3de \u2713","tool":"evtx_query","tool_call_id":"tc-1"},"prev_hash":"ea6f7c6785d2fef7886138c334a52c92afbd0cabc361a1319420875e2f61b794","seq":1,"ts":"2026-06-30T00:00:00Z"}
+{"kind":"tool_call_output","payload":{"output_hash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","row_count":3,"tool_call_id":"tc-1"},"prev_hash":"7b6ffd4ec2dd3fb676297a5b84bababc5334c7a3db9fe0e90decd0e02bae17ea","seq":2,"ts":"2026-06-30T00:00:00Z"}
+{"kind":"finding_approved","payload":{"finding_id":"f-1","title":"demo finding","tool_call_id":"tc-1"},"prev_hash":"b22e2317a656c1512e921c470ff4a61ca64ecbfa63a38173576c1247490a6cef","seq":3,"ts":"2026-06-30T00:00:00Z"}
+{"kind":"verdict_packet","payload":{"final_finding_ids":["f-1"],"packet_state":"EXPERT_REVIEW_DRAFT"},"prev_hash":"6d53c350e18b7e8fa07563979ac83e19d80f41c448d3dbe8ad28831776ebeb89","seq":4,"ts":"2026-06-30T00:00:00Z"}

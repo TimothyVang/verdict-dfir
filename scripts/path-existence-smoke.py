@@ -97,6 +97,11 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"^\./(analysis|exports)/"),
     # Runtime user dirs.
     re.compile(r"^~/"),
+    # Operator-created Claude Code config the operator writes to opt into the
+    # optional OS-level deny-hook (docs/architecture.md, docs/sandbox/...); it
+    # is intentionally NOT shipped in the repo, so it must not be asserted to
+    # exist on disk.
+    re.compile(r"^\.claude/settings(\.local)?\.json$"),
     # Env-var-substituted runtime paths (e.g.
     # `$XDG_STATE_HOME/findevil/memory.sqlite`,
     # `$HOME/.local/state/findevil/memory.sqlite` in agent-config/AGENTS.md
@@ -128,6 +133,10 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # in CLAUDE.md "Commands" section + apps/web/README.md for
     # `pnpm --filter` invocations.
     re.compile(r"^@[a-z0-9_-]+/[a-z0-9_-]+$"),
+    # First-party framework subpath package imports (e.g. `next/font`,
+    # `next/image`) — Next.js module specifiers quoted in docs/brand.md's type
+    # roles, not repo files. Same rationale as the @scoped-package allow above.
+    re.compile(r"^next/[a-z-]+$"),
     # Deferred-per-Amendment-A2 widget paths. apps/web is live now,
     # so broken apps/web references should fail this smoke.
     re.compile(r"^apps/mcp-widgets(/|$)"),
@@ -208,6 +217,12 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # Runtime output dir (`./out/`, `./out`): gitignored and created at run time,
     # so it exists only after a run, never in the CI checkout.
     re.compile(r"^\./out(/|$)"),
+    # The containment runtime dir: `.project-local/` holds TMPDIR, the
+    # FINDEVIL_HOME case store, XDG_*, and the npm/Rust/uv/pnpm toolchain caches
+    # (documented in docs/repo-layout.md + docs/agent-containment.md). It is
+    # gitignored and created by scripts/setup, so it exists only after setup —
+    # never in a fresh clone (where this smoke would otherwise false-fail).
+    re.compile(r"^\.project-local(/|$)"),
     # Generated demo video: built by scripts/make-demo-video.sh and hosted on the
     # GitHub Release (not committed, to keep the clone small). CHANGELOG/docs cite
     # its generator output path; README links the hosted copy.
@@ -256,7 +271,7 @@ ALLOW_PATTERNS: tuple[re.Pattern[str], ...] = (
     # superseded `sans-hackathon`, quoted in CLAUDE.md / docs.  External GitHub
     # references, not filesystem paths in this repo.
     re.compile(r"^github\.com/TimothyVang/"),
-    re.compile(r"^TimothyVang/(verdict-dfir|sans-hackathon)"),
+    re.compile(r"^TimothyVang/(verdict-dfir|sans-hackathon|dev-verdict-github)"),
     # In-repo markdown anchor links (file.md#section-name).  The path-
     # existence smoke resolves file paths by their prefix up to '#'; the
     # anchor part is not a file system component.  These are allowed so
@@ -409,6 +424,20 @@ def main() -> int:
 
     print(f"checked {total_paths} backtick-quoted paths across {len(docs)} docs")
     print()
+
+    # Content gate: the validation-scope doc must exist and name all three
+    # validation classes, so the training-data-contamination caveat the
+    # accuracy report links to can never silently lose a class.
+    limitations = REPO / "docs" / "LIMITATIONS.md"
+    if not limitations.is_file():
+        missing.append(("docs/LIMITATIONS.md", "file does not exist"))
+    else:
+        ltext = limitations.read_text(encoding="utf-8")
+        for cls in ("synthetic", "public-documented", "held-out"):
+            if cls not in ltext:
+                missing.append(
+                    ("docs/LIMITATIONS.md", f"missing validation_class '{cls}'")
+                )
 
     if missing:
         for src, target in missing:

@@ -1,0 +1,60 @@
+{
+  "audit_log_final_hash": "c50c46921d476f6d4e2f13475384522db77eb7529d27455256f50a8bd8b27745",
+  "audit_log_path": "audit.jsonl",
+  "audit_log_record_count": 22,
+  "case_id": "d0384d9d-6df6-42f3-973f-931c29bcad9b",
+  "extra": {
+    "evidence_type": "evtx",
+    "image_path": "/evidence/DE_1102_security_log_cleared.evtx",
+    "model": "find-evil-auto",
+    "packet_attestation": {
+      "customer_releasable": false,
+      "customer_release_candidate": false,
+      "expert_signoff_packet_sha256": "5ee6c8155eab51fb4f93ee52833719279007b48b127a287e7aa4664f1724d413",
+      "final_finding_ids": [
+        "f-A-evtx-audit-log-cleared"
+      ],
+      "packet_state": "EXPERT_REVIEW_DRAFT",
+      "release_gate_sha256": "52e815768536f6e14f86db4114757a70b7fac8849e07f98d8717acf659811d25",
+      "report_qa_sha256": "58c619e0577d9cf074b9331c246d4ed3e77e6f872980511c8757516cab648fe0",
+      "verdict_artifact_bytes": 157384,
+      "verdict_artifact_path": "verdict.json",
+      "verdict_artifact_sha256": "53c82e08a7629ca315593426ba3637919cfde79087d306ba499a840c2666b50a",
+      "verdict_packet_sha256": "3e5f108cdf4a014de027aa671edc2a407107983ceb17c8c642cbcb5abdd048b9"
+    },
+    "signer": "ed25519"
+  },
+  "finalized_at": "2026-06-20T15:30:46Z",
+  "leaf_count": 3,
+  "leaves": [
+    {
+      "digest_hex": "a0615707b547a2ac254688fd725c3c590f62440fc9b7947c2843dd40498a39e8",
+      "kind": "tool_call_output",
+      "record_id": "tc-001",
+      "seq": 2
+    },
+    {
+      "digest_hex": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
+      "kind": "tool_call_output",
+      "record_id": "tc-002",
+      "seq": 4
+    },
+    {
+      "digest_hex": "d33f82c335a65ae4a7e7707c9877024bb85c35b372639cc0862bc382b90fffda",
+      "kind": "finding",
+      "record_id": "f-A-evtx-audit-log-cleared",
+      "seq": 17
+    }
+  ],
+  "merkle_root_hex": "453dcb581a0e50d5fddbaa4f02ba7e41cd96879d91e4556fad3bc865a42317b8",
+  "run_id": "auto-1781969444",
+  "signature": {
+    "bundle_b64": "eyJjZXJ0X2ZpbmdlcnByaW50IjoiYjk4ZGYxYTlkMDlkYTM3NDFlMjk1ZDdkYTIxYjliNjc1Mjg3YWRmYjM2YjEwY2ExN2MyODBlMmExZmVlMGY1NCIsImtpbmQiOiJlZDI1NTE5IiwicGF5bG9hZF9zaGEyNTYiOiI0MDU3ZjczYTA5YWExNTlkNzIzZTBhMTRiYWEzYzIwOTdmZjBlMWQzZjZmMmFkNzEwNzY2NzQ3MjVjYzA4NWJkIiwicHVibGljX2tleV9iNjQiOiJUTjl6SldZVFJCTHdDbFNPWG5QalRrM1NieEZUbDhyR0Jlc3hqcjRtaExVPSIsInNpZ25hdHVyZV9iNjQiOiJkUEkrbThoNk5ENTYrUGswWVNYMHZvQzlMNU5sa1pvdkV2SC9IV0ZBNFVZTkFIRFBrYnBiWExmL3VLdDJvZjYxTTF4SkQ0TXh5VVBta3d1YzhhMUlDUT09In0=",
+    "cert_fingerprint": "b98df1a9d09da3741e295d7da21b9b675287adfb36b10ca17c280e2a1fee0f54",
+    "kind": "ed25519",
+    "payload_sha256": "4057f73a09aa159d723e0a14baa3c2097ff0e1d3f6f2ad71076674725cc085bd",
+    "signed_at": "2026-06-20T15:30:46Z"
+  },
+  "started_at": "2026-06-20T15:30:44Z",
+  "version": "1"
+}

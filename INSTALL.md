@@ -6,8 +6,8 @@ pitch see [README.md](README.md); for run modes and every flag see
 
 VERDICT runs as a [Claude Code](https://claude.com/claude-code) agent. Installation builds the two
 product MCP servers and the host DFIR toolchain; Claude Code auto-spawns the servers from
-`.mcp.json` on session start. The product surface is 43 tools total: 31 Rust DFIR tools in
-`findevil-mcp` plus 12 Python crypto/ACH/memory/ACP/expert-feedback tools in
+`.mcp.json` on session start. The product surface is 48 tools total: 34 Rust DFIR tools in
+`findevil-mcp` plus 14 Python crypto/ACH/memory/ACP/expert-feedback tools in
 `findevil-agent-mcp`.
 
 ---
@@ -17,13 +17,13 @@ product MCP servers and the host DFIR toolchain; Claude Code auto-spawns the ser
 Install the required OS tools and configure one Claude credential first. The first-run setup can
 bootstrap the C toolchain (`build-essential` on Debian/Ubuntu), missing cargo/uv via their official
 installers, and Node 20 via `fnm` when needed (best-effort, since Node is optional):
-`bash scripts/setup` calls `scripts/install.sh --bootstrap`. For fail-closed CI checks, run
+`bash scripts/setup` calls `scripts/install.sh --bootstrap`. For fail-closed CI/judge checks, run
 `bash scripts/install.sh` without `--bootstrap`; it reports missing tools instead of installing them.
 
 | Tool | Version | Why | Required? |
 |---|---|---|---|
-| Rust + Cargo | 1.88 (pinned in `rust-toolchain.toml`) | builds `findevil-mcp` (31 DFIR tools) | **yes** |
-| uv | latest | syncs the Python `findevil-agent-mcp` env (12 tools) | **yes** |
+| Rust + Cargo | 1.88 (pinned in `rust-toolchain.toml`) | builds `findevil-mcp` (34 DFIR tools) | **yes** |
+| uv | latest | syncs the Python `findevil-agent-mcp` env (14 tools) | **yes** |
 | Python | 3.11–3.12 | runs the Python `findevil-agent-mcp` + smoke/score tooling | **yes** |
 | git | recent | clones the repo; used by the smokes | **yes** |
 | unzip | any | extracts Velociraptor `.zip` collections + fixtures | **yes** |
@@ -50,7 +50,7 @@ installers, and Node 20 via `fnm` when needed (best-effort, since Node is option
 ## Step 1 — Clone
 
 ```bash
-git clone --depth 1 https://github.com/TimothyVang/verdict-dfir.git verdict   # --depth 1 keeps the clone small + fast
+git clone --depth 1 https://github.com/TimothyVang/verdict-dfir-beta.git verdict   # --depth 1 keeps the clone small + fast
 cd verdict
 ```
 

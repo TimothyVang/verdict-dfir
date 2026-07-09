@@ -19,12 +19,23 @@ Matching: an expected finding is RECALLED when some run finding either
   - overlaps its ``description`` + ``artifact_hint`` tokens above ``MATCH_THRESHOLD``
     (Jaccard over lowercased alphanumeric tokens, stopwords removed).
 
-PASS rule (exit 0) requires BOTH:
-  - ``recall_percent >= min_recall_percent`` from the golden, and
+Precision side (over-claiming): a run finding matched to no expected claim is
+``extra``. On an ``exhaustive`` (closed-world) golden every extra is a false
+positive; on an open-world golden an extra is only a *provable* false positive
+when it matches a planted ``anti_fact`` (a claim that is false for the case) or a
+``known_negative`` (a benign IOC-lookalike a correct run must not assert). The
+scorer reports ``precision_percent`` / ``f1`` / ``hallucination_rate`` and a
+``precision_scored`` flag so open-world numbers are not mistaken for authoritative.
+
+PASS rule (exit 0) requires ALL of:
+  - ``recall_percent >= min_recall_percent`` from the golden,
   - ``verdict_match`` — the run's verdict word is consistent with the golden's.
     Consistency is honest, not literal: ``INDETERMINATE`` is always accepted (a
     scoped-partial run is never a recall failure, per the live-test gate), and the
-    evil/no-evil polarity must agree otherwise.
+    evil/no-evil polarity must agree otherwise, and
+  - no ``anti_fact`` / ``known_negative`` violation — asserting a known-wrong claim
+    fails the run even on an open-world key. Generic extra findings are reported
+    but do not fail, so surfacing a real claim the key omitted is not punished.
 
 Usage:
     python scripts/score-recall.py <case-dir> [--golden goldens/<id>] [--quiet]
@@ -33,239 +44,80 @@ Usage:
 
 from __future__ import annotations
 
+import importlib.util
 import json
-import re
 import sys
 from pathlib import Path
 from typing import Any
 
-# A run finding matches an expected one when it COVERS this fraction of the
-# expected finding's distinctive tokens. Recall asks "did the run surface this
-# ground-truth claim?" — so we normalize the overlap by the expected token set,
-# not by the union (symmetric Jaccard unfairly penalizes verbose run findings
-# that fully state the claim and then add caveats). Set at 0.5 so a match needs the
-# *distinctive* tokens of the claim, not just shared generic DFIR vocabulary
-# (email/host/http) that a semantically-unrelated finding can accumulate to ~0.4.
-MATCH_COVERAGE = 0.5
-# Floor on absolute shared tokens so a tiny expected set can't match on one or
-# two generic words that survived stopword removal.
-MATCH_MIN_SHARED = 3
+# Single source of truth for the scoring core. The pure recall / precision /
+# verdict-consistency / negative-coverage logic lives in the product package
+# (services/agent/findevil_agent/accuracy.py) so the `accuracy_compare` MCP shim
+# and this maintainer CLI share one implementation (no logic fork). This script
+# keeps only the CLI + printing layer below.
+#
+# accuracy.py is stdlib-only, so we load it directly by file path rather than via
+# ``import findevil_agent.accuracy`` — that package's __init__ pulls in the agent
+# runtime (StrEnum etc., Python 3.11+), which this hyphenated maintainer script
+# (often run with a bare ``python3``) should not require.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_ACC_PATH = _REPO_ROOT / "services" / "agent" / "findevil_agent" / "accuracy.py"
+_acc_spec = importlib.util.spec_from_file_location("findevil_accuracy_core", _ACC_PATH)
+assert _acc_spec and _acc_spec.loader, f"cannot load accuracy core at {_ACC_PATH}"
+_accuracy = importlib.util.module_from_spec(_acc_spec)
+_acc_spec.loader.exec_module(_accuracy)
 
-# Tokens with no discriminating power for DFIR finding descriptions.
-_STOPWORDS = frozenset(
-    """a an and are as at be by for from has have in into is it its of on or that
-    the to via with within shows show indicates indicating evidence artifact
-    artifacts file files entry entries consistent suspicious recent recently""".split()
-)
-
-# Verdict words the product emits, grouped by polarity. INDETERMINATE is handled
-# separately (always accepted). Goldens use the same vocabulary as verdict.json.
-_EVIL_WORDS = frozenset({"CONFIRMED_EVIL", "SUSPICIOUS", "SUSPICION", "EVIL"})
-_BENIGN_WORDS = frozenset({"NO_EVIL", "BENIGN"})
-_NEUTRAL_WORDS = frozenset({"UNKNOWN", "INDETERMINATE"})
-
-
-def _tokens(*parts: str | None) -> set[str]:
-    text = " ".join(p for p in parts if p).lower()
-    return {
-        t for t in re.findall(r"[a-z0-9]+", text) if t not in _STOPWORDS and len(t) > 2
-    }
-
-
-def _coverage(expected: set[str], candidate: set[str]) -> tuple[float, int]:
-    """How much of the expected token set the candidate covers.
-
-    Returns (coverage_fraction, shared_count). Normalizing by the expected set
-    (not the union) makes a verbose-but-correct run finding match a concise
-    ground-truth claim.
-    """
-    if not expected or not candidate:
-        return 0.0, 0
-    shared = len(expected & candidate)
-    return shared / len(expected), shared
-
-
-def _newest_case_dir() -> Path | None:
-    root = Path("tmp/auto-runs")
-    if not root.is_dir():
-        return None
-    cases = [d for d in root.iterdir() if d.is_dir() and (d / "verdict.json").is_file()]
-    return max(cases, key=lambda d: d.stat().st_mtime) if cases else None
-
-
-def _resolve_golden(case_dir: Path, override: str | None) -> Path | None:
-    """Find the expected-findings.json for this case.
-
-    Order: explicit --golden, then goldens/<verdict.case_id>, then a goldens dir
-    whose name is a substring of the case dir name (handles auto-<uuid> dirs that
-    record their logical case_id inside verdict.json).
-    """
-    if override:
-        p = Path(override)
-        cand = p if p.is_file() else p / "expected-findings.json"
-        return cand if cand.is_file() else None
-
-    goldens = Path("goldens")
-    verdict = case_dir / "verdict.json"
-    if verdict.is_file():
-        try:
-            cid = json.loads(verdict.read_text(encoding="utf-8")).get("case_id")
-        except json.JSONDecodeError:
-            cid = None
-        if cid:
-            cand = goldens / str(cid) / "expected-findings.json"
-            if cand.is_file():
-                return cand
-    if goldens.is_dir():
-        name = case_dir.name
-        for sub in sorted(goldens.iterdir()):
-            cand = sub / "expected-findings.json"
-            if cand.is_file() and (sub.name in name or name in sub.name):
-                return cand
-    return None
-
-
-def _verdict_consistent(run_verdict: str | None, golden_verdict: str | None) -> bool:
-    """Honest verdict consistency — deliberately ASYMMETRIC.
-
-    The product's three verdict words carry an epistemic polarity: EVIL
-    (CONFIRMED_EVIL/SUSPICIOUS), BENIGN (NO_EVIL), NEUTRAL (INDETERMINATE/UNKNOWN).
-
-    Rules, in order:
-      1. A NEUTRAL *run* verdict is always accepted. We never punish honest
-         uncertainty — a scoped-partial or "saw leads, couldn't corroborate" run
-         is the correct posture, not a failure (matches the live-test gate).
-      2. Once the run makes a *definite* call (EVIL or BENIGN), a NEUTRAL *golden*
-         means the case was authored to expect uncertainty — so the definite call
-         is over/under-confident and FAILS. This is what makes a false-positive
-         control (e.g. alihadi-09 "Encrypt Them All", golden INDETERMINATE) bite:
-         a run that escalates to CONFIRMED_EVIL/SUSPICIOUS is wrong.
-      3. Otherwise the polarity must agree.
-    """
-    rv = (run_verdict or "").upper()
-    gv = (golden_verdict or "").upper()
-    if rv in _NEUTRAL_WORDS:
-        return True
-    if gv in _NEUTRAL_WORDS:
-        return False
-    if rv in _EVIL_WORDS and gv in _EVIL_WORDS:
-        return True
-    if rv in _BENIGN_WORDS and gv in _BENIGN_WORDS:
-        return True
-    return rv == gv
-
-
-def _is_eligible(expected: dict[str, Any], rf: dict[str, Any]) -> bool:
-    """Can this run finding satisfy this expected finding?
-
-    Eligibility is purely description-content overlap: the run finding must cover
-    enough of the expected finding's distinctive tokens. MITRE technique is
-    deliberately NOT a shortcut here — in cases where every finding shares one
-    technique (e.g. all T1071.001), a MITRE match would make any finding eligible
-    for any claim and inflate recall. Content overlap is the honest signal.
-    """
-    exp_tokens = _tokens(expected.get("description"), expected.get("artifact_hint"))
-    cov, shared = _coverage(
-        exp_tokens, _tokens(rf.get("description"), rf.get("artifact_path"))
-    )
-    return shared >= MATCH_MIN_SHARED and cov >= MATCH_COVERAGE
-
-
-def _max_matching(
-    expected: list[dict[str, Any]], run_findings: list[dict[str, Any]]
-) -> dict[int, int]:
-    """Maximum bipartite matching (Kuhn's algorithm): expected_idx -> run_idx.
-
-    A run finding may back at most one expected claim (no double-counting), and we
-    find the assignment that covers the *most* expected claims — so neither greedy
-    order nor a shared MITRE technique can under- or over-count recall.
-    """
-    adj: list[list[int]] = [
-        [j for j, rf in enumerate(run_findings) if _is_eligible(exp, rf)]
-        for exp in expected
-    ]
-    run_to_exp: dict[int, int] = {}
-
-    def _augment(i: int, seen: set[int]) -> bool:
-        for j in adj[i]:
-            if j in seen:
-                continue
-            seen.add(j)
-            if j not in run_to_exp or _augment(run_to_exp[j], seen):
-                run_to_exp[j] = i
-                return True
-        return False
-
-    for i in range(len(expected)):
-        _augment(i, set())
-    return {i: j for j, i in run_to_exp.items()}
-
-
-def score(case_dir: Path, golden_path: Path) -> dict[str, Any]:
-    verdict_doc = json.loads((case_dir / "verdict.json").read_text(encoding="utf-8"))
-    golden = json.loads(golden_path.read_text(encoding="utf-8"))
-
-    run_findings: list[dict[str, Any]] = verdict_doc.get("findings") or []
-    expected: list[dict[str, Any]] = golden.get("findings") or []
-
-    assignment = _max_matching(expected, run_findings)  # expected_idx -> run_idx (1:1)
-    matched: list[dict[str, Any]] = []
-    unmatched: list[dict[str, Any]] = []
-    for i, exp in enumerate(expected):
-        record = {
-            "finding_id": exp.get("finding_id"),
-            "description": exp.get("description"),
-            "mitre_technique": exp.get("mitre_technique"),
-        }
-        if i in assignment:
-            record["matched_run_finding_id"] = run_findings[assignment[i]].get(
-                "finding_id"
-            )
-            matched.append(record)
-        else:
-            unmatched.append(record)
-
-    expected_n = len(expected)
-    recalled_n = len(matched)
-    # An empty golden (e.g. synthetic-benign) is 100% recalled by definition: a
-    # clean case has nothing to find, so a run with no findings is a perfect score.
-    recall_percent = 100 if expected_n == 0 else round(recalled_n * 100 / expected_n)
-    min_recall = int(golden.get("min_recall_percent", 0))
-
-    run_verdict = verdict_doc.get("verdict")
-    golden_verdict = golden.get("verdict")
-    verdict_match = _verdict_consistent(run_verdict, golden_verdict)
-    passed = recall_percent >= min_recall and verdict_match
-
-    return {
-        "case_id": golden.get("case_id") or verdict_doc.get("case_id"),
-        "case_dir": str(case_dir),
-        "golden": str(golden_path),
-        "expected_n": expected_n,
-        "recalled_n": recalled_n,
-        "recall_percent": recall_percent,
-        "min_recall_percent": min_recall,
-        "run_verdict": run_verdict,
-        "golden_verdict": golden_verdict,
-        "verdict_match": verdict_match,
-        "pass": passed,
-        "matched": matched,
-        "unmatched": unmatched,
-    }
+newest_case_dir = _accuracy.newest_case_dir
+resolve_golden = _accuracy.resolve_golden
+score = _accuracy.score
 
 
 def _print_report(result: dict[str, Any]) -> None:
     print(f"=== VERDICT recall score — {result['case_id']} ===")
     print(f"  case_dir : {result['case_dir']}")
     print(f"  golden   : {result['golden']}")
+    rci = result.get("recall_ci_95")
+    rci_s = f"  95% CI [{rci[0]}, {rci[1]}%]" if rci else ""
     print(
         f"  recall   : {result['recalled_n']}/{result['expected_n']} "
-        f"= {result['recall_percent']}%  (min {result['min_recall_percent']}%)"
+        f"= {result['recall_percent']}%{rci_s}  (min {result['min_recall_percent']}%)"
+    )
+    scored = "scored" if result["precision_scored"] else "open-world (not scored)"
+    pci = result.get("precision_ci_95")
+    pci_s = f"  95% CI [{pci[0]}, {pci[1]}%]" if pci else ""
+    print(
+        f"  precision: {result['precision_percent']}%{pci_s}  "
+        f"(F1 {result['f1']}; {result['false_positives_n']} FP / "
+        f"{result['extra_n']} extra of {result['run_finding_n']} findings; {scored})"
+    )
+    missed = result.get("missed_by_name") or {}
+    if missed.get("count"):
+        names = "; ".join(
+            (m.get("description") or m.get("finding_id") or "?")[:48]
+            for m in missed["items"][:3]
+        )
+        more = f" (+{missed['count'] - 3} more)" if missed["count"] > 3 else ""
+        print(f"  missed   : {missed['count']} false negative(s) — {names}{more}")
+    print(f"  halluc.  : {result['hallucination_rate']}")
+    print(
+        f"  fp_planted: {result['fp_planted']} (planted bait the run must not assert)"
     )
     print(
         f"  verdict  : run={result['run_verdict']} golden={result['golden_verdict']} "
         f"match={'yes' if result['verdict_match'] else 'NO'}"
     )
+    if result["planted_bait"]:
+        print("  PLANTED BAIT ASSERTED (fails the run):")
+        for b in result["planted_bait"]:
+            terms = f" {b['terms']}" if b.get("terms") else ""
+            print(
+                f"    - {b['finding_id']} [{b['violation']}]{terms}: {b['description']}"
+            )
+    if result["false_positives"]:
+        print("  false positives:")
+        for fp in result["false_positives"]:
+            tag = f" [{fp['violation']}]" if fp.get("violation") else ""
+            print(f"    - {fp['finding_id']}{tag}: {fp['description']}")
     if result["unmatched"]:
         print("  missed:")
         for m in result["unmatched"]:
@@ -283,7 +135,7 @@ def main(argv: list[str]) -> int:
         golden_override = args[gi + 1] if gi + 1 < len(args) else None
         args = args[:gi] + args[gi + 2 :]
 
-    case_dir = Path(args[0]) if args else _newest_case_dir()
+    case_dir = Path(args[0]) if args else newest_case_dir()
     if case_dir is None:
         print(
             "usage: python scripts/score-recall.py <case-dir> [--golden <dir>]",
@@ -297,7 +149,7 @@ def main(argv: list[str]) -> int:
         print(f"error: {case_dir}/verdict.json not found", file=sys.stderr)
         return 2
 
-    golden_path = _resolve_golden(case_dir, golden_override)
+    golden_path = resolve_golden(case_dir, golden_override)
     if golden_path is None:
         print(
             f"error: no expected-findings.json golden found for {case_dir}",

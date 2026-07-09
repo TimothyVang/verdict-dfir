@@ -28,6 +28,8 @@ _MODULES: tuple[str, ...] = (
     "memory_recall",
     "pool_handoff",
     "expert_miss_capture",
+    "accuracy_compare",
+    "find_ai_signatures",
 )
 
 

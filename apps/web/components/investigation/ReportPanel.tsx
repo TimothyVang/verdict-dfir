@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { REPORT_ARTIFACT_LABELS } from "@/lib/report-artifacts";
-import { MONO, RADIUS, SectionHeading, VERDICT } from "@/lib/verdict-ui";
+import { BODY, MONO, RADIUS, SectionHeading, VERDICT } from "@/lib/verdict-ui";
 
 interface ReportFile {
   name: string;
@@ -34,7 +34,7 @@ function btnStyle(accent: string): React.CSSProperties {
     color: accent,
     borderRadius: RADIUS.pill,
     padding: "6px 14px",
-    fontFamily: MONO,
+    fontFamily: BODY,
     fontWeight: 700,
     fontSize: 12,
     cursor: "pointer",
@@ -113,7 +113,7 @@ export function ReportPanel({ caseDir, manifestDone, onReadyChange }: ReportPane
       <SectionHeading>REPORT</SectionHeading>
 
       {!caseDir ? (
-        <p style={{ fontFamily: MONO, fontSize: 13, color: VERDICT.mutedDark, margin: 0 }}>
+        <p style={{ fontFamily: BODY, fontSize: 13, color: VERDICT.mutedDark, margin: 0 }}>
           connect a case to view its signed report.
         </p>
       ) : pdf ? (
@@ -138,7 +138,7 @@ export function ReportPanel({ caseDir, manifestDone, onReadyChange }: ReportPane
           ) : null}
         </>
       ) : (
-        <p style={{ fontFamily: MONO, fontSize: 13, color: VERDICT.muted, margin: "0 0 12px" }}>
+        <p style={{ fontFamily: BODY, fontSize: 13, color: VERDICT.muted, margin: "0 0 12px" }}>
           {manifestDone
             ? "no PDF report — it is gated for expert review (engine QA) or still rendering. Artifacts below are available."
             : "the signed report appears here once the run finalizes."}
@@ -147,7 +147,7 @@ export function ReportPanel({ caseDir, manifestDone, onReadyChange }: ReportPane
 
       {available.length > 0 ? (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontFamily: MONO, fontSize: 12, color: VERDICT.mutedDark, marginBottom: 6 }}>
+          <div style={{ fontFamily: BODY, fontSize: 12, color: VERDICT.mutedDark, marginBottom: 6 }}>
             artifacts
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

@@ -310,7 +310,13 @@ else
     info "Building findevil-mcp (Rust, release mode — first build can take 5-10 min)..."
     # `-p findevil-mcp` selects the single package to build; we don't need
     # `--workspace` (cargo silently ignores it when -p is also passed).
-    cargo build --release --locked -p findevil-mcp -q
+    # Stream cargo's per-crate `Compiling …` progress on an interactive run so the
+    # 5-10 min first build does not look hung; stay quiet (-q) only under CI/non-TTY.
+    if [ -n "${CI:-}" ]; then
+        cargo build --release --locked -p findevil-mcp -q
+    else
+        cargo build --release --locked -p findevil-mcp
+    fi
 fi
 if [ ! -x "target/release/findevil-mcp" ] && [ ! -x "target/release/findevil-mcp.exe" ]; then
     fail "target/release/findevil-mcp not found after cargo build."
@@ -344,14 +350,14 @@ ok "services/agent_mcp/.venv ready."
 info "Verifying MCP servers (findevil-mcp + findevil-agent-mcp)..."
 
 if [ -x "target/release/findevil-mcp" ] || [ -x "target/release/findevil-mcp.exe" ]; then
-    ok "findevil-mcp (Rust, 31 DFIR tools) binary present."
+    ok "findevil-mcp (Rust, 32 DFIR tools) binary present."
 else
     fail "findevil-mcp binary missing after build — cannot continue."
     exit 1
 fi
 
 if (cd services/agent_mcp && uv run --frozen python -c "import findevil_agent_mcp" >/dev/null 2>&1); then
-    ok "findevil-agent-mcp (Python, 12 crypto/ACH/memory tools) imports cleanly."
+    ok "findevil-agent-mcp (Python, 13 crypto/ACH/memory tools) imports cleanly."
 else
     fail "findevil-agent-mcp import check failed — the Python MCP server will not start; re-run: uv sync --directory services/agent_mcp"
     exit 1
@@ -720,6 +726,38 @@ if bootstrap_enabled && command -v apt-get &> /dev/null; then
         fi
     else
         ok "long-tail DFIR packages present (ausearch/nfdump/suricata)."
+    fi
+fi
+
+# plaso (log2timeline.py / psort.py) powers plaso_parse — the long-tail timeline
+# parser behind legacy Windows .evt event logs, IE index.dat (msiecf), and broad
+# super-timeline coverage. It is NOT in the default Ubuntu archive, and a bare
+# `pip install plaso` builds the libyal native extensions (libfsntfs/libfsfat/…)
+# from source, which fails on a box without the C toolchain + headers. So install
+# it from the GIFT PPA (prebuilt; the SIFT-standard source) under the same
+# --bootstrap gate as the long-tail packages above, so a plain `install.sh` never
+# sudo-prompts. Best-effort and non-fatal: without plaso, plaso_parse degrades to a
+# clean BinaryNotFound the agent pivots on (legacy .evt / index.dat timeline
+# coverage is then SIFT-only). doctor.sh already verifies it (log2timeline.py).
+if bootstrap_enabled && command -v apt-get &> /dev/null; then
+    if command -v log2timeline.py &> /dev/null || command -v log2timeline &> /dev/null; then
+        ok "plaso present (log2timeline.py — powers plaso_parse: legacy .evt / index.dat / super-timeline)."
+    else
+        info "[bootstrap] installing plaso from the GIFT PPA (plaso-tools)..."
+        # Run each apt step as root directly, else via sudo, else bail to the manual remedy.
+        _plaso_apt() {
+            if [ "$(id -u)" -eq 0 ]; then "$@"
+            elif command -v sudo &> /dev/null; then sudo "$@"
+            else return 127; fi
+        }
+        if _plaso_apt apt-get install -y --no-install-recommends software-properties-common \
+            && _plaso_apt add-apt-repository -y ppa:gift/stable \
+            && _plaso_apt apt-get update -qq \
+            && _plaso_apt apt-get install -y --no-install-recommends plaso-tools; then
+            ok "plaso installed (log2timeline.py / psort.py)."
+        else
+            warn "plaso install skipped/failed (non-fatal; plaso_parse stays BinaryNotFound — legacy .evt / index.dat parsing is SIFT-only). Manual (Ubuntu): sudo add-apt-repository -y ppa:gift/stable && sudo apt-get update && sudo apt-get install -y plaso-tools"
+        fi
     fi
 fi
 

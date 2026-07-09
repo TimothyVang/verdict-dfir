@@ -14,6 +14,9 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
+# Contain all runtime state (caches, tmp) inside the project folder.
+# shellcheck source=lib/project-env.sh
+source "$REPO/scripts/lib/project-env.sh"
 QMD_MCP="$REPO/obsidian-mind/.claude/scripts/qmd-mcp.mjs"
 [ "${FINDEVIL_ENABLE_QMD:-0}" = "1" ] || { echo "qmd memory server: set FINDEVIL_ENABLE_QMD=1 to enable (skipping)" >&2; exit 0; }
 for qmd_path in "$REPO/obsidian-mind" "$REPO/obsidian-mind/.claude" "$REPO/obsidian-mind/.claude/scripts" "$QMD_MCP"; do

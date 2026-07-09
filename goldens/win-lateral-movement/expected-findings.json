@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "Answer key for evidence/cases/win-lateral-movement/.",
+    "The case is EVTX-only, so the expected findings remain HYPOTHESIS and the honest top-line verdict is INDETERMINATE unless another artifact class corroborates them.",
+    "Run with: bash scripts/verdict evidence/cases/win-lateral-movement/",
+    "Local-only until upstream EVTX sample provenance is documented."
+  ],
+  "case_id": "win-lateral-movement",
+  "source_url": "local-only EVTX attack-sample training case; raw fixtures not redistributed",
+  "license": "VERDICT-authored answer key; raw EVTX provenance must be verified before publishing or redistributing the fixtures",
+  "verdict": "INDETERMINATE",
+  "min_recall_percent": 100,
+  "findings": [
+    {
+      "finding_id": "wlm-001",
+      "description": "Remote WMI process execution appears in Security Event ID 4688 with WmiPrvSE.exe as the parent process",
+      "mitre_technique": "T1047",
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "evtx",
+      "artifact_hint": "Security EVTX EID 4688 child process under WmiPrvSE.exe, with related network logon context"
+    },
+    {
+      "finding_id": "wlm-002",
+      "description": "EVTX EID 7045 records installation of service spoolfool with image cmd.exe",
+      "mitre_technique": "T1543.003",
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "evtx",
+      "artifact_hint": "EID 7045 service-install evidence for spoolfool cmd.exe"
+    }
+  ]
+}

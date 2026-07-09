@@ -8,7 +8,7 @@ import { spread } from "./shared/pacing";
 // Beat 6 — "Twenty-two hosts." The fleet as a forensic contact sheet: 22 host
 // tiles in a tight editorial index (flagged = alert, clean = confirmed tone,
 // running/queued = muted) with mono host ids, beside a stat sidebar of
-// oversized Fraunces numerals and a signed note. Replaces the old GitHub-dark
+// oversized v2 editorial numerals and a signed note. Replaces the old GitHub-dark
 // grid + rounded-card rollup.
 
 const FINDING_COUNTS = [3, 1, 0, 2, 1, 4, 0, 1, 2, 0, 3, 1, 0, 1, 2, 0, 1, 3, 0, 0, 0, 0];
@@ -190,7 +190,7 @@ export function FleetScene() {
         </div>
       </div>
 
-      {/* Right — the stat sidebar: oversized Fraunces numerals of record */}
+      {/* Right — the stat sidebar: oversized v2 editorial numerals of record */}
       <div style={{ position: "absolute", right: MARGIN, top: 290, width: 470 }}>
         <div
           style={{

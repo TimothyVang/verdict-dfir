@@ -24,44 +24,42 @@ sys.path.insert(0, str(REPO / "services" / "agent"))
 
 from findevil_agent.crypto.audit_log import AuditLog  # noqa: E402
 from findevil_agent.crypto.manifest import build_manifest, write_manifest  # noqa: E402
-from findevil_agent.crypto.signer import StubSigner  # noqa: E402
+from findevil_agent.crypto.signer import LocalEd25519Signer, StubSigner  # noqa: E402
 
 
 def powershell() -> str | None:
     return shutil.which("powershell") or shutil.which("pwsh")
 
 
+def json_bytes(data: dict) -> bytes:
+    return json.dumps(data, indent=2, sort_keys=True).encode("utf-8")
+
+
 def write_json(path: Path, data: dict) -> None:
-    path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+    path.write_bytes(json_bytes(data))
+
+
+def hash_json(data: dict) -> str:
+    return hashlib.sha256(
+        json.dumps(data, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    ).hexdigest()
 
 
 def make_run(
-    root: Path, *, manifest_overall: bool = True, customer_releasable: bool = False
+    root: Path,
+    *,
+    manifest_overall: bool = True,
+    customer_releasable: bool = False,
+    cryptographic_signature: bool = True,
+    findings: list[dict] | None = None,
+    verifier_evidence_ids: list[str] | None = None,
+    split_verifier_evidence_id: str | None = None,
+    verdict_artifact_sha256: str | None = None,
+    tamper_finding_approved: bool = False,
+    tool_output_hash: str = "c" * 64,
 ) -> Path:
     run = root / "case-ready"
     run.mkdir(parents=True)
-    audit = AuditLog(run / "audit.jsonl")
-    audit.append("report_qa", {"status": "PASS"})
-    audit.append("customer_release_gate", {"customer_releasable": False})
-    audit.append("verdict_artifact", {"path": "verdict.json", "sha256": "a" * 64})
-    audit.append("expert_signoff_packet", {"expert_signoff_sha256": "b" * 64})
-    audit.append(
-        "tool_call_output",
-        {"tool_call_id": "tc-ready", "output_hash": "c" * 64},
-    )
-    manifest = build_manifest(
-        case_id="case-ready",
-        run_id="run-ready",
-        started_at="2026-05-10T00:00:00Z",
-        audit_log=audit,
-        signer=StubSigner(run_id="run-ready"),
-        extra={"image_path": "synthetic"},
-    )
-    manifest_path = write_manifest(manifest, run / "run.manifest.json")
-    if not manifest_overall:
-        manifest_obj = json.loads(manifest_path.read_text(encoding="utf-8"))
-        manifest_obj["merkle_root_hex"] = "f" * 64
-        write_json(manifest_path, manifest_obj)
     report_qa = {
         "status": "PASS",
         "packet_state": "CUSTOMER_RELEASE_CANDIDATE",
@@ -69,25 +67,149 @@ def make_run(
         "customer_releasable": False,
         "checks": [],
     }
-    write_json(
-        run / "verdict.json",
-        {
-            "case_id": "case-ready",
-            "run_id": "run-ready",
-            "verdict": "NO_EVIL",
-            "report_qa": report_qa,
-            "release_gate": {
-                "manifest_verified": manifest_overall,
-                "expert_decision": "pending",
-                "customer_releasable": customer_releasable,
-            },
-            "expert_signoff": {
-                "status": "PENDING_EXPERT_REVIEW",
-                "expert_decision": "pending",
-                "customer_releasable": customer_releasable,
-            },
+    verdict_obj = {
+        "case_id": "case-ready",
+        "run_id": "run-ready",
+        "verdict": "NO_EVIL",
+        "findings": findings or [],
+        "report_qa": report_qa,
+        "release_gate": {
+            "manifest_verified": manifest_overall,
+            "expert_decision": "pending",
+            "customer_releasable": customer_releasable,
         },
+        "expert_signoff": {
+            "status": "PENDING_EXPERT_REVIEW",
+            "expert_decision": "pending",
+            "customer_releasable": customer_releasable,
+        },
+    }
+    verdict_sha256 = hashlib.sha256(json_bytes(verdict_obj)).hexdigest()
+    audit = AuditLog(run / "audit.jsonl")
+    audit.append("report_qa", {"status": "PASS"})
+    audit.append("customer_release_gate", {"customer_releasable": False})
+    audit.append(
+        "verdict_artifact",
+        {"path": "verdict.json", "sha256": verdict_artifact_sha256 or verdict_sha256},
     )
+    audit.append("expert_signoff_packet", {"expert_signoff_sha256": "b" * 64})
+    audit.append(
+        "tool_call_start",
+        {"tool_call_id": "tc-ready", "tool": "evtx_query"},
+    )
+    audit.append(
+        "tool_call_output",
+        {"tool_call_id": "tc-ready", "output_hash": tool_output_hash},
+    )
+    verifier_ids = set(verifier_evidence_ids or [])
+    for finding in findings or []:
+        finding_id = str(finding.get("finding_id") or "")
+        if finding_id not in verifier_ids:
+            continue
+        approved_finding = (
+            {**finding, "description": "Audit-approved original finding."}
+            if tamper_finding_approved
+            else finding
+        )
+        audit.append(
+            "finding_approved",
+            {
+                "finding_id": finding_id,
+                "confidence": approved_finding.get("confidence"),
+                "tool_call_id": approved_finding.get("tool_call_id"),
+                "finding_sha256": hash_json(approved_finding),
+                "finding": approved_finding,
+            },
+        )
+    for finding_id in verifier_evidence_ids or []:
+        audit.append(
+            "verifier_action",
+            {
+                "finding_id": finding_id,
+                "action": "approved",
+                "reason": "readiness smoke replay matched",
+                "replay_record_sha256": "d" * 64,
+            },
+        )
+        audit.append(
+            "replay",
+            {
+                "finding_id": finding_id,
+                "replay_matched": True,
+                "replay_record_sha256": "d" * 64,
+            },
+        )
+        audit.append(
+            "acp_handoff",
+            {
+                "from_role": "verifier",
+                "to_role": "judge",
+                "correlation_id": finding_id,
+                "payload": {
+                    "finding_id": finding_id,
+                    "action": "approved",
+                    "replay_record_sha256": "d" * 64,
+                },
+            },
+        )
+    if split_verifier_evidence_id is not None:
+        audit.append(
+            "verifier_action",
+            {
+                "finding_id": split_verifier_evidence_id,
+                "action": "approved",
+                "reason": "hash matches replay but action does not match handoff",
+                "replay_record_sha256": "c" * 64,
+            },
+        )
+        audit.append(
+            "verifier_action",
+            {
+                "finding_id": split_verifier_evidence_id,
+                "action": "downgraded",
+                "reason": "action matches handoff but hash does not match replay",
+                "replay_record_sha256": "e" * 64,
+            },
+        )
+        audit.append(
+            "replay",
+            {
+                "finding_id": split_verifier_evidence_id,
+                "replay_matched": True,
+                "replay_record_sha256": "c" * 64,
+            },
+        )
+        audit.append(
+            "acp_handoff",
+            {
+                "from_role": "verifier",
+                "to_role": "judge",
+                "correlation_id": split_verifier_evidence_id,
+                "payload": {
+                    "finding_id": split_verifier_evidence_id,
+                    "action": "downgraded",
+                    "replay_record_sha256": "c" * 64,
+                },
+            },
+        )
+    manifest = build_manifest(
+        case_id="case-ready",
+        run_id="run-ready",
+        started_at="2026-05-10T00:00:00Z",
+        audit_log=audit,
+        signer=(
+            LocalEd25519Signer(root / "signing.key")
+            if cryptographic_signature
+            else StubSigner(run_id="run-ready")
+        ),
+        extra={"image_path": "synthetic"},
+    )
+    manifest_path = write_manifest(manifest, run / "run.manifest.json")
+    if not manifest_overall:
+        manifest_obj = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest_obj["merkle_root_hex"] = "f" * 64
+        write_json(manifest_path, manifest_obj)
+    write_json(run / "verdict.json", verdict_obj)
     write_json(
         run / "manifest_verify.json",
         {"overall": manifest_overall, "signature_present": True},
@@ -229,6 +351,19 @@ def assert_zip_hashes(summary: dict) -> None:
                 raise SystemExit(f"packet ZIP hash mismatch for {path}")
 
 
+def assert_packet_metadata_sanitized(
+    summary: dict, forbidden_paths: list[Path]
+) -> None:
+    packet_zip = Path(summary["packet_zip"])
+    forbidden = [str(path).replace("\\", "/") for path in forbidden_paths]
+    with zipfile.ZipFile(packet_zip) as zf:
+        for member in [name for name in zf.namelist() if name.endswith(".json")]:
+            text = zf.read(member).decode("utf-8").replace("\\", "/")
+            leaked = [path for path in forbidden if path and path in text]
+            if leaked:
+                raise SystemExit(f"packet metadata leaked local path in {member}")
+
+
 def main() -> int:
     ps = powershell()
     if ps is None:
@@ -254,6 +389,7 @@ def main() -> int:
         if not Path(summary["packet_zip"]).is_file():
             raise SystemExit("packet ZIP missing")
         assert_zip_hashes(summary)
+        assert_packet_metadata_sanitized(summary, [REPO, tmp, ready_run, out])
         packet_manifest = json.loads(Path(summary["packet_manifest"]).read_text())
         packet_paths = {row["path"] for row in packet_manifest["artifacts"]}
         for required in {
@@ -304,6 +440,116 @@ def main() -> int:
         repeat_paths = {row["path"] for row in repeat_manifest["artifacts"]}
         if "REPORT.md" in repeat_paths:
             raise SystemExit("repeat RunId packet retained stale REPORT.md")
+
+        bound_finding = {
+            "finding_id": "f-ready",
+            "tool_call_id": "tc-ready",
+            "confidence": "CONFIRMED",
+            "description": "Audit-bound final finding.",
+        }
+        bound_finding_run = make_run(
+            tmp / "bound-finding",
+            manifest_overall=True,
+            findings=[bound_finding],
+            verifier_evidence_ids=["f-ready"],
+        )
+        bound_finding_result = run_gate(ps, bound_finding_run, out, "bound-finding")
+        if bound_finding_result.returncode != 0:
+            print(bound_finding_result.stdout)
+            print(bound_finding_result.stderr, file=sys.stderr)
+            raise SystemExit("bound-finding readiness gate unexpectedly failed")
+
+        invalid_output_hash_run = make_run(
+            tmp / "invalid-output-hash",
+            manifest_overall=True,
+            findings=[bound_finding],
+            verifier_evidence_ids=["f-ready"],
+            tool_output_hash="not-a-sha256",
+        )
+        invalid_output_hash = run_gate(
+            ps, invalid_output_hash_run, out, "invalid-output-hash"
+        )
+        if invalid_output_hash.returncode == 0:
+            raise SystemExit("invalid-output-hash readiness gate unexpectedly passed")
+
+        tampered_verdict_artifact_run = make_run(
+            tmp / "tampered-verdict-artifact",
+            manifest_overall=True,
+            verdict_artifact_sha256="0" * 64,
+        )
+        tampered_verdict_artifact = run_gate(
+            ps,
+            tampered_verdict_artifact_run,
+            out,
+            "tampered-verdict-artifact",
+        )
+        if tampered_verdict_artifact.returncode == 0:
+            raise SystemExit(
+                "tampered-verdict-artifact readiness gate unexpectedly passed"
+            )
+
+        tampered_finding_approved_run = make_run(
+            tmp / "tampered-finding-approved",
+            manifest_overall=True,
+            findings=[bound_finding],
+            verifier_evidence_ids=["f-ready"],
+            tamper_finding_approved=True,
+        )
+        tampered_finding_approved = run_gate(
+            ps,
+            tampered_finding_approved_run,
+            out,
+            "tampered-finding-approved",
+        )
+        if tampered_finding_approved.returncode == 0:
+            raise SystemExit(
+                "tampered-finding-approved readiness gate unexpectedly passed"
+            )
+
+        stub_signature_run = make_run(
+            tmp / "stub-signature",
+            manifest_overall=True,
+            cryptographic_signature=False,
+        )
+        stub_signature = run_gate(ps, stub_signature_run, out, "stub-signature")
+        if stub_signature.returncode == 0:
+            raise SystemExit("stub-signature readiness gate unexpectedly passed")
+
+        mismatched_verifier_run = make_run(
+            tmp / "mismatched-verifier",
+            manifest_overall=True,
+            findings=[
+                {
+                    "finding_id": "f-ready",
+                    "tool_call_id": "tc-ready",
+                    "confidence": "CONFIRMED",
+                    "description": "Final finding needs matching verifier evidence.",
+                }
+            ],
+            verifier_evidence_ids=["f-other"],
+        )
+        mismatched_verifier = run_gate(
+            ps, mismatched_verifier_run, out, "mismatched-verifier"
+        )
+        if mismatched_verifier.returncode == 0:
+            raise SystemExit("mismatched-verifier readiness gate unexpectedly passed")
+
+        split_verifier_run = make_run(
+            tmp / "split-verifier",
+            manifest_overall=True,
+            findings=[
+                {
+                    "finding_id": "f-ready",
+                    "tool_call_id": "tc-ready",
+                    "confidence": "CONFIRMED",
+                    "description": "Final finding needs one bound verifier action/replay pair.",
+                }
+            ],
+            split_verifier_evidence_id="f-ready",
+        )
+        split_verifier = run_gate(ps, split_verifier_run, out, "split-verifier")
+        if split_verifier.returncode == 0:
+            raise SystemExit("split-verifier readiness gate unexpectedly passed")
 
         blocked_run = make_run(tmp / "negative", manifest_overall=False)
         negative = run_gate(ps, blocked_run, out, "negative")

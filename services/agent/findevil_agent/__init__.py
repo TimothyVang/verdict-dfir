@@ -20,6 +20,10 @@ from findevil_agent.events import (
     ToolCallStart,
     VerifierAction,
 )
+from findevil_agent.verdict_reasons import (
+    IndeterminateReason,
+    derive_indeterminate_reasons,
+)
 
 __version__ = "0.1.0"
 
@@ -31,6 +35,7 @@ __all__ = [
     "CredentialMode",
     "Finding",
     "HypothesisUpdate",
+    "IndeterminateReason",
     "PlanApproved",
     "PlanProposed",
     "RunVerdict",
@@ -38,5 +43,6 @@ __all__ = [
     "ToolCallStart",
     "VerifierAction",
     "__version__",
+    "derive_indeterminate_reasons",
     "resolve_credentials",
 ]

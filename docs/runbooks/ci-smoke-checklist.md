@@ -20,7 +20,8 @@ Every step declares its "green" condition. Stop at the first red; chase the root
 ## 1. Branch protection applied
 
 - [ ] `bash scripts/setup-branch-protection.sh` exits 0 (or confirms rules already in place).
-- [ ] `gh api repos/${OWNER}/${REPO}/branches/master/protection --jq '.required_status_checks.contexts'` returns the full list: `l0-static / workflow-lint`, `shell-lint`, `python-lint`, `rust-lint`, `typescript-lint`, `docs-consistency`, and `l1-unit / unit-build`.
+- [ ] `gh api repos/${OWNER}/${REPO}/branches/master/protection --jq '.required_status_checks.contexts'` returns `ci-required`. The component L0/L1 jobs should still be visible in Actions, but the aggregate check is the only required context.
+- [ ] `gh api repos/${OWNER}/${REPO}/branches/master/protection --jq '.required_pull_request_reviews.require_code_owner_reviews'` returns `true`, and `.github/CODEOWNERS` protects workflow changes.
 
 ## 2. PR → L0 → L1 happy path
 
@@ -32,10 +33,7 @@ Every step declares its "green" condition. Stop at the first red; chase the root
 ## 3. L3 nightly on merge
 
 - [ ] Merging to `master` triggers `l3-nightly.yml` automatically.
-- [ ] Job either:
-      - Completes green on a KVM-enabled runner, OR
-      - Exits with `::warning::KVM not available` on a runner without `/dev/kvm`.
-      The second is acceptable pre-launch; swap to a larger runner before release.
+- [ ] Job either completes green on a KVM-enabled runner or validates an explicit local fallback evidence packet whose recall gate passes. A skipped KVM run or a fallback packet below the recall bar is not release-green.
 - [ ] Slack `#ci-alerts` fires on L3 failure; silent on success.
 
 ## 4. Release tag → artifacts
@@ -43,7 +41,7 @@ Every step declares its "green" condition. Stop at the first red; chase the root
 Cut a throwaway tag to exercise the release path end-to-end:
 
 - [ ] `git tag v-smoke && git push origin v-smoke`.
-- [ ] `release.yml` starts; `l3-gate` job either confirms green L3 or emits pre-Week-2 `::warning`.
+- [ ] `release.yml` starts; `l3-gate` job confirms green L3 evidence for the exact target commit.
 - [ ] Confirm the release log notes the A2 removal of the `build-deb` job; no `.deb` artifact is expected.
 - [ ] `build-docker` job pushes `ghcr.io/${OWNER,,}/find-evil:v-smoke` and `:latest`.
 - [ ] `build-report` job uploads `report.html` from the current report-rendering path.
@@ -120,4 +118,4 @@ If any step fails:
 3. If it's a secret / credential problem, check the repo Settings → Secrets and Variables → Actions page for the missing name. See glue Spec #4 §5 for the canonical list.
 4. If it's a workflow-syntax issue: run `actionlint .github/workflows/*.yml` locally and fix before pushing a patch.
 
-Green run end-to-end: expect ~25–40 minutes when KVM runners are available, ~15–20 minutes when L3 gracefully skips.
+Green run end-to-end: expect ~25–40 minutes when KVM runners are available. When remote KVM falls back to committed local evidence, the run is green only if that evidence validates; failed or below-bar L3 evidence is not green.

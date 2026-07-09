@@ -1,0 +1,370 @@
+{
+  "_source": "fresh gate-ON SCHARDT run (recall 10/14, 0 gate rejections)",
+  "findings": [
+    {
+      "finding_id": "f-A-mft-tools",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-004",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/mft/$MFT",
+      "description": "Hacking-tool artifacts present on disk as downloaded applications, recovered from the MFT: Program Files/Anonymizer (created 2004-08-20T15:05:06Z). The filesystem records (MFT) show these tool files in Program Files / on the user's Desktop with creation timestamps clustered around the incident window; they are downloaded applications, not operating-system components. INFERRED from two tool-backed facts per file: the artifact's existence (MFT) and its name matching a known-tool heuristic (anonymizer). Corroborates Prefetch observations for the same toolset; file presence itself remains a filesystem fact.",
+      "confidence": "INFERRED",
+      "asserted_values": [],
+      "derived_from": [
+        "tc-004"
+      ],
+      "expectation": null,
+      "pool_origin": "A",
+      "mitre_technique": "T1588.002"
+    },
+    {
+      "finding_id": "f-A-recentdocs",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-178",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+      "description": "Registry recent-document and search history records the user's recent searches for and access to hacking tools: keys.txt, GhostWare, channels.txt, channels, \\\\4.12.220.254\\Temp (Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs, registry_query, last_write 2004-08-26T15:08:15Z). These NTUSER.DAT registry RecentDocs / search-history hive entries are the Windows XP record of recent search/access activity (ACMru/WordWheelQuery being empty on this install). INFERRED user activity: each entry's existence is tool-backed and its name matches a hacking-tool/staging tell. It records search/access intent and recency only.",
+      "confidence": "INFERRED",
+      "asserted_values": [],
+      "derived_from": [
+        "tc-178"
+      ],
+      "expectation": null,
+      "pool_origin": "A",
+      "mitre_technique": "T1083"
+    },
+    {
+      "finding_id": "f-A-mru-lalsetup250-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-179",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+      "description": "User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\lalsetup250.exe' (Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z). INFERRED user activity: the MRU entry's existence is tool-backed and reflects deliberate user action. It records intent/recency only.",
+      "confidence": "INFERRED",
+      "asserted_values": [],
+      "derived_from": [
+        "tc-179"
+      ],
+      "expectation": null,
+      "pool_origin": "A",
+      "mitre_technique": "T1217"
+    },
+    {
+      "finding_id": "f-A-mru-netstumblerinstaller-0-4-0-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-179",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+      "description": "User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\netstumblerinstaller_0_4_0.exe' (Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z). INFERRED user activity: the MRU entry's existence is tool-backed and reflects deliberate user action. It records intent/recency only.",
+      "confidence": "INFERRED",
+      "asserted_values": [],
+      "derived_from": [
+        "tc-179"
+      ],
+      "expectation": null,
+      "pool_origin": "A",
+      "mitre_technique": "T1217"
+    },
+    {
+      "finding_id": "f-A-mru-ethereal-setup-0-10-6-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-179",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+      "description": "User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\ethereal-setup-0.10.6.exe' (Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z). INFERRED user activity: the MRU entry's existence is tool-backed and reflects deliberate user action. It records intent/recency only.",
+      "confidence": "INFERRED",
+      "asserted_values": [],
+      "derived_from": [
+        "tc-179"
+      ],
+      "expectation": null,
+      "pool_origin": "A",
+      "mitre_technique": "T1217"
+    },
+    {
+      "finding_id": "f-A-mru-winpcap-3-01-a-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-179",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/registry/Documents and Settings/Mr. Evil/NTUSER.DAT",
+      "description": "User recently opened-file MRU records 'C:\\Documents and Settings\\Mr. Evil\\Desktop\\WinPcap_3_01_a.exe' (Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSaveMRU\\*, registry_query, last_write 2004-08-27T15:18:05Z). INFERRED user activity: the MRU entry's existence is tool-backed and reflects deliberate user action. It records intent/recency only.",
+      "confidence": "INFERRED",
+      "asserted_values": [],
+      "derived_from": [
+        "tc-179"
+      ],
+      "expectation": null,
+      "pool_origin": "A",
+      "mitre_technique": "T1217"
+    },
+    {
+      "finding_id": "f-A-sam-mr-evil",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-194",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/registry/WINDOWS/system32/config/SAM",
+      "description": "User account 'Mr. Evil' with suspicious naming was created on this system: it is recorded in the SAM (Security Account Manager) hive (SAM\\Domains\\Account\\Users\\Names\\Mr. Evil; the Names subkey last_write 2004-08-19T23:03:54Z approximates the account-creation time). INFERRED from two tool-backed facts: the account's existence (registry_query) and its name matching the suspicious-naming heuristic. Whether it holds elevated privileges is NOT yet claimed \u2014 enumerate group membership (Administrators) and logon artifacts to corroborate.",
+      "confidence": "INFERRED",
+      "asserted_values": [],
+      "derived_from": [
+        "tc-194"
+      ],
+      "expectation": null,
+      "pool_origin": "A",
+      "mitre_technique": "T1136.001"
+    },
+    {
+      "finding_id": "f-B-prefetch-cain-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-010",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/prefetch/WINDOWS/Prefetch/CAIN.EXE-23D61279.pf",
+      "description": "cain.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+      "confidence": "CONFIRMED",
+      "asserted_values": [
+        {
+          "count": null,
+          "expected": "2",
+          "match": "int",
+          "path": "run_count"
+        },
+        {
+          "count": null,
+          "expected": "CAIN.EXE",
+          "match": "exact",
+          "path": "executable_name"
+        }
+      ],
+      "derived_from": [
+        "tc-010",
+        "tc-214"
+      ],
+      "expectation": null,
+      "pool_origin": "B",
+      "mitre_technique": "T1588.002"
+    },
+    {
+      "finding_id": "f-B-prefetch-cain25b45-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-011",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/prefetch/WINDOWS/Prefetch/CAIN25B45.EXE-056F3A6E.pf",
+      "description": "cain25b45.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+      "confidence": "CONFIRMED",
+      "asserted_values": [
+        {
+          "count": null,
+          "expected": "1",
+          "match": "int",
+          "path": "run_count"
+        },
+        {
+          "count": null,
+          "expected": "CAIN25B45.EXE",
+          "match": "exact",
+          "path": "executable_name"
+        }
+      ],
+      "derived_from": [
+        "tc-011",
+        "tc-214"
+      ],
+      "expectation": null,
+      "pool_origin": "B",
+      "mitre_technique": "T1588.002"
+    },
+    {
+      "finding_id": "f-B-prefetch-ethereal-setup-0-10-6-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-020",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/prefetch/WINDOWS/Prefetch/ETHEREAL-SETUP-0.10.6.EXE-1D932600.pf",
+      "description": "ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+      "confidence": "CONFIRMED",
+      "asserted_values": [
+        {
+          "count": null,
+          "expected": "1",
+          "match": "int",
+          "path": "run_count"
+        },
+        {
+          "count": null,
+          "expected": "ETHEREAL-SETUP-0.10.6.EXE",
+          "match": "exact",
+          "path": "executable_name"
+        }
+      ],
+      "derived_from": [
+        "tc-020",
+        "tc-214"
+      ],
+      "expectation": null,
+      "pool_origin": "B",
+      "mitre_technique": "T1040"
+    },
+    {
+      "finding_id": "f-B-prefetch-ethereal-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-021",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/prefetch/WINDOWS/Prefetch/ETHEREAL.EXE-1C148EEF.pf",
+      "description": "ethereal.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+      "confidence": "CONFIRMED",
+      "asserted_values": [
+        {
+          "count": null,
+          "expected": "1",
+          "match": "int",
+          "path": "run_count"
+        },
+        {
+          "count": null,
+          "expected": "ETHEREAL.EXE",
+          "match": "exact",
+          "path": "executable_name"
+        }
+      ],
+      "derived_from": [
+        "tc-021",
+        "tc-214"
+      ],
+      "expectation": null,
+      "pool_origin": "B",
+      "mitre_technique": "T1040"
+    },
+    {
+      "finding_id": "f-B-prefetch-lookatlan-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-038",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/prefetch/WINDOWS/Prefetch/LOOKATLAN.EXE-1F991DD9.pf",
+      "description": "lookatlan.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+      "confidence": "CONFIRMED",
+      "asserted_values": [
+        {
+          "count": null,
+          "expected": "2",
+          "match": "int",
+          "path": "run_count"
+        },
+        {
+          "count": null,
+          "expected": "LOOKATLAN.EXE",
+          "match": "exact",
+          "path": "executable_name"
+        }
+      ],
+      "derived_from": [
+        "tc-038",
+        "tc-214"
+      ],
+      "expectation": null,
+      "pool_origin": "B",
+      "mitre_technique": "T1046"
+    },
+    {
+      "finding_id": "f-B-prefetch-mirc-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-040",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/prefetch/WINDOWS/Prefetch/MIRC.EXE-0661EC22.pf",
+      "description": "mirc.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+      "confidence": "CONFIRMED",
+      "asserted_values": [
+        {
+          "count": null,
+          "expected": "3",
+          "match": "int",
+          "path": "run_count"
+        },
+        {
+          "count": null,
+          "expected": "MIRC.EXE",
+          "match": "exact",
+          "path": "executable_name"
+        }
+      ],
+      "derived_from": [
+        "tc-040",
+        "tc-214"
+      ],
+      "expectation": null,
+      "pool_origin": "B",
+      "mitre_technique": "T1071.001"
+    },
+    {
+      "finding_id": "f-B-prefetch-mirc612-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-041",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/prefetch/WINDOWS/Prefetch/MIRC612.EXE-02791C37.pf",
+      "description": "mirc612.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+      "confidence": "CONFIRMED",
+      "asserted_values": [
+        {
+          "count": null,
+          "expected": "1",
+          "match": "int",
+          "path": "run_count"
+        },
+        {
+          "count": null,
+          "expected": "MIRC612.EXE",
+          "match": "exact",
+          "path": "executable_name"
+        }
+      ],
+      "derived_from": [
+        "tc-041",
+        "tc-214"
+      ],
+      "expectation": null,
+      "pool_origin": "B",
+      "mitre_technique": "T1071.001"
+    },
+    {
+      "finding_id": "f-B-prefetch-netstumbler-exe",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-047",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/prefetch/WINDOWS/Prefetch/NETSTUMBLER.EXE-0BFEE568.pf",
+      "description": "netstumbler.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+      "confidence": "CONFIRMED",
+      "asserted_values": [
+        {
+          "count": null,
+          "expected": "1",
+          "match": "int",
+          "path": "run_count"
+        },
+        {
+          "count": null,
+          "expected": "NETSTUMBLER.EXE",
+          "match": "exact",
+          "path": "executable_name"
+        }
+      ],
+      "derived_from": [
+        "tc-047",
+        "tc-214"
+      ],
+      "expectation": null,
+      "pool_origin": "B",
+      "mitre_technique": "T1046"
+    },
+    {
+      "finding_id": "f-B-prefetch-netstumblerinstaller-0-4-0-ex",
+      "case_id": "acc7ae40-b0ee-428f-9dcc-767db607a0f4",
+      "tool_call_id": "tc-048",
+      "artifact_path": "cases/acc7ae40-b0ee-428f-9dcc-767db607a0f4/extracted/disk/disk-extract-b39082e2-77f9-4db9-93e9-c0f28b0ecbd4/prefetch/WINDOWS/Prefetch/NETSTUMBLERINSTALLER_0_4_0.EX-0BD9920C.pf",
+      "description": "Windows Prefetch contains NETSTUMBLERINSTALLER_0_4_0.EX with run_count=1; NetStumbler wireless discovery tool is a triage lead. Treat this as a disk-artifact lead that needs corroboration before any standalone activity claim.",
+      "confidence": "INFERRED",
+      "asserted_values": [
+        {
+          "count": null,
+          "expected": "1",
+          "match": "int",
+          "path": "run_count"
+        },
+        {
+          "count": null,
+          "expected": "NETSTUMBLERINSTALLER_0_4_0.EX",
+          "match": "exact",
+          "path": "executable_name"
+        }
+      ],
+      "derived_from": [
+        "tc-048"
+      ],
+      "expectation": null,
+      "pool_origin": "B",
+      "mitre_technique": "T1046"
+    }
+  ]
+}

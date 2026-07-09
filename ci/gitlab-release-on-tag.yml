@@ -1,0 +1,35 @@
+# Release-on-tag for GitLab CI/CD, driven by the platform-agnostic `git-ship` tool.
+#
+# Drop this into your `.gitlab-ci.yml` (or `include:` it). The `release` job fires
+# only on pushed tags and runs the SAME `git-ship --tag` call used on GitHub.
+#
+# IMAGE: `alpine/git` ships git; we add curl + python3, which `git-ship` needs for
+# its REST API fallback (curl makes the call, python3 JSON-encodes the notes).
+# `glab` is optional — if it is on PATH `git-ship` uses it, otherwise it falls back
+# to the GitLab Releases REST API automatically. We do NOT install glab here to keep
+# the job fast; the API fallback is sufficient.
+#
+# TOKEN: `git-ship` reads GITLAB_TOKEN, falling back to CI_JOB_TOKEN. CI_JOB_TOKEN is
+# injected automatically by GitLab but may lack release-API scope on some instances;
+# if release creation is rejected, set a project/group CI/CD variable GITLAB_TOKEN to
+# a token with `api` scope (mask it).
+#
+# PREREQUISITE: the repo must ship the tool at `scripts/git-ship`. Install once with:
+#   cp ~/.local/bin/git-ship scripts/git-ship && chmod +x scripts/git-ship
+# then commit `scripts/git-ship`.
+
+release:
+  stage: deploy
+  image: alpine/git:latest
+  # Run this job only for tag pipelines.
+  rules:
+    - if: $CI_COMMIT_TAG
+  variables:
+    # Full clone so release-note generation has history to work with.
+    GIT_DEPTH: "0"
+  before_script:
+    # git is already in alpine/git; add curl + python3 for the REST API fallback.
+    - apk add --no-cache curl python3 bash
+  script:
+    # Same call as the GitHub workflow — only the tag-name variable differs.
+    - bash scripts/git-ship --tag "$CI_COMMIT_TAG"

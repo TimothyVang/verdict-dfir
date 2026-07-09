@@ -31,8 +31,11 @@ requires for replay.
 
 from __future__ import annotations
 
+import os
+from posixpath import basename as _posix_basename
 from typing import Any
 
+from findevil_agent.entailment import check_entailment, check_expectation, entailment_slice
 from findevil_agent.events import Finding, VerifierAction
 from findevil_agent.mcp_client import McpClient
 from findevil_agent.replay import (
@@ -41,6 +44,37 @@ from findevil_agent.replay import (
     missing_replay_artifact,
     replay_tool_call,
 )
+
+
+def _path_arguments(arguments: dict[str, Any]) -> list[str]:
+    """The artifact path(s) a recorded tool call was actually given.
+
+    Every Rust DFIR tool names its evidence input with a ``*_path`` argument
+    (``evtx_path``, ``memory_path``, ``pcap_path``, ``artifact_path``,
+    ``hive_path``, …). Re-binding compares the model's claimed
+    ``finding.artifact_path`` against this set, re-derived from the cited call —
+    not from anything the model said.
+    """
+    return [
+        str(v)
+        for k, v in arguments.items()
+        if isinstance(k, str) and k.endswith("_path") and isinstance(v, str) and v.strip()
+    ]
+
+
+def _artifact_matches_call(claimed: str, call_paths: list[str]) -> bool:
+    """True if the model's claimed artifact corresponds to a path the cited call
+    read — full-path equality OR basename equality (a finding routinely cites the
+    bare filename while the tool was given the absolute path). Backslash paths are
+    normalized so a Windows ``\\``-style claim still binds to a POSIX call path.
+    """
+    claimed_norm = claimed.strip().replace("\\", "/")
+    claimed_base = _posix_basename(claimed_norm)
+    for raw in call_paths:
+        call_norm = raw.replace("\\", "/")
+        if claimed_norm == call_norm or claimed_base == _posix_basename(call_norm):
+            return True
+    return False
 
 
 class CallReplay:
@@ -116,6 +150,69 @@ def reverify_finding(
     arguments = dict(record.get("arguments") or {})
     expected = str(record.get("output_sha256", ""))
 
+    # Preflight gate 1 — EVIDENCE RE-BINDING (opt-in,
+    # FIND_EVIL_REQUIRE_ARTIFACT_REBIND=1). The model PROPOSES
+    # ``finding.artifact_path``; the server RE-DERIVES the artifact from the
+    # cited call's recorded ``*_path`` argument(s) and rejects a finding that
+    # glues a real ``tool_call_id`` to an artifact the cited call never read.
+    # Runs BEFORE replay so a fabricated artifact is caught without spending a
+    # re-run. No ``*_path`` argument => nothing to bind against => not gated.
+    if os.environ.get("FIND_EVIL_REQUIRE_ARTIFACT_REBIND") == "1":
+        call_paths = _path_arguments(arguments)
+        if call_paths and not _artifact_matches_call(finding.artifact_path, call_paths):
+            reason = (
+                f"artifact re-bind mismatch: finding claims artifact "
+                f"{finding.artifact_path!r} but cited tool_call_id "
+                f"{finding.tool_call_id!r} read {call_paths!r}"
+            )
+            return (
+                VerifierAction(
+                    case_id=finding.case_id,
+                    action="rejected",
+                    finding_id=finding.finding_id,
+                    reason=reason,
+                ),
+                CallReplay(
+                    missing_replay_artifact(
+                        tool_call_id=finding.tool_call_id,
+                        drift_class="artifact_rebind_mismatch",
+                        reason=reason,
+                    )
+                ),
+            )
+
+    # Preflight gate 2 — ANTI-COHERENCE "TOO CLEAN" (opt-in,
+    # FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS_FINDING=1). A CONFIRMED finding that
+    # ruled out NO benign alternative fails before any replay — the coherence
+    # tell that the model talked itself into a clean story. Mirrors the events.py
+    # schema gate so a finding that reaches the verifier from another path is
+    # still caught. Lower tiers are exempt (leads / cross-fact inferences).
+    if (
+        os.environ.get("FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS_FINDING") == "1"
+        and finding.confidence == "CONFIRMED"
+        and not (finding.counter_hypothesis or "").strip()
+    ):
+        reason = (
+            f"counter-hypothesis missing: CONFIRMED finding {finding.finding_id} "
+            "records no benign/alternative explanation it ruled out "
+            "(anti-coherence 'too clean' gate)"
+        )
+        return (
+            VerifierAction(
+                case_id=finding.case_id,
+                action="rejected",
+                finding_id=finding.finding_id,
+                reason=reason,
+            ),
+            CallReplay(
+                missing_replay_artifact(
+                    tool_call_id=finding.tool_call_id,
+                    drift_class="counter_hypothesis_missing",
+                    reason=reason,
+                )
+            ),
+        )
+
     artifact = replay_tool_call(
         tool_call_id=finding.tool_call_id,
         record=record,
@@ -136,12 +233,110 @@ def reverify_finding(
         )
 
     if artifact.drift_class == "exact_match":
+        # The citation reproduces (output bytes unchanged). That proves the
+        # finding points at real, unchanged evidence — NOT that the model read
+        # it correctly. Entailment check: re-extract each asserted value from
+        # the re-run output and confirm it is actually present. A misread
+        # (valid citation, wrong value) is treated like drift: a CONFIRMED
+        # finding is rejected (re-dispatchable once), lower tiers downgrade.
+        approved_reason = "tool re-run output_sha256 matches audit log"
+        if finding.asserted_values:
+            entailment = check_entailment(finding.asserted_values, artifact.parsed_output or {})
+            # Seal the minimal entailment slice into the replay artifact so it
+            # rides into the signed audit chain and manifest_verify can re-confirm
+            # the facts offline (the value the parser read, not the model's claim).
+            replay.artifact = artifact.model_copy(
+                update={"entailment": entailment_slice(entailment)}
+            )
+            if not entailment.passed:
+                # Hard-anchor grounding: a forgery-resistant IDENTITY anchor
+                # (cryptographic hash / IP address) that does not entail is a
+                # laundered claim, not a confidence near-miss — reject it outright
+                # regardless of tier, even where a corroborating or filename miss
+                # on a lower tier would only downgrade. (Filename / byte-size hard
+                # anchors stay on the existing per-tier contract below.)
+                if entailment.identity_failures:
+                    return (
+                        VerifierAction(
+                            case_id=finding.case_id,
+                            action="rejected",
+                            finding_id=finding.finding_id,
+                            reason=(
+                                "entailment: hard anchor not found in tool output for: "
+                                + ", ".join(entailment.identity_failures)
+                            ),
+                        ),
+                        replay,
+                    )
+                misread_action = (
+                    "rejected"
+                    if finding.confidence == "CONFIRMED" and not downgrade_on_drift
+                    else "downgraded"
+                )
+                return (
+                    VerifierAction(
+                        case_id=finding.case_id,
+                        action=misread_action,
+                        finding_id=finding.finding_id,
+                        reason=f"entailment: {entailment.reason}",
+                    ),
+                    replay,
+                )
+            # Multiplicity guard: the asserted values all entail, but a count
+            # claim ("two variants", "N entries") was backed by FEWER entailed
+            # leaves than it asserted. The single real line is genuine, so demote
+            # below CONFIRMED rather than reject.
+            if entailment.multiplicity_demotions:
+                return (
+                    VerifierAction(
+                        case_id=finding.case_id,
+                        action="downgraded",
+                        finding_id=finding.finding_id,
+                        reason=(
+                            "entailment: multiplicity claim exceeds entailed supporting "
+                            "lines for: " + ", ".join(entailment.multiplicity_demotions)
+                        ),
+                    ),
+                    replay,
+                )
+            # Extractive provenance: record the value(s) the deterministic
+            # parser READ from the re-run evidence, so the chain carries a
+            # server-read fact, not the model's transcription.
+            if entailment.matched:
+                extracted = "; ".join(f"{m.path}={m.actual!r}" for m in entailment.matched)
+                approved_reason += f"; entailment confirmed from evidence: {extracted}"
+        # Falsifiable expectation (opt-in, FIND_EVIL_REQUIRE_EXPECTATION=1,
+        # default-off so default verdicts never change). The finding committed to
+        # a refutable PREDICTION; if the cited output reaches that path and holds
+        # a CONTRADICTING value, the prediction is refuted and the finding is
+        # demoted like a misread — CONFIRMED rejected (re-dispatchable once),
+        # lower tiers downgraded. Path-absent / consistent = not refuted.
+        if (
+            finding.expectation is not None
+            and os.environ.get("FIND_EVIL_REQUIRE_EXPECTATION") == "1"
+        ):
+            prediction = check_expectation(finding.expectation, artifact.parsed_output or {})
+            if not prediction.passed:
+                refuted_action = (
+                    "rejected"
+                    if finding.confidence == "CONFIRMED" and not downgrade_on_drift
+                    else "downgraded"
+                )
+                return (
+                    VerifierAction(
+                        case_id=finding.case_id,
+                        action=refuted_action,
+                        finding_id=finding.finding_id,
+                        reason=f"expectation refuted: {prediction.reason}",
+                    ),
+                    replay,
+                )
         return (
             VerifierAction(
                 case_id=finding.case_id,
                 action="approved",
                 finding_id=finding.finding_id,
-                reason="tool re-run output_sha256 matches audit log",
+                reason=approved_reason,
             ),
             replay,
         )

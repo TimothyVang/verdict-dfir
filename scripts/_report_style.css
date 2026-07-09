@@ -1,26 +1,30 @@
-/* VERDICT — editorial "forensic case file" report theme.
-   Mirrors apps/web/lib/verdict-ui.tsx + apps/web/app/globals.css: warm near-black
-   paper, cream ink, JetBrains Mono / Fraunces / Archivo, purple brand accent, and
-   the green/amber/blue confidence color system. Kept in sync with _DEFAULT_CSS in
+/* VERDICT v2 report theme — LIGHT "annotated case file".
+   Paper Cream page, Near Black ink, Inter body, Archivo Narrow condensed
+   mastheads, JetBrains Mono for evidence/data, filled semantic chips, and one
+   semantic accent per composition. Semantic colors have a FILL value (for chips)
+   and a darker TEXT value (readable on cream). Kept in sync with _DEFAULT_CSS in
    scripts/render_report.py. */
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Archivo+Narrow:wght@600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
-  --paper: #0e0c10;
-  --surface: #161318;
-  --inset: #0b0a0d;
-  --ink: #ece6da;
-  --muted: #8c8576;
-  --faint: #544f48;
-  --hairline: #2b2620;
-  --accent: #9b59b6;
-  --accent-light: #b98fce;
-  --alert: #d6452f;
-  --confirmed: #7fae6e;
-  --inferred: #c79a4a;
-  --hypothesis: #6f93b8;
+  --paper: #f5f1e8;        /* Paper Cream page */
+  --surface: #fdfcf8;      /* raised near-white panel */
+  --inset: #ece6da;        /* code / quote inset */
+  --ink: #12131a;          /* Near Black text */
+  --muted: #6b6459;        /* muted caption */
+  --faint: #9a9384;        /* faint meta */
+  --hairline: #d8d2c6;     /* light editorial hairline */
+  --accent: #4d5dff;       /* Electric Cobalt */
+  --accent-light: #4453d6; /* readable cobalt for links/labels on cream */
+  /* Semantic FILL (chips/rails) + readable TEXT (on cream) pairs. */
+  --alert: #ff6257;        --alert-text: #cf3b26;
+  --confirmed: #73d9c2;    --confirmed-text: #268a72;
+  --inferred: #ffd76a;     --inferred-text: #9a7414;
+  --hypothesis: #4d5dff;   --hypothesis-text: #3f43c4;
   --mono: "JetBrains Mono", "Courier New", monospace;
-  --serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --body: "Inter", system-ui, -apple-system, sans-serif;
+  --condensed: "Archivo Narrow", "Arial Narrow", system-ui, sans-serif;
+  --serif: "Archivo", Impact, system-ui, sans-serif;
   --grotesk: "Archivo", system-ui, -apple-system, sans-serif;
 }
 
@@ -29,9 +33,9 @@
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
 body {
-  background: #0e0c10;
+  background: var(--paper);
   color: var(--ink);
-  font-family: var(--mono);
+  font-family: var(--body);
   font-size: 13px;
   line-height: 1.7;
   max-width: 1040px;
@@ -40,24 +44,25 @@ body {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
   background-image:
-    linear-gradient(rgba(236, 230, 218, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(236, 230, 218, 0.022) 1px, transparent 1px);
+    linear-gradient(rgba(18, 19, 26, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(18, 19, 26, 0.028) 1px, transparent 1px);
   background-size: 56px 56px;
 }
 
-/* Masthead — Fraunces display serif. */
+/* Masthead — heavy CONDENSED editorial sans. */
 h1 {
-  font-family: var(--serif);
-  font-weight: 600;
+  font-family: var(--condensed);
+  font-weight: 700;
   color: var(--ink);
-  font-size: 2.5em;
-  letter-spacing: -0.5px;
-  line-height: 1.05;
+  font-size: 2.7em;
+  letter-spacing: 0;
+  line-height: 1.0;
+  text-transform: uppercase;
   margin: 0 0 0.35em;
   border: none;
 }
 
-/* Tier banners (Technical Report / Internal) — page break + purple band. */
+/* Tier banners (Technical Report / Internal) — page break + cobalt band. */
 h1.tier-break {
   page-break-before: always;
   font-family: var(--grotesk);
@@ -66,7 +71,7 @@ h1.tier-break {
   font-size: 1.15em;
   font-weight: 700;
   color: var(--ink);
-  background: linear-gradient(90deg, rgba(155, 89, 182, 0.24), rgba(155, 89, 182, 0.04));
+  background: linear-gradient(90deg, rgba(77, 93, 255, 0.14), rgba(77, 93, 255, 0.02));
   border: none;
   border-left: 3px solid var(--accent);
   border-radius: 4px;
@@ -80,8 +85,8 @@ h2 {
   text-transform: uppercase;
   letter-spacing: 2.5px;
   font-size: 1.02em;
-  font-weight: 600;
-  color: var(--accent-light);
+  font-weight: 700;
+  color: var(--accent);
   margin: 2.6em 0 1em;
   padding-bottom: 0.5em;
   border-bottom: 1px solid var(--hairline);
@@ -92,7 +97,7 @@ h3 {
   text-transform: uppercase;
   letter-spacing: 1.5px;
   font-size: 0.9em;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--muted);
   margin: 1.8em 0 0.7em;
 }
@@ -101,27 +106,27 @@ p, li { color: var(--ink); }
 a {
   color: var(--accent-light);
   text-decoration: none;
-  border-bottom: 1px solid rgba(155, 89, 182, 0.4);
+  border-bottom: 1px solid rgba(77, 93, 255, 0.4);
 }
 strong { color: var(--ink); font-weight: 700; }
 em { color: var(--muted); }
 
-/* Figures presented as light "mounted exhibits" pinned to the dark case file. */
+/* Figures presented as mounted exhibits on the paper. */
 img {
   max-width: 100%;
   display: block;
   margin: 1.8em auto;
-  background: #fbfaf6;
+  background: #ffffff;
   border: 1px solid var(--hairline);
   border-radius: 6px;
   padding: 10px;
-  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 6px 22px rgba(18, 19, 26, 0.12);
 }
 
-/* Code. */
+/* Code — evidence/data on a cream inset. */
 code {
   background: var(--inset);
-  color: var(--accent-light);
+  color: var(--hypothesis-text);
   padding: 0.12em 0.45em;
   border-radius: 4px;
   border: 1px solid var(--hairline);
@@ -135,23 +140,24 @@ pre {
   border-radius: 8px;
   border: 1px solid var(--hairline);
   overflow-x: auto;
+  font-family: var(--mono);
 }
 pre code { background: none; border: none; padding: 0; color: inherit; }
 
-/* Cryptographic-attestation blockquote — purple crypto card. */
+/* Cryptographic-attestation blockquote — cobalt crypto card. */
 blockquote {
   font-family: var(--mono);
   color: var(--ink);
   margin: 1.4em 0;
-  background: rgba(155, 89, 182, 0.1);
-  border: 1px solid rgba(155, 89, 182, 0.45);
+  background: rgba(77, 93, 255, 0.07);
+  border: 1px solid rgba(77, 93, 255, 0.32);
   border-left: 3px solid var(--accent);
   border-radius: 0 6px 6px 0;
   padding: 0.9em 1.3em;
 }
 blockquote strong { color: var(--accent-light); }
 
-/* Tables — dark surface, hairline grid, purple-tinted header. */
+/* Tables — light surface, hairline grid, cobalt-tinted header. */
 table {
   border-collapse: collapse;
   margin: 1.3em 0;
@@ -161,12 +167,12 @@ table {
   border: 1px solid var(--hairline);
 }
 th {
-  background: rgba(155, 89, 182, 0.16);
+  background: rgba(77, 93, 255, 0.1);
   color: var(--accent-light);
   font-family: var(--grotesk);
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95em;
   padding: 0.55em 0.8em;
   border: 1px solid var(--hairline);
@@ -177,13 +183,11 @@ td {
   border: 1px solid var(--hairline);
   color: var(--ink);
   vertical-align: top;
+  font-family: var(--mono);
 }
-/* Wide data tables (e.g. the 10-column event ledger) carry long unbreakable
-   tokens — file paths, hostnames, timestamps. Let cells wrap so the table fits
-   the reading column instead of overflowing to the right (and so it fits the
-   narrower PDF page). */
+/* Wide data tables carry long unbreakable tokens — let cells wrap. */
 th, td { overflow-wrap: anywhere; word-break: break-word; }
-tr:nth-child(even) td { background: rgba(236, 230, 218, 0.025); }
+tr:nth-child(even) td { background: rgba(18, 19, 26, 0.028); }
 
 hr { border: none; border-top: 1px solid var(--hairline); margin: 2.4em 0; }
 
@@ -193,40 +197,55 @@ hr { border: none; border-top: 1px solid var(--hairline); margin: 2.4em 0; }
   text-transform: uppercase;
   letter-spacing: 5px;
   font-size: 0.72em;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--accent);
 }
 .tagline {
-  font-family: var(--mono);
+  font-family: var(--body);
   color: var(--muted);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   font-size: 0.86em;
 }
 
-/* Semantic confidence + verdict keywords (wrapped post-render). */
-.conf-confirmed, .verdict-confirmed { color: var(--confirmed); font-weight: 700; }
-.conf-inferred, .verdict-inferred { color: var(--inferred); font-weight: 700; }
-.conf-hypothesis { color: var(--hypothesis); font-weight: 700; }
-.verdict-alert { color: var(--alert); font-weight: 700; }
+/* Semantic confidence + verdict keywords (wrapped post-render) — readable text tones. */
+.conf-confirmed, .verdict-confirmed { color: var(--confirmed-text); font-weight: 700; }
+.conf-inferred, .verdict-inferred { color: var(--inferred-text); font-weight: 700; }
+.conf-hypothesis { color: var(--hypothesis-text); font-weight: 700; }
+.verdict-alert { color: var(--alert-text); font-weight: 700; }
+
+/* Offline re-verification block. */
+.offline-audit {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--confirmed);
+  border-radius: 0 8px 8px 0;
+  padding: 1em 1.3em;
+  margin: 2.2em 0;
+  page-break-inside: avoid;
+}
+.offline-audit h2 { margin-top: 0; border-bottom: none; color: var(--confirmed-text); }
+.offline-audit a { font-family: var(--grotesk); letter-spacing: 0.5px; }
+.offline-audit script { display: none; }
 
 /* ===================================================================== */
 /* Native HTML/CSS report figures (scorecard / story-strip / composition) */
 /* ===================================================================== */
 .vfig { background: var(--surface); border: 1px solid var(--hairline);
   border-radius: 10px; padding: 18px 20px; margin: 1.6em 0;
-  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.4); page-break-inside: avoid; }
+  box-shadow: 0 6px 22px rgba(18, 19, 26, 0.1); page-break-inside: avoid; }
 .vfig-title { font-family: var(--grotesk); text-transform: uppercase;
-  letter-spacing: 2px; font-size: 0.78em; font-weight: 600; color: var(--muted);
+  letter-spacing: 2px; font-size: 0.78em; font-weight: 700; color: var(--muted);
   margin-bottom: 14px; }
-.vfig-sub { color: var(--faint); letter-spacing: 1px; }
+.vfig-sub { color: var(--faint); letter-spacing: 0.5px; }
 .vfig-note { font-family: var(--grotesk); font-size: 0.72em; color: var(--faint);
   margin-top: 12px; letter-spacing: 0.5px; }
+/* FILLED semantic chips — solid pastel with ink/cream text (brand badge style). */
 .vchip { display: inline-block; font-family: var(--grotesk); font-size: 0.72em;
   font-weight: 700; letter-spacing: 0.5px; padding: 2px 10px; border-radius: 6px;
-  margin-right: 8px; border: 1px solid currentColor; }
-.vchip-confirmed { color: var(--confirmed); background: rgba(127, 174, 110, 0.12); }
-.vchip-inferred { color: var(--inferred); background: rgba(199, 154, 74, 0.12); }
-.vchip-hypothesis { color: var(--hypothesis); background: rgba(111, 147, 184, 0.12); }
+  margin-right: 8px; border: 1px solid transparent; text-transform: uppercase; }
+.vchip-confirmed { color: #12131a; background: var(--confirmed); border-color: var(--confirmed); }
+.vchip-inferred { color: #12131a; background: var(--inferred); border-color: var(--inferred); }
+.vchip-hypothesis { color: #f5f1e8; background: var(--hypothesis); border-color: var(--hypothesis); }
 
 /* Scorecard */
 .vsc { display: flex; gap: 0; padding: 0; overflow: hidden; }
@@ -237,14 +256,14 @@ hr { border: none; border-top: 1px solid var(--hairline); margin: 2.4em 0; }
 .vsc-body { padding: 18px 22px; flex: 1; }
 .vsc-top { display: flex; align-items: baseline; justify-content: space-between;
   margin-bottom: 10px; }
-.vsc-verdict { font-family: var(--grotesk); font-weight: 700; font-size: 1.1em;
-  letter-spacing: 3px; }
-.vsc-verdict-alert { color: var(--alert); }
-.vsc-verdict-confirmed { color: var(--confirmed); }
-.vsc-verdict-inferred { color: var(--inferred); }
+.vsc-verdict { font-family: var(--condensed); font-weight: 700; font-size: 1.3em;
+  letter-spacing: 1px; text-transform: uppercase; }
+.vsc-verdict-alert { color: var(--alert-text); }
+.vsc-verdict-confirmed { color: var(--confirmed-text); }
+.vsc-verdict-inferred { color: var(--inferred-text); }
 .vsc-cert { font-family: var(--grotesk); font-size: 0.72em; letter-spacing: 1px;
   text-transform: uppercase; color: var(--muted); }
-.vsc-headline { font-family: var(--serif); font-size: 1.35em; line-height: 1.2;
+.vsc-headline { font-family: var(--body); font-size: 1.2em; line-height: 1.3;
   color: var(--ink); margin-bottom: 10px; }
 .vsc-meta { font-family: var(--mono); font-size: 0.85em; color: var(--accent-light);
   margin-bottom: 12px; }
@@ -255,14 +274,14 @@ hr { border: none; border-top: 1px solid var(--hairline); margin: 2.4em 0; }
   font-family: var(--mono); font-size: 0.82em; }
 .vcomp-label { flex: 0 0 220px; color: var(--ink); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; }
-.vcomp-track { flex: 1; height: 14px; background: rgba(236, 230, 218, 0.05);
+.vcomp-track { flex: 1; height: 14px; background: rgba(18, 19, 26, 0.07);
   border-radius: 7px; overflow: hidden; }
 .vcomp-fill { display: block; height: 100%; background: var(--accent);
   border-radius: 7px; }
 .vcomp-crit .vcomp-fill { background: var(--alert); }
-.vcomp-crit .vcomp-label { color: var(--alert); font-weight: 700; }
+.vcomp-crit .vcomp-label { color: var(--alert-text); font-weight: 700; }
 .vcomp-count { flex: 0 0 56px; text-align: right; color: var(--muted); }
-.vcomp-flag { color: var(--alert); }
+.vcomp-flag { color: var(--alert-text); }
 
 /* Story-strip sequence */
 .vseq-list { list-style: none; margin: 0; padding: 0 0 0 6px;
@@ -271,7 +290,7 @@ hr { border: none; border-top: 1px solid var(--hairline); margin: 2.4em 0; }
 .vseq-item:last-child { padding-bottom: 0; }
 .vseq-dot { position: absolute; left: -7px; top: 4px; width: 11px; height: 11px;
   border-radius: 50%; background: var(--hypothesis); border: 2px solid var(--paper); }
-.vseq-evil .vseq-dot { background: var(--alert); box-shadow: 0 0 0 3px rgba(214, 69, 47, 0.25); }
+.vseq-evil .vseq-dot { background: var(--alert); box-shadow: 0 0 0 3px rgba(255, 98, 87, 0.22); }
 .vseq-ctx .vseq-dot { background: var(--faint); }
 .vseq-time { flex: 0 0 150px; font-family: var(--mono); font-size: 0.76em;
   color: var(--muted); padding-top: 2px; }
@@ -282,7 +301,7 @@ hr { border: none; border-top: 1px solid var(--hairline); margin: 2.4em 0; }
 .vseq-who { font-family: var(--mono); font-size: 0.74em; color: var(--muted);
   margin-top: 3px; }
 .vseq-flag { display: inline-block; font-family: var(--grotesk); font-size: 0.68em;
-  font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--alert);
-  border: 1px solid var(--alert); border-radius: 5px; padding: 1px 7px; margin-left: 6px; }
+  font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--alert-text);
+  border: 1px solid var(--alert-text); border-radius: 5px; padding: 1px 7px; margin-left: 6px; }
 .vseq-tag { display: inline-block; font-family: var(--grotesk); font-size: 0.66em;
   letter-spacing: 1px; text-transform: uppercase; color: var(--faint); margin-left: 6px; }

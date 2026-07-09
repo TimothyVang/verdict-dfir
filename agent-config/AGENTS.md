@@ -15,6 +15,13 @@ calls verifier → judge → correlator → manifest_finalize (terminal
 step under Amendment A5). Never touches evidence directly; only
 dispatches and merges.
 
+**Evidence location.** Live-run evidence is the gitignored `evidence/`
+directory at the repo root (override with `$FINDEVIL_EVIDENCE_ROOT`; see
+`evidence/README.md`). A fresh git worktree's `evidence/` is empty — pass an
+explicit path or set `$FINDEVIL_EVIDENCE_ROOT`. Never fabricate, stub, or mock
+evidence for a run; if `evidence/` is empty, say so and ask for a path rather
+than substituting.
+
 **Memory-store path resolution (do this once at session start, before
 forking subagents):** the cross-case memory SQLite file lives at
 `$FINDEVIL_MEMORY_STORE` if set, else `$XDG_STATE_HOME/findevil/memory.sqlite`,
@@ -113,7 +120,26 @@ Calls `correlate_findings` MCP tool. Enforces the SOUL.md ≥2
 artifact-class rule: any "X executed" Finding must cite ≥2 distinct
 artifact classes (Prefetch + Amcache+ShimCache, or EDR + memory).
 Single-source claims auto-downgrade. Outcome is `kept` or
-`downgraded` per Finding with a reason.
+`downgraded` per Finding with a reason. Under
+`FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS_FINDING`, it also downgrades any
+execution/intent Finding that recorded no benign explanation it ruled
+out (`counter_hypothesis`) — the presumption-of-benignity gate.
+
+Pool A and Pool B authoring: before emitting a CONFIRMED execution,
+persistence, or lateral-movement Finding, write one sentence in
+`counter_hypothesis` naming the most plausible benign alternative
+(vendor updater, legitimate admin task, known-FP pattern) and why the
+evidence overrules it. An empty `counter_hypothesis` on such a Finding
+is a gate failure.
+
+When the judge or correlator organically flips a Finding's confidence
+tier (for example, a CONFIRMED claim downgraded to HYPOTHESIS on the
+≥2 artifact-class rule, or a tier raised on corroboration), commit that
+flip as a `verdict_revision` record carrying its own reason. These are
+rare by design — a safety net, not a routine step — and are written to
+the prev_hash-linked audit chain so the conclusion-change is offline-
+verifiable via `manifest_verify` and rendered as the report's
+Self-Correction section. Never synthesize a flip to manufacture one.
 
 ## Routing rules
 

@@ -6,7 +6,7 @@ import { EvidenceTag, Kicker, KineticHeadline, PullQuote, RuleLine, Stamp } from
 import { ExhibitVideo } from "./shared/ExhibitVideo";
 
 // Beat 5 — "Admissible." The hash chain rendered as a provenance LEDGER of
-// record: each audit record is a ledger row (kind in Fraunces, prev→hash in
+// record: each audit record is a ledger row (kind in heavy editorial sans, prev→hash in
 // mono, a tier tag) separated by hairline rules. To the side, the rs_merkle
 // root, the signed-manifest seal, the FRE 902(14) line as a legal-exhibit
 // pull-quote, and a small mono manifest_verify exhibit. Real hashes preserved

@@ -37,7 +37,7 @@ dependencies = [
 
   # mcp imports pydantic-settings providers at server import time;
   # those providers require python-dotenv even when no .env is loaded.
-  "python-dotenv>=1.0,<1.2",
+  "python-dotenv>=1.0,<1.3",
 ]
 
 [project.optional-dependencies]

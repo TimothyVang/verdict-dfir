@@ -7,7 +7,7 @@ import { spread } from "./shared/pacing";
 
 // Beat 2 — "The chain of trust." The architecture as an editorial numbered
 // flow rather than boxes-and-arrows: the five trust boundaries run 01–05 down
-// an asymmetric column, each a Fraunces label with a mono sub-line, hairlines
+// an asymmetric column, each a heavy editorial label with a mono sub-line, hairlines
 // between, and two margin annotations. The data (the five layers + their
 // sublabels) is preserved verbatim from the old box diagram.
 
@@ -21,12 +21,12 @@ interface Boundary {
 const BOUNDARIES: Boundary[] = [
   { no: "01", label: "Evidence Vault", sub: "read-only · SHA-256 at case_open", note: "nothing is trusted before it is hashed" },
   { no: "02", label: "SIFT Tools, subprocess", sub: "Volatility · Hayabusa · Chainsaw · YARA" },
-  { no: "03", label: "31 Rust DFIR Tools", sub: "findevil-mcp · typed IO · hash every output", note: "no execute_shell — the surface stays narrow" },
-  { no: "04", label: "12 Python Crypto Tools", sub: "findevil-agent-mcp · ACH · signer · memory" },
+  { no: "03", label: "32 Rust DFIR Tools", sub: "findevil-mcp · typed IO · hash every output", note: "no execute_shell — the surface stays narrow" },
+  { no: "04", label: "13 Python Crypto Tools", sub: "findevil-agent-mcp · ACH · signer · memory" },
   { no: "05", label: "VERDICT Orchestrator", sub: "Claude Code · Pool A + Pool B · judge · correlate" },
 ];
 
-export function ArchDiagram({ page = 2, total = 10 }: { page?: number; total?: number } = {}) {
+export function ArchDiagram() {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -36,7 +36,7 @@ export function ArchDiagram({ page = 2, total = 10 }: { page?: number; total?: n
   const sd = (raw: number) => spread(raw, 0, 100, durationInFrames, 24, 200);
 
   return (
-    <Scene page={page} caption="Architecture" total={total}>
+    <Scene page={2} caption="Architecture">
       {/* Masthead — kicker + headline, left gutter, with intentional space */}
       <div style={{ position: "absolute", left: MARGIN, top: 168, width: 980 }}>
         <Kicker frame={frame} delay={sd(2)} color={C.accent}>
@@ -70,7 +70,7 @@ export function ArchDiagram({ page = 2, total = 10 }: { page?: number; total?: n
             opacity: interpolate(frame - sd(44), [0, 14], [0, 1], clampOpts),
           }}
         >
-          chain verifiable offline · 43 typed tools
+          chain verifiable offline · 45 typed tools
         </div>
       </div>
 
@@ -106,7 +106,7 @@ export function ArchDiagram({ page = 2, total = 10 }: { page?: number; total?: n
                   {b.no}
                 </span>
 
-                {/* The boundary name — Fraunces, the editorial voice */}
+                {/* The boundary name — v2 editorial voice */}
                 <span
                   style={{
                     fontFamily: SERIF,

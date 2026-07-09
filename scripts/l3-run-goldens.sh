@@ -34,6 +34,7 @@ FIXTURES=(
   "nist-hacking-case"
   "sans-starter"
   "synthetic-benign"
+  "synthetic-decoy"
   "nitroba"
   "nist-data-leakage"
   "m57-jean"

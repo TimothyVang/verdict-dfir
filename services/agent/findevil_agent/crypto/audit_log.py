@@ -202,7 +202,10 @@ class AuditLog:
                 raw = raw.rstrip(b"\n")
                 if not raw:
                     continue
-                obj = json.loads(raw)
+                try:
+                    obj = json.loads(raw)
+                except json.JSONDecodeError as exc:
+                    raise AuditLogError(f"line is not valid JSON: {exc}") from exc
                 yield AuditRecord(
                     seq=int(obj["seq"]),
                     ts=str(obj["ts"]),
@@ -229,7 +232,10 @@ class AuditLog:
                 raw = raw.rstrip(b"\n")
                 if not raw:
                     continue
-                obj = json.loads(raw)
+                try:
+                    obj = json.loads(raw)
+                except json.JSONDecodeError as exc:
+                    raise AuditLogError(f"seq {count}: line is not valid JSON: {exc}") from exc
                 if not isinstance(obj, dict):
                     raise AuditLogError(f"seq {count}: not a JSON object")
                 seq = obj.get("seq")

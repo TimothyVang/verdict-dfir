@@ -1,5 +1,5 @@
 import React from "react";
-import { VERDICT, MONO, Grain, Vignette, CaseFurnitureHeader, CaseFurnitureFooter } from "@/lib/verdict-ui";
+import { VERDICT, BODY, Grain, Vignette, CaseFurnitureHeader, CaseFurnitureFooter } from "@/lib/verdict-ui";
 
 /**
  * CaseShell — the editorial "forensic case file" frame every route sits in.
@@ -20,7 +20,7 @@ export default function CaseShell({ children }: { children: React.ReactNode }) {
         flexDirection: "column",
         background: VERDICT.bg,
         color: VERDICT.text,
-        fontFamily: MONO,
+        fontFamily: BODY,
       }}
     >
       <Vignette />

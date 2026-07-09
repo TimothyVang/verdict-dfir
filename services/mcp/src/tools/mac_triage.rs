@@ -165,12 +165,19 @@ pub fn mac_triage(input: &MacTriageInput) -> Result<MacTriageOutput, MacTriageEr
         )));
     }
 
+    let args = build_mac_apt_args(&input.image_path, &input.module, &outdir);
+    // Defense-in-depth pre-spawn gate: refuse a poisoned mac_apt binary that
+    // resolves to a denied basename, and reject NUL bytes in the image path.
+    if let Err(e) = crate::tools::argsafe::guard_spawn(&binary, &args) {
+        let _ = std::fs::remove_dir_all(&outdir);
+        return Err(MacTriageError::SubprocessFailed {
+            exit_code: -1,
+            stderr: e.to_string(),
+        });
+    }
+
     let mut cmd = Command::new(&binary);
-    cmd.args(build_mac_apt_args(
-        &input.image_path,
-        &input.module,
-        &outdir,
-    ));
+    cmd.args(args);
 
     let proc = cmd.output().map_err(|err| {
         if err.kind() == std::io::ErrorKind::NotFound {

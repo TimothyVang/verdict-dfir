@@ -14,6 +14,22 @@ import pytest
 from findevil_agent.crypto.audit_log import AuditLog
 
 
+@pytest.fixture(autouse=True)
+def _fact_fidelity_gate_off_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The fact-fidelity gate is production-default-ON (Stage A). These MCP-boundary
+    # tests build findings as fixtures (finding_a / finding_b) to exercise the
+    # wrappers, not the gate, so default it off here; gate behavior is covered in
+    # services/agent/tests. See services/agent/tests/conftest.py.
+    monkeypatch.setenv("FIND_EVIL_REQUIRE_ASSERTED_VALUES", "0")
+
+
+@pytest.fixture(autouse=True)
+def _allow_stub_signer_in_tests(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Production coerces signer:"stub" → ed25519 unless this opt-in is set.
+    # Manifest tests intentionally exercise the deterministic stub path.
+    monkeypatch.setenv("FINDEVIL_ALLOW_STUB_SIGNER", "1")
+
+
 @pytest.fixture
 def seeded_audit_log(tmp_path: Path) -> Path:
     """Audit log with the seven-record fixture used by manifest tests."""

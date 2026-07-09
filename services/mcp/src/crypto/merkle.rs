@@ -335,6 +335,12 @@ mod tests {
     /// Cross-language parity check: same leaves, both languages
     /// must produce the same root. The Python side hashes b"a", b"b",
     /// b"c" and produces this expected root (computed offline).
+    ///
+    /// FROZEN VECTOR — mirrored by the Python
+    /// `TestFrozenCrossLanguageVector::test_three_leaf_frozen_root` in
+    /// `services/agent/tests/test_crypto_merkle.py`. If this constant
+    /// drifts on either side, that side fails red and the silent
+    /// Rust/Python mirror divergence (C4/C5 risk) surfaces in CI.
     #[test]
     fn cross_lang_three_leaf_root_matches_python() {
         let mut t = MerkleTree::new();
@@ -345,6 +351,27 @@ mod tests {
         // the same inputs. If this constant drifts vs Python, the
         // cross-lang invariant is broken.
         let py_root = "d31a37ef6ac14a2db1470c4316beb5592e6afd4465022339adafda76a18ffabe";
+        assert_eq!(t.root_hex(), py_root, "cross-lang Merkle root drift");
+    }
+
+    /// FROZEN VECTOR — 5 leaves exercise the duplicate-last odd-tier
+    /// rule at TWO tiers (5 -> 6 -> 3 -> 4 -> 2 -> 1), a stronger
+    /// drift probe than the 3-leaf case. The identical hex constant is
+    /// asserted by the Python
+    /// `TestFrozenCrossLanguageVector::test_five_leaf_frozen_root`.
+    /// A divergence in either canonicalization (leaf order,
+    /// `H(left || right)` concat order, the odd-tier duplicate rule,
+    /// or the SHA-256 primitive) fails this test red instead of
+    /// silently breaking offline manifest verification. Do NOT
+    /// recompute this from the impl to "fix" a failure — a changed
+    /// root means the canonicalization changed.
+    #[test]
+    fn cross_lang_five_leaf_root_matches_python() {
+        let mut t = MerkleTree::new();
+        for leaf in [b"alpha".as_slice(), b"bravo", b"charlie", b"delta", b"echo"] {
+            t.append(sha(leaf));
+        }
+        let py_root = "305b1e31a691e2aef1c9734f73e5d92936f51fa552d87cbca23a50955b84f42b";
         assert_eq!(t.root_hex(), py_root, "cross-lang Merkle root drift");
     }
 }

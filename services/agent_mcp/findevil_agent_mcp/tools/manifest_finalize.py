@@ -18,15 +18,51 @@ and test-only placeholders.
 
 from __future__ import annotations
 
+import os
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Literal
 
+from findevil_agent.crypto.anchor import (
+    anchor_merkle_root,
+    require_rekor_enabled,
+)
 from findevil_agent.crypto.audit_log import AuditLog
 from findevil_agent.crypto.manifest import build_manifest, write_manifest
 from findevil_agent.crypto.signer import FallbackSigner, Signer, StubSigner, make_signer
 from pydantic import BaseModel, ConfigDict, Field
 
 from findevil_agent_mcp.tools._base import ToolSpec
+
+# Explicit opt-in for tests / deterministic dry-runs. Without this, a model
+# that passes signer:"stub" is coerced to ed25519 so local seals stay real.
+_STUB_ALLOW_ENV = "FINDEVIL_ALLOW_STUB_SIGNER"
+
+
+def _stub_signer_allowed() -> bool:
+    return os.environ.get(_STUB_ALLOW_ENV, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _resolve_signer_request(requested: str) -> tuple[str, str | None]:
+    """Return (effective_request, coerce_reason).
+
+    Coerces ``stub`` → ``ed25519`` unless :envvar:`FINDEVIL_ALLOW_STUB_SIGNER`
+    is set. Does not alter sigstore/ed25519 requests.
+    """
+    if requested != "stub":
+        return requested, None
+    if _stub_signer_allowed():
+        return "stub", None
+    return (
+        "ed25519",
+        "stub coerced to ed25519 "
+        f"(set {_STUB_ALLOW_ENV}=1 for the test-only stub placeholder)",
+    )
 
 
 class ManifestFinalizeInput(BaseModel):
@@ -49,6 +85,19 @@ class ManifestFinalizeInput(BaseModel):
     extra: dict[str, Any] = Field(
         default_factory=dict,
         description="Free-form metadata embedded in the manifest (image_path, model, etc.).",
+    )
+    anchor_transparency: bool = Field(
+        default=False,
+        description=(
+            "OPT-IN: publish the audit Merkle root to a public Sigstore Rekor "
+            "transparency log (RFC-3161 TSA fallback) so a third party can prove "
+            "when the sealed root existed. Absent by default — when false the "
+            "manifest is byte-identical and no network is touched. Requires the "
+            "operator to also set FINDEVIL_REKOR_ENABLE=1; requesting it without "
+            "that opt-in fails closed. Only the bare 32-byte SHA-256 root leaves "
+            "the host (no evidence text). The anchor is attached AFTER signing "
+            "and excluded from the signed body, so it never alters the signature."
+        ),
     )
 
 
@@ -83,6 +132,21 @@ class ManifestFinalizeOutput(BaseModel):
         default=None,
         description="Why the requested signer degraded, when it did; null otherwise.",
     )
+    transparency_anchored: bool = Field(
+        default=False,
+        description=(
+            "True iff a transparency anchor was successfully attached (Rekor or "
+            "RFC-3161 TSA fallback). False when anchoring was not requested or the "
+            "attempt honestly failed (see the manifest's transparency_log block)."
+        ),
+    )
+    transparency_kind: str | None = Field(
+        default=None,
+        description=(
+            "The transparency anchor kind actually recorded: 'rekor', 'rfc3161', "
+            "'none' (attempted but failed), or null when anchoring was not requested."
+        ),
+    )
 
 
 async def _handle(inp: BaseModel) -> ManifestFinalizeOutput:
@@ -92,9 +156,12 @@ async def _handle(inp: BaseModel) -> ManifestFinalizeOutput:
     # the signer; ed25519 signs with the local keypair (offline). Requests are
     # wrapped so a failed signer honestly degrades — sigstore -> ed25519 ->
     # stub, ed25519 -> stub — with the reason recorded; never crashes the run.
-    if inp.signer == "stub":
+    # Agent-supplied signer:"stub" is coerced to ed25519 unless the operator
+    # explicitly opts into the test placeholder via FINDEVIL_ALLOW_STUB_SIGNER.
+    requested, coerce_reason = _resolve_signer_request(inp.signer)
+    if requested == "stub":
         signer: Signer = StubSigner(run_id=inp.run_id)
-    elif inp.signer == "ed25519":
+    elif requested == "ed25519":
         signer = FallbackSigner(make_signer(kind="ed25519"), StubSigner(run_id=inp.run_id))
     else:  # sigstore
         signer = FallbackSigner(
@@ -112,7 +179,32 @@ async def _handle(inp: BaseModel) -> ManifestFinalizeOutput:
     )
     out_path = write_manifest(manifest, Path(inp.output_path))
 
+    # Optional, opt-in transparency anchoring. Absent by default: with
+    # anchor_transparency=False (the default) NOTHING below runs, so the manifest
+    # stays byte-identical and no network is touched. When requested, the env
+    # opt-in must also be set (fail-closed), then the anchor is attached AFTER
+    # signing and the manifest is RE-WRITTEN — the anchor is excluded from the
+    # already-computed signed body, so the re-write does NOT invalidate the
+    # signature.
+    transparency_anchored = False
+    transparency_kind: str | None = None
+    if inp.anchor_transparency:
+        require_rekor_enabled()  # fail-closed when the network action lacks the opt-in
+        block = anchor_merkle_root(manifest.merkle_root_hex)
+        if block is not None:
+            manifest = replace(manifest, transparency_log=block)
+            out_path = write_manifest(manifest, Path(inp.output_path))
+            transparency_kind = str(block.get("kind") or "none")
+            transparency_anchored = bool(block.get("anchored"))
+
     sig = manifest.signature or {}
+    degrade_reason = (
+        str(sig.get("fallback_reason")) if sig.get("fallback_reason") else None
+    )
+    if coerce_reason and degrade_reason:
+        combined_reason = f"{coerce_reason}; {degrade_reason}"
+    else:
+        combined_reason = coerce_reason or degrade_reason
     return ManifestFinalizeOutput(
         manifest_path=str(out_path),
         merkle_root_hex=manifest.merkle_root_hex,
@@ -124,7 +216,9 @@ async def _handle(inp: BaseModel) -> ManifestFinalizeOutput:
             str(sig.get("cert_fingerprint")) if sig.get("cert_fingerprint") else None
         ),
         signer_effective=str(sig.get("kind") or "stub"),
-        fallback_reason=(str(sig.get("fallback_reason")) if sig.get("fallback_reason") else None),
+        fallback_reason=combined_reason,
+        transparency_anchored=transparency_anchored,
+        transparency_kind=transparency_kind,
     )
 
 

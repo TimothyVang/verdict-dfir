@@ -6,8 +6,8 @@ Two modes:
 **Synthetic** (default): spawns the server as a subprocess (matching
 the ``.mcp.json`` boot recipe) and drives a full investigation
 through 11 of 12 MCP tools with hand-crafted Findings. This is the
-demo flow under Amendment A2/A3 minus the actual SCHARDT.001 disk
-image — exercises the same crypto/ACH/memory/ACP paths the live demo
+demo flow under Amendment A2/A3 minus an actual disk image —
+exercises the same crypto/ACH/memory/ACP paths the live demo
 will. Skipped: ``verify_finding`` (needs the Rust DFIR MCP server).
 The A3 additions (``memory_remember`` + ``memory_recall`` cold→warm
 transition, ``pool_handoff`` IBM-ACP envelope) and the expert-miss
@@ -49,6 +49,11 @@ from typing import Any
 
 REPO = Path(__file__).resolve().parent.parent
 AGENT_MCP_DIR = REPO / "services" / "agent_mcp"
+
+# The fact-fidelity gate is production-default-ON (Stage A). This smoke exercises
+# the audit/crypto chain over hand-crafted synthetic Findings, not the gate, so
+# disable it here — also propagated to the spawned MCP server via os.environ.copy().
+os.environ.setdefault("FIND_EVIL_REQUIRE_ASSERTED_VALUES", "0")
 
 
 def fatal(msg: str) -> None:
@@ -198,6 +203,21 @@ def _finding(
     }
 
 
+def _verifier_actions(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+    for finding in findings:
+        action = str(finding.get("verifier_action") or "approved")
+        actions.append(
+            {
+                "case_id": str(finding.get("case_id") or "smoke-case"),
+                "finding_id": str(finding["finding_id"]),
+                "action": action,
+                "reason": "smoke verifier action supplied before judge_findings",
+            }
+        )
+    return actions
+
+
 def latest_auto_run() -> Path | None:
     base = REPO / "tmp" / "auto-runs"
     if not base.is_dir():
@@ -306,8 +326,8 @@ def real_evidence_flow(client: StdioClient, case_dir: Path) -> int:
         {
             "pool_a_findings": pool_a,
             "pool_b_findings": pool_b,
-            "pool_a_verifier_actions": [],
-            "pool_b_verifier_actions": [],
+            "pool_a_verifier_actions": _verifier_actions(pool_a),
+            "pool_b_verifier_actions": _verifier_actions(pool_b),
         },
     )
     if "merged" not in j:
@@ -584,8 +604,8 @@ def synthetic_flow(client: StdioClient) -> int:
             {
                 "pool_a_findings": a_findings,
                 "pool_b_findings": b_findings,
-                "pool_a_verifier_actions": [],
-                "pool_b_verifier_actions": [],
+                "pool_a_verifier_actions": _verifier_actions(a_findings),
+                "pool_b_verifier_actions": _verifier_actions(b_findings),
             },
         )
         if not j["merged"] or j["budget_exceeded"]:
@@ -612,16 +632,24 @@ def synthetic_flow(client: StdioClient) -> int:
                 "output_path": str(manifest_path),
                 "signer": "stub",
                 "extra": {
-                    "image_path": "/fixtures/nist-hacking-case/SCHARDT.001",
+                    "image_path": "/fixtures/sample-case/sample-disk.001",
                     "model": "claude-opus-4-7",
                 },
             },
         )
         if not (mf["leaf_count"] >= 4 and len(mf["merkle_root_hex"]) == 64):
             fatal(f"manifest finalize unexpected: {mf}")
+        # Transparency anchoring is opt-in and absent by default: without
+        # anchor_transparency the manifest carries NO transparency_log block.
+        if (
+            mf.get("transparency_anchored") is not False
+            or mf.get("transparency_kind") is not None
+        ):
+            fatal(f"transparency anchor must be absent by default, got: {mf}")
         log(
             f"  -> {mf['leaf_count']} Merkle leaves, root={mf['merkle_root_hex'][:12]}..., "
-            f"sig sha256={mf['signature_payload_sha256'][:12]}..."
+            f"sig sha256={mf['signature_payload_sha256'][:12]}... "
+            "(transparency anchor absent by default)"
         )
 
         # ---- 9. manifest_verify (offline) ------------------------------
@@ -629,11 +657,16 @@ def synthetic_flow(client: StdioClient) -> int:
         mv = client.call_tool("manifest_verify", {"manifest_path": str(manifest_path)})
         if not mv["overall"]:
             fatal(f"manifest verification failed: {mv}")
+        # No anchor present -> transparency_ok is vacuously True and never gates.
+        if mv.get("transparency_ok") is not True:
+            fatal(f"transparency_ok must be vacuously True with no anchor, got: {mv}")
         log(
-            "  -> overall=True, audit_chain_ok={a}, merkle_root_ok={m}, sig_present={s}".format(
+            "  -> overall=True, audit_chain_ok={a}, merkle_root_ok={m}, sig_present={s}, "
+            "transparency_ok={t}".format(
                 a=mv["audit_chain_ok"],
                 m=mv["merkle_root_ok"],
                 s=mv["signature_present"],
+                t=mv["transparency_ok"],
             )
         )
 
@@ -735,6 +768,10 @@ def main() -> int:
                 "memory_recall",
                 "pool_handoff",
                 "expert_miss_capture",
+                # read-only accuracy diagnostic (13th Python tool)
+                "accuracy_compare",
+                # read-only AI/agent-tradecraft signature lead tool (14th Python tool)
+                "find_ai_signatures",
             ]
         )
         if names != expected:

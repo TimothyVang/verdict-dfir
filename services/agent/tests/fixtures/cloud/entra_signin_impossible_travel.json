@@ -1,0 +1,31 @@
+{
+  "comment": "SYNTHETIC Entra ID sign-in log fragment (Graph auditLogs/signIns value[]). No real tenant data. user@contoso.com signs in from New York, then 30 minutes later from Sydney (~16,000 km) — physically implausible ground speed.",
+  "value": [
+    {
+      "createdDateTime": "2026-06-13T01:00:00Z",
+      "userPrincipalName": "user@contoso.com",
+      "ipAddress": "1.2.3.4",
+      "appDisplayName": "Azure Portal",
+      "resourceDisplayName": "Windows Azure Service Management API",
+      "status": { "errorCode": 0 },
+      "location": {
+        "city": "New York",
+        "countryOrRegion": "US",
+        "geoCoordinates": { "latitude": 40.7128, "longitude": -74.006 }
+      }
+    },
+    {
+      "createdDateTime": "2026-06-13T01:30:00Z",
+      "userPrincipalName": "user@contoso.com",
+      "ipAddress": "5.6.7.8",
+      "appDisplayName": "Azure Portal",
+      "resourceDisplayName": "Windows Azure Service Management API",
+      "status": { "errorCode": 0 },
+      "location": {
+        "city": "Sydney",
+        "countryOrRegion": "AU",
+        "geoCoordinates": { "latitude": -33.8688, "longitude": 151.2093 }
+      }
+    }
+  ]
+}

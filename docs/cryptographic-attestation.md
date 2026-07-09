@@ -26,6 +26,8 @@ file collects the load-bearing claims in one place.
 
 ## The three-link chain
 
+![Chain of custody — manifest_finalize output: the hash-chained audit.jsonl, one Merkle leaf per tool_call_output, and audit_log_final_hash + merkle_root_hex bound into an ed25519-signed run.manifest.json](showcase/results-custody-chain.png)
+
 Every VERDICT investigation produces a `run.manifest.json`
 backed by composed cryptographic primitives across three tiers:
 
@@ -160,8 +162,11 @@ is what the verifier consumes.
    honest cryptographic status — never `true` for a stub bundle (a
    deterministic placeholder is not proof), and a sigstore bundle is
    recorded for offline verification by a party that supplies the
-   expected signer identity. `overall` gates on presence, so the
-   committed stub-signed sample runs verify end-to-end.
+   expected signer identity. `overall` requires a bundle to be present
+   and treats a `stub` or recorded `sigstore` bundle as advisory (so
+   dev/offline stub runs verify end-to-end), but a present `ed25519`
+   bundle that does **not** cryptographically verify fails `overall` —
+   a forged or corrupted signature cannot pass.
 
 If all checks pass, `overall=true`. Any one fails → `overall=false`
 with a precise diagnostic naming the field and the expected vs actual
@@ -173,6 +178,41 @@ local key carries no third-party identity; a **stub**-signed run proves
 chain and Merkle integrity but nothing about who sealed it. Only a real
 sigstore signature adds non-repudiable identity via the transparency
 log, which is why customer release requires `signer=sigstore`.
+
+---
+
+## Navigating the chain: the evidence traceability index
+
+`manifest_verify` and `scripts/trace-finding` answer "is the chain
+intact?". The companion **evidence traceability index** answers "show me
+the exact line that backs this claim". It is a deterministic, no-LLM,
+read-only join over `verdict.json` + `audit.jsonl` that maps, for every
+Finding:
+
+    claim (description) -> asserted entities/values
+                        -> finding_id
+                        -> each cited tool_call_id
+                        -> the exact audit.jsonl line number + output_sha256
+
+```bash
+# Human table:
+python -m scripts.evidence_traceability_index <run-dir>
+# Machine-readable JSON (for tooling / report embedding):
+python -m scripts.evidence_traceability_index <run-dir> --json
+```
+
+It re-walks the same canonical/`prev_hash` chain checks as the verifier:
+a citation is `RESOLVED` only when its `tool_call_id` maps to a
+`tool_call_output` record whose audit line is in canonical form on an
+unbroken chain. A missing `tool_call_output` or a tampered line surfaces
+the citation — and its owning Finding — as `UNRESOLVED`, and the process
+exits non-zero. Re-running over the same directory is byte-identical.
+
+This index is a **presentation / forensic-navigation aid only**. Per the
+project guardrails, indexes and visuals never create Findings, satisfy
+citations, or upgrade confidence; it only *navigates* the custody spine,
+it does not change it. `scripts/build-offline-report.py --run-dir <run-dir>`
+embeds the same table into the offline `report.html`.
 
 ---
 
@@ -229,6 +269,17 @@ and certification (the Rule 902(11) notice requirement).
     of the current chain.** Bitcoin offered a stronger no-single-party
     timestamp; Rekor trusts the LF to operate the log honestly. Either
     way, this is supplementary to — not part of — the 902(14) requirement.
+  - **Merkle-root anchoring opt-in (verified 2026-07-05):** publishing the
+    audit Merkle root to Rekor (RFC-3161 TSA fallback) is a double-locked
+    opt-in — the `manifest_finalize` call must pass `anchor_transparency=True`
+    **and** the operator must set `FINDEVIL_REKOR_ENABLE=1`; requesting it
+    without the env fails closed, and when off the manifest is byte-identical
+    with no network touched. The crypto path (signer + manifest + anchor) is
+    clean-venv verified: 75 `test_crypto_*` cases pass in a freshly synced
+    `services/agent` venv, including that a present-but-corrupted anchor is
+    flagged without gating the offline `signature_verified` pass (the anchor is
+    attached after signing and excluded from the signed body). The opt-in stays
+    off by default; only the bare 32-byte root egresses when enabled.
 
 A court looking at a `run.manifest.json` three years from now
 establishes the record's integrity from the hash chain and signature
@@ -315,6 +366,9 @@ Honest disclosure (per `docs/false-positives.md` and SOUL.md):
 - `agent-config/JUDGING.md` (after-the-fact self-assessment rubric;
   scored out-of-band by `scripts/self-score.py`, not part of the chain)
 - `scripts/trace-finding` (offline replay helper for completed case directories)
+- `scripts/evidence_traceability_index.py` (deterministic, read-only
+  finding -> tool_call_id -> audit line + output_sha256 join; navigation
+  aid, never creates Findings)
 - `scripts/agent-mcp-smoke.py` (the negative test runs in CI on
   every L1 build per `docker/l1-compose.yml`)
 - [Federal Rule of Evidence 902(14)](https://www.law.cornell.edu/rules/fre/rule_902)

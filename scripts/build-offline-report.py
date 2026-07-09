@@ -146,7 +146,65 @@ def load_source(source: Path) -> tuple[str, str]:
     raise FileNotFoundError(source)
 
 
-def build_html(source: Path) -> str:
+def render_traceability_section(run_dir: Path) -> str:
+    """Render the deterministic evidence-traceability index for a run directory.
+
+    Read-only forensic-navigation aid: it joins each Finding to the audit.jsonl
+    line + output_sha256 that backs it. It never creates Findings or upgrades
+    confidence (per CLAUDE.md). Returns "" when the run dir has no index to show
+    so the default offline report (no --run-dir) is byte-for-byte unchanged.
+    """
+    from evidence_traceability_index import IndexError_, build_index
+
+    try:
+        index = build_index(run_dir)
+    except IndexError_:
+        return ""
+
+    summary = index["summary"]
+    chain = index["audit_chain"]
+    rows = []
+    for finding in index["findings"]:
+        for cit in finding["citations"]:
+            if cit["status"] == "RESOLVED":
+                where = (
+                    f"audit line {cit['audit_line']} "
+                    f"(<code>{escape((cit['output_sha256'] or '')[:16])}…</code>)"
+                )
+            else:
+                where = f"UNRESOLVED — {escape(cit['reason'] or 'broken chain')}"
+            rows.append(
+                "<tr>"
+                f"<td>{escape(finding['finding_id'])}</td>"
+                f"<td>{escape(finding['status'])}</td>"
+                f"<td><code>{escape(cit['tool_call_id'])}</code></td>"
+                f"<td>{where}</td>"
+                "</tr>"
+            )
+    if not rows:
+        return ""
+    chain_state = (
+        "intact"
+        if chain["intact"]
+        else f"BROKEN at seq {escape(str(chain['first_break_seq']))}"
+    )
+    return f"""
+    <section aria-label="Evidence traceability index">
+      <h2>Evidence Traceability Index</h2>
+      <p>Deterministic, read-only join from each Finding to the exact
+      <code>audit.jsonl</code> line and <code>output_sha256</code> that backs it.
+      Audit chain {chain_state}; {summary['resolved']}/{summary['findings']}
+      findings resolve to an intact citation chain. This index is a navigation
+      aid only — it never creates Findings or upgrades confidence.</p>
+      <table>
+        <tr><th>Finding</th><th>Status</th><th>Tool call</th><th>Audit provenance</th></tr>
+        {"".join(rows)}
+      </table>
+    </section>
+"""
+
+
+def build_html(source: Path, run_dir: Path | None = None) -> str:
     text, source_label = load_source(source)
     fields = parse_front_matter(text)
     summary = markdown_to_plain_blocks(extract_section(text, "Executive summary"))
@@ -195,6 +253,7 @@ def build_html(source: Path) -> str:
     )
     summary_html = "\n".join(paragraph(block) for block in summary[:6])
     methodology_html = "\n".join(paragraph(block) for block in methodology[:3])
+    traceability_html = render_traceability_section(run_dir) if run_dir else ""
 
     return f"""<!doctype html>
 <html lang="en">
@@ -238,6 +297,7 @@ def build_html(source: Path) -> str:
       <h2>Cryptographic Attestation</h2>
       <table>{crypto_html}</table>
     </section>
+    {traceability_html}
     <section>
       <h2>Methodology</h2>
       {methodology_html}
@@ -254,16 +314,27 @@ def main() -> int:
         "--source", default=str(DEFAULT_SOURCE), help="source markdown report"
     )
     parser.add_argument("--out", required=True, help="output report.html path")
+    parser.add_argument(
+        "--run-dir",
+        default=None,
+        help="optional completed run dir (verdict.json + audit.jsonl); when given, "
+        "appends a deterministic evidence-traceability index section",
+    )
     args = parser.parse_args()
 
     source = Path(args.source)
     if not source.is_absolute():
         source = REPO / source
+    run_dir: Path | None = None
+    if args.run_dir:
+        run_dir = Path(args.run_dir)
+        if not run_dir.is_absolute():
+            run_dir = Path.cwd() / run_dir
     out = Path(args.out)
     if not out.is_absolute():
         out = Path.cwd() / out
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(build_html(source), encoding="utf-8")
+    out.write_text(build_html(source, run_dir), encoding="utf-8")
     print(f"wrote {out}")
     return 0
 

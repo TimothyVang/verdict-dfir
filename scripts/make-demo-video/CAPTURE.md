@@ -139,6 +139,37 @@ pnpm render           # writes ../../docs/find-evil-demo.mp4
 
 Then host the mp4 and record the URL in the release notes or submission field.
 
+## The video slate (beyond the showcase)
+
+The same Remotion pipeline renders four additional videos, each a `<Composition>`
+in `src/Root.tsx` driven by its own beats file in `src/beats/` and its own
+narration subdir in `public/audio/<prefix>/`. The narration is authored as data
+(the `narration` field), and on-screen copy comes from the `scene` / `headline`
+/ `body` / `points` / `command` / `exhibit` fields on each `Beat` (see
+`ConceptCard.tsx` and `ExhibitChapter.tsx`).
+
+| Composition | Beats file | What it's for | Output |
+|-------------|-----------|----------------|--------|
+| `FindEvilDemo` | `beats-data.ts` | The ~4.5 min showcase | `docs/find-evil-demo.mp4` |
+| `EducationalExplainer` | `explainer-beats.ts` | What VERDICT is + core concepts | `docs/verdict-educational-explainer.mp4` |
+| `FeatureDeepDives` | `deepdive-beats.ts` | Standout features w/ real footage | `docs/verdict-feature-deep-dives.mp4` |
+| `Quickstart` | `quickstart-beats.ts` | Install + first run | `docs/verdict-quickstart.mp4` |
+| `ContributorCall` | `contributor-beats.ts` | "Help build VERDICT" | `docs/verdict-contributor-call.mp4` |
+
+Build one (TTS + render in one step):
+
+```bash
+bash scripts/make-demo-video.sh --composition Quickstart      # one video
+bash scripts/make-demo-video.sh --all                         # the whole slate
+bash scripts/make-demo-video.sh --composition Quickstart --preview   # fast 90-frame check
+```
+
+`FeatureDeepDives` reuses the real exhibit clips already in `public/ui/`
+(terminal self-correction, live dashboard, offline tamper) — no new capture
+needed. Host each mp4 and surface the explainer + contributor URLs in `README.md`
+(those are the "educate / help build" links). The showcase URL alone is the one
+registered as `DEMO_VIDEO_URL`.
+
 ## Honesty note
 
 The fault injection in Slot 1 is deliberate and **declared in the audit chain** (a

@@ -1,0 +1,131 @@
+{
+  "_comment": [
+    "Golden for DFIR Madness Case 001 - 'The Stolen Szechuan Sauce' (disk + memory + pcap, 2 Windows hosts).",
+    "",
+    "Source: https://dfirmadness.com/answers-to-szechuan-case-001/ (official answer key),",
+    "corroborated by the DFIR Madness case intro, iblue.team, g4rud4/GitLab, and Netresec walkthroughs.",
+    "",
+    "PROVISIONAL / HELD-OUT: VERDICT has NOT yet run this case (needs the ~16GB evidence staged +",
+    "SIFT for the disk half). min_recall_percent below is a placeholder floor to be recalibrated after",
+    "the first real scripts/benchmark run; treat this as a held-out benchmark (Phase 6). We enumerate WHAT",
+    "a correct multi-class triage must surface; finding_id -> tool_call_id mapping is populated at run time.",
+    "",
+    "Fidelity caveats honored (kept generic to avoid over-assertion):",
+    "- malware is 'coreupdate.exe'/'coreupdater.exe' (same Meterpreter binary, both spellings are one IOC).",
+    "- The SHA-256 is community-walkthrough-sourced, NOT in the official key; not asserted as a match value.",
+    "- The exact registry Run-key path is inconsistent across walkthroughs; the hint stays generic.",
+    "- The prefetch execution artifact (corroboration, not in the official key) is intentionally omitted.",
+    "- Timestamps are UTC (host local is UTC-6)."
+  ],
+  "case_id": "szechuan",
+  "source_url": "https://dfirmadness.com/answers-to-szechuan-case-001/",
+  "license": "DFIR Madness - free for education (redistribute URL + hash, not the image)",
+  "verdict": "SUSPICIOUS",
+  "min_recall_percent": 50,
+  "findings": [
+    {
+      "finding_id": "szechuan-01",
+      "description": "RDP brute force against the domain controller from attacker host 194.61.24.102 (burst of failed logons then a success as CITADEL\\Administrator)",
+      "mitre_technique": "T1110.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Security.evtx burst of EID 4625 from 194.61.24.102 followed by EID 4624 for Administrator"
+    },
+    {
+      "finding_id": "szechuan-02",
+      "description": "Interactive RDP foothold on the DC as Administrator immediately after the brute force succeeded, from 194.61.24.102",
+      "mitre_technique": "T1021.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Security.evtx EID 4624 Logon Type 10 (RemoteInteractive) from 194.61.24.102; RDP tcp/3389 session in the PCAP"
+    },
+    {
+      "finding_id": "szechuan-03",
+      "description": "Meterpreter payload coreupdate.exe downloaded to the DC over HTTP from 194.61.24.102",
+      "mitre_technique": "T1105",
+      "confidence": "CONFIRMED",
+      "artifact_class": "network",
+      "artifact_hint": "PCAP HTTP GET of coreupdate.exe from 194.61.24.102; corroborated by IE WebCache/browser history on disk"
+    },
+    {
+      "finding_id": "szechuan-04",
+      "description": "Malware written to C:\\Windows\\System32\\coreupdate.exe, masquerading as a Windows update binary",
+      "mitre_technique": "T1036.005",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "MFT $STANDARD_INFORMATION create time for C:\\Windows\\System32\\coreupdate(r).exe (Meterpreter binary)"
+    },
+    {
+      "finding_id": "szechuan-05",
+      "description": "Meterpreter reverse_tcp command-and-control beacon from the DC outbound to 203.78.103.109 on port 443",
+      "mitre_technique": "T1071.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "network",
+      "artifact_hint": "PCAP established TCP 10.42.85.10 -> 203.78.103.109:443; corroborated by netstat in the DC memory image"
+    },
+    {
+      "finding_id": "szechuan-06",
+      "description": "Process injection / migration of the Meterpreter session into spoolsv.exe on the DC to hide the C2",
+      "mitre_technique": "T1055",
+      "confidence": "INFERRED",
+      "artifact_class": "memory",
+      "artifact_hint": "Volatility malfind flags injected RWX in spoolsv.exe on the DC memory image; that PID owns the 203.78.103.109 connection"
+    },
+    {
+      "finding_id": "szechuan-07",
+      "description": "Windows service persistence installed on the DC by the malware",
+      "mitre_technique": "T1543.003",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "System.evtx EID 7045 (service install); corroborated by the SYSTEM CurrentControlSet Services hive"
+    },
+    {
+      "finding_id": "szechuan-08",
+      "description": "Registry Run-key persistence holding a base64-encoded PowerShell shellcode injector",
+      "mitre_technique": "T1547.001",
+      "confidence": "INFERRED",
+      "artifact_class": "disk",
+      "artifact_hint": "A CurrentVersion\\Run value containing base64 PowerShell (VirtualAlloc/CreateThread); exact hive path left generic"
+    },
+    {
+      "finding_id": "szechuan-09",
+      "description": "Credential access - additional local account credentials recovered from the compromised DC",
+      "mitre_technique": "T1003",
+      "confidence": "INFERRED",
+      "artifact_class": "memory",
+      "artifact_hint": "Credentials (Administrator, ricksanchez) recovered from the DC memory image via lsass / Meterpreter"
+    },
+    {
+      "finding_id": "szechuan-10",
+      "description": "Lateral movement from the DC to the desktop DESKTOP-SDN1RPT (10.42.85.115) over RDP",
+      "mitre_technique": "T1021.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Desktop Security.evtx EID 4624 Type 10 sourced from the DC 10.42.85.10; RDP traffic DC->Desktop in the PCAP"
+    },
+    {
+      "finding_id": "szechuan-11",
+      "description": "Re-infection of the desktop with the same Meterpreter malware plus service persistence, beaconing to the same C2 203.78.103.109",
+      "mitre_technique": "T1543.003",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Desktop System.evtx EID 7045; MFT entry for coreupdate(r).exe in System32; PCAP/memory C2 to 203.78.103.109"
+    },
+    {
+      "finding_id": "szechuan-12",
+      "description": "Collection and staging - stolen data archived into ZIPs (secret.zip on the DC, loot.zip on the desktop)",
+      "mitre_technique": "T1560",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "MFT / filesystem entries for secret.zip (DC) and loot.zip (desktop); recipe file MACB times"
+    },
+    {
+      "finding_id": "szechuan-13",
+      "description": "Exfiltration of the staged archives over the Meterpreter C2 channel to the attacker",
+      "mitre_technique": "T1041",
+      "confidence": "INFERRED",
+      "artifact_class": "network",
+      "artifact_hint": "Outbound data transfer over the Meterpreter session to 203.78.103.109; timing corroborated by the ZIP create times"
+    }
+  ]
+}

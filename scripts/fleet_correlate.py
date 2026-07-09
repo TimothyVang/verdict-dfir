@@ -30,7 +30,9 @@ If no arg given, uses the most recent fleet under tmp/fleet-runs/.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
@@ -38,6 +40,96 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+# --------------------------------------------------------------------------- #
+# Cross-host hygiene (fleet stage). The OS-signed-binary / too-common-pivot
+# suppression and the discriminating-pivot campaign-lead gate are built and
+# unit-tested in services/agent/findevil_agent/correlator.py. Wire those exact
+# shipped functions into the live fleet pipeline rather than re-implementing
+# them. This is pure read-side: the fleet report is a derivative summary, never
+# the signed per-host manifest, and this stage never edits the audit chain.
+# --------------------------------------------------------------------------- #
+def _load_cross_host():
+    """Resolve (SharedArtifact, correlate_cross_host, is_os_signed) from the
+    agent package.
+
+    Primary path imports the public correlator facade
+    (``findevil_agent.correlator``). The fleet stages run under the host
+    ``python3``, which may be older than the agent venv's 3.11 (see the
+    ``AGENT_MODE`` note in ``scripts/verdict``); when the full agent package
+    can't import there, fall back to loading the dependency-free
+    ``correlator_crosshost`` submodule by file path (it imports only stdlib).
+    Either way the SAME shipped, unit-tested logic is applied. Returns
+    ``(None, None, None)`` only when neither path resolves — the hygiene stage
+    then records itself as unavailable instead of crashing the correlation run.
+    """
+    agent_pkg = REPO_ROOT / "services" / "agent"
+    if str(agent_pkg) not in sys.path:
+        sys.path.insert(0, str(agent_pkg))
+    try:
+        from findevil_agent.correlator import (
+            SharedArtifact,
+            correlate_cross_host,
+            is_os_signed,
+        )
+
+        return SharedArtifact, correlate_cross_host, is_os_signed
+    except Exception:
+        pass
+    crosshost = agent_pkg / "findevil_agent" / "correlator_crosshost.py"
+    if not crosshost.is_file():
+        return None, None, None
+    try:
+        name = "_findevil_correlator_crosshost"
+        spec = importlib.util.spec_from_file_location(name, crosshost)
+        if spec is None or spec.loader is None:
+            return None, None, None
+        mod = importlib.util.module_from_spec(spec)
+        # Register before exec: the module's @dataclass field-type resolution
+        # looks the module up in sys.modules by __name__ (fails otherwise).
+        sys.modules[name] = mod
+        spec.loader.exec_module(mod)
+        return mod.SharedArtifact, mod.correlate_cross_host, mod.is_os_signed
+    except Exception:
+        return None, None, None
+
+
+_SharedArtifact, _correlate_cross_host, _is_os_signed = _load_cross_host()
+_CROSS_HOST_HYGIENE_AVAILABLE = _correlate_cross_host is not None
+
+# Evidence-agnostic field-name signatures used to mine shared artifacts from a
+# finding's structured ``asserted_values`` (the deterministic, audited channel —
+# free-text descriptions are deliberately NOT mined to avoid fabricated IOCs).
+# These key on general DFIR field-name TOKENS (so snake_case paths like
+# ``conn.dest_domain`` match), never on any image-specific literal. A bare
+# 64-hex digest value is the strongest, path-independent hash signal.
+_SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+_HASH_TOKENS = frozenset({"sha256", "hash", "imphash", "digest"})
+_SIGNER_TOKENS = frozenset(
+    {
+        "signer",
+        "signature",
+        "signed",
+        "publisher",
+        "cert",
+        "certificate",
+        "authenticode",
+    }
+)
+# Domain-family pivots only (registrar / CDN / CA / dyn-DNS orgs and domains —
+# the classes the shipped too-common denylist covers). Bare ip / host tokens are
+# intentionally excluded: they would never match the org/domain denylist and so
+# could mint spurious campaign leads.
+_NETWORK_TOKENS = frozenset(
+    {"domain", "fqdn", "sni", "registrar", "issuer", "ca", "cdn", "c2"}
+)
+
+
+def _path_tokens(path: str) -> set[str]:
+    """Lowercase a dotted/bracketed asserted-value path into its word tokens."""
+    return {t for t in re.split(r"[^a-z0-9]+", path.lower()) if t}
+
 
 # Same definition as the orchestrator — keep in sync if tuning.
 #
@@ -433,6 +525,191 @@ def merkle_uniqueness(verdicts: list[dict[str, Any]]) -> tuple[int, int]:
     return len(set(roots)), len(roots)
 
 
+# ---------------------------------------------------------------------------
+# Cross-host hygiene mining (read-side; feeds the shipped correlator gate).
+# ---------------------------------------------------------------------------
+
+
+def _finding_artifacts(
+    finding: dict[str, Any],
+) -> tuple[list[tuple[str, str | None]], list[str]]:
+    """Extract (sha256, signer) binary pairs and network-pivot values from one
+    finding's ``asserted_values``.
+
+    Evidence-agnostic: keys only on general DFIR field-name signatures
+    (sha256/hash, signer/publisher/subject, domain/registrar/issuer/CA) or a
+    bare 64-hex digest value — never on any image-specific literal. The signer,
+    when present, is paired with every hash in the same finding (a finding
+    typically characterizes one binary)."""
+    avs = finding.get("asserted_values") or []
+    signer: str | None = None
+    hashes: list[str] = []
+    pivots: list[str] = []
+    for av in avs:
+        toks = _path_tokens(str(av.get("path") or ""))
+        value = str(av.get("expected") or "").strip()
+        if not value:
+            continue
+        if toks & _SIGNER_TOKENS:
+            if signer is None:
+                signer = value
+            continue
+        if _SHA256_RE.match(value) or (toks & _HASH_TOKENS):
+            hashes.append(value.lower())
+            continue
+        if toks & _NETWORK_TOKENS:
+            pivots.append(value)
+    return [(h, signer) for h in hashes], pivots
+
+
+def _resolve_signer(signers: set[str]) -> str | None:
+    """Pick one representative code-signing subject for a shared hash.
+
+    A SHA-256 is content-addressed, so the signer is a property of the bytes;
+    different hosts should report the same subject. Prefer an OS/vendor-baseline
+    signer when any observation carries one (so suppression is robust even if a
+    second host recorded the hash with no signer field), else the lexically
+    first subject, else ``None``."""
+    if not signers:
+        return None
+    for s in sorted(signers):
+        if _is_os_signed is not None and _is_os_signed(s):
+            return s
+    return sorted(signers)[0]
+
+
+def mine_shared_artifacts(verdicts: list[dict[str, Any]]) -> list[Any]:
+    """Build the SharedArtifact list (binaries by hash+signer, network pivots)
+    for artifacts that span >=2 distinct hosts.
+
+    Returns an empty list when the cross-host hygiene functions could not be
+    imported. Deterministic: artifacts are sorted by (kind, value)."""
+    if not _CROSS_HOST_HYGIENE_AVAILABLE:
+        return []
+    bin_hosts: dict[str, set[str]] = defaultdict(set)
+    bin_signers: dict[str, set[str]] = defaultdict(set)
+    pivot_hosts: dict[str, set[str]] = defaultdict(set)
+    for v in verdicts:
+        host = v.get("_host") or v.get("host") or "?"
+        for f in v.get("findings", []):
+            pairs, pivots = _finding_artifacts(f)
+            for h, signer in pairs:
+                bin_hosts[h].add(host)
+                if signer:
+                    bin_signers[h].add(signer)
+            for p in pivots:
+                pivot_hosts[p].add(host)
+    artifacts: list[Any] = []
+    for h in sorted(bin_hosts):
+        hosts = bin_hosts[h]
+        if len(hosts) < 2:
+            continue
+        artifacts.append(
+            _SharedArtifact(
+                kind="binary",
+                value=h,
+                hosts=tuple(sorted(hosts)),
+                signer=_resolve_signer(bin_signers[h]),
+            )
+        )
+    for p in sorted(pivot_hosts):
+        hosts = pivot_hosts[p]
+        if len(hosts) < 2:
+            continue
+        artifacts.append(
+            _SharedArtifact(kind="network_pivot", value=p, hosts=tuple(sorted(hosts)))
+        )
+    return artifacts
+
+
+def cross_host_hygiene(verdicts: list[dict[str, Any]]) -> dict[str, Any]:
+    """Apply the shipped cross-host hygiene gate to the fleet's shared artifacts.
+
+    Suppresses OS/Microsoft-signed shared binaries and too-common network pivots
+    (bulk registrar / CDN / free-TLS issuer), groups non-OS shared binaries for
+    analyst review, and emits a cross-host campaign LEAD only when a
+    discriminating pivot exists. ``attribution`` is the fleet-level invariant —
+    always False (host artifacts never establish actor identity)."""
+    if not _CROSS_HOST_HYGIENE_AVAILABLE:
+        return {
+            "available": False,
+            "note": (
+                "cross-host hygiene skipped: findevil_agent.correlator not "
+                "importable under this interpreter (derivative-summary stage)"
+            ),
+            "artifact_count": 0,
+            "actor_link": False,
+            "co_occurrence": False,
+            "attribution": False,
+            "outcomes": [],
+        }
+    artifacts = mine_shared_artifacts(verdicts)
+    corr = _correlate_cross_host(artifacts)
+    return {
+        "available": True,
+        "artifact_count": len(artifacts),
+        "actor_link": corr.actor_link,
+        "co_occurrence": corr.co_occurrence,
+        "attribution": corr.attribution,
+        "outcomes": [
+            {
+                "kind": o.kind,
+                "value": o.value,
+                "hosts": list(o.hosts),
+                "decision": o.decision,
+                "reason": o.reason,
+                "epistemic_label": o.epistemic_label,
+                "attribution": o.attribution,
+            }
+            for o in corr.outcomes
+        ],
+    }
+
+
+def _append_hygiene_md(md: list[str], hygiene: dict[str, Any]) -> None:
+    """Render the cross-host hygiene section (shared binaries + network pivots)."""
+    md.append("## Cross-host hygiene (shared binaries & network pivots)")
+    md.append("")
+    if not hygiene.get("available", False):
+        md.append(f"*{hygiene.get('note', 'cross-host hygiene unavailable')}.*")
+        md.append("")
+        return
+    outcomes = hygiene.get("outcomes", [])
+    leads = [o for o in outcomes if o["decision"] == "campaign_lead"]
+    review = [o for o in outcomes if o["decision"] == "shared_binaries_review"]
+    suppressed = [o for o in outcomes if o["decision"] == "suppressed"]
+    md.append(
+        "*OS / Microsoft-signed shared binaries and too-common network pivots "
+        "(bulk registrar / CDN / free-TLS issuer) are suppressed — a shared "
+        "hash or registrar between hosts is internet noise, not a campaign. A "
+        "cross-host campaign LEAD is emitted only on a discriminating pivot, and "
+        "host artifacts never establish attribution.*"
+    )
+    md.append("")
+    if not outcomes:
+        md.append(
+            "*No binary hashes or network pivots were shared across >=2 hosts "
+            "(mined from finding `asserted_values`).*"
+        )
+        md.append("")
+        return
+    md.append(
+        f"**Cross-host actor-link:** {'YES — discriminating pivot present' if hygiene.get('actor_link') else 'no'}"
+        f"  ·  **co-occurrence only:** {'yes' if hygiene.get('co_occurrence') else 'no'}"
+        f"  ·  **attribution:** {hygiene.get('attribution', False)} (invariant)"
+    )
+    md.append("")
+    md.append("| Decision | Kind | Indicator | Hosts |")
+    md.append("|---|---|---|---:|")
+    for o in leads + review + suppressed:
+        ind = o["value"]
+        ind = ind[:18] + "…" if len(ind) > 19 else ind
+        md.append(
+            f"| {o['decision']} | {o['kind']} | `{ind}` | {len(set(o['hosts']))} |"
+        )
+    md.append("")
+
+
 def write_outputs(
     fleet_dir: Path,
     verdicts: list[dict[str, Any]],
@@ -441,7 +718,10 @@ def write_outputs(
     mitre: Counter,
     distrib: Counter,
     unique_roots: tuple[int, int],
+    hygiene: dict[str, Any] | None = None,
 ) -> None:
+    if hygiene is None:
+        hygiene = cross_host_hygiene(verdicts)
     structured = {
         "fleet_dir": str(fleet_dir),
         "host_count": len(verdicts),
@@ -454,6 +734,7 @@ def write_outputs(
         },
         "selfscore_aggregate": selfscore_aggregate(verdicts),
         "cross_host_processes": cross_procs,
+        "cross_host_hygiene": hygiene,
         "temporal_clusters": clusters,
     }
     (fleet_dir / "fleet_correlation.json").write_text(
@@ -503,6 +784,8 @@ def write_outputs(
     else:
         md.append("*No cross-host process correlations found.*")
     md.append("")
+
+    _append_hygiene_md(md, hygiene)
 
     md.append("## Temporal clusters")
     md.append("")
@@ -648,7 +931,18 @@ def main() -> int:
     distrib = verdict_distribution(verdicts)
     unique_roots = merkle_uniqueness(verdicts)
 
-    write_outputs(fleet_dir, verdicts, cross, clusters, mitre, distrib, unique_roots)
+    hygiene = cross_host_hygiene(verdicts)
+    if hygiene.get("available"):
+        print(
+            f"  cross-host hygiene: {hygiene['artifact_count']} shared artifact(s); "
+            f"actor_link={hygiene['actor_link']} co_occurrence={hygiene['co_occurrence']}"
+        )
+    else:
+        print(f"  cross-host hygiene: unavailable ({hygiene.get('note', '')})")
+
+    write_outputs(
+        fleet_dir, verdicts, cross, clusters, mitre, distrib, unique_roots, hygiene
+    )
     print(f"  -> {fleet_dir / 'fleet_correlation.md'}")
     print(f"  -> {fleet_dir / 'fleet_correlation.json'}")
     return 0

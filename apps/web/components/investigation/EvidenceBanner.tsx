@@ -11,7 +11,7 @@
 import { useState } from "react";
 
 import type { EvidenceMeta } from "@/lib/evidence-meta";
-import { GROTESK, MONO, VERDICT } from "@/lib/verdict-ui";
+import { BODY, GROTESK, MONO, VERDICT } from "@/lib/verdict-ui";
 
 type Props = {
   meta: EvidenceMeta | null;
@@ -132,7 +132,7 @@ export function EvidenceBanner({ meta }: Props) {
                 border: `1px solid ${VERDICT.border}`,
                 borderRadius: 6,
                 color: copied ? VERDICT.confirmed : VERDICT.muted,
-                fontFamily: MONO,
+                fontFamily: BODY,
                 fontSize: 11,
                 padding: "1px 8px",
                 cursor: "pointer",

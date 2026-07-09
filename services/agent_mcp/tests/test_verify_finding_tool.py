@@ -150,3 +150,23 @@ class TestVerifyFinding:
         assert isinstance(result, VerifyFindingOutput)
         assert result.action == "rejected"
         assert "tc-missing" in result.reason
+
+    async def test_blank_tool_call_id_rejected_gracefully(self, monkeypatch: Any) -> None:
+        # A model emitting a CONFIRMED finding with a BLANK tool_call_id hits the
+        # schema firewall (events.py _require_tool_call_id_for_anchored). At this
+        # untrusted-input boundary that ValidationError must become a structured
+        # 'rejected' action — the same graceful veto the verifier gave before the
+        # firewall landed — not an uncaught error that breaks the run loop.
+        client = MockMcpClient()
+        monkeypatch.setattr(vf, "_make_mcp_client", lambda _cmd: client)
+
+        result = await SPEC.handler(
+            VerifyFindingInput(
+                finding=_finding_dict(tool_call_id=""),
+                tool_call_index={},
+                findevil_mcp_command=["dummy"],
+            )
+        )
+        assert isinstance(result, VerifyFindingOutput)
+        assert result.action == "rejected"
+        assert "tool_call_id" in result.reason

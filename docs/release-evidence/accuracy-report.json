@@ -1,0 +1,1073 @@
+{
+  "cases": [
+    {
+      "case_dir": "docs/sample-run/nist-hacking-case",
+      "case_id": "nist-hacking-case",
+      "deterministic_grounding": {
+        "available": true,
+        "citation_coverage": 1.0,
+        "custody_available": true,
+        "custody_ok": true,
+        "overclaim_snuck_through_n": 0,
+        "replay_attempted_n": 19,
+        "replay_pass_rate": 1.0,
+        "suppression_funnel": {
+          "classes": {
+            "below_confidence_leads_only": 0,
+            "correlator_downgraded": 7,
+            "fact_fidelity_vetoed": 0,
+            "verifier_rejected": 0
+          },
+          "note": "raw -> reported funnel. verifier_rejected / fact_fidelity_vetoed / below_confidence_leads_only REMOVE a candidate (counted into raw); correlator_downgraded only lowers a reported finding's tier and is NOT subtracted. Derived read-only from the run dir; not a goldens score.",
+          "raw_candidate_findings_n": 19,
+          "reported_findings_n": 19,
+          "source": "audit.jsonl"
+        },
+        "tier": "A",
+        "untested_surface": {
+          "allowed_not_run": [
+            "ausearch",
+            "browser_history",
+            "cloud_audit",
+            "evtx_query",
+            "ez_parse",
+            "hayabusa_scan",
+            "indx_parse",
+            "journalctl_query",
+            "login_accounting",
+            "mac_triage",
+            "nfdump_query",
+            "oe_dbx_parse",
+            "pcap_triage",
+            "plaso_parse",
+            "suricata_eve",
+            "sysmon_network_query",
+            "usnjrnl_query",
+            "vel_collect",
+            "vol_malfind",
+            "vol_pslist",
+            "vol_psscan",
+            "vol_psxview",
+            "vol_run",
+            "yara_scan",
+            "zeek_summary"
+          ],
+          "allowed_not_run_n": 25,
+          "exercised_n": 7,
+          "exercised_tools": [
+            "case_open",
+            "disk_extract_artifacts",
+            "disk_mount",
+            "disk_unmount",
+            "mft_timeline",
+            "prefetch_parse",
+            "registry_query"
+          ],
+          "note": "Product MCP DFIR tools (findevil-mcp) available but not exercised in this Case. Untested surface is coverage context, not a defect \u2014 many tools do not apply to a given evidence type.",
+          "product_dfir_tools_n": 32
+        }
+      },
+      "golden": "goldens/nist-hacking-case/expected-findings.json",
+      "investigative_recall": {
+        "candidate_fp_for_human_review": [
+          {
+            "confidence": "CONFIRMED",
+            "description": "cain.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-cain-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "cain25b45.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-cain25b45-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-ethereal-setup-0-10-6-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "ethereal.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-ethereal-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "lookatlan.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-lookatlan-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "mirc.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-mirc-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "mirc612.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-mirc612-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "netstumbler.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-netstumbler-exe"
+          }
+        ],
+        "candidate_fp_n": 8,
+        "corpus_identity": "public",
+        "expected_n": 14,
+        "f1": 0.5263,
+        "fp_planted": 0,
+        "hallucination_rate": 0.0,
+        "min_recall_percent": 71,
+        "missed_by_name": {
+          "count": 9,
+          "items": [
+            {
+              "description": "Dual-boot XP install with linked-list of recent searches for hacking tools",
+              "finding_id": "nhc-001",
+              "mitre_technique": null
+            },
+            {
+              "description": "USB device insertion history indicates external drive connected for staging",
+              "finding_id": "nhc-002",
+              "mitre_technique": "T1052.001"
+            },
+            {
+              "description": "Recovered deleted email discussing the intrusion plan",
+              "finding_id": "nhc-003",
+              "mitre_technique": null
+            },
+            {
+              "description": "Internet history indicating downloads of illicit content",
+              "finding_id": "nhc-006",
+              "mitre_technique": "T1071.001"
+            },
+            {
+              "description": "LNK (shortcut) files referencing removable media volume serial numbers",
+              "finding_id": "nhc-008",
+              "mitre_technique": null
+            },
+            {
+              "description": "Recycle bin contains deleted staging artifacts",
+              "finding_id": "nhc-009",
+              "mitre_technique": "T1070.004"
+            },
+            {
+              "description": "Event log entries indicating user logons consistent with claimed timeline",
+              "finding_id": "nhc-012",
+              "mitre_technique": "T1078.001"
+            },
+            {
+              "description": "Thumbcache / thumbnail artifacts indicating viewed content",
+              "finding_id": "nhc-013",
+              "mitre_technique": null
+            },
+            {
+              "description": "Named-pipe or service enumeration artifacts consistent with reconnaissance",
+              "finding_id": "nhc-014",
+              "mitre_technique": "T1046"
+            }
+          ]
+        },
+        "planted_bait_caught": [],
+        "precision_percent": 100,
+        "precision_scored": false,
+        "recall_percent": 36,
+        "recalled_n": 5,
+        "scored": true,
+        "tier": "B",
+        "verdict_match": true
+      },
+      "pass": false
+    },
+    {
+      "case_dir": "docs/sample-run/nist-hacking-case-sift",
+      "case_id": "nist-hacking-case",
+      "deterministic_grounding": {
+        "available": true,
+        "citation_coverage": 1.0,
+        "custody_available": true,
+        "custody_ok": true,
+        "overclaim_snuck_through_n": 0,
+        "replay_attempted_n": 19,
+        "replay_pass_rate": 1.0,
+        "suppression_funnel": {
+          "classes": {
+            "below_confidence_leads_only": 0,
+            "correlator_downgraded": 7,
+            "fact_fidelity_vetoed": 0,
+            "verifier_rejected": 0
+          },
+          "note": "raw -> reported funnel. verifier_rejected / fact_fidelity_vetoed / below_confidence_leads_only REMOVE a candidate (counted into raw); correlator_downgraded only lowers a reported finding's tier and is NOT subtracted. Derived read-only from the run dir; not a goldens score.",
+          "raw_candidate_findings_n": 19,
+          "reported_findings_n": 19,
+          "source": "audit.jsonl"
+        },
+        "tier": "A",
+        "untested_surface": {
+          "allowed_not_run": [
+            "ausearch",
+            "browser_history",
+            "cloud_audit",
+            "evtx_query",
+            "ez_parse",
+            "hayabusa_scan",
+            "indx_parse",
+            "journalctl_query",
+            "login_accounting",
+            "mac_triage",
+            "nfdump_query",
+            "oe_dbx_parse",
+            "pcap_triage",
+            "plaso_parse",
+            "suricata_eve",
+            "sysmon_network_query",
+            "usnjrnl_query",
+            "vel_collect",
+            "vol_malfind",
+            "vol_pslist",
+            "vol_psscan",
+            "vol_psxview",
+            "vol_run",
+            "yara_scan",
+            "zeek_summary"
+          ],
+          "allowed_not_run_n": 25,
+          "exercised_n": 7,
+          "exercised_tools": [
+            "case_open",
+            "disk_extract_artifacts",
+            "disk_mount",
+            "disk_unmount",
+            "mft_timeline",
+            "prefetch_parse",
+            "registry_query"
+          ],
+          "note": "Product MCP DFIR tools (findevil-mcp) available but not exercised in this Case. Untested surface is coverage context, not a defect \u2014 many tools do not apply to a given evidence type.",
+          "product_dfir_tools_n": 32
+        }
+      },
+      "golden": "goldens/nist-hacking-case/expected-findings.json",
+      "investigative_recall": {
+        "candidate_fp_for_human_review": [
+          {
+            "confidence": "CONFIRMED",
+            "description": "cain.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-cain-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "cain25b45.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-cain25b45-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "ethereal-setup-0.10.6.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-ethereal-setup-0-10-6-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "ethereal.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-ethereal-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "lookatlan.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-lookatlan-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "mirc.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-mirc-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "mirc612.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-mirc612-exe"
+          },
+          {
+            "confidence": "CONFIRMED",
+            "description": "netstumbler.exe executed on this host: Windows Prefetch records its execution and the UserAssist key (per-user GUI execution) records the same binary. Two independent artifact classes (prefetch + registry/UserAssist) corroborate execution.",
+            "finding_id": "f-B-prefetch-netstumbler-exe"
+          }
+        ],
+        "candidate_fp_n": 8,
+        "corpus_identity": "public",
+        "expected_n": 14,
+        "f1": 0.5263,
+        "fp_planted": 0,
+        "hallucination_rate": 0.0,
+        "min_recall_percent": 71,
+        "missed_by_name": {
+          "count": 9,
+          "items": [
+            {
+              "description": "Dual-boot XP install with linked-list of recent searches for hacking tools",
+              "finding_id": "nhc-001",
+              "mitre_technique": null
+            },
+            {
+              "description": "USB device insertion history indicates external drive connected for staging",
+              "finding_id": "nhc-002",
+              "mitre_technique": "T1052.001"
+            },
+            {
+              "description": "Recovered deleted email discussing the intrusion plan",
+              "finding_id": "nhc-003",
+              "mitre_technique": null
+            },
+            {
+              "description": "Internet history indicating downloads of illicit content",
+              "finding_id": "nhc-006",
+              "mitre_technique": "T1071.001"
+            },
+            {
+              "description": "LNK (shortcut) files referencing removable media volume serial numbers",
+              "finding_id": "nhc-008",
+              "mitre_technique": null
+            },
+            {
+              "description": "Recycle bin contains deleted staging artifacts",
+              "finding_id": "nhc-009",
+              "mitre_technique": "T1070.004"
+            },
+            {
+              "description": "Event log entries indicating user logons consistent with claimed timeline",
+              "finding_id": "nhc-012",
+              "mitre_technique": "T1078.001"
+            },
+            {
+              "description": "Thumbcache / thumbnail artifacts indicating viewed content",
+              "finding_id": "nhc-013",
+              "mitre_technique": null
+            },
+            {
+              "description": "Named-pipe or service enumeration artifacts consistent with reconnaissance",
+              "finding_id": "nhc-014",
+              "mitre_technique": "T1046"
+            }
+          ]
+        },
+        "planted_bait_caught": [],
+        "precision_percent": 100,
+        "precision_scored": false,
+        "recall_percent": 36,
+        "recalled_n": 5,
+        "scored": true,
+        "tier": "B",
+        "verdict_match": true
+      },
+      "pass": false
+    },
+    {
+      "case_dir": "docs/sample-run/nitroba",
+      "case_id": "nitroba",
+      "deterministic_grounding": {
+        "available": true,
+        "citation_coverage": 1.0,
+        "custody_available": true,
+        "custody_ok": true,
+        "overclaim_snuck_through_n": 0,
+        "replay_attempted_n": 9,
+        "replay_pass_rate": 1.0,
+        "suppression_funnel": {
+          "classes": {
+            "below_confidence_leads_only": 0,
+            "correlator_downgraded": 0,
+            "fact_fidelity_vetoed": 0,
+            "verifier_rejected": 0
+          },
+          "note": "raw -> reported funnel. verifier_rejected / fact_fidelity_vetoed / below_confidence_leads_only REMOVE a candidate (counted into raw); correlator_downgraded only lowers a reported finding's tier and is NOT subtracted. Derived read-only from the run dir; not a goldens score.",
+          "raw_candidate_findings_n": 9,
+          "reported_findings_n": 9,
+          "source": "audit.jsonl"
+        },
+        "tier": "A",
+        "untested_surface": {
+          "allowed_not_run": [
+            "ausearch",
+            "browser_history",
+            "cloud_audit",
+            "disk_extract_artifacts",
+            "disk_mount",
+            "disk_unmount",
+            "evtx_query",
+            "ez_parse",
+            "hayabusa_scan",
+            "indx_parse",
+            "journalctl_query",
+            "login_accounting",
+            "mac_triage",
+            "mft_timeline",
+            "nfdump_query",
+            "oe_dbx_parse",
+            "plaso_parse",
+            "prefetch_parse",
+            "registry_query",
+            "suricata_eve",
+            "sysmon_network_query",
+            "usnjrnl_query",
+            "vel_collect",
+            "vol_malfind",
+            "vol_pslist",
+            "vol_psscan",
+            "vol_psxview",
+            "vol_run",
+            "yara_scan",
+            "zeek_summary"
+          ],
+          "allowed_not_run_n": 30,
+          "exercised_n": 2,
+          "exercised_tools": [
+            "case_open",
+            "pcap_triage"
+          ],
+          "note": "Product MCP DFIR tools (findevil-mcp) available but not exercised in this Case. Untested surface is coverage context, not a defect \u2014 many tools do not apply to a given evidence type.",
+          "product_dfir_tools_n": 32
+        }
+      },
+      "golden": "goldens/nitroba/expected-findings.json",
+      "investigative_recall": {
+        "candidate_fp_for_human_review": [],
+        "candidate_fp_n": 0,
+        "corpus_identity": "public",
+        "expected_n": 5,
+        "f1": 1.0,
+        "fp_planted": 0,
+        "hallucination_rate": 0.0,
+        "min_recall_percent": 80,
+        "missed_by_name": {
+          "count": 0,
+          "items": []
+        },
+        "planted_bait_caught": [],
+        "precision_percent": 100,
+        "precision_scored": false,
+        "recall_percent": 100,
+        "recalled_n": 5,
+        "scored": true,
+        "tier": "B",
+        "verdict_match": true
+      },
+      "pass": true
+    },
+    {
+      "case_dir": "docs/sample-run/synthetic-benign",
+      "case_id": "synthetic-benign",
+      "deterministic_grounding": {
+        "available": true,
+        "citation_coverage": 1.0,
+        "custody_available": true,
+        "custody_ok": true,
+        "overclaim_snuck_through_n": 0,
+        "replay_attempted_n": 0,
+        "replay_pass_rate": 1.0,
+        "suppression_funnel": {
+          "classes": {
+            "below_confidence_leads_only": 0,
+            "correlator_downgraded": 0,
+            "fact_fidelity_vetoed": 0,
+            "verifier_rejected": 0
+          },
+          "note": "raw -> reported funnel. verifier_rejected / fact_fidelity_vetoed / below_confidence_leads_only REMOVE a candidate (counted into raw); correlator_downgraded only lowers a reported finding's tier and is NOT subtracted. Derived read-only from the run dir; not a goldens score.",
+          "raw_candidate_findings_n": 0,
+          "reported_findings_n": 0,
+          "source": "audit.jsonl"
+        },
+        "tier": "A",
+        "untested_surface": {
+          "allowed_not_run": [
+            "ausearch",
+            "browser_history",
+            "case_open",
+            "cloud_audit",
+            "disk_extract_artifacts",
+            "disk_mount",
+            "disk_unmount",
+            "evtx_query",
+            "ez_parse",
+            "hayabusa_scan",
+            "indx_parse",
+            "journalctl_query",
+            "login_accounting",
+            "mac_triage",
+            "mft_timeline",
+            "nfdump_query",
+            "oe_dbx_parse",
+            "pcap_triage",
+            "plaso_parse",
+            "prefetch_parse",
+            "registry_query",
+            "suricata_eve",
+            "sysmon_network_query",
+            "usnjrnl_query",
+            "vel_collect",
+            "vol_malfind",
+            "vol_pslist",
+            "vol_psscan",
+            "vol_psxview",
+            "vol_run",
+            "yara_scan",
+            "zeek_summary"
+          ],
+          "allowed_not_run_n": 32,
+          "exercised_n": 0,
+          "exercised_tools": [],
+          "note": "Product MCP DFIR tools (findevil-mcp) available but not exercised in this Case. Untested surface is coverage context, not a defect \u2014 many tools do not apply to a given evidence type.",
+          "product_dfir_tools_n": 32
+        }
+      },
+      "golden": "goldens/synthetic-benign/expected-findings.json",
+      "investigative_recall": {
+        "candidate_fp_for_human_review": [],
+        "candidate_fp_n": 0,
+        "corpus_identity": "synthetic",
+        "expected_n": 0,
+        "f1": 1.0,
+        "fp_planted": 0,
+        "hallucination_rate": 0.0,
+        "min_recall_percent": 100,
+        "missed_by_name": {
+          "count": 0,
+          "items": []
+        },
+        "planted_bait_caught": [],
+        "precision_percent": 100,
+        "precision_scored": true,
+        "recall_percent": 100,
+        "recalled_n": 0,
+        "scored": true,
+        "tier": "B",
+        "verdict_match": true
+      },
+      "pass": true
+    },
+    {
+      "case_dir": "docs/sample-run/synthetic-decoy",
+      "case_id": "synthetic-decoy",
+      "deterministic_grounding": {
+        "available": true,
+        "citation_coverage": 1.0,
+        "custody_available": true,
+        "custody_ok": true,
+        "overclaim_snuck_through_n": 0,
+        "replay_attempted_n": 0,
+        "replay_pass_rate": 1.0,
+        "suppression_funnel": {
+          "classes": {
+            "below_confidence_leads_only": 0,
+            "correlator_downgraded": 0,
+            "fact_fidelity_vetoed": 0,
+            "verifier_rejected": 0
+          },
+          "note": "raw -> reported funnel. verifier_rejected / fact_fidelity_vetoed / below_confidence_leads_only REMOVE a candidate (counted into raw); correlator_downgraded only lowers a reported finding's tier and is NOT subtracted. Derived read-only from the run dir; not a goldens score.",
+          "raw_candidate_findings_n": 0,
+          "reported_findings_n": 0,
+          "source": "audit.jsonl"
+        },
+        "tier": "A",
+        "untested_surface": {
+          "allowed_not_run": [
+            "ausearch",
+            "browser_history",
+            "case_open",
+            "cloud_audit",
+            "disk_extract_artifacts",
+            "disk_mount",
+            "disk_unmount",
+            "evtx_query",
+            "ez_parse",
+            "hayabusa_scan",
+            "indx_parse",
+            "journalctl_query",
+            "login_accounting",
+            "mac_triage",
+            "mft_timeline",
+            "nfdump_query",
+            "oe_dbx_parse",
+            "pcap_triage",
+            "plaso_parse",
+            "prefetch_parse",
+            "registry_query",
+            "suricata_eve",
+            "sysmon_network_query",
+            "usnjrnl_query",
+            "vel_collect",
+            "vol_malfind",
+            "vol_pslist",
+            "vol_psscan",
+            "vol_psxview",
+            "vol_run",
+            "yara_scan",
+            "zeek_summary"
+          ],
+          "allowed_not_run_n": 32,
+          "exercised_n": 0,
+          "exercised_tools": [],
+          "note": "Product MCP DFIR tools (findevil-mcp) available but not exercised in this Case. Untested surface is coverage context, not a defect \u2014 many tools do not apply to a given evidence type.",
+          "product_dfir_tools_n": 32
+        }
+      },
+      "golden": "goldens/synthetic-decoy/expected-findings.json",
+      "investigative_recall": {
+        "candidate_fp_for_human_review": [],
+        "candidate_fp_n": 0,
+        "corpus_identity": "synthetic",
+        "expected_n": 0,
+        "f1": 1.0,
+        "fp_planted": 0,
+        "hallucination_rate": 0.0,
+        "min_recall_percent": 100,
+        "missed_by_name": {
+          "count": 0,
+          "items": []
+        },
+        "planted_bait_caught": [],
+        "precision_percent": 100,
+        "precision_scored": true,
+        "recall_percent": 100,
+        "recalled_n": 0,
+        "scored": true,
+        "tier": "B",
+        "verdict_match": true
+      },
+      "pass": true
+    }
+  ],
+  "disclosed_no_external_key": [
+    "docs/sample-run/attack-samples-evtx",
+    "docs/sample-run/fault-injection-redispatch",
+    "docs/sample-run/memory-dc",
+    "docs/sample-run/natural-self-correction"
+  ],
+  "disclosed_no_external_key_cases": [
+    {
+      "case_dir": "docs/sample-run/attack-samples-evtx",
+      "case_id": "dir-65e16198ac581860",
+      "deterministic_grounding": {
+        "available": true,
+        "citation_coverage": 1.0,
+        "custody_available": true,
+        "custody_ok": true,
+        "overclaim_snuck_through_n": 0,
+        "replay_attempted_n": 3,
+        "replay_pass_rate": 1.0,
+        "suppression_funnel": {
+          "classes": {
+            "below_confidence_leads_only": 0,
+            "correlator_downgraded": 1,
+            "fact_fidelity_vetoed": 0,
+            "verifier_rejected": 0
+          },
+          "note": "raw -> reported funnel. verifier_rejected / fact_fidelity_vetoed / below_confidence_leads_only REMOVE a candidate (counted into raw); correlator_downgraded only lowers a reported finding's tier and is NOT subtracted. Derived read-only from the run dir; not a goldens score.",
+          "raw_candidate_findings_n": 3,
+          "reported_findings_n": 3,
+          "source": "audit.jsonl"
+        },
+        "tier": "A",
+        "untested_surface": {
+          "allowed_not_run": [
+            "ausearch",
+            "browser_history",
+            "case_open",
+            "cloud_audit",
+            "disk_extract_artifacts",
+            "disk_mount",
+            "disk_unmount",
+            "ez_parse",
+            "indx_parse",
+            "journalctl_query",
+            "login_accounting",
+            "mac_triage",
+            "mft_timeline",
+            "nfdump_query",
+            "oe_dbx_parse",
+            "pcap_triage",
+            "plaso_parse",
+            "prefetch_parse",
+            "registry_query",
+            "suricata_eve",
+            "sysmon_network_query",
+            "usnjrnl_query",
+            "vel_collect",
+            "vol_malfind",
+            "vol_pslist",
+            "vol_psscan",
+            "vol_psxview",
+            "vol_run",
+            "yara_scan",
+            "zeek_summary"
+          ],
+          "allowed_not_run_n": 30,
+          "exercised_n": 2,
+          "exercised_tools": [
+            "evtx_query",
+            "hayabusa_scan"
+          ],
+          "note": "Product MCP DFIR tools (findevil-mcp) available but not exercised in this Case. Untested surface is coverage context, not a defect \u2014 many tools do not apply to a given evidence type.",
+          "product_dfir_tools_n": 32
+        }
+      },
+      "golden": null,
+      "investigative_recall": {
+        "candidate_fp_for_human_review": [],
+        "candidate_fp_n": 0,
+        "corpus_identity": "unknown",
+        "expected_n": null,
+        "f1": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "fp_planted": 0,
+        "hallucination_rate": null,
+        "min_recall_percent": null,
+        "missed_by_name": {
+          "count": null,
+          "items": [],
+          "reason": "no_external_answer_key"
+        },
+        "planted_bait_caught": [],
+        "precision_percent": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "precision_scored": false,
+        "reason": "no_external_answer_key",
+        "recall_percent": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "recalled_n": null,
+        "scored": false,
+        "tier": "B",
+        "verdict_match": null
+      },
+      "pass": null
+    },
+    {
+      "case_dir": "docs/sample-run/fault-injection-redispatch",
+      "case_id": "4243612d-b14c-42de-ae58-941b59a19ab0",
+      "deterministic_grounding": {
+        "available": true,
+        "citation_coverage": 1.0,
+        "custody_available": true,
+        "custody_ok": true,
+        "overclaim_snuck_through_n": 0,
+        "replay_attempted_n": 9,
+        "replay_pass_rate": 1.0,
+        "suppression_funnel": {
+          "classes": {
+            "below_confidence_leads_only": 0,
+            "correlator_downgraded": 0,
+            "fact_fidelity_vetoed": 0,
+            "verifier_rejected": 0
+          },
+          "note": "raw -> reported funnel. verifier_rejected / fact_fidelity_vetoed / below_confidence_leads_only REMOVE a candidate (counted into raw); correlator_downgraded only lowers a reported finding's tier and is NOT subtracted. Derived read-only from the run dir; not a goldens score.",
+          "raw_candidate_findings_n": 9,
+          "reported_findings_n": 9,
+          "source": "audit.jsonl"
+        },
+        "tier": "A",
+        "untested_surface": {
+          "allowed_not_run": [
+            "ausearch",
+            "browser_history",
+            "cloud_audit",
+            "evtx_query",
+            "ez_parse",
+            "hayabusa_scan",
+            "indx_parse",
+            "journalctl_query",
+            "login_accounting",
+            "mac_triage",
+            "nfdump_query",
+            "oe_dbx_parse",
+            "pcap_triage",
+            "plaso_parse",
+            "suricata_eve",
+            "sysmon_network_query",
+            "usnjrnl_query",
+            "vel_collect",
+            "vol_malfind",
+            "vol_pslist",
+            "vol_psscan",
+            "vol_psxview",
+            "vol_run",
+            "yara_scan",
+            "zeek_summary"
+          ],
+          "allowed_not_run_n": 25,
+          "exercised_n": 7,
+          "exercised_tools": [
+            "case_open",
+            "disk_extract_artifacts",
+            "disk_mount",
+            "disk_unmount",
+            "mft_timeline",
+            "prefetch_parse",
+            "registry_query"
+          ],
+          "note": "Product MCP DFIR tools (findevil-mcp) available but not exercised in this Case. Untested surface is coverage context, not a defect \u2014 many tools do not apply to a given evidence type.",
+          "product_dfir_tools_n": 32
+        }
+      },
+      "golden": null,
+      "investigative_recall": {
+        "candidate_fp_for_human_review": [],
+        "candidate_fp_n": 0,
+        "corpus_identity": "unknown",
+        "expected_n": null,
+        "f1": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "fp_planted": 0,
+        "hallucination_rate": null,
+        "min_recall_percent": null,
+        "missed_by_name": {
+          "count": null,
+          "items": [],
+          "reason": "no_external_answer_key"
+        },
+        "planted_bait_caught": [],
+        "precision_percent": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "precision_scored": false,
+        "reason": "no_external_answer_key",
+        "recall_percent": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "recalled_n": null,
+        "scored": false,
+        "tier": "B",
+        "verdict_match": null
+      },
+      "pass": null
+    },
+    {
+      "case_dir": "docs/sample-run/memory-dc",
+      "case_id": "2d3bc561-31c7-4135-a6d2-3003d180609a",
+      "deterministic_grounding": {
+        "available": true,
+        "citation_coverage": 1.0,
+        "custody_available": true,
+        "custody_ok": true,
+        "overclaim_snuck_through_n": 0,
+        "replay_attempted_n": 2,
+        "replay_pass_rate": 1.0,
+        "suppression_funnel": {
+          "classes": {
+            "below_confidence_leads_only": 0,
+            "correlator_downgraded": 0,
+            "fact_fidelity_vetoed": 0,
+            "verifier_rejected": 0
+          },
+          "note": "raw -> reported funnel. verifier_rejected / fact_fidelity_vetoed / below_confidence_leads_only REMOVE a candidate (counted into raw); correlator_downgraded only lowers a reported finding's tier and is NOT subtracted. Derived read-only from the run dir; not a goldens score.",
+          "raw_candidate_findings_n": 2,
+          "reported_findings_n": 2,
+          "source": "audit.jsonl"
+        },
+        "tier": "A",
+        "untested_surface": {
+          "allowed_not_run": [
+            "ausearch",
+            "browser_history",
+            "cloud_audit",
+            "disk_extract_artifacts",
+            "disk_mount",
+            "disk_unmount",
+            "evtx_query",
+            "ez_parse",
+            "hayabusa_scan",
+            "indx_parse",
+            "journalctl_query",
+            "login_accounting",
+            "mac_triage",
+            "mft_timeline",
+            "nfdump_query",
+            "oe_dbx_parse",
+            "pcap_triage",
+            "plaso_parse",
+            "prefetch_parse",
+            "registry_query",
+            "suricata_eve",
+            "sysmon_network_query",
+            "usnjrnl_query",
+            "vel_collect",
+            "vol_run",
+            "yara_scan",
+            "zeek_summary"
+          ],
+          "allowed_not_run_n": 27,
+          "exercised_n": 5,
+          "exercised_tools": [
+            "case_open",
+            "vol_malfind",
+            "vol_pslist",
+            "vol_psscan",
+            "vol_psxview"
+          ],
+          "note": "Product MCP DFIR tools (findevil-mcp) available but not exercised in this Case. Untested surface is coverage context, not a defect \u2014 many tools do not apply to a given evidence type.",
+          "product_dfir_tools_n": 32
+        }
+      },
+      "golden": null,
+      "investigative_recall": {
+        "candidate_fp_for_human_review": [],
+        "candidate_fp_n": 0,
+        "corpus_identity": "unknown",
+        "expected_n": null,
+        "f1": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "fp_planted": 0,
+        "hallucination_rate": null,
+        "min_recall_percent": null,
+        "missed_by_name": {
+          "count": null,
+          "items": [],
+          "reason": "no_external_answer_key"
+        },
+        "planted_bait_caught": [],
+        "precision_percent": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "precision_scored": false,
+        "reason": "no_external_answer_key",
+        "recall_percent": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "recalled_n": null,
+        "scored": false,
+        "tier": "B",
+        "verdict_match": null
+      },
+      "pass": null
+    },
+    {
+      "case_dir": "docs/sample-run/natural-self-correction",
+      "case_id": "b6068a27-011f-4e9f-8f30-de9741e98f7e",
+      "deterministic_grounding": {
+        "available": true,
+        "citation_coverage": 1.0,
+        "custody_available": true,
+        "custody_ok": true,
+        "overclaim_snuck_through_n": 0,
+        "replay_attempted_n": 1,
+        "replay_pass_rate": 1.0,
+        "suppression_funnel": {
+          "classes": {
+            "below_confidence_leads_only": 0,
+            "correlator_downgraded": 1,
+            "fact_fidelity_vetoed": 0,
+            "verifier_rejected": 0
+          },
+          "note": "raw -> reported funnel. verifier_rejected / fact_fidelity_vetoed / below_confidence_leads_only REMOVE a candidate (counted into raw); correlator_downgraded only lowers a reported finding's tier and is NOT subtracted. Derived read-only from the run dir; not a goldens score.",
+          "raw_candidate_findings_n": 1,
+          "reported_findings_n": 1,
+          "source": "audit.jsonl"
+        },
+        "tier": "A",
+        "untested_surface": {
+          "allowed_not_run": [
+            "ausearch",
+            "browser_history",
+            "cloud_audit",
+            "ez_parse",
+            "indx_parse",
+            "journalctl_query",
+            "login_accounting",
+            "mac_triage",
+            "nfdump_query",
+            "oe_dbx_parse",
+            "pcap_triage",
+            "plaso_parse",
+            "suricata_eve",
+            "sysmon_network_query",
+            "vel_collect",
+            "vol_malfind",
+            "vol_pslist",
+            "vol_psscan",
+            "vol_psxview",
+            "vol_run",
+            "yara_scan",
+            "zeek_summary"
+          ],
+          "allowed_not_run_n": 22,
+          "exercised_n": 10,
+          "exercised_tools": [
+            "case_open",
+            "disk_extract_artifacts",
+            "disk_mount",
+            "disk_unmount",
+            "evtx_query",
+            "hayabusa_scan",
+            "mft_timeline",
+            "prefetch_parse",
+            "registry_query",
+            "usnjrnl_query"
+          ],
+          "note": "Product MCP DFIR tools (findevil-mcp) available but not exercised in this Case. Untested surface is coverage context, not a defect \u2014 many tools do not apply to a given evidence type.",
+          "product_dfir_tools_n": 32
+        }
+      },
+      "golden": null,
+      "investigative_recall": {
+        "candidate_fp_for_human_review": [],
+        "candidate_fp_n": 0,
+        "corpus_identity": "unknown",
+        "expected_n": null,
+        "f1": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "fp_planted": 0,
+        "hallucination_rate": null,
+        "min_recall_percent": null,
+        "missed_by_name": {
+          "count": null,
+          "items": [],
+          "reason": "no_external_answer_key"
+        },
+        "planted_bait_caught": [],
+        "precision_percent": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "precision_scored": false,
+        "reason": "no_external_answer_key",
+        "recall_percent": {
+          "reason": "no_external_answer_key",
+          "value": null
+        },
+        "recalled_n": null,
+        "scored": false,
+        "tier": "B",
+        "verdict_match": null
+      },
+      "pass": null
+    }
+  ],
+  "note": "Two-axis, tier-labelled accuracy: Tier A = deterministic_grounding (goldens-free: citation / replay / custody, computable now) and Tier B = investigative_recall (recall / precision / F1, valid ONLY against an external answer key). Never blended. A case with no resolved key is DISCLOSED under disclosed_no_external_key with Tier B null-with-reason, never given a fabricated number. Recompute with scripts/generate-accuracy-report.py.",
+  "product_commit": "ca12039c58d65acd5234d0be88de4fda5b1e8daa",
+  "schema_version": 1,
+  "source_cases": [
+    "docs/sample-run/nist-hacking-case",
+    "docs/sample-run/nist-hacking-case-sift",
+    "docs/sample-run/nitroba",
+    "docs/sample-run/synthetic-benign",
+    "docs/sample-run/synthetic-decoy"
+  ],
+  "summary": {
+    "cases_disclosed_no_key": 4,
+    "cases_passing": 3,
+    "cases_scored": 5,
+    "total_fp_caught_and_reasoned_away": 0,
+    "total_fp_planted": 0
+  }
+}

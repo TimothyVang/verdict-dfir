@@ -1,6 +1,6 @@
 import React from "react";
 import { Easing, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { C, CONFIDENCE_TONE, EASE_OUT, GROTESK, SERIF } from "./editorial";
+import { C, CONFIDENCE_TONE, EASE_OUT, GROTESK, BODY, CONDENSED } from "./editorial";
 
 const easeOut = Easing.bezier(EASE_OUT[0], EASE_OUT[1], EASE_OUT[2], EASE_OUT[3]);
 const clampOpts = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -25,8 +25,8 @@ export function RuleLine({ frame = 0, delay = 0, width = "100%", color = C.hairl
   return <div style={{ height: thickness, width, background: color, transform: `scaleX(${p})`, transformOrigin: "left", ...style }} />;
 }
 
-// KineticHeadline — Fraunces headline that wipes up into view behind its own
-// top edge (clip-path reveal) with a small rise. The editorial signature move.
+// KineticHeadline — heavy editorial sans headline that wipes up into view behind
+// its own top edge (clip-path reveal) with a small rise. The v2 signature move.
 export function KineticHeadline({ text, frame, delay = 0, size = 96, color = C.ink, italic = false, weight = 700, style }: {
   text: string; frame: number; delay?: number; size?: number; color?: string; italic?: boolean; weight?: number; style?: React.CSSProperties;
 }) {
@@ -35,7 +35,7 @@ export function KineticHeadline({ text, frame, delay = 0, size = 96, color = C.i
   return (
     <div style={{ overflow: "hidden", paddingBottom: 6 }}>
       <div style={{
-        fontFamily: SERIF, fontWeight: weight, fontStyle: italic ? "italic" : "normal",
+        fontFamily: CONDENSED, fontWeight: weight, fontStyle: italic ? "italic" : "normal",
         fontSize: size, lineHeight: 1.02, letterSpacing: -1, color,
         clipPath: `inset(0 0 ${(1 - p) * 100}% 0)`, transform: `translateY(${ty}px)`, ...style,
       }}>
@@ -45,14 +45,14 @@ export function KineticHeadline({ text, frame, delay = 0, size = 96, color = C.i
   );
 }
 
-// PullQuote — oversized serif quote for a beat's key claim.
+// PullQuote — oversized editorial quote for a beat's key claim.
 export function PullQuote({ children, frame, delay = 0, size = 60, color = C.ink, style }: {
   children: React.ReactNode; frame: number; delay?: number; size?: number; color?: string; style?: React.CSSProperties;
 }) {
   const op = interpolate(frame - delay, [0, 16], [0, 1], { ...clampOpts, easing: easeOut });
   const ty = interpolate(frame - delay, [0, 18], [14, 0], clampOpts);
   return (
-    <div style={{ opacity: op, transform: `translateY(${ty}px)`, fontFamily: SERIF, fontSize: size, fontWeight: 600, lineHeight: 1.12, letterSpacing: -0.5, color, ...style }}>
+    <div style={{ opacity: op, transform: `translateY(${ty}px)`, fontFamily: BODY, fontSize: size, fontWeight: 500, lineHeight: 1.2, letterSpacing: -0.2, color, ...style }}>
       {children}
     </div>
   );

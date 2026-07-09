@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   isAllowedCasePath,
+  listCases,
   tailAuditLog,
   type AuditLine,
 } from "@/lib/audit-tail";
@@ -34,6 +35,14 @@ function lineFor(seq: number, kind: string, payload: object): string {
     prev_hash:
       "00000000".padEnd(64, "0").slice(0, 64),
   });
+}
+
+async function createRepoMarkers(root: string): Promise<void> {
+  await fs.mkdir(path.join(root, "scripts"), { recursive: true });
+  await fs.mkdir(path.join(root, "apps", "web"), { recursive: true });
+  await fs.writeFile(path.join(root, "scripts", "doctor.sh"), "#!/usr/bin/env bash\n", "utf-8");
+  await fs.writeFile(path.join(root, "apps", "web", "package.json"), "{}\n", "utf-8");
+  await fs.writeFile(path.join(root, "pnpm-workspace.yaml"), "packages: []\n", "utf-8");
 }
 
 describe("tailAuditLog", () => {
@@ -144,13 +153,11 @@ describe("tailAuditLog", () => {
 });
 
 describe("isAllowedCasePath", () => {
-  // The helper resolves allow-listed roots against process.cwd(), so
-  // pin cwd to a known fake repo root to keep these tests independent
-  // of where vitest runs from.
-  const fakeRepoRoot =
-    process.platform === "win32" ? "C:\\repo" : "/repo";
+  let fakeRepoRoot: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    fakeRepoRoot = path.join(tmpDir, "repo");
+    await createRepoMarkers(fakeRepoRoot);
     vi.spyOn(process, "cwd").mockReturnValue(fakeRepoRoot);
     delete process.env.FINDEVIL_DASHBOARD_EXTRA_ROOTS;
   });
@@ -209,5 +216,15 @@ describe("isAllowedCasePath", () => {
     // Sanity: the actually-allowed root and a child of it both pass.
     expect(isAllowedCasePath(allowed)).toBe(true);
     expect(isAllowedCasePath(path.join(allowed, "case-1"))).toBe(true);
+  });
+
+  it("fails closed when no trusted repo root is available", async () => {
+    const markerlessRoot = path.join(tmpDir, "not-a-repo");
+    await fs.mkdir(markerlessRoot, { recursive: true });
+    vi.restoreAllMocks();
+    vi.spyOn(process, "cwd").mockReturnValue(markerlessRoot);
+
+    expect(isAllowedCasePath(path.join(markerlessRoot, "goldens", "case-1"))).toBe(false);
+    await expect(listCases()).resolves.toEqual([]);
   });
 });

@@ -123,9 +123,38 @@ A reviewer will check these with a grep, not your word:
 - **The agent cites it, you don't.** Your tool just returns typed output; the agent
   layer records the `tool_call_id` and SHA-256s the result into the audit chain.
 
+## Adding a Python tool (`findevil-agent-mcp`)
+
+The 14 Python tools are protocol shims, not DFIR primitives — crypto, ACH, memory,
+expert-feedback. Domain logic lives in `services/agent/` (`findevil_agent`); the tool is
+a typed Pydantic wrapper that calls it. Reference implementation:
+[`services/agent_mcp/findevil_agent_mcp/tools/audit_append.py`](../services/agent_mcp/findevil_agent_mcp/tools/audit_append.py).
+
+The same five-step pattern, in Python:
+
+1. **Typed I/O, deny-unknown-fields.** A module under
+   `services/agent_mcp/findevil_agent_mcp/tools/` with a Pydantic `*Input` and `*Output`,
+   each `model_config = ConfigDict(extra="forbid", frozen=True)` (the Python analogue of
+   `deny_unknown_fields`), and a `Field(..., description=...)` on every field so the agent
+   understands each parameter.
+2. **An async `_handle(inp)`** that calls `findevil_agent` domain code (never a shell, never
+   raw I/O on the original evidence) and returns the typed `*Output`.
+3. **Export `SPEC = ToolSpec(name, description, input_model, output_model, handler)`**
+   (the shared `ToolSpec` in `_base.py`) plus `__all__`.
+4. **Register it** by adding the module to the `all_specs()` aggregator in
+   [`services/agent_mcp/findevil_agent_mcp/tools/__init__.py`](../services/agent_mcp/findevil_agent_mcp/tools/__init__.py)
+   — it raises if a module does not export a `SPEC`.
+5. **Add a test** under `services/agent_mcp/tests/` (`test_audit_tools.py` is the pattern):
+   the input schema rejects an unknown field, the handler returns the typed output, and any
+   error path raises a typed exception (not a bare `Exception`).
+
+Invariants are identical to the Rust side: typed in / typed out, read-only on evidence,
+typed errors not panics, and the agent — not the tool — records the `tool_call_id` into the
+audit chain. Verify with `uv run --directory services/agent_mcp pytest` and `ruff check .`.
+
 ## Why the narrowness is the feature
 
-31 typed Rust tools with no shell verb is not a limitation we apologize for — it is the
+32 typed Rust tools with no shell verb is not a limitation we apologize for — it is the
 reason a judge can run `manifest_verify` and trust the result. Adding a tool that keeps
 this contract grows the surface **without** growing the attack surface, which is exactly
 the kind of contribution Protocol SIFT wants back.

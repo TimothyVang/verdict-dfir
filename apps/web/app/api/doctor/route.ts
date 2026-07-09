@@ -8,15 +8,24 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 
+import { requireRepoRoot } from "@/lib/repo-root";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function repoRoot(): string {
-  return process.env.FINDEVIL_REPO_ROOT ?? process.cwd();
-}
-
 export async function GET(): Promise<Response> {
-  const root = repoRoot();
+  let root: string;
+  try {
+    root = requireRepoRoot();
+  } catch (e) {
+    return new Response(
+      JSON.stringify({
+        error: e instanceof Error ? e.message : String(e),
+        hint: "Launch from the repo root or set FINDEVIL_REPO_ROOT to the repo root.",
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
   const scriptPath = path.join("scripts", "doctor.sh");
 
   const result = await new Promise<{ code: number; out: string; err: string }>((resolve) => {

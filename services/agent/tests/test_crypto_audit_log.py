@@ -103,6 +103,25 @@ class TestAuditLogBasics:
         with pytest.raises(AuditLogError):
             fresh.verify()
 
+    def test_verify_malformed_line_raises_auditlogerror_not_crash(self, tmp_path: Path) -> None:
+        # A non-JSON line must surface as a typed AuditLogError (a clean failure
+        # the manifest verifier turns into overall=False), never a raw
+        # json.JSONDecodeError that crashes verification.
+        path = tmp_path / "audit.jsonl"
+        log = AuditLog(path)
+        log.append("a", {"x": 1})
+        log.append("b", {"x": 2})
+        log.append("c", {"x": 3})
+        # Malform a NON-last line so the constructor's tail read (which already
+        # guards the last line) succeeds and the break is hit inside verify().
+        lines = path.read_bytes().splitlines()
+        lines[1] = b"@@NOTJSON@@" + lines[1]
+        path.write_bytes(b"\n".join(lines) + b"\n")
+
+        fresh = AuditLog(path)
+        with pytest.raises(AuditLogError, match="not valid JSON"):
+            fresh.verify()
+
     def test_verify_detects_truncation(self, tmp_path: Path) -> None:
         path = tmp_path / "audit.jsonl"
         log = AuditLog(path)

@@ -23,12 +23,23 @@
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::tools::proc_runner::{run_with_timeout, timeout_from_env, RunError};
+
 const DEFAULT_LIMIT: usize = 10_000;
+
+/// Env var that overrides the per-run Volatility wall-clock budget (seconds).
+const TIMEOUT_ENV: &str = "FINDEVIL_VOL_TIMEOUT_SECS";
+
+/// Default Volatility wall-clock budget. Generous — some plugins legitimately
+/// take many minutes on a large image — but bounded so a wedged `vol` can no
+/// longer block the MCP server indefinitely. Override with [`TIMEOUT_ENV`].
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(1800);
 
 /// Canonical Vol3 plugin names this verb will run. Curated from the
 /// parser-coverage roadmap's memory section — the evil-hunting plugins that run
@@ -160,6 +171,12 @@ pub enum VolRunError {
     #[error("volatility exited {exit_code}: {stderr}")]
     SubprocessFailed { exit_code: i32, stderr: String },
 
+    #[error(
+        "volatility exceeded its {seconds} s time budget and was killed \
+         (raise $FINDEVIL_VOL_TIMEOUT_SECS for legitimately long plugins)"
+    )]
+    Timeout { seconds: u64 },
+
     #[error("could not parse volatility JSON output: {0}")]
     OutputParse(String),
 }
@@ -215,19 +232,44 @@ pub fn vol_run(input: &VolRunInput) -> Result<VolRunOutput, VolRunError> {
     let binary = resolve_binary()?;
     let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
 
-    let mut cmd = Command::new(&binary);
-    cmd.args(build_vol_args(&input.memory_path, &input.plugin, input.pid));
-
-    let proc = cmd.output().map_err(|err| {
-        if err.kind() == std::io::ErrorKind::NotFound {
-            VolRunError::BinaryNotFound
-        } else {
-            VolRunError::SubprocessFailed {
-                exit_code: -1,
-                stderr: format!("spawn failed: {err}"),
-            }
+    let args = build_vol_args(&input.memory_path, &input.plugin, input.pid);
+    // Defense-in-depth pre-spawn gate: refuse a poisoned $VOLATILITY_BIN that
+    // resolves to a denied binary, and reject NUL bytes in the memory path.
+    crate::tools::argsafe::guard_spawn(&binary, &args).map_err(|e| {
+        VolRunError::SubprocessFailed {
+            exit_code: -1,
+            stderr: e.to_string(),
         }
     })?;
+
+    let mut cmd = Command::new(&binary);
+    cmd.args(args);
+
+    // Run in its own process group under a wall-clock budget so a hung plugin is
+    // force-killed and reaped instead of blocking the server forever.
+    let proc =
+        run_with_timeout(cmd, timeout_from_env(TIMEOUT_ENV, DEFAULT_TIMEOUT)).map_err(|err| {
+            match err {
+                RunError::Spawn(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    VolRunError::BinaryNotFound
+                }
+                RunError::Spawn(e) => VolRunError::SubprocessFailed {
+                    exit_code: -1,
+                    stderr: format!("spawn failed: {e}"),
+                },
+                RunError::Io(e) => VolRunError::SubprocessFailed {
+                    exit_code: -1,
+                    stderr: format!("io error: {e}"),
+                },
+                RunError::Timeout(d) => VolRunError::Timeout {
+                    seconds: d.as_secs(),
+                },
+                RunError::ReaderPanicked => VolRunError::SubprocessFailed {
+                    exit_code: -1,
+                    stderr: "volatility output reader thread panicked".to_string(),
+                },
+            }
+        })?;
 
     let stderr_tail = truncate_to(String::from_utf8_lossy(&proc.stderr).into_owned(), 4096);
 

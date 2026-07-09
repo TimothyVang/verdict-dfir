@@ -39,6 +39,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  BODY,
   ConfidenceChip,
   ErrorChip,
   GROTESK,
@@ -522,7 +523,7 @@ function VerifyBadge({ verify }: VerifyBadgeProps) {
       style={{
         display: "inline-block",
         alignSelf: "flex-end",
-        fontFamily: MONO,
+        fontFamily: GROTESK,
         fontSize: 13,
         fontWeight: 700,
         letterSpacing: 0.5,
@@ -597,7 +598,7 @@ function FindingCardView({ card }: FindingCardViewProps) {
             border: `1px solid ${VERDICT.borderSubtle}`,
             borderRadius: RADIUS.tile,
             padding: "12px 16px",
-            fontFamily: MONO,
+            fontFamily: BODY,
             fontSize: 16,
             lineHeight: 1.55,
             color: VERDICT.text,
@@ -610,6 +611,7 @@ function FindingCardView({ card }: FindingCardViewProps) {
             <div
               style={{
                 marginTop: 8,
+                fontFamily: MONO,
                 fontSize: 13,
                 color: VERDICT.muted,
               }}
@@ -708,7 +710,7 @@ export function InvestigationStreamPanel({
         position: "relative",
         background: VERDICT.bg,
         color: VERDICT.text,
-        fontFamily: MONO,
+        fontFamily: BODY,
         borderRadius: RADIUS.card,
         border: `1px solid ${VERDICT.border}`,
         padding: "clamp(20px, 4vw, 48px)",

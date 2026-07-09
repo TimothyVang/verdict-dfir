@@ -20,7 +20,7 @@ import {
   normalizeAuthoritative,
   type TimelineEvent,
 } from "@/lib/timeline-data";
-import { MONO, RADIUS, SectionHeading, VERDICT } from "@/lib/verdict-ui";
+import { BODY, MONO, RADIUS, SectionHeading, VERDICT } from "@/lib/verdict-ui";
 
 interface LiveTimelineProps {
   events: AuditLine[];
@@ -114,7 +114,7 @@ export function LiveTimeline({ events, caseDir, manifestDone }: LiveTimelineProp
       </SectionHeading>
 
       {!hasData ? (
-        <p style={{ fontFamily: MONO, fontSize: 13, color: VERDICT.mutedDark, margin: "8px 0" }}>
+        <p style={{ fontFamily: BODY, fontSize: 13, color: VERDICT.mutedDark, margin: "8px 0" }}>
           timeline builds as findings land — the full normalized timeline appears when the run finalizes.
         </p>
       ) : (

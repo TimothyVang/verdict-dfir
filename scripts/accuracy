@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""VERDICT measured ATT&CK coverage matrix CLI — a maintainer grading tool.
+
+Companion to ``scripts/score-recall.py``. Where score-recall answers "of the
+findings a correct run should surface, how many did the run find?", this answers
+"of the ATT&CK techniques the run is expected to cover, how many did it actually
+cover with cited typed-tool output, and with enough artifact classes?"
+
+It reads a finished case directory's ``verdict.json`` ``attack_coverage`` matrix
+and the matching ``goldens/<case-id>/attack-assertions.yaml`` golden, then grades
+each asserted technique:
+
+  * ``covered``            — observed with >= the declared minimum artifact classes;
+  * ``under_corroborated`` — observed but below the minimum (the >=2-class
+    corroboration doctrine, encoded per technique in the golden);
+  * ``missing``            — absent from the matrix, or observed with no class.
+
+It is offline and after-the-fact: it never touches the sealed audit chain and is
+never part of the investigation pipeline. PASS (exit 0) requires every asserted
+technique to be ``covered``.
+
+Usage:
+    python scripts/accuracy <case-dir> [--assertions goldens/<id>] [--quiet]
+    python scripts/accuracy                 # newest dir under tmp/auto-runs/
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+# Single source of truth for the scoring core (no logic fork). accuracy.py is
+# stdlib-only, so we load it by file path rather than ``import
+# findevil_agent.accuracy`` — that package's __init__ pulls in the agent runtime
+# (Python 3.11+), which this hyphenated maintainer CLI should not require.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_ACC_PATH = _REPO_ROOT / "services" / "agent" / "findevil_agent" / "accuracy.py"
+_acc_spec = importlib.util.spec_from_file_location("findevil_accuracy_core", _ACC_PATH)
+assert _acc_spec and _acc_spec.loader, f"cannot load accuracy core at {_ACC_PATH}"
+_accuracy = importlib.util.module_from_spec(_acc_spec)
+_acc_spec.loader.exec_module(_accuracy)
+
+newest_case_dir = _accuracy.newest_case_dir
+load_attack_assertions = _accuracy.load_attack_assertions
+score_attack_coverage = _accuracy.score_attack_coverage
+
+_ASSERTIONS_NAME = "attack-assertions.yaml"
+
+
+def _resolve_assertions(case_dir: Path, override: str | None) -> Path | None:
+    """Find the attack-assertions.yaml golden for this case.
+
+    Order mirrors ``resolve_golden``: explicit override, then
+    goldens/<verdict.case_id>, then a goldens dir whose name is a substring of the
+    case dir name (handles auto-<uuid> dirs that record their logical case_id in
+    verdict.json).
+    """
+    if override:
+        p = Path(override)
+        cand = p if p.is_file() else p / _ASSERTIONS_NAME
+        return cand if cand.is_file() else None
+
+    goldens = _REPO_ROOT / "goldens"
+    verdict = case_dir / "verdict.json"
+    if verdict.is_file():
+        try:
+            cid = json.loads(verdict.read_text(encoding="utf-8")).get("case_id")
+        except json.JSONDecodeError:
+            cid = None
+        if cid:
+            cand = goldens / str(cid) / _ASSERTIONS_NAME
+            if cand.is_file():
+                return cand
+    if goldens.is_dir():
+        name = case_dir.name
+        for sub in sorted(goldens.iterdir()):
+            cand = sub / _ASSERTIONS_NAME
+            if cand.is_file() and (sub.name in name or name in sub.name):
+                return cand
+    return None
+
+
+def _print_report(result: dict[str, Any]) -> None:
+    print(f"=== VERDICT ATT&CK coverage matrix — {result['case_id']} ===")
+    print(f"  case_dir  : {result['case_dir']}")
+    print(f"  assertions: {result['assertions']}")
+    print(f"  {result['summary']}")
+    for row in result["matrix"]:
+        observed = ", ".join(row["observed_artifact_classes"]) or "(none)"
+        conf = (
+            f" conf={row['finding_confidence']}"
+            if row.get("finding_confidence")
+            else ""
+        )
+        print(
+            f"    - {row['technique_id']:<12} {row['status']:<18} "
+            f"{row['observed_class_count']}/{row['min_artifact_classes']} classes "
+            f"[{observed}]{conf}"
+        )
+    print(f"  RESULT    : {'PASS' if result['full_coverage'] else 'FAIL'}")
+
+
+def main(argv: list[str]) -> int:
+    quiet = "--quiet" in argv
+    args = [a for a in argv[1:] if a != "--quiet"]
+    assertions_override: str | None = None
+    if "--assertions" in args:
+        ai = args.index("--assertions")
+        assertions_override = args[ai + 1] if ai + 1 < len(args) else None
+        args = args[:ai] + args[ai + 2 :]
+
+    case_dir = Path(args[0]) if args else newest_case_dir()
+    if case_dir is None:
+        print(
+            "usage: python scripts/accuracy <case-dir> [--assertions <dir>]",
+            file=sys.stderr,
+        )
+        print(
+            "  (no case dir given and none found under tmp/auto-runs/)", file=sys.stderr
+        )
+        return 2
+    if not (case_dir / "verdict.json").is_file():
+        print(f"error: {case_dir}/verdict.json not found", file=sys.stderr)
+        return 2
+
+    assertions_path = _resolve_assertions(case_dir, assertions_override)
+    if assertions_path is None:
+        print(
+            f"error: no {_ASSERTIONS_NAME} golden found for {case_dir}", file=sys.stderr
+        )
+        print(
+            "  pass one explicitly with --assertions goldens/<case-id>",
+            file=sys.stderr,
+        )
+        return 2
+
+    result = score_attack_coverage(case_dir, assertions_path)
+    if not quiet:
+        _print_report(result)
+    out = case_dir / "attack-coverage-matrix.json"
+    out.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    if not quiet:
+        print(f"\nwrote {out}")
+    return 0 if result["full_coverage"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

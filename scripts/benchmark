@@ -1,0 +1,215 @@
+#!/usr/bin/env bash
+# scripts/benchmark — single reproducible corpus runner (benchmark-plan Phase 3).
+#
+# One command that, per case in goldens/CORPUS.json: runs the engine
+# (scripts/verdict) on the case's evidence, then scores the run against its
+# golden with scripts/score-recall.py, and (with --gate) checks regression
+# bounds. Emits a two-axis-friendly summary + docs/benchmark/results.json,
+# stamped with the engine commit.
+#
+# This is NOT wired into scripts/run-all-smokes.sh: it needs staged evidence and
+# real runs, so it is operator/scheduled only. The fast gate stays evidence-free.
+# (The schema + wiring of CORPUS.json is validated by scripts/benchmark-smoke.py,
+# which IS in the fast gate.)
+#
+# Usage:
+#   scripts/benchmark [--local] [--sift] [--gate] [--case <name>] [--list] [--dry-run]
+#
+#   --local    (default) run only runnable_local:true cases (no SIFT microVM).
+#   --sift     also run disk-image cases through scripts/verdict --sift.
+#   --gate     after scoring, run score-regression-bounds.py where a
+#              regression-bounds.json exists; a regression fails the run.
+#   --case N   run just the CORPUS entry named N.
+#   --list     print the corpus (name, type, runnable_local, evidence) and exit.
+#   --dry-run  resolve + print what would run, per case, without running.
+#
+# Exit 0 = every attempted case passed (and, with --gate, held its bounds);
+# non-zero if any attempted case failed or regressed. Cases skipped for missing
+# evidence are reported, not silently dropped, and do not by themselves fail the
+# run (honest degrade for the clean-clone / no-fixture path).
+
+set -uo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${REPO_ROOT}"
+
+CORPUS="goldens/CORPUS.json"
+OUT_DIR="docs/benchmark"
+RESULTS_JSON="${OUT_DIR}/results.json"
+BENCH_TMP="tmp/benchmark"
+
+mode_sift=0
+gate=0
+dry_run=0
+only_case=""
+do_list=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --local) : ;;                 # default; explicit no-op
+    --sift) mode_sift=1 ;;
+    --gate) gate=1 ;;
+    --dry-run) dry_run=1 ;;
+    --list) do_list=1 ;;
+    --case) shift; only_case="${1:-}"; [ -n "${only_case}" ] || { echo "--case needs a name" >&2; exit 2; } ;;
+    -h|--help) sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "unknown arg: $1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+[ -f "${CORPUS}" ] || { echo "error: ${CORPUS} not found" >&2; exit 2; }
+command -v python3 >/dev/null || { echo "error: python3 required" >&2; exit 2; }
+
+# Emit one TSV line per selected case: name<TAB>type<TAB>runnable_local<TAB>evidence<TAB>golden<TAB>needs_golden
+corpus_rows() {
+  python3 - "${CORPUS}" "${only_case}" "${mode_sift}" <<'PY'
+import json, sys
+corpus_path, only_case, mode_sift = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
+data = json.load(open(corpus_path))
+for c in data.get("cases", []):
+    name = c.get("name", "")
+    if only_case and name != only_case:
+        continue
+    runnable = bool(c.get("runnable_local"))
+    # --local (default): only runnable_local cases. --sift: also non-local (disk) cases.
+    if not runnable and not mode_sift:
+        continue
+    row = [name, c.get("type", ""), "1" if runnable else "0",
+           c.get("evidence", ""), c.get("golden", ""),
+           "1" if c.get("needs_golden") else "0"]
+    print("\t".join(row))
+PY
+}
+
+if [ "${do_list}" = "1" ]; then
+  printf '%-28s %-10s %-8s %s\n' NAME TYPE LOCAL EVIDENCE
+  corpus_rows | while IFS=$'\t' read -r name type local evidence golden needs_golden; do
+    printf '%-28s %-10s %-8s %s\n' "${name}" "${type}" "${local}" "${evidence}"
+  done
+  exit 0
+fi
+
+engine_commit="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+mkdir -p "${BENCH_TMP}" "${OUT_DIR}"
+
+pass=0; fail=0; skipped=0; regressed=0
+results_tsv="${BENCH_TMP}/results.tsv"
+: > "${results_tsv}"
+
+echo "=========================================="
+echo "VERDICT benchmark — engine ${engine_commit}$([ "${mode_sift}" = 1 ] && echo ' (+sift)')"
+echo "=========================================="
+
+while IFS=$'\t' read -r name type local evidence golden needs_golden; do
+  [ -n "${name}" ] || continue
+  echo
+  echo "--- ${name} (${type}) ---"
+
+  if [ "${needs_golden}" = "1" ]; then
+    echo "  SKIP: golden not yet authored (${golden}/expected-findings.json)"
+    skipped=$((skipped + 1))
+    printf '%s\tskip\tno-golden\t\n' "${name}" >> "${results_tsv}"
+    continue
+  fi
+  if [ ! -e "${evidence}" ]; then
+    echo "  SKIP: evidence not staged (${evidence}); stage via scripts/fetch-fixtures.sh"
+    skipped=$((skipped + 1))
+    printf '%s\tskip\tno-evidence\t\n' "${name}" >> "${results_tsv}"
+    continue
+  fi
+
+  case_dir="tmp/auto-runs/${name}"
+  run_summary="${BENCH_TMP}/${name}.run-summary.json"
+  verdict_args=(scripts/verdict "${evidence}" --case-id "${name}" --run-summary "${run_summary}" --no-dashboard --unattended --skip-build)
+  [ "${local}" = "0" ] && [ "${mode_sift}" = "1" ] && verdict_args=(scripts/verdict "${evidence}" --sift --case-id "${name}" --run-summary "${run_summary}" --no-dashboard --unattended)
+
+  if [ "${dry_run}" = "1" ]; then
+    echo "  DRY-RUN: ${verdict_args[*]}"
+    echo "           score: python3 scripts/score-recall.py ${case_dir} --golden ${golden}"
+    [ "${gate}" = "1" ] && echo "           gate:  python3 scripts/score-regression-bounds.py ${case_dir}"
+    continue
+  fi
+
+  # Clear any prior benchmark output for this deterministic case-id. scripts/verdict
+  # refuses to clobber an existing case dir (an anti-clobber safety), so a re-run
+  # would fail without this. Confined to tmp/auto-runs/<corpus-name> (the name is a
+  # validated CORPUS entry), never a foreign path.
+  [ -n "${name}" ] && rm -rf "tmp/auto-runs/${name}"
+
+  echo "  run: ${verdict_args[*]}"
+  if ! "${verdict_args[@]}" > "${BENCH_TMP}/${name}.run.log" 2>&1; then
+    echo "  FAIL: engine run errored (see ${BENCH_TMP}/${name}.run.log)"
+    fail=$((fail + 1)); printf '%s\tfail\tengine-error\t\n' "${name}" >> "${results_tsv}"; continue
+  fi
+  # Prefer the run-summary's local_dir; fall back to the deterministic case dir.
+  resolved="$(python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print((d.get('result') or {}).get('local_dir') or '')" "${run_summary}" 2>/dev/null || true)"
+  [ -n "${resolved}" ] && [ -d "${resolved}" ] && case_dir="${resolved}"
+  if [ ! -f "${case_dir}/verdict.json" ]; then
+    echo "  FAIL: no verdict.json at ${case_dir}"
+    fail=$((fail + 1)); printf '%s\tfail\tno-verdict\t\n' "${name}" >> "${results_tsv}"; continue
+  fi
+
+  if python3 scripts/score-recall.py "${case_dir}" --golden "${golden}" > "${BENCH_TMP}/${name}.score.log" 2>&1; then
+    score_ok=1
+  else
+    score_ok=0
+  fi
+  recall="$(python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print(f\"{d.get('recalled_n')}/{d.get('expected_n')} ({d.get('recall_percent')}%) verdict={d.get('run_verdict')}\")" "${case_dir}/recall-score.json" 2>/dev/null || echo '?')"
+
+  reg=""
+  if [ "${gate}" = "1" ] && [ -f "${golden}/regression-bounds.json" ]; then
+    if python3 scripts/score-regression-bounds.py "${case_dir}" > "${BENCH_TMP}/${name}.gate.log" 2>&1; then
+      reg="bounds-ok"
+    else
+      reg="REGRESSED"; regressed=$((regressed + 1))
+    fi
+  fi
+
+  if [ "${score_ok}" = "1" ] && [ "${reg}" != "REGRESSED" ]; then
+    echo "  PASS: ${recall} ${reg}"
+    pass=$((pass + 1)); printf '%s\tpass\t%s\t%s\n' "${name}" "${recall}" "${reg}" >> "${results_tsv}"
+  else
+    echo "  FAIL: ${recall} ${reg}"
+    fail=$((fail + 1)); printf '%s\tfail\t%s\t%s\n' "${name}" "${recall}" "${reg}" >> "${results_tsv}"
+  fi
+done < <(corpus_rows)
+
+if [ "${dry_run}" = "1" ]; then
+  echo; echo "dry-run complete"; exit 0
+fi
+
+# Machine-readable summary (never a blended number — per-case only).
+python3 - "${results_tsv}" "${RESULTS_JSON}" "${engine_commit}" "${mode_sift}" "${gate}" <<'PY'
+import json, sys
+tsv, out, commit, sift, gate = sys.argv[1:6]
+cases = []
+for line in open(tsv):
+    parts = line.rstrip("\n").split("\t")
+    if len(parts) < 2 or not parts[0]:
+        continue
+    name, result = parts[0], parts[1]
+    detail = parts[2] if len(parts) > 2 else ""
+    reg = parts[3] if len(parts) > 3 else ""
+    cases.append({"name": name, "result": result, "recall": detail, "gate": reg})
+summary = {
+    "engine_commit": commit,
+    "sift": sift == "1",
+    "gate": gate == "1",
+    "counts": {
+        "pass": sum(1 for c in cases if c["result"] == "pass"),
+        "fail": sum(1 for c in cases if c["result"] == "fail"),
+        "skip": sum(1 for c in cases if c["result"] == "skip"),
+    },
+    "cases": cases,
+}
+json.dump(summary, open(out, "w"), indent=2)
+open(out, "a").write("\n")
+PY
+
+echo
+echo "=========================================="
+echo "benchmark: ${pass} passed, ${fail} failed, ${skipped} skipped$([ "${gate}" = 1 ] && echo ", ${regressed} regressed")"
+echo "summary: ${RESULTS_JSON}"
+echo "=========================================="
+[ "${fail}" = "0" ] && [ "${regressed}" = "0" ]

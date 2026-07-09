@@ -40,9 +40,11 @@ export const CAPTURED: ReadonlySet<string> = new Set<string>([
   // Pool A and Pool B disagree, detect_contradictions surfaces each clash, and
   // the credibility-weighted judge reconciles it (auto_higher_credibility).
   "F-contradiction.mp4",
-  // Live interactive Claude Code TUI investigating NIST SCHARDT.dd: plaso_parse is
-  // genuinely unavailable (log2timeline not on PATH), the agent says so and adapts
-  // to mft_timeline — organic self-correction captured on the real TUI, fault_injection=0.
+  // Live interactive Claude Code TUI: a genuinely broken artifact — a truncated
+  // registry hive (registry_query: "hive truncated, header too small") — drives a
+  // named course_correction (narrow, continue other lanes), then a heartbeat
+  // escalation to an honest partial / INDETERMINATE verdict. Organic self-correction
+  // captured on the real TUI, fault_injection=0 (matches deepdive Beat 4).
   "self-correction.mp4",
 ]);
 

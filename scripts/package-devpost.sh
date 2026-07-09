@@ -140,17 +140,7 @@ fi
 cp LICENSE "${STAGE_DIR}/LICENSE"
 
 # ---------------------------------------------------------------------
-# 4. Optional legacy .deb — from release-assets/ if an older release provided one.
-# ---------------------------------------------------------------------
-deb=$(ls "${RELEASE_ASSETS_DIR}"/*.deb 2>/dev/null | head -n1 || true)
-if [[ -z "${deb}" ]]; then
-  log "WARN: no .deb in ${RELEASE_ASSETS_DIR}/; submission zip will omit it"
-else
-  cp "${deb}" "${STAGE_DIR}/"
-fi
-
-# ---------------------------------------------------------------------
-# 5. report.html — from release-assets/.
+# 4. report.html — from release-assets/.
 # ---------------------------------------------------------------------
 if [[ -f "${RELEASE_ASSETS_DIR}/report.html" ]]; then
   cp "${RELEASE_ASSETS_DIR}/report.html" "${STAGE_DIR}/"
@@ -165,7 +155,7 @@ else
 fi
 
 # ---------------------------------------------------------------------
-# 6. readiness-packet.zip — optional portable proof packet.
+# 5. readiness-packet.zip — optional portable proof packet.
 # ---------------------------------------------------------------------
 if [[ -f "${READINESS_PACKET_ZIP}" ]]; then
   cp "${READINESS_PACKET_ZIP}" "${STAGE_DIR}/readiness-packet.zip"
@@ -174,7 +164,7 @@ else
 fi
 
 # ---------------------------------------------------------------------
-# 7. benchmark-results.csv.
+# 6. benchmark-results.csv.
 # ---------------------------------------------------------------------
 if [[ -f "${BENCHMARK_CSV}" ]]; then
   cp "${BENCHMARK_CSV}" "${STAGE_DIR}/benchmark-results.csv"
@@ -201,11 +191,6 @@ required=(
   "LICENSE"
   "report.html"
 )
-# .deb is conditional — only required when release-assets had one.
-if [[ -n "${deb:-}" ]]; then
-  required+=("$(basename "${deb}")")
-fi
-
 missing=0
 for f in "${required[@]}"; do
   if [[ ! -f "${STAGE_DIR}/${f}" ]]; then
