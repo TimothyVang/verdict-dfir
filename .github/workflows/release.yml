@@ -202,7 +202,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download report.html
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: report-${{ github.ref_name }}
           path: dist/
