@@ -73,7 +73,7 @@ jobs:
 
       - name: Upload verdicts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: l3-weekly-verdicts
           path: logs/l3/**

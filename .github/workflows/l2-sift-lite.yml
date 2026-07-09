@@ -135,7 +135,7 @@ jobs:
           } >> l2-smoke.log
 
       - name: Upload smoke artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: l2-smoke-log
           path: l2-smoke.log
