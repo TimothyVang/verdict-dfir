@@ -67,7 +67,7 @@ mft = "=0.6.1"
 # requires rustc 1.89 (we're at 1.88).
 yara-x = "=1.12.0"
 yara-x-macros = "=1.12.0"
-yara-x-parser = "=1.12.0"
+yara-x-parser = "=1.17.0"
 yara-x-proto = "=1.12.0"
 
 # usnjrnl-forensic — MIT, NTFS USN Journal parser with full-path
