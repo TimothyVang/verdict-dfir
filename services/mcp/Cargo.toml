@@ -37,7 +37,7 @@ sha2 = "0.11"
 # omerbenamram's EVTX parser — MIT/Apache-2.0, ~1600x faster than
 # python-evtx. Linked in-process per Spec #2 §16. Pinned exact per
 # the spec's library version table.
-evtx = "=0.11.2"
+evtx = "=0.12.2"
 
 # Pure-Rust Windows Prefetch parser — MIT, supports MAM-compressed
 # Win10+ format and SCCA Win7-/8.1. Used by the `prefetch_parse` tool.
