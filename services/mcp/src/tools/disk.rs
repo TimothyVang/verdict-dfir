@@ -10,6 +10,8 @@ use std::fs;
 use std::io;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use chrono::Utc;
 use schemars::JsonSchema;
@@ -232,6 +234,8 @@ pub enum DiskError {
     EwfSegmentSet(String),
     #[error("io error at {path}: {source}")]
     Io { path: PathBuf, source: io::Error },
+    #[error("session resource ledger is locked by another writer: {0}")]
+    LedgerLocked(PathBuf),
     #[error("cannot serialize session resource ledger: {0}")]
     Serialize(#[from] serde_json::Error),
 }
@@ -317,7 +321,7 @@ pub fn disk_extract_artifacts(
 ) -> Result<DiskExtractArtifactsOutput, DiskError> {
     let case_dir = case_dir(&input.case_id)?;
     let ledger_path = case_dir.join(LEDGER_NAME);
-    let mut ledger = read_ledger(&ledger_path)?;
+    let ledger = read_ledger(&ledger_path)?;
     let mount = ledger
         .resources
         .iter()
@@ -403,22 +407,29 @@ pub fn disk_extract_artifacts(
     }
 
     let now = now_iso();
-    ledger.resources.push(SessionResource {
-        id: extract_id.clone(),
-        resource_type: "disk_extract_artifacts".to_string(),
-        status: "extracted".to_string(),
-        created_at: now.clone(),
-        updated_at: now,
-        image_path: Some(image_path),
-        mount_point: mount.mount_point,
-        fs_root: mount.fs_root,
-        parent_id: Some(input.mount_id.clone()),
-        output_dir: Some(output_dir.clone()),
-        artifacts: artifacts.clone(),
-        command: vec!["fls".to_string(), "icat".to_string()],
-        note: "extracted disk artifacts directly from the image via The Sleuth Kit".to_string(),
-    });
-    write_ledger(&ledger_path, &ledger)?;
+    // Append the new extract row through the locked upsert helper: the mount
+    // fields read above are immutable, and the long Sleuth Kit extraction ran
+    // outside the lock, so the critical section stays a short read-modify-write
+    // that can't lose a concurrent writer's entry.
+    upsert_resource(
+        &ledger_path,
+        SessionResource {
+            id: extract_id.clone(),
+            resource_type: "disk_extract_artifacts".to_string(),
+            status: "extracted".to_string(),
+            created_at: now.clone(),
+            updated_at: now,
+            image_path: Some(image_path),
+            mount_point: mount.mount_point,
+            fs_root: mount.fs_root,
+            parent_id: Some(input.mount_id.clone()),
+            output_dir: Some(output_dir.clone()),
+            artifacts: artifacts.clone(),
+            command: vec!["fls".to_string(), "icat".to_string()],
+            note: "extracted disk artifacts directly from the image via The Sleuth Kit"
+                .to_string(),
+        },
+    )?;
 
     Ok(DiskExtractArtifactsOutput {
         case_id: input.case_id.clone(),
@@ -440,6 +451,10 @@ pub fn disk_extract_artifacts(
 pub fn disk_unmount(input: &DiskUnmountInput) -> Result<DiskUnmountOutput, DiskError> {
     let case_dir = case_dir(&input.case_id)?;
     let ledger_path = case_dir.join(LEDGER_NAME);
+    // Hold the ledger lock across the whole in-place read-modify-write: unlike
+    // extract, this mutates an existing row by index, so a fresh locked read and
+    // the status write must be atomic. `umount` is fast, so the hold is short.
+    let _lock = LedgerLock::acquire(&ledger_path)?;
     let mut ledger = read_ledger(&ledger_path)?;
     let idx = ledger
         .resources
@@ -1797,6 +1812,57 @@ fn findevil_home() -> Result<PathBuf, DiskError> {
     Err(DiskError::CaseNotFound("FINDEVIL_HOME".to_string()))
 }
 
+/// Longest a ledger mutation waits for a peer writer before failing closed.
+const LEDGER_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
+/// Poll interval while waiting for the ledger lock file to be released.
+const LEDGER_LOCK_POLL: Duration = Duration::from_millis(25);
+
+/// Advisory cross-process lock guarding the whole-file read-modify-write of the
+/// session-resource ledger. Two ledger-mutating calls for the same case (e.g.
+/// two `findevil-mcp` processes over one `FINDEVIL_HOME`) would otherwise
+/// interleave read → write and silently drop one writer's resource entry,
+/// leaking the underlying mount/extract on disk.
+///
+/// The pinned 1.88 toolchain has no portable `std` file lock (`File::lock`
+/// landed in 1.89) and adding an `fs2`/`libc` dependency would churn the pinned
+/// workspace lockfile, so this uses an existence-as-lock sibling file created
+/// with `O_EXCL` (`create_new`). Acquisition blocks up to
+/// `LEDGER_LOCK_TIMEOUT` and then fails closed with `LedgerLocked` rather than
+/// stealing the lock — a racy stale-reclaim would reintroduce the very
+/// lost-update it closes. The guard removes the lock file on `Drop`.
+struct LedgerLock {
+    path: PathBuf,
+}
+
+impl LedgerLock {
+    fn acquire(ledger_path: &Path) -> Result<Self, DiskError> {
+        let path = ledger_path.with_extension("lock");
+        let deadline = Instant::now() + LEDGER_LOCK_TIMEOUT;
+        loop {
+            match fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+            {
+                Ok(_) => return Ok(Self { path }),
+                Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {
+                    if Instant::now() >= deadline {
+                        return Err(DiskError::LedgerLocked(path));
+                    }
+                    thread::sleep(LEDGER_LOCK_POLL);
+                }
+                Err(source) => return Err(DiskError::Io { path, source }),
+            }
+        }
+    }
+}
+
+impl Drop for LedgerLock {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
 fn read_ledger(path: &Path) -> Result<SessionLedger, DiskError> {
     if !path.exists() {
         return Ok(SessionLedger::default());
@@ -1817,6 +1883,7 @@ fn write_ledger(path: &Path, ledger: &SessionLedger) -> Result<(), DiskError> {
 }
 
 fn upsert_resource(path: &Path, resource: SessionResource) -> Result<(), DiskError> {
+    let _lock = LedgerLock::acquire(path)?;
     let mut ledger = read_ledger(path)?;
     ledger.resources.retain(|r| r.id != resource.id);
     ledger.resources.push(resource);
@@ -1864,7 +1931,7 @@ mod tests {
         ewfmount_available, is_missing_binary, mock_list, parse_fls_line, parse_mmls_partitions,
         parse_mmls_primary_partition_offset, safe_join, select_artifacts, unmount_steps,
         validate_mount_point_under_case, wanted_kinds, Candidate, DiskError, FlsEntry,
-        DIRECT_TSK_COMMAND,
+        LedgerLock, DIRECT_TSK_COMMAND,
     };
     use std::path::Path;
 
@@ -1889,6 +1956,31 @@ mod tests {
                 "{rel:?} left a .. component: {joined:?}"
             );
         }
+    }
+
+    #[test]
+    fn ledger_lock_is_mutually_exclusive_and_releases_on_drop() {
+        // The advisory lock behind the ledger read-modify-write must exclude a
+        // second holder while the first is live, and free the sibling `.lock`
+        // file on drop so the next writer can proceed. Tested without waiting
+        // the full acquire timeout by probing the O_EXCL sentinel directly.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let ledger_path = dir.path().join("session_resources.json");
+        let lock_path = ledger_path.with_extension("lock");
+
+        let guard = LedgerLock::acquire(&ledger_path).expect("first acquire");
+        assert!(lock_path.exists(), "lock sentinel should exist while held");
+        // A concurrent holder (the create_new acquire path) cannot take it.
+        let contended = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&lock_path);
+        assert!(contended.is_err(), "second holder must not acquire the lock");
+
+        drop(guard);
+        assert!(!lock_path.exists(), "lock sentinel should be gone after drop");
+        // Now the lock is free, so a fresh acquire succeeds.
+        let _reacquire = LedgerLock::acquire(&ledger_path).expect("re-acquire after release");
     }
 
     #[test]
