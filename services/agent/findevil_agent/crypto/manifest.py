@@ -48,6 +48,19 @@ class UncitedFindingError(ValueError):
     mode."""
 
 
+class UnverifiedFindingError(ValueError):
+    """Refusal to seal: a ``finding_approved`` record has no approving
+    ``verifier_action`` (``action`` in ``approved``/``downgraded``) recorded
+    earlier in the audit chain. Citing a real ``tool_call_id`` is necessary
+    but NOT sufficient — the run's own verifier must have approved (or
+    evidence-backed-downgraded) that specific finding before it becomes a
+    signed Merkle leaf. This closes the gap where a finding the verifier
+    rejected, or never ran ``verify_finding`` over at all, could be sealed
+    just because its cited tool call happened to appear as an output. A
+    ``rejected`` verifier disposition (or none) is fail-closed here,
+    independent of prompt discipline in interactive mode."""
+
+
 # ---------------------------------------------------------------------------
 # Dataclasses (frozen — manifests are immutable once finalized).
 # ---------------------------------------------------------------------------
@@ -131,6 +144,42 @@ def _uncited_findings(audit_log: AuditLog) -> list[str]:
     return uncited
 
 
+# Verifier dispositions that keep a finding sealable. ``rejected`` is dropped by
+# the judge (``_apply_verifier_actions``); ``downgraded`` survives with lowered
+# confidence, so it still ships as a signed leaf. Anything else — including a
+# missing verifier_action — is fail-closed.
+_APPROVING_VERIFIER_ACTIONS = frozenset({"approved", "downgraded"})
+
+
+def _unverified_findings(audit_log: AuditLog) -> list[str]:
+    """finding_approved records with no approving ``verifier_action`` recorded
+    earlier in the chain. Chain order matters: the verifier's disposition must
+    precede the seal, mirroring the real pipeline (``verify_finding`` /
+    ``pool_handoff`` are appended before ``finding_approved``).
+
+    A finding is sealable only if the run's own verifier emitted a
+    ``verifier_action`` for it with ``action`` in ``approved``/``downgraded``.
+    A ``rejected`` disposition, or no disposition at all, is refused — citing a
+    real tool_call_id is not the same as the finding having passed verification.
+    Keying on the *presence* of an approving disposition (not the absence of a
+    rejecting one) keeps the legitimate re-dispatch path — a ``rejected`` then a
+    later ``downgraded`` for the same finding — sealable."""
+    approved_finding_ids: set[str] = set()
+    unverified: list[str] = []
+    for record in audit_log.iter_records():
+        if record.kind == "verifier_action":
+            action = str(record.payload.get("action") or "")
+            if action in _APPROVING_VERIFIER_ACTIONS:
+                fid = str(record.payload.get("finding_id") or "")
+                if fid:
+                    approved_finding_ids.add(fid)
+        elif record.kind == "finding_approved":
+            fid = str(record.payload.get("finding_id") or "")
+            if not fid or fid not in approved_finding_ids:
+                unverified.append(fid or f"seq-{record.seq}")
+    return unverified
+
+
 def _walk_audit_log(audit_log: AuditLog) -> tuple[list[ManifestLeaf], int, str]:
     """Replay the audit log once: derive the Merkle-eligible leaves, count the
     records, and compute the final line hash. Shared by the build path and by
@@ -194,12 +243,23 @@ def build_manifest(
     Raises :class:`UncitedFindingError` when the log contains a
     ``finding_approved`` record without a ``tool_call_id`` recorded
     earlier in the chain — an uncited finding must never be sealed.
+
+    Raises :class:`UnverifiedFindingError` when a ``finding_approved``
+    record has no approving ``verifier_action`` (``approved``/``downgraded``)
+    recorded earlier in the chain — a finding the verifier rejected, or never
+    ran, must never be sealed even if it cites a real tool_call_id.
     """
     uncited = _uncited_findings(audit_log)
     if uncited:
         raise UncitedFindingError(
             "refusing to seal: finding(s) without a tool_call_id recorded "
             f"earlier in the audit chain: {', '.join(uncited[:5])}"
+        )
+    unverified = _unverified_findings(audit_log)
+    if unverified:
+        raise UnverifiedFindingError(
+            "refusing to seal: finding(s) without an approving verifier_action "
+            f"recorded earlier in the audit chain: {', '.join(unverified[:5])}"
         )
     leaves, record_count, final_hash = _walk_audit_log(audit_log)
 
@@ -706,6 +766,7 @@ __all__ = [
     "ManifestVerification",
     "RunManifest",
     "UncitedFindingError",
+    "UnverifiedFindingError",
     "build_manifest",
     "verify_manifest",
     "write_manifest",
@@ -728,6 +789,10 @@ def _demo_run() -> None:  # pragma: no cover
                 "tool_call_id": "tc-1",
                 "output_hash": "a" * 64,
             },
+        )
+        log.append(
+            "verifier_action",
+            {"finding_id": "f-1", "action": "approved", "reason": "byte-for-byte replay match"},
         )
         log.append(
             "finding_approved",

@@ -32,7 +32,7 @@ def _allow_stub_signer_in_tests(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def seeded_audit_log(tmp_path: Path) -> Path:
-    """Audit log with the seven-record fixture used by manifest tests."""
+    """Audit log with the nine-record fixture used by manifest tests."""
     path = tmp_path / "audit.jsonl"
     log = AuditLog(path)
     log.append("tool_call_start", {"tool_call_id": "tc-1", "tool": "evtx_query"})
@@ -45,6 +45,16 @@ def seeded_audit_log(tmp_path: Path) -> Path:
     log.append(
         "tool_call_output",
         {"tool_call_id": "tc-2", "output_hash": "b" * 64, "row_count": 12},
+    )
+    # Verifier disposition precedes the seal — build_manifest refuses to seal a
+    # finding_approved without an approving verifier_action (UnverifiedFindingError).
+    log.append(
+        "verifier_action",
+        {"finding_id": "f-1", "action": "approved", "reason": "replay matched"},
+    )
+    log.append(
+        "verifier_action",
+        {"finding_id": "f-2", "action": "downgraded", "reason": "output_sha256 drift"},
     )
     log.append(
         "finding_approved",

@@ -234,6 +234,10 @@ def run_self_attack(
         {"tool_call_id": tool_call_id, "output_hash": output_sha256},
     )
     log.append(
+        "verifier_action",
+        {"finding_id": f"f-{attack.name}", "action": "approved", "reason": "self-attack harness"},
+    )
+    log.append(
         "finding_approved",
         {"finding_id": f"f-{attack.name}", "tool_call_id": tool_call_id, "confidence": "INFERRED"},
     )

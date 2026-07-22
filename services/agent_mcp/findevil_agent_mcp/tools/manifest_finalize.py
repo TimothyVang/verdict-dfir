@@ -236,9 +236,10 @@ SPEC = ToolSpec(
         "(keyless Fulcio/Rekor — requires $SIGSTORE_ID_TOKEN); signer='stub' is an "
         "explicit dev placeholder. This is the terminal step — once the manifest is signed "
         "the run is closed. REFUSES to seal a run containing any finding_approved "
-        "record without a tool_call_id recorded earlier in the audit chain — the "
-        "'every Finding cites a tool_call_id' invariant is enforced here in code, "
-        "not just by prompts. "
+        "record without a tool_call_id recorded earlier in the audit chain, or "
+        "without an approving verifier_action (approved/downgraded) for that finding "
+        "earlier in the chain — the 'every Finding cites a tool_call_id AND passed "
+        "the verifier' invariant is enforced here in code, not just by prompts. "
         "On error: most common cause is the audit_log_path doesn't exist or has been "
         "tampered with — run audit_verify first to confirm the chain is clean."
     ),
