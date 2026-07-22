@@ -202,18 +202,12 @@ pub fn ez_parse(input: &EzParseInput) -> Result<EzParseOutput, EzParseError> {
         Err(err) => return Err(err),
     };
 
-    let outdir = std::env::temp_dir().join(format!(
-        "ez-{}-{}-{}",
-        spec.key,
-        std::process::id(),
-        nanosecond_tag()
-    ));
-    if let Err(e) = std::fs::create_dir_all(&outdir) {
-        return Err(EzParseError::OutputRead(format!(
-            "could not create output dir {}: {e}",
-            outdir.display()
-        )));
-    }
+    // Stage decoded output under the case directory (self-enforced containment),
+    // not the OS temp dir — otherwise containment depends entirely on an external
+    // TMPDIR being set. Mirrors srum_parse/pst_parse/bulk_extract.
+    let outdir =
+        crate::tools::case_id::case_scratch_dir(&input.case_id, &format!("ez-{}", spec.key))
+            .map_err(|e| EzParseError::OutputRead(e.to_string()))?;
 
     let args = build_ez_args(spec, &input.artifact_path, &outdir);
     // Defense-in-depth pre-spawn gate: refuse a poisoned $EZTOOLS_DIR that
@@ -444,13 +438,6 @@ fn truncate_to(mut s: String, max: usize) -> String {
         s.push_str("…[truncated]");
     }
     s
-}
-
-fn nanosecond_tag() -> u128 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_nanos())
 }
 
 #[cfg(test)]

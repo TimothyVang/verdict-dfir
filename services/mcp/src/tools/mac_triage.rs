@@ -152,18 +152,14 @@ pub fn mac_triage(input: &MacTriageInput) -> Result<MacTriageOutput, MacTriageEr
     let binary = resolve_binary()?;
     let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
 
-    let outdir = std::env::temp_dir().join(format!(
-        "macapt-{}-{}-{}",
-        input.module.to_ascii_lowercase(),
-        std::process::id(),
-        nanosecond_tag()
-    ));
-    if let Err(e) = std::fs::create_dir_all(&outdir) {
-        return Err(MacTriageError::OutputRead(format!(
-            "could not create output dir {}: {e}",
-            outdir.display()
-        )));
-    }
+    // Stage decoded output under the case directory (self-enforced containment),
+    // not the OS temp dir — otherwise containment depends entirely on an external
+    // TMPDIR being set. Mirrors srum_parse/pst_parse/bulk_extract.
+    let outdir = crate::tools::case_id::case_scratch_dir(
+        &input.case_id,
+        &format!("macapt-{}", input.module.to_ascii_lowercase()),
+    )
+    .map_err(|e| MacTriageError::OutputRead(e.to_string()))?;
 
     let args = build_mac_apt_args(&input.image_path, &input.module, &outdir);
     // Defense-in-depth pre-spawn gate: refuse a poisoned mac_apt binary that
@@ -300,13 +296,6 @@ fn truncate_to(mut s: String, max: usize) -> String {
         s.push_str("…[truncated]");
     }
     s
-}
-
-fn nanosecond_tag() -> u128 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_nanos())
 }
 
 #[cfg(test)]

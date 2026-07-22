@@ -126,18 +126,12 @@ pub fn suricata_eve(input: &SuricataEveInput) -> Result<SuricataEveOutput, Suric
     let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
 
     // Suricata writes eve.json (and stats.log, fast.log, …) into -l <outdir>.
-    // Use a fresh per-call temp directory so concurrent runs don't collide.
-    let outdir = std::env::temp_dir().join(format!(
-        "suricata-eve-{}-{}",
-        std::process::id(),
-        nanosecond_tag()
-    ));
-    if let Err(err) = std::fs::create_dir_all(&outdir) {
-        return Err(SuricataEveError::OutputParse(format!(
-            "could not create output dir {}: {err}",
-            outdir.display()
-        )));
-    }
+    // Stage under the case directory (self-enforced containment), not the OS
+    // temp dir — otherwise containment depends entirely on an external TMPDIR
+    // being set. Mirrors srum_parse/pst_parse/bulk_extract. The per-call unique
+    // subdir also keeps concurrent runs from colliding.
+    let outdir = crate::tools::case_id::case_scratch_dir(&input.case_id, "suricata-eve")
+        .map_err(|e| SuricataEveError::OutputParse(e.to_string()))?;
 
     let mut cmd = Command::new(&binary);
     cmd.args(build_suricata_args(&input.pcap_path, &outdir));
@@ -262,13 +256,6 @@ fn truncate_to(mut s: String, max: usize) -> String {
         s.push_str("…[truncated]");
     }
     s
-}
-
-fn nanosecond_tag() -> u128 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_nanos())
 }
 
 #[cfg(test)]

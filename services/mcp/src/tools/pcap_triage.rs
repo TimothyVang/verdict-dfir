@@ -264,13 +264,11 @@ fn parse_tshark(stdout: &str, stderr_tail: String) -> Result<PcapTriageOutput, P
 fn run_zeek(input: &PcapTriageInput) -> Result<PcapTriageOutput, PcapTriageError> {
     let binary =
         resolve_binary("ZEEK_BIN", &["zeek", "zeek.exe"]).ok_or(PcapTriageError::BinaryNotFound)?;
-    let out_dir = std::env::temp_dir().join(format!(
-        "findevil-zeek-{}-{}",
-        std::process::id(),
-        chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
-    ));
-    std::fs::create_dir_all(&out_dir)
-        .map_err(|err| PcapTriageError::OutputParse(format!("create temp dir: {err}")))?;
+    // Stage Zeek's decoded output under the case directory (self-enforced
+    // containment), not the OS temp dir — otherwise containment depends entirely
+    // on an external TMPDIR being set. Mirrors srum_parse/pst_parse/bulk_extract.
+    let out_dir = crate::tools::case_id::case_scratch_dir(&input.case_id, "findevil-zeek")
+        .map_err(|err| PcapTriageError::OutputParse(err.to_string()))?;
     let proc = Command::new(&binary)
         .current_dir(&out_dir)
         .arg("-r")
