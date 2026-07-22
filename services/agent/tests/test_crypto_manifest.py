@@ -376,6 +376,35 @@ class TestVerifyManifest:
         # A flipped signature bit must fail overall, not just the side-signal.
         assert result.overall is False
 
+    def test_relabeling_kind_cannot_downgrade_ed25519_check(self, tmp_path: Path) -> None:
+        # An ed25519-signed manifest is tampered in a body field the Merkle root
+        # does NOT cover (``extra``) — caught only by the signature. The attacker
+        # then relabels ``signature.kind`` to an advisory tier ("sigstore") and
+        # leaves the (now-stale) ed25519 bundle in place, trying to route the
+        # real crypto check around the advisory branch. The verification path is
+        # chosen from the bundle CONTENTS, not the declared ``kind``, so the
+        # stale ed25519 signature is still checked and ``overall`` stays False.
+        from findevil_agent.crypto.signer import LocalEd25519Signer
+
+        log = _seed_log(tmp_path / "audit.jsonl")
+        manifest = build_manifest(
+            case_id="case-relabel",
+            run_id="ver-relabel",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=LocalEd25519Signer(key_path=tmp_path / "signing.key"),
+            extra={"image_path": "/evidence/original.E01"},
+        )
+        path = write_manifest(manifest, tmp_path / "run.manifest.json")
+        obj = json.loads(path.read_text(encoding="utf-8"))
+        # Tamper an unprotected body field, then relabel the signature tier.
+        obj["extra"]["image_path"] = "/evidence/FORGED.E01"
+        obj["signature"]["kind"] = "sigstore"
+        path.write_text(json.dumps(obj), encoding="utf-8")
+
+        result = verify_manifest(path)
+        assert result.overall is False
+
     def test_records_signer_kind_and_honest_verification(self, tmp_path: Path) -> None:
         log = _seed_log(tmp_path / "audit.jsonl")
         manifest = build_manifest(

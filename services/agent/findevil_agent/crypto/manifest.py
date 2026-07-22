@@ -468,13 +468,22 @@ def verify_manifest(
     # `overall` requires the chain, Merkle root, and leaf count to verify and a
     # signature bundle to be present. A `stub` (dev/offline placeholder) or a
     # recorded `sigstore` bundle is advisory — it does not gate `overall`, so
-    # dev/offline stub runs still verify end-to-end. But a signature that is
-    # present and was cryptographically checked yet did NOT verify (a forged or
-    # corrupted `ed25519` bundle, or an unknown signer kind) is a hard failure:
-    # `overall` must not stay true for a signature that fails verification.
+    # dev/offline stub runs still verify end-to-end. But a signature that was
+    # cryptographically checked yet did NOT verify is a hard failure: `overall`
+    # must not stay true for it. Crucially, whether a real cryptographic check
+    # applies is decided by the BUNDLE CONTENTS, not the manifest's self-declared
+    # `kind`: if the bundle carries Ed25519 key + signature material it MUST
+    # verify no matter what `kind` claims, so relabeling `kind` from `ed25519`
+    # to an advisory tier cannot skip the check and let a tampered/forged body
+    # pass. An unknown non-advisory `kind` still fails closed.
     # `signature_verified` remains the separate, field-level crypto signal.
     advisory_sig_kinds = ("stub", "sigstore")
-    sig_failed = sig_present and sig_kind not in advisory_sig_kinds and sig_verified is not True
+    bundle_ed25519 = sig_present and _bundle_has_ed25519_material(sig)
+    sig_failed = (
+        sig_present
+        and (bundle_ed25519 or sig_kind not in advisory_sig_kinds)
+        and sig_verified is not True
+    )
     overall = (
         audit_status is True
         and rebuild_status is True
@@ -511,9 +520,18 @@ def _signature_verified(
     is *recorded* for offline verification by a party that supplies the
     expected signer identity (a deployment policy this library can't assume) —
     so we report that explicitly rather than overclaim.
+
+    The verification path is chosen from the bundle CONTENTS, not the
+    manifest's self-declared ``kind``: a bundle that structurally carries
+    Ed25519 key + signature material is verified cryptographically no matter
+    what ``kind`` claims. This is what stops relabeling ``kind`` from
+    ``ed25519`` to an advisory tier (``sigstore``/``stub``) from skipping the
+    real signature check on an otherwise-verifiable bundle.
     """
     if not present:
         return "no signature bundle present"
+    if _bundle_has_ed25519_material(sig or {}):
+        return _verify_ed25519_signature(sig or {}, manifest_obj or {})
     if kind == "stub":
         return "stub signature: deterministic dev/offline placeholder, not cryptographic proof"
     if kind == "ed25519":
@@ -524,6 +542,29 @@ def _signature_verified(
             "requires the verifier to supply the expected signer identity (deployment policy)"
         )
     return f"unknown signer kind {kind!r}"
+
+
+def _bundle_has_ed25519_material(sig: dict[str, Any]) -> bool:
+    """True when the embedded bundle structurally carries Ed25519 public-key +
+    signature material, independent of the manifest's self-declared ``kind``.
+
+    The signature verification path is selected from this — not from the
+    untrusted ``signature.kind`` label — so relabeling ``kind`` to an advisory
+    tier can never route an otherwise-verifiable bundle around the real check.
+    Fails closed: an undecodable / non-object bundle returns ``False`` (the
+    declared-``kind`` path then reports it honestly).
+    """
+    import base64
+
+    try:
+        bundle = json.loads(base64.b64decode(str(sig.get("bundle_b64") or "")))
+    except (ValueError, TypeError):
+        return False
+    return (
+        isinstance(bundle, dict)
+        and isinstance(bundle.get("public_key_b64"), str)
+        and isinstance(bundle.get("signature_b64"), str)
+    )
 
 
 def _verify_ed25519_signature(sig: dict[str, Any], manifest_obj: dict[str, Any]) -> bool | str:
