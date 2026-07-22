@@ -218,6 +218,61 @@ def reverify_finding(
             ),
         )
 
+    # Preflight gate 3 — INFERENCE PROVENANCE (default-on; opt out via
+    # FIND_EVIL_REQUIRE_DERIVED_FROM=0). An INFERRED finding with no
+    # asserted_values rests its entire fidelity on the confirmed facts it cites
+    # in ``derived_from`` (SOUL.md / JUDGING.md §"IR Accuracy" ≥2-fact rule) —
+    # the entailment block below is skipped for it because it has no single
+    # re-extractable value. The events.py schema only checks that derived_from
+    # is a NON-empty list, so without this gate an inference could ride to a
+    # verdict on its OWN tool replay while its derivation points at a
+    # fabricated/never-recorded tool_call_id. Here the derivation is re-bound
+    # against the audit log: every entry must resolve to a recorded tool call,
+    # and at least two DISTINCT recorded facts must back the inference. (Whether
+    # those facts were themselves CONFIRMED / entailment-passed is cross-finding
+    # state this per-finding verifier does not hold; that check stays with the
+    # judge/correlator.) An inference that instead declares asserted_values is
+    # exempt — its fidelity is covered by the entailment check below.
+    if (
+        os.environ.get("FIND_EVIL_REQUIRE_DERIVED_FROM") != "0"
+        and finding.confidence == "INFERRED"
+        and not finding.asserted_values
+        and finding.derived_from
+    ):
+        missing = [d for d in finding.derived_from if d not in tool_call_index]
+        recorded_distinct = [
+            d for d in dict.fromkeys(finding.derived_from) if d in tool_call_index
+        ]
+        if missing or len(recorded_distinct) < 2:
+            if missing:
+                reason = (
+                    f"inference provenance: INFERRED finding {finding.finding_id} "
+                    f"derives from fact(s) not found in the audit log: {missing!r}"
+                )
+                drift_class = "derived_from_missing_record"
+            else:
+                reason = (
+                    f"inference provenance: INFERRED finding {finding.finding_id} "
+                    f"rests on {len(recorded_distinct)} distinct recorded fact(s); an "
+                    "inference must cite at least two confirmed facts (SOUL.md ≥2-fact rule)"
+                )
+                drift_class = "derived_from_under_corroborated"
+            return (
+                VerifierAction(
+                    case_id=finding.case_id,
+                    action="rejected",
+                    finding_id=finding.finding_id,
+                    reason=reason,
+                ),
+                CallReplay(
+                    missing_replay_artifact(
+                        tool_call_id=finding.tool_call_id,
+                        drift_class=drift_class,
+                        reason=reason,
+                    )
+                ),
+            )
+
     artifact = replay_tool_call(
         tool_call_id=finding.tool_call_id,
         record=record,
