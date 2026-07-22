@@ -371,9 +371,14 @@ def recheck_entailment_slice(slice_: Any) -> bool | str:
                 constraints = json.loads(expected)
             except (ValueError, TypeError):
                 return f"record slice expected is not JSON at {path}"
-            text = str(actual).lower()
-            if not isinstance(constraints, dict) or not all(
-                str(v).strip().lower() in text for v in constraints.values()
+            # Re-check with the same token-boundary-aware matcher the live
+            # record path uses (``_matches_record`` -> ``_contains_token``), not
+            # plain substring containment, so an incidental fragment (e.g.
+            # "cain" inside "mccain") cannot launder a sealed record match. The
+            # sealed slice only carries the stringified record, so the token
+            # matcher runs over that text rather than per field.
+            if not isinstance(constraints, dict) or not constraints or not all(
+                _contains_token(str(v), str(actual)) for v in constraints.values()
             ):
                 return f"sealed record value no longer satisfies the assertion at {path}"
         elif not _matches(expected, actual, mode):
