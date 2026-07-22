@@ -27,6 +27,18 @@ class ManifestVerifyInput(BaseModel):
             "verifying a manifest copied to a different directory."
         ),
     )
+    expected_public_key: str | None = Field(
+        default=None,
+        description=(
+            "Optional trust anchor: the base64-encoded raw Ed25519 public key "
+            "the signer is expected to hold. When set, an ed25519 manifest whose "
+            "embedded key does not match fails signature_verified and overall "
+            "(fail-closed) — this binds the run to a known signer instead of "
+            "accepting any self-signed throwaway key. Defaults to "
+            "$FINDEVIL_EXPECTED_ED25519_PUBKEY when omitted; without either, "
+            "ed25519 proves integrity/key-continuity only, not signer identity."
+        ),
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -72,7 +84,11 @@ class ManifestVerifyOutput(BaseModel):
 async def _handle(inp: BaseModel) -> ManifestVerifyOutput:
     assert isinstance(inp, ManifestVerifyInput)
     audit_path = Path(inp.audit_log_path) if inp.audit_log_path else None
-    result = verify_manifest(Path(inp.manifest_path), audit_log_path=audit_path)
+    result = verify_manifest(
+        Path(inp.manifest_path),
+        audit_log_path=audit_path,
+        expected_public_key=inp.expected_public_key,
+    )
 
     def _split(value: bool | str) -> tuple[bool, str | None]:
         if value is True:

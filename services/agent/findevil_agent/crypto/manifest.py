@@ -349,6 +349,7 @@ def verify_manifest(
     manifest_path: Path,
     *,
     audit_log_path: Path | None = None,
+    expected_public_key: str | None = None,
 ) -> ManifestVerification:
     """Run the offline-verifiable parts of Spec #2 §7.2.
 
@@ -366,6 +367,19 @@ def verify_manifest(
         bundle is present, and no present signature failed verification
         (``stub`` / recorded ``sigstore`` are advisory). ``signature_verified``
         and ``entailment_ok`` are reported as separate side-signals.
+
+    ``expected_public_key`` is an optional trust anchor: the base64-encoded raw
+    Ed25519 public key the verifier expects the manifest to be signed by. It
+    defaults to ``$FINDEVIL_EXPECTED_ED25519_PUBKEY`` so a deployment can pin
+    the signer ambiently. When set, an ``ed25519`` manifest whose embedded
+    public key does not match the pin fails ``signature_verified`` (and, since
+    ``ed25519`` is not advisory, ``overall``) — this is the fail-closed identity
+    check that distinguishes a trusted signer from a self-signed throwaway key.
+    Ed25519 alone proves only integrity and local key continuity, not identity,
+    so WITHOUT a pin any well-formed self-signed bundle still verifies
+    cryptographically; supplying the pin (or the sigstore tier) is what binds a
+    run to a known signer. The pin scopes to the ``ed25519`` branch only —
+    ``stub`` and ``sigstore`` behavior is unchanged.
     """
     obj = json.loads(manifest_path.read_text(encoding="utf-8"))
 
@@ -441,7 +455,14 @@ def verify_manifest(
     sig = obj.get("signature") or {}
     sig_present = bool(sig.get("bundle_b64") and sig.get("payload_sha256"))
     sig_kind = str(sig.get("kind") or "stub")
-    sig_verified = _signature_verified(sig_present, sig_kind, sig, obj)
+    import os
+
+    pinned_key = (
+        expected_public_key
+        if expected_public_key is not None
+        else os.environ.get("FINDEVIL_EXPECTED_ED25519_PUBKEY")
+    )
+    sig_verified = _signature_verified(sig_present, sig_kind, sig, obj, pinned_key)
 
     # 5. Offline entailment re-verification (separate honest signal, like
     # signature_verified — does NOT gate overall). Vacuously True when the log
@@ -509,6 +530,7 @@ def _signature_verified(
     kind: str,
     sig: dict[str, Any] | None = None,
     manifest_obj: dict[str, Any] | None = None,
+    expected_public_key: str | None = None,
 ) -> bool | str:
     """Honest answer to 'was the signature cryptographically verified?'.
 
@@ -516,8 +538,10 @@ def _signature_verified(
     proof) and never falsely claims to have verified a sigstore bundle it did
     not. An ``ed25519`` bundle embeds its public key, so it IS verified here,
     offline: the canonical manifest body (everything except ``signature``) is
-    rebuilt and checked against the embedded signature. A real sigstore bundle
-    is *recorded* for offline verification by a party that supplies the
+    rebuilt and checked against the embedded signature. When
+    ``expected_public_key`` is supplied, the embedded key must additionally
+    match that pinned trust anchor or verification fails closed. A real sigstore
+    bundle is *recorded* for offline verification by a party that supplies the
     expected signer identity (a deployment policy this library can't assume) —
     so we report that explicitly rather than overclaim.
 
@@ -531,11 +555,11 @@ def _signature_verified(
     if not present:
         return "no signature bundle present"
     if _bundle_has_ed25519_material(sig or {}):
-        return _verify_ed25519_signature(sig or {}, manifest_obj or {})
+        return _verify_ed25519_signature(sig or {}, manifest_obj or {}, expected_public_key)
     if kind == "stub":
         return "stub signature: deterministic dev/offline placeholder, not cryptographic proof"
     if kind == "ed25519":
-        return _verify_ed25519_signature(sig or {}, manifest_obj or {})
+        return _verify_ed25519_signature(sig or {}, manifest_obj or {}, expected_public_key)
     if kind == "sigstore":
         return (
             "sigstore bundle present and recorded; offline cryptographic verification "
@@ -567,7 +591,11 @@ def _bundle_has_ed25519_material(sig: dict[str, Any]) -> bool:
     )
 
 
-def _verify_ed25519_signature(sig: dict[str, Any], manifest_obj: dict[str, Any]) -> bool | str:
+def _verify_ed25519_signature(
+    sig: dict[str, Any],
+    manifest_obj: dict[str, Any],
+    expected_public_key: str | None = None,
+) -> bool | str:
     """Offline cryptographic verification of a LocalEd25519Signer bundle.
 
     Rebuilds the exact bytes that were signed — the JCS-canonicalized manifest
@@ -575,6 +603,15 @@ def _verify_ed25519_signature(sig: dict[str, Any], manifest_obj: dict[str, Any])
     which signs ``canonicalize_json(_to_json_safe(body, exclude_signature=True))``)
     — and verifies the embedded Ed25519 signature against the embedded public
     key. Returns ``True`` only on a genuine cryptographic pass.
+
+    A signature verifying against a key embedded in the same bundle only proves
+    the body was not altered after signing (integrity + local key continuity);
+    it does NOT prove *who* signed, since a case fabricated from scratch and
+    self-signed with a throwaway keypair verifies just as cleanly. When
+    ``expected_public_key`` (a base64 raw Ed25519 public key) is supplied as a
+    trust anchor, the embedded key must match it or verification fails closed —
+    binding the run to a known signer. A malformed pin also fails closed (never
+    passes, never crashes).
     """
     import base64
 
@@ -584,6 +621,22 @@ def _verify_ed25519_signature(sig: dict[str, Any], manifest_obj: dict[str, Any])
         signature_b64 = bundle["signature_b64"]
     except (KeyError, ValueError, TypeError) as exc:
         return f"ed25519 bundle malformed: {exc}"
+    # Trust-anchor pin: when the verifier supplies an expected public key, the
+    # bundle's embedded key must match it. Compared on decoded raw bytes so
+    # base64 padding/whitespace differences don't cause a false mismatch. A
+    # missing/undecodable pin or embedded key fails closed rather than falling
+    # through to the (unpinned) self-verification below.
+    if expected_public_key:
+        try:
+            embedded_raw = base64.b64decode(str(public_key_b64), validate=True)
+            expected_raw = base64.b64decode(str(expected_public_key), validate=True)
+        except (ValueError, TypeError) as exc:
+            return f"ed25519 pinned-key check failed: could not decode public key: {exc}"
+        if not embedded_raw or embedded_raw != expected_raw:
+            return (
+                "ed25519 signer key does not match the pinned expected public key: "
+                "the manifest is signed by an untrusted key"
+            )
     # Mirror the sign path: the signed body excludes BOTH ``signature`` and the
     # after-signing ``transparency_log`` anchor, so exclude both when rebuilding
     # the bytes to verify. (See ``_to_json_safe(exclude_signature=True)``.)
