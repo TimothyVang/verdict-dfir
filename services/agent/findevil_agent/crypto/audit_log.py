@@ -25,6 +25,7 @@ Design goals:
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -138,16 +139,29 @@ class AuditLog:
         """Populate ``_next_seq`` + ``_last_hash`` from any existing file."""
         if not self.path.is_file():
             return
+        with self.path.open("rb") as f:
+            self._scan_tail(f)
+
+    def _scan_tail(self, f: Any) -> None:
+        """Derive ``_next_seq`` + ``_last_hash`` from an open binary file handle.
+
+        Scans from the start of ``f`` and sets the writer's cached tail state
+        from the last non-empty record. Shared by construction-time
+        ``_load_tail`` and the locked re-read in ``append`` so the same
+        validation applies to both paths.
+        """
+        f.seek(0)
         last_line: bytes | None = None
         count = 0
-        with self.path.open("rb") as f:
-            for raw in f:
-                raw = raw.rstrip(b"\n")
-                if not raw:
-                    continue
-                last_line = raw
-                count += 1
+        for raw in f:
+            raw = raw.rstrip(b"\n")
+            if not raw:
+                continue
+            last_line = raw
+            count += 1
         if last_line is None:
+            self._next_seq = 0
+            self._last_hash = ""
             return
         try:
             obj = json.loads(last_line)
@@ -170,24 +184,48 @@ class AuditLog:
     # ------------------------------------------------------------------
 
     def append(self, kind: str, payload: dict[str, Any], *, ts: str | None = None) -> AuditRecord:
-        """Append one record. Thread-safe. fsyncs before returning."""
+        """Append one record. Safe for concurrent multi-writer sharing. fsyncs
+        before returning.
+
+        Multiple writers routinely share one ``audit.jsonl`` — every
+        audit-writing MCP tool constructs a fresh ``AuditLog`` per call, so the
+        per-instance :class:`threading.Lock` alone gives no cross-instance or
+        cross-process protection. To keep the hash chain intact under
+        concurrency we hold an OS-level exclusive lock (``fcntl.flock``) across
+        the whole read-tail-then-append critical section, and re-derive the tail
+        *under* that lock — a lock without the re-read would still splice a stale
+        ``prev_hash``/``seq`` and brick the chain. The lock is blocking, so
+        contending writers queue and each appends in turn; failure to acquire it
+        propagates and fails the append closed rather than writing unlocked.
+        """
         with self._lock:
-            record = AuditRecord(
-                seq=self._next_seq,
-                ts=ts or _utc_iso(),
-                kind=kind,
-                prev_hash=self._last_hash,
-                payload=payload,
-            )
-            line = canonicalize_json(record.to_canonical_dict())
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            with self.path.open("ab") as f:
-                f.write(line + b"\n")
-                f.flush()
-                os.fsync(f.fileno())
-            self._last_hash = hash_line(line)
-            self._next_seq += 1
-            return record
+            with self.path.open("a+b") as f:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    # Re-derive the true tail under the lock: another writer may
+                    # have appended since this instance was constructed, so the
+                    # cached _next_seq/_last_hash can be stale.
+                    self._scan_tail(f)
+                    record = AuditRecord(
+                        seq=self._next_seq,
+                        ts=ts or _utc_iso(),
+                        kind=kind,
+                        prev_hash=self._last_hash,
+                        payload=payload,
+                    )
+                    line = canonicalize_json(record.to_canonical_dict())
+                    # Required to legally switch the shared handle from reading
+                    # (the tail scan) to writing.
+                    f.seek(0, os.SEEK_END)
+                    f.write(line + b"\n")
+                    f.flush()
+                    os.fsync(f.fileno())
+                    self._last_hash = hash_line(line)
+                    self._next_seq += 1
+                    return record
+                finally:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
     # ------------------------------------------------------------------
     # Reader / verifier.
