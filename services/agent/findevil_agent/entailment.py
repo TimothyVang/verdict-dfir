@@ -49,12 +49,6 @@ _FILENAME = re.compile(r"^[^\\/]+\.[A-Za-z0-9][A-Za-z0-9_-]{0,7}$")
 # maximal run of these characters.
 _ALNUM = re.compile(r"[0-9A-Za-z]")
 _ALNUM_RUN = re.compile(r"[0-9A-Za-z]+")
-# Minimum length of a needle's alphanumeric run for boundary enforcement to
-# apply. A needle whose longest alphanumeric run is shorter than this (or which
-# has none, e.g. a bare separator) carries no laundering-prone token, so it
-# keeps the legacy plain-containment behavior rather than strict alignment —
-# tightening only where it cannot weaken a true-positive anchor.
-_MIN_TOKEN_LEN = 2
 
 
 @dataclass(frozen=True)
@@ -393,16 +387,17 @@ def _contains_token(needle: str, haystack: str) -> bool:
     identical decision.
 
     Empty needles keep their established "field present" semantics (they match
-    any leaf, including a JSON ``null`` read as an empty string). Needles whose
-    longest alphanumeric run is below :data:`_MIN_TOKEN_LEN` fall back to plain
-    containment, since such a fragment carries no laundering-prone token and
-    boundary enforcement there could only weaken a legitimate anchor.
+    any leaf, including a JSON ``null`` read as an empty string). Boundary
+    enforcement applies to any needle carrying at least one alphanumeric
+    character — including a single digit or letter — so ``"3"`` matches the
+    standalone token ``"3"`` but never launders itself in from inside ``"13"``.
+    A needle with no alphanumeric run at all (e.g. a bare separator) keeps plain
+    containment; enforcement there is a no-op since it has no alphanumeric edge.
     """
     needle = needle.strip().lower()
     if not needle:
         return True
-    runs = _ALNUM_RUN.findall(needle)
-    enforce = bool(runs) and max(len(run) for run in runs) >= _MIN_TOKEN_LEN
+    enforce = bool(_ALNUM_RUN.findall(needle))
     for line in haystack.lower().splitlines() or [""]:
         start = 0
         while True:
