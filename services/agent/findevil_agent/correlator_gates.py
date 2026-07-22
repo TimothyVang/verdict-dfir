@@ -6,7 +6,7 @@ facade orchestrates:
 
 * the named, severity-tagged per-technique corroboration gates (EXECUTION,
   LATERAL_MOVEMENT, PRIVILEGE_ESCALATION, PERSISTENCE, CREDENTIAL_ACCESS,
-  DEFENSE_EVASION, COMMAND_AND_CONTROL), each mapping a MITRE tactic onto the
+  DEFENSE_EVASION, COMMAND_AND_CONTROL, EXFILTRATION), each mapping a MITRE tactic onto the
   independent artifact-class pair(s) it requires in the Finding's own text, and
 * the per-claim-type confidence CEILING table (a hard MAXIMUM tier keyed by
   claim type / evidence composition).
@@ -242,6 +242,16 @@ _GATE_CLASS_PATTERNS: dict[str, re.Pattern[str]] = {
         r"\b(?:memory|volatility|malfind|handle|lsass|minidump|dump)\b",
         re.IGNORECASE,
     ),
+    # Collection / staging class — data staged or archived for exfiltration
+    # (T1074 Data Staged, T1560 Archive Collected Data). Keys on general archiver
+    # and staging signatures, never an image-specific tool name. Used only by the
+    # EXFILTRATION gate; no prior gate references it, so adding it is inert for
+    # existing gate behavior.
+    "staging": re.compile(
+        r"\b(?:stag(?:ed|ing)|archiv\w*|collect(?:ed|ion|s)?|compress\w*"
+        r"|rar|7-?zip|zip|tar|gzip|makecab|cabinet)\b",
+        re.IGNORECASE,
+    ),
 }
 
 # A "slot" is a tuple of acceptable class names (any-of). An "alternative" is a
@@ -374,6 +384,24 @@ _TACTIC_GATES: tuple[CorroborationGate, ...] = (
         ),
         # A C2 claim needs the network class AND the process class.
         alternatives=((("network",), ("process",)),),
+    ),
+    CorroborationGate(
+        name="EXFILTRATION",
+        severity="high",
+        # T1041 Exfil Over C2, T1048 Exfil Over Alt Protocol, T1052 Exfil Over
+        # Physical Medium, T1567 Exfil Over Web Service, T1011 Exfil Over Other
+        # Network Medium, plus the staging techniques the CLAUDE.md exfiltration
+        # rule pairs with movement evidence: T1074 Data Staged, T1560 Archive
+        # Collected Data.
+        mitre_prefixes=("T1041", "T1048", "T1052", "T1567", "T1011", "T1074", "T1560"),
+        text_re=re.compile(
+            r"\b(?:exfil\w*|data\s?(?:theft|staged\s?for\s?exfil\w*))\b",
+            re.IGNORECASE,
+        ),
+        # CLAUDE.md: an exfiltration claim needs finding-specific collection/staging
+        # AND network / tool / data-movement evidence — so a staging class plus a
+        # network-or-process class. A single artifact class is downgraded.
+        alternatives=((("staging",), ("network", "process")),),
     ),
 )
 
