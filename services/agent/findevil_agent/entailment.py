@@ -41,6 +41,18 @@ _IPV4 = re.compile(r"^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1
 # path is corroborating context; the bare filename it ends in is the anchor).
 _FILENAME = re.compile(r"^[^\\/]+\.[A-Za-z0-9][A-Za-z0-9_-]{0,7}$")
 
+# Whole-token identity-anchor scanners for FREE TEXT (a finding's description).
+# The anchor-shape regexes above are ``^…$``-anchored for whole-STRING
+# classification of a single asserted value; scanning prose needs the same
+# shapes bounded to word tokens so a hash/IP embedded in a sentence is still
+# found. IPv6 has no clean word-boundary form, so it is scanned per whitespace/
+# punctuation token via :func:`_is_ipv6`.
+_HASH_TOKEN = re.compile(r"\b[0-9a-fA-F]{32}\b|\b[0-9a-fA-F]{40}\b|\b[0-9a-fA-F]{64}\b")
+_IPV4_TOKEN = re.compile(
+    r"\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b"
+)
+_TEXT_TOKEN_SPLIT = re.compile(r"[\s,;()\[\]{}<>\"'`]+")
+
 # Token-boundary contains matching. Plain substring containment lets an
 # incidental fragment launder a claim ("cain" must not match inside "mccain"),
 # so a contains anchor must align to TOKEN boundaries: a match whose
@@ -139,6 +151,54 @@ def _is_ipv6(token: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def identity_anchors_in_text(text: str) -> list[str]:
+    """Every forgery-resistant IDENTITY anchor (cryptographic hash, IPv4/IPv6)
+    that appears as a whole token in free text, de-duplicated, order preserved.
+
+    These are the anchor classes with no legitimate near-miss reading (see
+    :func:`is_identity_anchor`): a value of this shape stated in a finding's
+    prose is a specific claim the cited evidence must actually contain. Plain
+    prose numbers/counts are deliberately NOT scanned — they have no
+    deterministic ground truth to diff and are governed by the multiplicity
+    guard on ``asserted_values`` instead.
+    """
+    seen: set[str] = set()
+    anchors: list[str] = []
+
+    def _add(tok: str) -> None:
+        if tok and tok not in seen:
+            seen.add(tok)
+            anchors.append(tok)
+
+    for m in _HASH_TOKEN.finditer(text):
+        _add(m.group(0))
+    for m in _IPV4_TOKEN.finditer(text):
+        _add(m.group(0))
+    for raw in _TEXT_TOKEN_SPLIT.split(text):
+        tok = raw.strip()
+        if ":" in tok and _is_ipv6(tok):
+            _add(tok)
+    return anchors
+
+
+def unentailed_identity_anchors(text: str, parsed_output: dict[str, Any]) -> list[str]:
+    """Identity anchors named in ``text`` that are ABSENT from the cited tool
+    output — i.e. laundered claims.
+
+    The verifier already proves the cited output reproduces byte-for-byte and
+    that ``asserted_values`` entail; this closes the parallel gap that the
+    free-text description (what the analyst actually reads) is never checked, so
+    a fabricated hash/IP in the prose rides through on one unrelated-but-true
+    asserted value. Presence is a deterministic, case-insensitive containment
+    test against the serialized output — the same ground truth entailment
+    trusts — so a replay reproduces the identical decision.
+    """
+    if not text:
+        return []
+    blob = json.dumps(parsed_output or {}, default=str).lower()
+    return [anchor for anchor in identity_anchors_in_text(text) if anchor.lower() not in blob]
 
 
 def check_entailment(

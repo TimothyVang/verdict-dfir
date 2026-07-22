@@ -79,7 +79,10 @@ class TestRequiredCitation:
 class TestSuccessPath:
     def test_matching_sha_approves(self) -> None:
         f = _make_finding()
-        same_payload = {"row_count": 7}
+        # The finding's description claims "logon from 192.168.1.5"; a genuine
+        # finding's cited output actually contains that identity anchor, so the
+        # description-laundering guard is satisfied and the finding approves.
+        same_payload = {"row_count": 7, "source_ip": "192.168.1.5"}
         # MockMcpClient computes SHA on the canonical JSON of dict;
         # we precompute the same SHA into the index.
         import hashlib
@@ -257,6 +260,65 @@ class TestEntailment:
         action, replay = self._exact_match([])
         assert action.action == "approved"
         assert replay is not None and replay.artifact.entailment is None
+
+
+class TestDescriptionLaundering:
+    """A finding can satisfy the entailment gate with one unrelated-but-true
+    asserted value while its free-text description (the field the analyst reads)
+    states a DIFFERENT, fabricated identity anchor that entailment never checks.
+    The description-laundering guard re-scans the description for hash/IP anchors
+    and rejects any absent from the cited output."""
+
+    def _exact_match(self, *, description: str, asserted_values: list[AssertedValue]):
+        import hashlib
+        import json
+
+        payload = {"row_count": 7, "entries": [{"name": "svchost.exe"}]}
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        expected_sha = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        mcp = MockMcpClient()
+        mcp.register("evtx_query", payload)
+        index = _make_index(output_sha256=expected_sha)
+        f = Finding(
+            case_id="c-1",
+            finding_id="f-1",
+            tool_call_id="tc-1",
+            artifact_path="Security.evtx",
+            confidence="CONFIRMED",
+            description=description,
+            asserted_values=asserted_values,
+        )
+        return reverify_finding(f, mcp=mcp, tool_call_index=index)
+
+    def test_fabricated_hash_in_description_rejects(self) -> None:
+        # asserted_value is unrelated-but-TRUE (row_count=7 is really there), so
+        # entailment passes; the description launders a fabricated SHA-256 that
+        # the cited output never contained.
+        fabricated = "d" * 64
+        action, _ = self._exact_match(
+            description=f"malware hash {fabricated} dropped by svchost",
+            asserted_values=[AssertedValue(path="row_count", expected="7", match="int")],
+        )
+        assert action.action == "rejected"
+        assert "identity anchor" in action.reason
+        assert fabricated in action.reason
+
+    def test_fabricated_ip_in_description_rejects(self) -> None:
+        action, _ = self._exact_match(
+            description="c2 beacon to 203.0.113.9",
+            asserted_values=[AssertedValue(path="row_count", expected="7", match="int")],
+        )
+        assert action.action == "rejected"
+        assert "203.0.113.9" in action.reason
+
+    def test_description_anchor_present_in_output_approves(self) -> None:
+        # An identity anchor named in the description that IS in the cited output
+        # is a genuine claim — no false reject.
+        action, _ = self._exact_match(
+            description="svchost.exe seen; row_count 7 confirmed",
+            asserted_values=[AssertedValue(path="row_count", expected="7", match="int")],
+        )
+        assert action.action == "approved"
 
 
 class TestDowngradeConfidence:

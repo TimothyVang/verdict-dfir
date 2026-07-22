@@ -35,7 +35,12 @@ import os
 from posixpath import basename as _posix_basename
 from typing import Any
 
-from findevil_agent.entailment import check_entailment, check_expectation, entailment_slice
+from findevil_agent.entailment import (
+    check_entailment,
+    check_expectation,
+    entailment_slice,
+    unentailed_identity_anchors,
+)
 from findevil_agent.events import Finding, VerifierAction
 from findevil_agent.mcp_client import McpClient
 from findevil_agent.replay import (
@@ -331,6 +336,37 @@ def reverify_finding(
                     ),
                     replay,
                 )
+        # Description laundering guard. Entailment only inspects
+        # ``asserted_values``/``expectation``; the free-text ``description`` is
+        # what the analyst actually reads, and nothing above checks it. A finding
+        # can satisfy the entailment gate with one unrelated-but-true assertion
+        # while its description states a DIFFERENT, fabricated identity anchor
+        # that is never verified. Re-scan the description for forgery-resistant
+        # IDENTITY anchors (cryptographic hash / IP address) and require each to
+        # be present in the cited re-run output. A missing one is a laundered
+        # claim, not a near-miss, so reject outright regardless of tier —
+        # mirroring the ``identity_failures`` hard-reject above. Runs
+        # independently of the ``asserted_values`` block, since the whole gap is
+        # "asserted_values true, description lies". Scope (deliberate): only
+        # identity anchors are checked; plain prose numbers/counts have no
+        # deterministic ground truth to diff and stay governed by the
+        # asserted_values entailment + multiplicity gates.
+        desc_launder = unentailed_identity_anchors(
+            finding.description, artifact.parsed_output or {}
+        )
+        if desc_launder:
+            return (
+                VerifierAction(
+                    case_id=finding.case_id,
+                    action="rejected",
+                    finding_id=finding.finding_id,
+                    reason=(
+                        "description asserts identity anchor(s) not found in cited "
+                        "tool output: " + ", ".join(desc_launder)
+                    ),
+                ),
+                replay,
+            )
         return (
             VerifierAction(
                 case_id=finding.case_id,
