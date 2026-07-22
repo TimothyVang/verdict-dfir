@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, VecDeque};
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 
 use chrono::Utc;
@@ -222,6 +222,8 @@ pub enum DiskError {
     MountNotMounted(String),
     #[error("mount root not found: {0}")]
     MountRootNotFound(PathBuf),
+    #[error("mount_point must resolve under the case mounts directory: {0}")]
+    MountPointOutsideCase(PathBuf),
     #[error("unsupported on this platform without mode=mock")]
     UnsupportedPlatform,
     #[error("subprocess failed ({status}): {stderr_tail}")]
@@ -245,6 +247,13 @@ pub fn disk_mount(input: &DiskMountInput) -> Result<DiskMountOutput, DiskError> 
         .mount_point
         .clone()
         .unwrap_or_else(|| case_dir.join("mounts").join(&mount_id));
+    // A caller-supplied mount_point must land under the case's derived mounts/
+    // area — never at an arbitrary host path or inside the source evidence /
+    // case root. Validate (fail-closed) *before* create_dir so the directory is
+    // never materialized at an out-of-case path.
+    if input.mount_point.is_some() {
+        validate_mount_point_under_case(&case_dir, &mount_point)?;
+    }
     create_dir(&mount_point)?;
     let image_paths = match input.mode {
         DiskMode::Mock => vec![input.image_path.clone()],
@@ -1716,6 +1725,59 @@ pub(crate) fn case_dir(case_id: &str) -> Result<PathBuf, DiskError> {
     }
 }
 
+/// Reject a caller-supplied `mount_point` that does not resolve under the
+/// case's designated `mounts/` directory. Derived staging must never land at an
+/// arbitrary host path or inside the source evidence / case root, so a `..`
+/// escape, a symlink escape, or a sibling path (`mounts-evil`) is refused
+/// fail-closed. The mount point need not exist yet: the deepest existing
+/// ancestor is canonicalized (resolving symlinks) and the remaining lexical
+/// components are appended, then the result must be the mounts root or a
+/// descendant of it. Shared with `vss_mount`, which has the identical pattern.
+pub(crate) fn validate_mount_point_under_case(
+    case_dir: &Path,
+    mount_point: &Path,
+) -> Result<(), DiskError> {
+    // Anchor on the canonicalized case dir (it exists) + the literal `mounts`
+    // segment. The mounts dir itself may not exist on the first mount, so it is
+    // not canonicalized directly; a symlinked `mounts` therefore fails to match
+    // and is rejected, which is the desired fail-closed behavior.
+    let mounts_root = case_dir
+        .canonicalize()
+        .map_err(|_| DiskError::MountPointOutsideCase(mount_point.to_path_buf()))?
+        .join("mounts");
+    let resolved = resolve_existing_prefix(mount_point);
+    if resolved.starts_with(&mounts_root) {
+        Ok(())
+    } else {
+        Err(DiskError::MountPointOutsideCase(mount_point.to_path_buf()))
+    }
+}
+
+/// Resolve `path` by canonicalizing the deepest existing prefix (following
+/// symlinks) and appending the remaining components lexically, resolving `.`
+/// and `..` without touching the filesystem. Pure enough to be deterministic
+/// for a path whose tail does not yet exist.
+fn resolve_existing_prefix(path: &Path) -> PathBuf {
+    let mut resolved = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(prefix) => resolved.push(prefix.as_os_str()),
+            Component::RootDir => resolved.push(Component::RootDir.as_os_str()),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                resolved.pop();
+            }
+            Component::Normal(part) => {
+                resolved.push(part);
+                if let Ok(canonical) = resolved.canonicalize() {
+                    resolved = canonical;
+                }
+            }
+        }
+    }
+    resolved
+}
+
 fn findevil_home() -> Result<PathBuf, DiskError> {
     if let Ok(v) = std::env::var("FINDEVIL_HOME") {
         if !v.is_empty() {
@@ -1801,7 +1863,8 @@ mod tests {
         artifact_subrank, case_dir, class_priority, classify_artifact_path, direct_tsk_mount,
         ewfmount_available, is_missing_binary, mock_list, parse_fls_line, parse_mmls_partitions,
         parse_mmls_primary_partition_offset, safe_join, select_artifacts, unmount_steps,
-        wanted_kinds, Candidate, DiskError, FlsEntry, DIRECT_TSK_COMMAND,
+        validate_mount_point_under_case, wanted_kinds, Candidate, DiskError, FlsEntry,
+        DIRECT_TSK_COMMAND,
     };
     use std::path::Path;
 
@@ -2484,6 +2547,48 @@ Units are in 512-byte sectors
         match case_dir("..") {
             Err(DiskError::InvalidCaseId(_)) => {}
             other => panic!("expected InvalidCaseId for .., got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn validate_mount_point_confines_to_case_mounts_dir() {
+        let case = tempfile::tempdir().expect("tempdir");
+        let case_dir = case.path();
+        let mounts = case_dir.join("mounts");
+        std::fs::create_dir_all(&mounts).expect("create mounts");
+
+        // A fresh mount id under mounts/ (tail does not yet exist) is accepted.
+        assert!(
+            validate_mount_point_under_case(case_dir, &mounts.join("disk-mount-1")).is_ok(),
+            "a path under the case mounts dir must be accepted"
+        );
+
+        // The case root itself, and anything directly under it (e.g. the
+        // evidence area), must be rejected — derived staging never lands there.
+        for outside in [case_dir.to_path_buf(), case_dir.join("evidence")] {
+            match validate_mount_point_under_case(case_dir, &outside) {
+                Err(DiskError::MountPointOutsideCase(_)) => {}
+                other => panic!("expected MountPointOutsideCase for {outside:?}, got {other:?}"),
+            }
+        }
+
+        // A `..` escape out of mounts/ back into the case root is rejected.
+        match validate_mount_point_under_case(case_dir, &mounts.join("..").join("evil")) {
+            Err(DiskError::MountPointOutsideCase(_)) => {}
+            other => panic!("expected MountPointOutsideCase for .. escape, got {other:?}"),
+        }
+
+        // A sibling whose name merely shares the `mounts` prefix must not pass a
+        // component-aware containment check.
+        match validate_mount_point_under_case(case_dir, &case_dir.join("mounts-evil")) {
+            Err(DiskError::MountPointOutsideCase(_)) => {}
+            other => panic!("expected MountPointOutsideCase for mounts-evil, got {other:?}"),
+        }
+
+        // An absolute host path far outside the case is rejected.
+        match validate_mount_point_under_case(case_dir, Path::new("/tmp")) {
+            Err(DiskError::MountPointOutsideCase(_)) => {}
+            other => panic!("expected MountPointOutsideCase for /tmp, got {other:?}"),
         }
     }
 }

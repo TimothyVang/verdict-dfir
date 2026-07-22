@@ -1610,6 +1610,7 @@ fn dispatch_disk_mount(args: Value) -> Result<Value, ToolError> {
             e @ (crate::tools::DiskError::CaseNotFound(_)
             | crate::tools::DiskError::ImageNotFound(_)
             | crate::tools::DiskError::EwfSegmentSet(_)
+            | crate::tools::DiskError::MountPointOutsideCase(_)
             | crate::tools::DiskError::UnsupportedPlatform),
         ) => Err(ToolError::InvalidParams(format!("{e}"))),
         Err(e) => Err(ToolError::Internal(format!("disk_mount: {e}"))),
@@ -2058,9 +2059,11 @@ fn dispatch_vss_mount(args: Value) -> Result<Value, ToolError> {
         Ok(output) => {
             serde_json::to_value(output).map_err(|e| ToolError::Internal(format!("serialize: {e}")))
         }
-        Err(e @ (crate::tools::VssError::ImageNotFound(_) | crate::tools::VssError::Case(_))) => {
-            Err(ToolError::InvalidParams(format!("{e}")))
-        }
+        Err(
+            e @ (crate::tools::VssError::ImageNotFound(_)
+            | crate::tools::VssError::Case(_)
+            | crate::tools::VssError::MountPointOutsideCase(_)),
+        ) => Err(ToolError::InvalidParams(format!("{e}"))),
         Err(e) => Err(ToolError::Internal(format!("vss_mount: {e}"))),
     }
 }
