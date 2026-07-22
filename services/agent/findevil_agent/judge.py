@@ -114,9 +114,10 @@ def judge_findings(
     """Merge findings from the two pools into a single approved set.
 
     Strategy:
-      1. Group findings by a stable key — currently
-         ``(tool_call_id, artifact_path)`` — so corroborated claims
-         from both pools collapse into one MergedFinding.
+      1. Group findings by a stable key —
+         ``(tool_call_id, artifact_path, mitre_technique, artifact_offset,
+         claim_id)`` — so corroborated claims from both pools collapse into
+         one MergedFinding.
       2. Compute prior_accuracy + credibility per pool from
          verifier actions.
       3. Score each candidate; threshold-map to a confidence label;
@@ -145,7 +146,7 @@ def judge_findings(
     cred_a = _credibility(pool_a)
     cred_b = _credibility(pool_b)
 
-    grouped: dict[tuple[str, str, str, str], list[tuple[Finding, str]]] = {}
+    grouped: dict[tuple[str, str, str, str, str], list[tuple[Finding, str]]] = {}
     for f in pool_a.findings:
         grouped.setdefault(_group_key(f), []).append((f, "A"))
     for f in pool_b.findings:
@@ -281,24 +282,43 @@ def _claim_id(finding_id: str) -> str:
     return finding_id
 
 
-def _group_key(f: Finding) -> tuple[str, str, str, str]:
+def _group_key(f: Finding) -> tuple[str, str, str, str, str]:
     """Group findings that make the *same claim* so the A+B judge can corroborate.
 
-    Keyed on ``(tool_call_id, artifact_path, mitre_technique, claim_id)`` where
-    ``claim_id`` is the finding id with its pool prefix stripped. The coarse
-    triple alone is too loose: a single tool call routinely yields MANY distinct
-    findings that share it — one ``pcap_triage`` surfaces an anonymous-email POST,
-    an authenticated webmail session, and a social login, all ``T1071.001`` on the
-    same capture. Merging by the triple alone collapsed all of them into one and
-    silently destroyed recall. The pool-stripped id keeps distinct subjects apart
-    while still letting a genuine ``f-A-x`` / ``f-B-x`` pair (the same claim seen
-    by both pools) land together and merge. ``description`` stays OUT of the key —
-    the two pools word the same claim differently.
+    Keyed on ``(tool_call_id, artifact_path, mitre_technique, artifact_offset,
+    claim_id)``. The coarse triple alone is too loose: a single tool call
+    routinely yields MANY distinct findings that share it — one ``pcap_triage``
+    surfaces an anonymous-email POST, an authenticated webmail session, and a
+    social login, all ``T1071.001`` on the same capture. Merging by the triple
+    alone collapsed all of them into one and silently destroyed recall.
+
+    Two substantive discriminators keep distinct subjects apart while still
+    letting a genuine same-claim pair (seen by both pools) land together:
+
+    * ``artifact_offset`` — the location/subject WITHIN the artifact. Both pools
+      cite the same offset for the same subject and different offsets for
+      different subjects, so it is a real evidentiary discriminator rather than a
+      naming convention.
+    * ``claim_id`` — the finding id with its pool prefix stripped, a fallback
+      that aligns an ``f-A-x`` / ``f-B-x`` pair when no offset is present.
+
+    Both discriminators only ever make the key FINER — they can split a group but
+    never fuse two, so the change is fail-closed: it hardens the dangerous
+    false-MERGE direction (two unrelated claims blended into one, dropping a
+    description) at the cost of leaving the safe false-SPLIT direction (a genuine
+    corroboration missed → both findings still emitted, only the +0.2 bonus
+    forgone) intact. A single hashable key provably cannot fix both, and losing
+    evidence is the costlier failure. ``artifact_offset`` also removes the sole
+    reliance on the unenforced ``f-A-`` / ``f-B-`` id convention: a naming
+    collision on the id no longer silently merges two subjects that carry
+    distinct offsets. ``description`` stays OUT of the key — the two pools word
+    the same claim differently.
     """
     return (
         f.tool_call_id or "",
         f.artifact_path or "",
         f.mitre_technique or "",
+        f.artifact_offset or "",
         _claim_id(f.finding_id or ""),
     )
 
