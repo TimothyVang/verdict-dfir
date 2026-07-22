@@ -91,6 +91,7 @@ class MemoryStore:
         *,
         kind: str | None = None,
         limit: int = 10,
+        exclude_case_id: str | None = None,
     ) -> list[RecallHit]:
         # FTS5 requires special characters (., @, -, etc.) to be phrase-quoted.
         fts_query = '"' + query.replace('"', '""') + '"'
@@ -104,6 +105,13 @@ class MemoryStore:
         if kind is not None:
             sql += "AND kind = ? "
             params.append(kind)
+        # Cross-case contract: recall only surfaces genuinely prior-case rows.
+        # Exclude the live case so a row this run just wrote (possibly by a
+        # sibling pool running in parallel on the SAME case) can never be
+        # recalled back as if it were prior-case knowledge.
+        if exclude_case_id is not None:
+            sql += "AND case_id != ? "
+            params.append(exclude_case_id)
         # Fetch all candidates (up to limit) ordered by BM25 only; final sort
         # by combined confidence (relevance * decay) is done in Python below.
         sql += "ORDER BY score LIMIT ?"

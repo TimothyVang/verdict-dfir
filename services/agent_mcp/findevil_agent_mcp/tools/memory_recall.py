@@ -21,6 +21,15 @@ class MemoryRecallInput(BaseModel):
         description="Optional filter: 'ioc'|'hash'|'ttp'|'hostname'|'finding_summary'.",
     )
     limit: int = Field(default=10, ge=1, le=100)
+    exclude_case_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional current/live case_id to exclude from results. Pass the "
+            "open case's id so recall returns only genuinely prior-case rows and "
+            "never surfaces an observation this same case (or a sibling pool "
+            "running in parallel on it) just wrote."
+        ),
+    )
     audit_log_path: str | None = Field(
         default=None,
         description=(
@@ -72,7 +81,12 @@ def _append_recall_provenance(audit_log_path: str, inp: MemoryRecallInput, hits:
 async def _handle(inp: BaseModel) -> MemoryRecallOutput:
     assert isinstance(inp, MemoryRecallInput)
     with MemoryStore(Path(inp.store_path)) as store:
-        rows = store.recall(inp.query, kind=inp.kind, limit=inp.limit)
+        rows = store.recall(
+            inp.query,
+            kind=inp.kind,
+            limit=inp.limit,
+            exclude_case_id=inp.exclude_case_id,
+        )
     output = MemoryRecallOutput(
         hits=[
             RecallHitOut(
