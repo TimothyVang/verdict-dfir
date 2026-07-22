@@ -1543,7 +1543,14 @@ fn handle_tools_call(params: &Value, registry: &[ToolEntry]) -> Result<Value, To
 /// cannot re-leak the injection attempt.
 fn finalize_tool_output(name: &str, payload: &Value) -> Result<Value, ToolError> {
     let (payload, sanitized) = crate::sanitize::sanitize_value(payload);
-    let payload_text = serde_json::to_string(&payload)
+    // Serialize with keys sorted recursively so the emitted text — and the
+    // `output_sha256` taken over it — is the SAME canonical form the Python
+    // mirror (`findevil_agent_mcp.server`) emits via
+    // `json.dumps(..., sort_keys=True, separators=(",", ":"))`. serde_json runs
+    // with `preserve_order` on (pulled in by schemars), so without this it would
+    // hash natural struct-field order and a cross-surface `verify_finding` replay
+    // would compute a different digest for equivalent content.
+    let payload_text = serde_json::to_string(&canonicalize_keys(payload))
         .map_err(|e| ToolError::Internal(format!("serialize tool output: {e}")))?;
     let sha = sha256_hex(payload_text.as_bytes());
 
@@ -2301,6 +2308,29 @@ fn sha256_hex(bytes: &[u8]) -> String {
     let mut h = Sha256::new();
     h.update(bytes);
     hex::encode(h.finalize())
+}
+
+/// Recursively rebuild a JSON value with every object's keys in sorted order.
+///
+/// serde_json is compiled with `preserve_order` (via schemars), so a `Value`
+/// otherwise serializes in insertion/struct-field order. Canonicalizing here
+/// mirrors Python's `json.dumps(..., sort_keys=True)` so both MCP surfaces hash
+/// the same bytes for equivalent content. Byte-wise `String` ordering matches
+/// Python's code-point sort for the ASCII keys this schema uses.
+fn canonicalize_keys(value: Value) -> Value {
+    match value {
+        Value::Object(map) => {
+            let mut entries: Vec<(String, Value)> = map.into_iter().collect();
+            entries.sort_by(|a, b| a.0.cmp(&b.0));
+            let mut sorted = serde_json::Map::new();
+            for (k, v) in entries {
+                sorted.insert(k, canonicalize_keys(v));
+            }
+            Value::Object(sorted)
+        }
+        Value::Array(items) => Value::Array(items.into_iter().map(canonicalize_keys).collect()),
+        other => other,
+    }
 }
 
 // Hand-rolled hex encoder removed — `hex` is already a dev-dep,
