@@ -46,6 +46,9 @@ def _is_invisible(cp: int) -> bool:
         or 0x200B <= cp <= 0x200F  # ZWSP ZWNJ ZWJ LRM RLM
         or cp == 0x2060  # word joiner
         or cp == 0xFEFF  # BOM / zero-width no-break space
+        or 0xFE00 <= cp <= 0xFE0F  # variation selectors VS1-VS16
+        or 0xE0100 <= cp <= 0xE01EF  # variation selectors supplement VS17-VS256
+        or 0xE0000 <= cp <= 0xE007F  # Unicode Tag block (ASCII smuggling)
     )
 
 
