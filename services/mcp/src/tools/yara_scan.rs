@@ -239,9 +239,19 @@ fn walk_dir(root: &Path, recursive: bool, visit: &mut dyn FnMut(&Path)) {
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.is_file() {
+        // Use the non-following file type (like disk::mock_walk) rather than
+        // Path::is_file/is_dir, which stat() through symlinks. A symlink
+        // reports neither is_file nor is_dir here, so a self-referential or
+        // cyclical directory symlink on mounted evidence can never drive
+        // unbounded recursion (an uncatchable stack-overflow crash of the
+        // stdio server). This also keeps evidence read-only-safe: we never
+        // traverse out of the target tree via a link.
+        let Ok(ft) = entry.file_type() else {
+            continue;
+        };
+        if ft.is_file() {
             visit(&path);
-        } else if path.is_dir() && recursive {
+        } else if ft.is_dir() && recursive {
             walk_dir(&path, recursive, visit);
         }
     }
