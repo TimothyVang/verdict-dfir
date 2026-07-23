@@ -112,8 +112,8 @@ classes scores higher than 12 shallow EVTX queries.
 > security boundaries are enforced and whether they were tested for
 > bypass.
 
-**Demonstrate via:** the typed product MCP surface: 45 audit-chained
-tools total, including 32 Rust DFIR tools and 13 Python
+**Demonstrate via:** the typed product MCP surface: 57 audit-chained
+tools total, including 43 Rust DFIR tools and 14 Python
 crypto/ACH/memory/ACP/expert-feedback tools. The Rust surface includes
 `vol_psscan` and `vol_psxview` for DKOM cross-validation plus
 allow-listed long-tail wrappers (`vol_run`, `ez_parse`, `plaso_parse`,
