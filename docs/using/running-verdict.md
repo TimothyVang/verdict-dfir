@@ -13,7 +13,7 @@ MCP pipeline → open the live dashboard at the Case → signed Verdict + report
 
 The Verdict word is always one of **`SUSPICIOUS`** / **`INDETERMINATE`** / **`NO_EVIL`** (see
 [`../verdict-semantics.md`](../verdict-semantics.md)). Every Finding cites a `tool_call_id` from
-the 48 audit-chained product tools (34 Rust + 14 Python) — the only surface sealed into the
+the 57 audit-chained product tools (43 Rust + 14 Python) — the only surface sealed into the
 manifest. `.mcp.json` registers 6 servers total; 4 are non-product
 (`n8n-mcp`, `playwright`, `puppeteer`, plus the `qmd` dev-memory recall server) — full table in
 [`../reference/mcp-and-tools.md`](../reference/mcp-and-tools.md).
@@ -61,12 +61,17 @@ available; host-local mode remains useful but has narrower disk-content coverage
 scripts/verdict <evidence> [options]
 ```
 
-Every flag the launcher actually parses:
+The flags the launcher parses for the deterministic pipeline (the opt-in
+`--agent` / `--agent-provider` / `--agent-model` / `--agent-max-steps` /
+`--acknowledge-evidence-egress` Stage-B agent-loop flags are covered by
+`CLAUDE.md` and are not repeated here):
 
 | Flag | Effect |
 |---|---|
 | `<evidence>` (positional) | Path to the Observable. Omit it to use the newest non-placeholder entry already in `evidence/`. |
 | `--sift` | Run the DFIR tools inside the SANS SIFT VM over SSH (default: tools on the local host). This is the recommended parity path for raw disk image content extraction; local mode can also parse supported disk artifacts when Sleuth Kit/libewf prerequisites are present, but otherwise records custody-only limitations. The post-verdict n8n automation + grounding can run in `--sift` mode too (host-side, after the case dir syncs back). Requires a one-time `bash scripts/sift-vm-bootstrap.sh`; set `FIND_EVIL_GUEST_IP` if the VM's IP changed. |
+| `--keep-sift-staging` | With `--sift`, skip cleanup of the staged SIFT-side case-evidence copy after the run instead of removing it. |
+| `--case-id <id>` (also `--case-id=<id>`) | Pin the `case_id` instead of the default `auto-<uuid>`, so a launcher can deep-link the dashboard before the run starts. Must be passed as a top-level option, not after `--`. |
 | `--docker` | Run the DFIR tools inside the `findevil-dfir` container — the container analog of `--sift` and mutually exclusive with it. Brings the container up via `scripts/run-dfir-container.sh` (build/pull the image, mount evidence read-only at `/evidence`, build the MCP in-container), skips the host build, swaps in the docker MCP transport (`.mcp.json.docker`), and hands off the in-container `/evidence` path. Single-host; the container is left running (tear down with `scripts/run-dfir-container.sh --down`). See `docs/using/docker-backend.md`. |
 | `--fleet` | Whole multi-host case in ONE command: per-host investigations → cross-host correlation → `FLEET_REPORT`. **Auto-detected** when `<evidence>` is a folder with `hosts/` or `disks/` (the whole-case layout). Resumable: re-run the same command and completed hosts are skipped. Combine with `--sift` to run the per-host stage inside the SIFT VM (`fleet_investigate.py`). See `docs/using/fleet-analysis.md`. |
 | `--watch` | No path? Block until a file **or** a case folder is dropped into `evidence/`, debounced until the copy finishes, then go. |
@@ -235,9 +240,9 @@ Mermaid flow, an interactive collapsible `process-tree.html`, the technique-grou
 completed Case with `scripts/attack-flow <case-dir>` (a thin wrapper over
 `python -m findevil_agent.attackflow`). It is **presentation-only** — it derives its graph from
 the Case's own `verdict.json` and process artifacts, makes no network or model calls, and never
-creates or modifies a Finding. The process-tree artifact appears only when the Case has a
-process artifact (for example a memory image); otherwise it is omitted from the output with a
-stated reason rather than fabricated.
+creates or modifies a Finding. `process-tree.html` is always one of the seven emitted files, but
+when the Case has no process artifact (for example a disk-only case) its content is a stated
+"Process tree unavailable" placeholder with the reason, rather than a fabricated tree.
 
 Findings are colored by confidence tier (Signal Coral = Confirmed, Butter = Inferred, Cobalt =
 Hypothesis) and processes linked to a Finding are called out. Best-viewed paths:
