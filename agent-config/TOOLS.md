@@ -4,14 +4,14 @@ The agent has access to two MCP servers, both auto-spawned by Claude Code via `.
 
 | Server | Lang | Tools |
 |---|---|---|
-| `findevil-mcp` | Rust (`services/mcp/`) | 42 typed DFIR tools |
+| `findevil-mcp` | Rust (`services/mcp/`) | 43 typed DFIR tools |
 | `findevil-agent-mcp` | Python (`services/agent_mcp/`) | 14 crypto + ACH + memory + ACP + expert-feedback + accuracy + AI-signature tools (post-A5; the `ots_stamp` + `ots_verify` pair was removed) |
 
 Every successful tool call carries `_meta.output_sha256` (hex SHA-256 of the canonical JSON output). Findings cite tool calls by `tool_call_id`. The verifier vetoes any finding that doesn't.
 
 > **Finding-authoring invariant.** Every CONFIRMED execution/intent Finding MUST populate `counter_hypothesis` with the benign explanation considered and discarded (presumption of benignity). Empty on such a Finding is a gate failure under `FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS_FINDING`; the correlator downgrades it and the schema/verifier reject it.
 
-> **This file is the agent read-order catalog of the 46 typed PRODUCT tools** (the only verbs in
+> **This file is the agent read-order catalog of the 57 typed PRODUCT tools** (the only verbs in
 > the audit chain). The *full* set of MCP servers actually registered in `.mcp.json` (incl. the
 > operator-runtime `n8n-mcp`, `playwright`, `puppeteer` that emit no Findings) and the external
 > DFIR binaries + dependency pins are inventoried in
@@ -45,6 +45,21 @@ USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` pat
 Args: `{image_path: str, expected_sha256?: str, label?: str}`
 Returns: `{id, image_path, image_hash, size_bytes, opened_at}`
 Use when: starting an investigation. **Must be called first** — every subsequent tool needs the `case_id`. The image hash is the first audit-chain leaf; if the agent passes `expected_sha256` and it doesn't match, `case_open` errors before any other tool runs.
+
+### disk_mount
+Args: `{case_id, image_path, mount_point?: str, mode?: enum}`
+Returns: `{case_id, mount_id, status, image_path, mount_point, fs_root, ledger_path, command[], stderr_tail, note}`
+Use when: a raw/E01 disk image needs to be mounted read-only before the other disk tools can read it (loop/EWF mount via `ewfmount` + inner volume via TSK). Local mode mounts the EWF container only; the inner-volume mount needs the SIFT VM (`--sift`). Returns the `mount_id` the other disk tools reference.
+
+### disk_extract_artifacts
+Args: `{case_id, mount_id, artifact_kinds?: enum[], limit?, max_artifact_bytes?, recover_deleted?: bool}`
+Returns: `{case_id, mount_id, extract_id, output_dir, artifacts[]: {artifact_class, source_path, extracted_path, size_bytes, recovered_deleted}, artifacts_seen}`
+Use when: carving MFT/USN/Prefetch/Registry/yara-target files from a `disk_mount`ed volume to the work dir. Recovers deleted-but-metadata-intact files under `__deleted__/<inode>/` (reallocated inodes are skipped).
+
+### disk_unmount
+Args: `{case_id, mount_id, mode?: enum}`
+Returns: status of the released mount
+Use when: releasing a `disk_mount`ed volume once extraction is done (finally-block step in every disk playbook).
 
 ### bulk_extract
 Args: `{case_id, image_path, scanners?: enum[], find_regexes?: str[], keyword_file?: str, limit?}`
