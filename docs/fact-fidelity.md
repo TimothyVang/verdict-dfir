@@ -37,7 +37,9 @@ on the finding ───┘    2. SHA-256 matches the audit record?  ── no �
                        3. check_entailment(asserted_values, output)
                             ├─ every value present?  ── yes ─> APPROVED
                             │      (records the value the parser read)
-                            └─ a value missing?      ── no ──> REJECT  (CONFIRMED)
+                            └─ a value missing?      ── no ──> a missing IDENTITY anchor
+                                                                (hash/IP) REJECTS at ANY tier;
+                                                                otherwise REJECT (CONFIRMED) /
                                                                 DOWNGRADE (lower tiers)
                                                                      │
    _apply_verifier_actions drops a rejected finding and lowers a    │
