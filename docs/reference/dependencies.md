@@ -86,11 +86,15 @@ spec amendment.
 | `forensic-rs` | `=0.13` | prefetch FS abstraction |
 | `mft` | `=0.6.1` | `mft_timeline` (0.7+ needs rustc 1.90; we're locked at 1.88) |
 | `yara-x` (+ `-macros`/`-parser`/`-proto`) | `1.12.0` | `yara_scan` (in-process) |
-| `usnjrnl-forensic` | `0.6.0` | `usnjrnl_query` |
-| `sha2` | `0.10` | output SHA-256 over canonical JSON |
+| `usnjrnl-forensic` | `=0.7.3` | `usnjrnl_query` |
+| `rusqlite` (`bundled`) | `=0.32.1` | `browser_history` (Chrome/Edge/Firefox SQLite, read-only) |
+| `cfb` | `=0.14.0` | `thumbcache_parse` (XP-era `Thumbs.db` OLE/CFB) |
+| `kamadak-exif` | `=0.6.1` | `exif_parse` |
+| `mail-parser` | `=0.11.4` | `email_parse` (`.eml` / `mbox`) |
+| `sha2` | `0.11` | output SHA-256 over canonical JSON |
 | `uuid` | `1.x` | `case_id` |
 | `serde` / `serde_json` / `schemars` | 1.x / 1.x / 1.x | typed I/O + JSON schema |
-| `tokio` / `chrono` / `tracing` / `hex` / `thiserror` | 1.x / 0.4 / 0.1 / 0.4 / 1.0 | runtime, time, logging |
+| `tokio` / `chrono` / `tracing` / `hex` / `thiserror` | 1.x / 0.4 / 0.1 / 0.4 / 2.x | runtime, time, logging |
 
 > Registry hive parsing is **in-tree** (`src/tools/regf.rs`), not a crate: `frnsc-hive` panicked
 > on XP-era `lf`/`li`/`ri` cells and `notatin` doesn't build under rustc 1.88.
@@ -101,20 +105,27 @@ spec amendment.
 
 ## 4. Python dependencies
 
-`services/agent_mcp/pyproject.toml` (+ `uv.lock`), importing `services/agent/` as a path dep:
+`services/agent_mcp/pyproject.toml` (+ `uv.lock`), importing `services/agent/` as a path dep.
+Rows below the `findevil-agent` line are `services/agent/pyproject.toml`'s own deps, pulled in
+transitively:
 
 | Package | Pin | Role |
 |---|---|---|
 | `mcp` | `>=1.0,<2.0` | MCP server SDK |
 | `pydantic` | `>=2.7,<3.0` | typed tool I/O |
 | `structlog` | `>=24.4` | structured logging |
-| `python-dotenv` | `>=1.0,<1.2` | env loading |
+| `python-dotenv` | `>=1.0,<1.3` | env loading |
 | `findevil-agent` | path dep | crypto chain + ACH primitives |
-| `anthropic` | `0.97.0` | LLM client (judge/correlator helpers) |
+| `anthropic` | `>=0.45,<1.0` (locked `0.97.0`) | LLM client (judge/correlator helpers) |
+| `duckdb` | `>=0.10` | L1 per-case DuckDB store |
+| `mitreattack-python` | `>=5.4,<7.0` | MITRE ATT&CK technique lookup |
+| `httpx` | `>=0.27` | HTTP client for downstream tooling |
+| `esperanto` | `>=2.0,<3.0` | unified multi-provider LLM/embedding factory (`FINDEVIL_LLM_PROVIDER`) |
+| `pydantic-to-typescript` | `>=2.0` | generates TS types for the bonus Next.js SPA path |
 | `pytest` / `pytest-asyncio` / `pytest-cov` / `ruff` / `mypy` | dev | test + lint + types |
 
 Crypto stack (in `services/agent/`): Ed25519 (the offline-verifiable default manifest signer),
-`sigstore` (opt-in identity/transparency signer tier), plus a hand-rolled `rs_merkle`-compatible
+`sigstore>=3,<5` (opt-in identity/transparency signer tier), plus a hand-rolled `rs_merkle`-compatible
 Merkle tree. **`opentimestamps-client` was REMOVED under Amendment A5** — the OTS/Bitcoin 4th tier is
 gone; the chain is 3 tiers (audit `prev_hash` → Merkle root → manifest signature).
 
@@ -145,5 +156,5 @@ are pulled on demand via `npx -y` — not workspace deps.
 ```bash
 bash scripts/doctor.sh           # human summary: READY / NOT READY + remedies
 bash scripts/doctor.sh --json    # machine-readable; diff against this file
-bash scripts/install-dfir-tools.sh   # install the 8 external tools into ~/.local/bin
+bash scripts/install-dfir-tools.sh   # best-effort install of external DFIR tools into ~/.local/bin
 ```
