@@ -28,10 +28,18 @@ It also returns `replay_artifact` (`schema_version: findevil.replay.v1`) with:
 - `replay_error` — replay raised an MCP or transport error.
 - `missing_citation` — the Finding had no usable `tool_call_id`.
 - `missing_audit_record` — the cited `tool_call_id` was not present in the audit index.
+- `artifact_rebind_mismatch` — preflight veto (opt-in, `FIND_EVIL_REQUIRE_ARTIFACT_REBIND=1`):
+  the finding's claimed artifact path does not match what the cited `tool_call_id` actually read.
+- `counter_hypothesis_missing` — preflight veto (opt-in,
+  `FIND_EVIL_REQUIRE_COUNTER_HYPOTHESIS_FINDING=1`): a CONFIRMED finding arrived with no recorded
+  benign/alternative explanation it ruled out.
 
-The existing verifier behavior is preserved: exact matches approve, replay errors
-or missing citations reject, and material drift downgrades one confidence tier.
-No Track 3b severity bump is applied here.
+The existing verifier behavior is preserved: exact matches approve (subject to the entailment
+check, see [`fact-fidelity.md`](fact-fidelity.md)), replay errors or missing citations reject, and
+material drift downgrades one confidence tier — **except** on a CONFIRMED finding's first pass,
+where material drift rejects outright (re-dispatchable once); only a persistent drift on retry, or
+drift on a lower tier, takes the terminal one-tier downgrade. No Track 3b severity bump is applied
+here.
 
 ## Cache and force-fresh replay
 
