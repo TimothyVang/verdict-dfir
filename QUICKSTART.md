@@ -106,7 +106,7 @@ claude
 scripts/verdict <path-to-evidence> --sift
 ```
 
-`.mcp.json` (or `.mcp.json.sift`, swapped automatically) tells Claude Code to spawn both MCP servers — `findevil-mcp` (Rust, 34 typed DFIR tools) and `findevil-agent-mcp` (Python, 14 typed crypto/ACH/memory/ACP/expert-feedback tools).
+`.mcp.json` (or `.mcp.json.sift`, swapped automatically) tells Claude Code to spawn both MCP servers — `findevil-mcp` (Rust, 43 typed DFIR tools) and `findevil-agent-mcp` (Python, 14 typed crypto/ACH/memory/ACP/expert-feedback tools).
 
 In the session, prompt:
 
