@@ -44,7 +44,7 @@ Everything else belongs in a directory.
 | `evidence/` | Default evidence drop dir (ships as README + `.gitkeep`; contents are gitignored). |
 | `.github/` | GitHub workflows and templates. |
 | `.githooks/` | Repo-managed git hooks (e.g. the publish pre-push guard). |
-| `.claude/` | Claude Code config; only `.claude/skills/` ships, the rest is gitignored. |
+| `.claude/` | Claude Code config; only `.claude/settings.json` and `.claude/skills/` ship, the rest is gitignored. |
 
 ## Self-contained runtime: `.project-local/`
 
