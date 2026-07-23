@@ -8,13 +8,13 @@
 
 Two numbers that look like a contradiction but aren't:
 
-- **48** = the **product tool surface** (34 Rust + 14 Python). This is the narrow, typed,
+- **57** = the **product tool surface** (43 Rust + 14 Python). This is the narrow, typed,
   audit-chained verb set the investigation runs on. It does not change lightly.
 - **6** = the number of **MCP servers actually registered in `.mcp.json`**. Only the first two
   are product-default and in the audit chain; the other four are non-product conveniences
   (operator-runtime browser/automation + the optional `qmd` memory sidecar).
 
-Neither number contradicts the other: 46 counts *product tools*, 6 counts *registered servers*.
+Neither number contradicts the other: 57 counts *product tools*, 6 counts *registered servers*.
 
 ---
 
@@ -22,7 +22,7 @@ Neither number contradicts the other: 46 counts *product tools*, 6 counts *regis
 
 | # | Server | Transport / command | Role | In audit chain? | Emits Findings? |
 |---|---|---|---|---|---|
-| 1 | `findevil-mcp` | stdio · `bash scripts/run-mcp-rust.sh` | 34 typed Rust DFIR tools | **Yes** | **Yes** |
+| 1 | `findevil-mcp` | stdio · `bash scripts/run-mcp-rust.sh` | 43 typed Rust DFIR tools | **Yes** | **Yes** |
 | 2 | `findevil-agent-mcp` | stdio · `bash scripts/run-mcp-python.sh` | 14 Python crypto / ACH / memory / ACP / expert tools | **Yes** | **Yes** |
 | 3 | `n8n-mcp` | stdio · `npx -y n8n-mcp` (`MCP_MODE=stdio`) | Post-verdict finding-to-action automation (operator-local) | No | No |
 | 4 | `playwright` | stdio · `npx -y @playwright/mcp@latest` | Browser automation / dashboard verification | No | No |
@@ -57,7 +57,7 @@ operator-runtime servers, it is **not** part of the investigation surface.
 
 ---
 
-## 2. Product tools — 48 total (34 Rust + 14 Python)
+## 2. Product tools — 57 total (43 Rust + 14 Python)
 
 **Invariant: there is no `execute_shell` tool, ever.** This typed surface is the entire verb
 set the investigation has. The narrowness *is* the security pitch. The five generic Rust verbs
@@ -76,7 +76,7 @@ unit-tested against synthetic fixtures, but they have not yet been exercised on 
 committed case run. The committed sample runs prove the core disk/registry/EVTX/MFT/Prefetch/YARA/
 USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` paths.
 
-### `findevil-mcp` — 34 Rust DFIR tools (`services/mcp/src/tools/`)
+### `findevil-mcp` — 43 Rust DFIR tools (`services/mcp/src/tools/`)
 
 | Tool | Purpose | Source |
 |---|---|---|
@@ -84,6 +84,7 @@ USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` pat
 | `disk_mount` | Register a read-only disk-mount session for raw/E01 images | `disk.rs` |
 | `disk_extract_artifacts` | Copy `$MFT`/Registry/EVTX/Prefetch/… from the mount into the case area; also recovers deleted-but-metadata-intact files (staged under `__deleted__/<inode>/`, reallocated inodes skipped, opt out with `recover_deleted: false`) | `disk.rs` |
 | `disk_unmount` | Unmount a disk-mount session, mark it unmounted in the ledger | `disk.rs` |
+| `bulk_extract` | Run `bulk_extractor` over a raw/E01 image to recover features (email/URLs/EXIF/etc.) from allocated files AND unallocated/free space, slack, and deleted regions the filesystem no longer references — reaches deleted content the live-filesystem parsers can't | `bulk_extract.rs` |
 | `evtx_query` | Parse `.evtx` with EventID/limit filtering (in-process `evtx` crate) | `evtx_query.rs` |
 | `prefetch_parse` | Execution evidence from Windows Prefetch (MAM + SCCA) | `prefetch_parse.rs` |
 | `mft_timeline` | NTFS `$MFT` timeline with `$SI`/`$FN` MAC times | `mft_timeline.rs` |
@@ -101,6 +102,14 @@ USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` pat
 | `vel_collect` | Run a Velociraptor artifact via subprocess, stream rows | `vel_collect.rs` |
 | `browser_history` | Read visited URLs from a Chrome/Edge `History` or Firefox `places.sqlite` (read-only, in-process via `rusqlite`) | `browser_history.rs` |
 | `oe_dbx_parse` | Read an Outlook Express `.dbx` mail/news store — OE-signature-validated, extracts RFC822 `Subject`/`From`/`Newsgroups` headers (in-process; no other parser reads DBX) | `oe_dbx_parse.rs` |
+| `email_parse` | Parse loose email on disk: a single RFC 5322 `.eml` message or an `mbox` archive of many — sender/recipient/subject/date and attachment filenames only (never decodes payloads) | `email_parse.rs` |
+| `exif_parse` | Read EXIF metadata (camera make/model, editing software, capture timestamps, GPS coordinates) from a user-content image (JPEG/TIFF/HEIF/…) | `exif_parse.rs` |
+| `bits_parse` | Parse a Windows BITS state store (`qmgr0.dat`/`qmgr1.dat`; detects but does not decode the ESE `qmgr.db`) for stealthy background-download persistence leads (T1197) | `bits_parse.rs` |
+| `srum_parse` | Parse the Windows SRUM database (`SRUDB.dat`) via `esedbexport` for per-application network BytesSent/BytesRecvd and execution provenance — an exfil-volume LEAD, never proof | `srum_parse.rs` |
+| `pst_parse` | Parse an Outlook PST/OST mail store via `pffexport` (libpff); also recovers deleted/orphaned messages from unallocated PST space (metadata only) | `pst_parse.rs` |
+| `wmi_persist_parse` | Surface WMI event-consumer persistence (T1546.003) by scanning the CIM repository (`OBJECTS.DATA`) for `__EventFilter`/`EventConsumer`/`__FilterToConsumerBinding` signatures | `wmi_persist_parse.rs` |
+| `vss_list` | Enumerate Volume Shadow Copies in a volume image via `vshadowinfo` (libvshadow) | `vss.rs` |
+| `vss_mount` | Mount Volume Shadow Copies via `vshadowmount` (libvshadow) so normal disk tools can read a snapshot like any other volume | `vss.rs` |
 | `thumbcache_parse` | Parse XP `Thumbs.db` (OLE/CFB catalog) and Vista+ `thumbcache_*.db`/`iconcache_*.db` (CMMM) — image-viewed/presence evidence that survives file deletion (in-process, magic-byte detected) | `thumbcache_parse.rs` |
 | `hashset_lookup` | NSRL known-good / operator known-bad hash-set lookup — streamed text sets or read-only-immutable SQLite (RDS v3 / generic), parameterized queries only | `hashset_lookup.rs` |
 | `vol_run` | Allow-listed Volatility3 plugin verb (the ~40-plugin memory tail in one tool) — `PluginNotAllowed` before argv | `vol_run.rs` |
@@ -132,6 +141,7 @@ USN/Hayabusa/Sysmon/Zeek/PCAP, `vol_*`, `vel_collect`, and `browser_history` pat
 | `pool_handoff` | IBM-ACP structured role-to-role handoff (audit record) | `pool_handoff.py` |
 | `expert_miss_capture` | Record an expert's pre-release PDF edit into the miss ledger | `expert_miss_capture.py` |
 | `accuracy_compare` | Read-only ground-truth accuracy diagnostic (TP/FP/FN, precision/recall/F1, hallucination rate) for a finished Case vs a curated golden — a DIAGNOSTIC, never a Finding (emits at most one non-Finding `accuracy_diagnostic` audit record) | `accuracy_compare.py` |
+| `find_ai_signatures` | Read-only scan of supplied text/artifacts for AI/agent tradecraft signatures (LLM API-client fingerprints, agent-framework module names, ReAct scaffolding, model-family identifiers) — every match is a HYPOTHESIS-tier LEAD, never execution proof or attribution | `find_ai_signatures.py` |
 
 > The `memory_remember`/`memory_recall` pair is the **in-flow investigation memory** (Hermes
 > FTS5, audit-chained). It is distinct from any optional operator-side memory sidecar such as
@@ -162,6 +172,12 @@ Rust crate behind `yara_scan` (not a subprocess).
 Binary resolution order for the Rust server: `$VOLATILITY_BIN` / `$HAYABUSA_BIN` /
 `$VELOCIRAPTOR_BIN` / `$TSHARK_BIN` first, then PATH. A missing binary is an **environment
 limitation reported as BinaryNotFound**, never evidence-absence.
+
+> This table mirrors what `scripts/doctor.sh` / `scripts/install-dfir-tools.sh` check today —
+> it does not yet cover the newer install-first backends `bulk_extractor` (`bulk_extract`),
+> `esedbexport`/libesedb (`srum_parse`), `pffexport`/libpff (`pst_parse`), or
+> `vshadowinfo`/`vshadowmount`/libvshadow (`vss_list`/`vss_mount`). Their env-var binary
+> overrides are listed in [`environment-variables.md`](environment-variables.md).
 
 ---
 
