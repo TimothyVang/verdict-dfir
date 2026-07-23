@@ -40,6 +40,18 @@
 | `FINDEVIL_EVIDENCE_ROOT` | repo-root `evidence/` | `scripts/find_evil_auto.py` | Override the default evidence drop directory; precedence is explicit CLI path > `$FINDEVIL_EVIDENCE_ROOT` > repo-local `evidence/`. |
 | `FINDEVIL_HOME` | `${PROJECT_LOCAL}/findevil` (contained under `.project-local/`) | `scripts/lib/project-env.sh`, Rust tools (`case_open`, `disk.rs`, `bulk_extract.rs`, `pst_parse.rs`, `srum_parse.rs`), Python agent config | Case-store root: where `case_open` creates the per-case directory tree. Falls back to `~/.findevil` when `$HOME`/`$USERPROFILE` is set and `FINDEVIL_HOME` is unset. |
 
+## Agent mode (`--agent`) / LLM provider
+
+| Var | Default | Read by | Purpose |
+|---|---|---|---|
+| `FINDEVIL_AGENT_PROVIDER` | `claude_cli` | `findevil_agent.agentloop.factory` | Provider-agnostic `--agent` loop backend: `anthropic` / `openai` / `openrouter` / `local` / `dgx` / `claude_cli`. Set by `scripts/verdict --agent --agent-provider <id>`. |
+| `FINDEVIL_AGENT_MODEL` | provider-specific default | `findevil_agent.agentloop.factory` | Model ID for the `--agent` loop backend. |
+| `FINDEVIL_AGENT_BASE_URL` | provider-specific default | `findevil_agent.agentloop.factory` | OpenAI-compatible endpoint base URL for `local`/`dgx` agent providers. |
+| `FINDEVIL_LLM_PROVIDER` | `anthropic` | `findevil_agent.config`, `findevil_agent.llm` (backs `esperanto`) | LLM provider for judge/correlator/report helpers (distinct from the `--agent` loop's `FINDEVIL_AGENT_PROVIDER`). |
+| `FINDEVIL_MODEL` | `claude-sonnet-4-6` | `findevil_agent.config`, `findevil_agent.llm` | Model ID for the same non-agent-loop LLM helper calls. |
+| `FINDEVIL_EMBEDDING_PROVIDER` | `anthropic` | `findevil_agent.config`, `findevil_agent.llm` | Embedding provider for `memory_remember`/`memory_recall` (Hermes FTS5 + embeddings). |
+| `FINDEVIL_EMBEDDING_MODEL` | `voyage-3` | `findevil_agent.config`, `findevil_agent.llm` | Embedding model ID. |
+
 ## SIFT VM (`--sift` mode)
 
 | Var | Default | Read by | Purpose |
@@ -83,6 +95,7 @@
 | `FINDEVIL_BULK_KEYWORD_FILE` | `bulk_extract` (keyword/regex scan) | unset — no default keyword file |
 | `FIND_EVIL_MEMORY_YARA_RULES` | `yara_scan` (memory) | optional rule-file override |
 | `FIND_EVIL_DISK_YARA_RULES` | `yara_scan` (disk) | optional rule-file override |
+| `FIND_EVIL_KNOWN_GOOD_HASHES` | `hashset_lookup` | optional extra NSRL/operator known-good hash-set path(s) |
 
 ## Setup / install toggles
 
@@ -93,6 +106,11 @@
 | `FINDEVIL_DOWNLOAD_DIR` | `~/Downloads` | `setup` / browser MCP | Gated-asset download dir (set to `tmp/gated-downloads` to keep the OVA in-project) |
 | `HAYABUSA_VERSION` / `CHAINSAW_VERSION` / `VOLATILITY_VERSION` / `VELOCIRAPTOR_VERSION` / `PANDOC_VERSION` | see [`dependencies.md`](dependencies.md) | `install-dfir-tools.sh` | Override external-tool pins |
 | `FINDEVIL_LAUNCHER_SMOKE_BASH_TIMEOUT_SECONDS` | platform | launcher smoke | Windows Git Bash slow-start workaround |
+| `FINDEVIL_MCP_VERSION` | latest GitHub release | `install.sh` | Pin the `findevil-mcp` release version fetched for the prebuilt-binary fast path |
+| `FINDEVIL_MCP_FROM_SOURCE` | unset | `install.sh` | Force building `findevil-mcp` from source instead of fetching a release binary |
+| `FINDEVIL_MCP_PREBUILT` | unset | `install.sh` | Force the prebuilt-binary path even under CI (which builds from source by default) |
+| `FINDEVIL_MCP_RELEASE_BASE` / `FINDEVIL_MCP_RELEASE_REPO` | `.../TimothyVang/verdict-dfir` release URLs | `install.sh` | Override the GitHub release base URL / repo for the prebuilt binary fetch |
+| `FINDEVIL_MCP_BIN` | `target/release/findevil-mcp` | `scripts/run-mcp-rust.sh` | Override the `findevil-mcp` binary path the launcher execs |
 
 ## n8n automation (operator-runtime, optional)
 
@@ -103,6 +121,29 @@
 | `MCP_MODE` | `stdio` | `n8n-mcp` | Required transport mode (set by `install.sh`) |
 | `DISABLE_CONSOLE_OUTPUT` | `true` | `n8n-mcp` | Quiets pre-fetch output |
 | `FINDEVIL_ENABLE_N8N` | unset (`1` to enable) | `scripts/verdict-setup.sh` | Opt-in: actively start a local n8n and wait for it before the run (post-verdict automation/grounding stays skipped otherwise) |
+
+## Miscellaneous runtime flags
+
+| Var | Default | Read by | Purpose |
+|---|---|---|---|
+| `FINDEVIL_LOG_LEVEL` | `INFO` | `findevil_agent_mcp.server` | Python MCP server log level |
+| `FINDEVIL_MEMORY_STORE` | case-relative default | `findevil_agent.config`, `find_evil_auto.py` | Override the Hermes FTS5 memory-store path (`memory_remember`/`memory_recall`) |
+| `FINDEVIL_INJECTION_LEDGER` | case-relative default | `findevil_agent_mcp.injection_ledger`, `services/mcp/src/server/injection_ledger.rs` | Override where the prompt-injection sanitizer's neutralization-count ledger is written (both language mirrors) |
+| `FIND_EVIL_NEUTRALIZE_QUOTED_CLASSES` | unset (`1` to enable) | `findevil_agent.correlator_gates` | Opt-in: extend the sanitizer's chat/role-token neutralization to quoted-text classes |
+| `FIND_EVIL_PACE` | unset | `scripts/find_evil_auto.py` | Optional inter-step pacing delay (demo/recording use) |
+| `FIND_EVIL_CROSS_ARTIFACT_PID` | unset | `scripts/find_evil_auto.py` | Internal cross-artifact-class correlation marker (set by the engine, not an operator toggle) |
+| `FIND_EVIL_DOCKER` | unset (`1` to enable) | `scripts/find_evil_auto.py` | Signals the engine is running inside the L1/L2 DFIR Docker container |
+| `FIND_EVIL_DOCKER_CONTAINER` | `findevil-dfir` | `scripts/find_evil_auto.py` | Container name used for the Docker-mode invocation path |
+| `FINDEVIL_VELOCIRAPTOR_ZIP_MAX_MEMBER_BYTES` | `536870912` (512 MiB) | `scripts/find_evil_auto.py` | Cap on a single member file size when unpacking a `vel_collect` result zip |
+| `FINDEVIL_MISS_GH_ENABLED` | unset (`1` to enable) | `expert_miss_capture.py` | Opt-in: mirror an expert-miss record to a GitHub issue |
+| `FINDEVIL_MISS_GH_REDACT` | unset (`1` to enable) | `expert_miss_capture.py` | Redact sensitive fields before the GitHub mirror above |
+
+Not documented above (verified present but internal build/CI/test knobs, out of the operator-facing
+run surface): `FINDEVIL_BOOTSTRAP` (`install.sh --bootstrap` opt-in installer mode),
+`FINDEVIL_VERDICT_SELFTEST` (internal `scripts/verdict` self-test stage selector), `FINDEVIL_DEVPOST_MODE`
+(hackathon-submission mode — CLAUDE.md's release-hygiene rule excludes stale hackathon process
+artifacts from public docs), and the `FINDEVIL_DFIR_*` / `FINDEVIL_SIFT_*` family (container-image and
+SIFT-staging path plumbing internal to `scripts/run-dfir-container.sh` / `scripts/sift-*.sh`).
 
 ## QMD memory sidecar (operator-local, optional)
 

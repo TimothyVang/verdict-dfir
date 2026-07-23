@@ -64,10 +64,11 @@ set the investigation has. The narrowness *is* the security pitch. The five gene
 (`vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`, `cloud_audit`) are **allow-listed
 parameterized verbs**, not shells: the plugin/tool/module/parser/provider name is validated
 against a fixed allow-list before any argv is built, so an off-list or injection-shaped value is
-rejected with a typed error and never reaches a subprocess. The six single-purpose subprocess
-wraps (`journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`, `suricata_eve`,
-`indx_parse`) take a typed path and a fixed argv — a hostile path is one inert argv element,
-never a flag or a shell fragment.
+rejected with a typed error and never reaches a subprocess. The same fixed-argv discipline
+applies to every other single-purpose subprocess wrap in the surface — `journalctl_query`,
+`login_accounting`, `ausearch`, `nfdump_query`, `suricata_eve`, `indx_parse`, `bulk_extract`,
+`srum_parse`, `pst_parse`, `vss_list`, `vss_mount` — each takes a typed path and a fixed argv:
+a hostile path is one inert argv element, never a flag or a shell fragment.
 
 **Maturity note.** The long-tail verbs `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`,
 `cloud_audit`, `journalctl_query`, `login_accounting`, `ausearch`, `nfdump_query`,
