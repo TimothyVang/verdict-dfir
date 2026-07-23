@@ -78,14 +78,14 @@ const BOUNDARIES: Boundary[] = [
     body: (
       <div style={{ display: "flex", gap: 38, flexWrap: "wrap" }}>
         <Mono color={C.ink}>
-          <b style={{ color: C.accent }}>findevil-mcp</b>&nbsp;· 32 Rust DFIR tools
+          <b style={{ color: C.accent }}>findevil-mcp</b>&nbsp;· 43 Rust DFIR tools
         </Mono>
         <Mono color={C.ink}>
           <b style={{ color: C.accent }}>findevil-agent-mcp</b>&nbsp;· 14 Python crypto / ACH
         </Mono>
       </div>
     ),
-    note: "typed in, typed out · hashes every output · no execute_shell",
+    note: "57 product tools total · typed in, typed out · hashes every output · no execute_shell",
   },
   {
     no: "03",
