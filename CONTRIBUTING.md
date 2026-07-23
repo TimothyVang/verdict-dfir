@@ -9,8 +9,8 @@ map of what VERDICT is, the open problems (including the hard one — keeping th
 contributors can plug in.
 
 VERDICT is a DFIR agent where **Claude Code is the engine** (Amendment A2). It is three subsystems:
-a Rust MCP server (`services/mcp/`, 32 DFIR tools), a Python MCP server
-(`services/agent_mcp/`, 13 crypto/ACH/memory tools), and a Next.js dashboard (`apps/web/`). The two
+a Rust MCP server (`services/mcp/`, 43 DFIR tools), a Python MCP server
+(`services/agent_mcp/`, 14 crypto/ACH/memory tools), and a Next.js dashboard (`apps/web/`). The two
 MCP servers are standard MCP, so any MCP-capable agent can drive the tool surface — Claude Code is the
 reference agent, not the only one.
 
