@@ -21,7 +21,7 @@ authors = [
 dependencies = [
   # Anthropic MCP Python SDK. Pinned per Spec #2 §16 conventions —
   # 1.x is the first stable line; 2.x will require migration.
-  "mcp>=1.0,<2.0",
+  "mcp>=1.0,<3.0",
 
   # Pydantic v2 for typed tool I/O. Same pin as the agent service
   # so Pydantic models stay assignment-compatible.
