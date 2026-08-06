@@ -18,7 +18,7 @@ name = "findevil-mcp"
 path = "src/main.rs"
 
 # Dependency pins per Spec #2 §16.
-# evtx, rs_merkle, duckdb versions are locked; do not upgrade
+# evtx and duckdb versions are locked; do not upgrade
 # without a spec amendment.
 [dependencies]
 # rmcp (Spec #2 §4.1) was the planned MCP SDK but was deliberately
