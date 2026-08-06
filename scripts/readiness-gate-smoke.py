@@ -102,6 +102,20 @@ def make_run(
         {"tool_call_id": "tc-ready", "output_hash": tool_output_hash},
     )
     verifier_ids = set(verifier_evidence_ids or [])
+    # Ahead of the approvals: the seal gate walks the chain in order and needs an
+    # approving verifier_action already recorded when it reaches a
+    # finding_approved. The replay/acp_handoff records for the same findings stay
+    # in the loop below, so only the ordering of this one record kind changes.
+    for finding_id in verifier_evidence_ids or []:
+        audit.append(
+            "verifier_action",
+            {
+                "finding_id": finding_id,
+                "action": "approved",
+                "reason": "readiness smoke replay matched",
+                "replay_record_sha256": "d" * 64,
+            },
+        )
     for finding in findings or []:
         finding_id = str(finding.get("finding_id") or "")
         if finding_id not in verifier_ids:
@@ -122,15 +136,6 @@ def make_run(
             },
         )
     for finding_id in verifier_evidence_ids or []:
-        audit.append(
-            "verifier_action",
-            {
-                "finding_id": finding_id,
-                "action": "approved",
-                "reason": "readiness smoke replay matched",
-                "replay_record_sha256": "d" * 64,
-            },
-        )
         audit.append(
             "replay",
             {
