@@ -145,9 +145,13 @@ class Finding(_BaseEvent):
     description: str
     pool_origin: Literal["A", "B", "merged"] | None = None
     # SOUL.md / JUDGING.md §"IR Accuracy": an INFERRED finding must cite the
-    # confirmed facts it rests on (≥2). Carries the tool_call_ids (or
-    # finding_ids) of those facts. Optional so CONFIRMED/HYPOTHESIS findings,
-    # which don't derive from other facts, can omit it.
+    # confirmed facts it rests on (≥2). Carries the tool_call_ids of those
+    # facts — NOT finding_ids: the verifier's inference-provenance gate resolves
+    # every entry against the audit log's tool_call_index, so a finding_id here
+    # is rejected as derived_from_missing_record. Every emitter in the repo
+    # cites tool_call_ids, and docs/fact-fidelity.md agrees. Optional so
+    # CONFIRMED/HYPOTHESIS findings, which don't derive from other facts, can
+    # omit it.
     derived_from: list[str] | None = None
     # Hermes cross-case recall hits attached as NON-evidentiary context
     # (memory_recall). Never a tool_call_id, never counts toward the >=2
