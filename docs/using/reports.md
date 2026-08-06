@@ -23,7 +23,7 @@ one is a hard error:
 
 | File | Role |
 |---|---|
-| `run.manifest.json` | Signed, hash-chained manifest (rs_merkle root plus the effective signer tier: Ed25519 by default, Sigstore when identity/transparency is configured, or explicit stub fallback). Drives the chain-of-custody figure and the offline-verification appendix. |
+| `run.manifest.json` | Signed, hash-chained manifest (Merkle root plus the effective signer tier: Ed25519 by default, Sigstore when identity/transparency is configured, or explicit stub fallback). Drives the chain-of-custody figure and the offline-verification appendix. |
 | `verdict.json` | The Verdict word plus every structured payload the report renders (see below). |
 | `audit.jsonl` | Append-only, hash-chained audit log (`prev_hash` per line). Optional at read time: if the file is absent the chain-of-custody figure just renders with no records; if present, parsed line-by-line and bad lines are skipped, not fatal. |
 
