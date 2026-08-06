@@ -255,11 +255,18 @@ fn collect_csv_paths(dir: &Path, out: &mut Vec<PathBuf>) {
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.is_dir() {
+        // Non-following file type, matching yara_scan::walk_dir and
+        // disk::mock_walk. Path::is_dir/is_file stat() through symlinks, so a
+        // self-referential link under mac_apt's output recursed forever.
+        let Ok(file_type) = entry.file_type() else {
+            continue;
+        };
+        if file_type.is_dir() {
             collect_csv_paths(&path, out);
-        } else if path
-            .extension()
-            .is_some_and(|e| e.eq_ignore_ascii_case("csv"))
+        } else if file_type.is_file()
+            && path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("csv"))
         {
             out.push(path);
         }
