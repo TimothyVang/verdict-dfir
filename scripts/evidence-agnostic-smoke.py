@@ -218,11 +218,10 @@ EXCLUDE_DIR_PARTS = {
 }
 EXCLUDE_FILES = {
     "evidence-agnostic-smoke.py",
-    # Benchmark/fixture harnesses: their reference to the nhc-003 / NIST fixture
-    # image is intrinsic and load-bearing (the same carve-out that exempts
-    # goldens/ and tests). These produce no Findings and cannot be decoupled
-    # from the named fixture without gutting them.
-    "nhc003-carve-status.sh",  # golden free-space carve-status measurement harness
+    # Fixture fetcher: its reference to the nhc-003 / NIST fixture image is
+    # intrinsic and load-bearing (the same carve-out that exempts goldens/ and
+    # tests). It produces no Findings and cannot be decoupled from the named
+    # fixture without gutting it.
     "fetch-fixtures.sh",  # downloads the named NIST Hacking Case fixture image
 }
 EXTS = {".py", ".rs", ".sh"}
