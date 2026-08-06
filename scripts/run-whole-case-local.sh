@@ -36,6 +36,11 @@ if [ $# -lt 1 ]; then
 fi
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Contain all runtime state (tmp, case store, caches) inside the project folder,
+# same as scripts/verdict and every scripts/run-mcp-*.sh launcher, so a direct
+# standalone run keeps its own temp-file creation (mktemp below) in-project too.
+# shellcheck source=lib/project-env.sh
+source "${REPO}/scripts/lib/project-env.sh"
 ROOT="$1"
 if ! ROOT="$(cd "$ROOT" && pwd)"; then
   echo "case root does not exist: $1" >&2

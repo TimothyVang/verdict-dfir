@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# scripts/nhc003-carve-status.sh — honest status for nhc-003 free-space carve measurement.
+# scripts/carve-probe-status.sh — honest status for a free-space carve probe.
 #
-# Never prints a recall percentage. Never claims SCHARDT improvement without a
+# Never prints a recall percentage. Never claims any carving improvement without a
 # scored golden match (this script does not implement golden scoring).
 #
 # Exit codes:
@@ -9,19 +9,21 @@
 #   1 — STATUS=ERROR (tool failure when a probe was attempted)
 #
 # Image selection, in order:
-#   1. NHC003_IMAGE
-#   2. VERDICT_SCHARDT_IMAGE
-#   3. evidence/SCHARDT.dd, evidence/SCHARDT.E01, evidence/cases/SCHARDT.dd
+#   1. First positional argument
+#   2. FINDEVIL_CARVE_IMAGE
+# No image-specific default: with no image configured the script skips cleanly
+# (STATUS=UNMEASURED, exit 0) so it stays evidence-agnostic and never no-ops
+# silently against one hard-coded image.
 #
 # Probe controls:
-#   NHC003_SKIP_PROBE=1     — only check prerequisites; do not run bulk_extractor
-#   NHC003_PROBE_MB=512     — MiB to sample from the start of a larger image
-#                              (default 512, minimum 16)
-#   NHC003_PROBE_TIMEOUT=180 — seconds to allow bulk_extractor (default 180,
-#                              minimum 30)
+#   FINDEVIL_CARVE_SKIP_PROBE=1     — only check prerequisites; do not run bulk_extractor
+#   FINDEVIL_CARVE_PROBE_MB=512     — MiB to sample from the start of a larger image
+#                                     (default 512, minimum 16)
+#   FINDEVIL_CARVE_PROBE_TIMEOUT=180 — seconds to allow bulk_extractor (default 180,
+#                                     minimum 30)
 #
-# A larger NHC003_PROBE_MB can make the partial probe less shallow. It still
-# does not become a recall measurement, and this script still exits
+# A larger FINDEVIL_CARVE_PROBE_MB can make the partial probe less shallow. It
+# still does not become a recall measurement, and this script still exits
 # STATUS=UNMEASURED or STATUS=PARTIAL_PROBE_UNMEASURED unless the tool fails.
 set -euo pipefail
 
@@ -39,11 +41,8 @@ if command -v bulk_extractor >/dev/null 2>&1; then
 fi
 
 for cand in \
-  "${NHC003_IMAGE:-}" \
-  "${VERDICT_SCHARDT_IMAGE:-}" \
-  "${ROOT}/evidence/SCHARDT.dd" \
-  "${ROOT}/evidence/SCHARDT.E01" \
-  "${ROOT}/evidence/cases/SCHARDT.dd"
+  "${1:-}" \
+  "${FINDEVIL_CARVE_IMAGE:-}"
 do
   if [ -n "${cand}" ] && [ -f "${cand}" ]; then
     have_img=1
@@ -52,29 +51,29 @@ do
   fi
 done
 
-echo "nhc003-carve-status"
+echo "carve-probe-status"
 echo "  bulk_extractor: $([ "$have_bin" = 1 ] && echo "yes ($bin_path)" || echo "no")"
-echo "  schardt_image:  $([ "$have_img" = 1 ] && echo "yes ($img_path)" || echo "no (set NHC003_IMAGE or place evidence/SCHARDT.dd)")"
+echo "  carve_image:    $([ "$have_img" = 1 ] && echo "yes ($img_path)" || echo "no (pass a path or set FINDEVIL_CARVE_IMAGE)")"
 echo "  note: synthetic carve smoke is separate (bulk_extract_smoke); this script never claims recall %"
 echo "  scorer: none; probe rows are diagnostic-only and are not golden matches"
 
 if [ "$have_bin" != 1 ] || [ "$have_img" != 1 ]; then
   echo "STATUS=UNMEASURED"
-  echo "reason: missing prerequisites for an end-to-end nhc-003 measurement"
+  echo "reason: missing prerequisites for an end-to-end carve measurement"
   exit 0
 fi
 
-if [ "${NHC003_SKIP_PROBE:-0}" = "1" ]; then
+if [ "${FINDEVIL_CARVE_SKIP_PROBE:-0}" = "1" ]; then
   echo "STATUS=UNMEASURED"
-  echo "reason: prerequisites present but NHC003_SKIP_PROBE=1 (no probe run)"
+  echo "reason: prerequisites present but FINDEVIL_CARVE_SKIP_PROBE=1 (no probe run)"
   exit 0
 fi
 
-probe_mb="${NHC003_PROBE_MB:-512}"
+probe_mb="${FINDEVIL_CARVE_PROBE_MB:-512}"
 if ! [[ "${probe_mb}" =~ ^[0-9]+$ ]] || [ "${probe_mb}" -lt 16 ]; then
   probe_mb=512
 fi
-timeout_s="${NHC003_PROBE_TIMEOUT:-180}"
+timeout_s="${FINDEVIL_CARVE_PROBE_TIMEOUT:-180}"
 if ! [[ "${timeout_s}" =~ ^[0-9]+$ ]] || [ "${timeout_s}" -lt 30 ]; then
   timeout_s=180
 fi
@@ -82,8 +81,8 @@ fi
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-# Large images (e.g. full SCHARDT ~4.6G): sample only the first NHC003_PROBE_MB
-# so the status gate stays operator-friendly. This is explicitly a partial probe.
+# Large images: sample only the first FINDEVIL_CARVE_PROBE_MB so the status gate
+# stays operator-friendly. This is explicitly a partial probe.
 img_size="$(wc -c <"${img_path}" | tr -d ' ')"
 sample="${tmp}/sample.dd"
 need_bytes=$((probe_mb * 1024 * 1024))

@@ -63,7 +63,7 @@ class TestAuditVerify:
         result = await VERIFY_SPEC.handler(AuditVerifyInput(path=str(seeded_audit_log)))
         assert isinstance(result, AuditVerifyOutput)
         assert result.ok is True
-        assert result.record_count == 7
+        assert result.record_count == 9
         assert result.error is None
 
     async def test_detects_chain_break(self, seeded_audit_log: Path) -> None:

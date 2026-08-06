@@ -179,7 +179,8 @@ class LocalEd25519Signer:
     """Real local-keypair signer — the offline default tier.
 
     Signs the canonical payload bytes with an Ed25519 private key kept at a
-    stable local path (``~/.findevil/signing.key`` unless overridden via
+    stable local path (``$FINDEVIL_HOME/signing.key``, else
+    ``$HOME/.findevil/signing.key``, unless overridden via
     ``FINDEVIL_SIGNING_KEY`` or the ``key_path`` argument). The key is
     auto-generated on first use (dir 0o700, file 0o600). The bundle embeds the
     public key, so ``manifest_verify`` can cryptographically verify the
@@ -260,7 +261,13 @@ def _default_key_path() -> Any:
     env = os.environ.get("FINDEVIL_SIGNING_KEY")
     if env:
         return Path(env)
-    return Path.home() / ".findevil" / "signing.key"
+    # Fall back under the project-contained case home ($FINDEVIL_HOME, else
+    # $HOME/.findevil), using the same resolver every other FINDEVIL_HOME
+    # consumer shares — so a fresh clone/worktree writes the auto-generated
+    # signing key inside .project-local/ instead of the real $HOME.
+    from findevil_agent.config import resolve_case_home
+
+    return resolve_case_home() / "signing.key"
 
 
 class FallbackSigner:

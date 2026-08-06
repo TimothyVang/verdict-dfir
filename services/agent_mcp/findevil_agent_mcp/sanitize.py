@@ -46,7 +46,21 @@ def _is_invisible(cp: int) -> bool:
         or 0x200B <= cp <= 0x200F  # ZWSP ZWNJ ZWJ LRM RLM
         or cp == 0x2060  # word joiner
         or cp == 0xFEFF  # BOM / zero-width no-break space
+        or 0xFE00 <= cp <= 0xFE0F  # variation selectors VS1-VS16
+        or 0xE0100 <= cp <= 0xE01EF  # variation selectors supplement VS17-VS256
+        or 0xE0000 <= cp <= 0xE007F  # Unicode Tag block (ASCII smuggling)
     )
+
+
+# ASCII-only lowercase table. Mirrors Rust's byte-wise ``to_ascii_lowercase``
+# and, unlike ``str.lower()``, is length-preserving: ``str.lower()`` is
+# Unicode-aware and can change code-point count (U+0130 'İ' expands to two code
+# points), which would desync the case-folded buffer from ``stripped`` and break
+# the index-based token scan below. Every ROLE_TOKENS entry is ASCII, so folding
+# only ASCII A-Z is sufficient for case-insensitive matching.
+_ASCII_LOWER = str.maketrans(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"
+)
 
 
 def _bump(counts: dict[str, int], key: str) -> None:
@@ -66,7 +80,7 @@ def sanitize_str(text: str, counts: dict[str, int]) -> str:
     stripped = "".join(kept)
 
     # 2) Replace chat/role control tokens (case-insensitive) with an inert marker.
-    lower = stripped.lower()
+    lower = stripped.translate(_ASCII_LOWER)
     out: list[str] = []
     i = 0
     n = len(stripped)

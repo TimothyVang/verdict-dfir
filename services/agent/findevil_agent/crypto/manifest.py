@@ -48,6 +48,19 @@ class UncitedFindingError(ValueError):
     mode."""
 
 
+class UnverifiedFindingError(ValueError):
+    """Refusal to seal: a ``finding_approved`` record has no approving
+    ``verifier_action`` (``action`` in ``approved``/``downgraded``) recorded
+    earlier in the audit chain. Citing a real ``tool_call_id`` is necessary
+    but NOT sufficient — the run's own verifier must have approved (or
+    evidence-backed-downgraded) that specific finding before it becomes a
+    signed Merkle leaf. This closes the gap where a finding the verifier
+    rejected, or never ran ``verify_finding`` over at all, could be sealed
+    just because its cited tool call happened to appear as an output. A
+    ``rejected`` verifier disposition (or none) is fail-closed here,
+    independent of prompt discipline in interactive mode."""
+
+
 # ---------------------------------------------------------------------------
 # Dataclasses (frozen — manifests are immutable once finalized).
 # ---------------------------------------------------------------------------
@@ -131,6 +144,42 @@ def _uncited_findings(audit_log: AuditLog) -> list[str]:
     return uncited
 
 
+# Verifier dispositions that keep a finding sealable. ``rejected`` is dropped by
+# the judge (``_apply_verifier_actions``); ``downgraded`` survives with lowered
+# confidence, so it still ships as a signed leaf. Anything else — including a
+# missing verifier_action — is fail-closed.
+_APPROVING_VERIFIER_ACTIONS = frozenset({"approved", "downgraded"})
+
+
+def _unverified_findings(audit_log: AuditLog) -> list[str]:
+    """finding_approved records with no approving ``verifier_action`` recorded
+    earlier in the chain. Chain order matters: the verifier's disposition must
+    precede the seal, mirroring the real pipeline (``verify_finding`` /
+    ``pool_handoff`` are appended before ``finding_approved``).
+
+    A finding is sealable only if the run's own verifier emitted a
+    ``verifier_action`` for it with ``action`` in ``approved``/``downgraded``.
+    A ``rejected`` disposition, or no disposition at all, is refused — citing a
+    real tool_call_id is not the same as the finding having passed verification.
+    Keying on the *presence* of an approving disposition (not the absence of a
+    rejecting one) keeps the legitimate re-dispatch path — a ``rejected`` then a
+    later ``downgraded`` for the same finding — sealable."""
+    approved_finding_ids: set[str] = set()
+    unverified: list[str] = []
+    for record in audit_log.iter_records():
+        if record.kind == "verifier_action":
+            action = str(record.payload.get("action") or "")
+            if action in _APPROVING_VERIFIER_ACTIONS:
+                fid = str(record.payload.get("finding_id") or "")
+                if fid:
+                    approved_finding_ids.add(fid)
+        elif record.kind == "finding_approved":
+            fid = str(record.payload.get("finding_id") or "")
+            if not fid or fid not in approved_finding_ids:
+                unverified.append(fid or f"seq-{record.seq}")
+    return unverified
+
+
 def _walk_audit_log(audit_log: AuditLog) -> tuple[list[ManifestLeaf], int, str]:
     """Replay the audit log once: derive the Merkle-eligible leaves, count the
     records, and compute the final line hash. Shared by the build path and by
@@ -194,12 +243,23 @@ def build_manifest(
     Raises :class:`UncitedFindingError` when the log contains a
     ``finding_approved`` record without a ``tool_call_id`` recorded
     earlier in the chain — an uncited finding must never be sealed.
+
+    Raises :class:`UnverifiedFindingError` when a ``finding_approved``
+    record has no approving ``verifier_action`` (``approved``/``downgraded``)
+    recorded earlier in the chain — a finding the verifier rejected, or never
+    ran, must never be sealed even if it cites a real tool_call_id.
     """
     uncited = _uncited_findings(audit_log)
     if uncited:
         raise UncitedFindingError(
             "refusing to seal: finding(s) without a tool_call_id recorded "
             f"earlier in the audit chain: {', '.join(uncited[:5])}"
+        )
+    unverified = _unverified_findings(audit_log)
+    if unverified:
+        raise UnverifiedFindingError(
+            "refusing to seal: finding(s) without an approving verifier_action "
+            f"recorded earlier in the audit chain: {', '.join(unverified[:5])}"
         )
     leaves, record_count, final_hash = _walk_audit_log(audit_log)
 
@@ -349,6 +409,7 @@ def verify_manifest(
     manifest_path: Path,
     *,
     audit_log_path: Path | None = None,
+    expected_public_key: str | None = None,
 ) -> ManifestVerification:
     """Run the offline-verifiable parts of Spec #2 §7.2.
 
@@ -366,6 +427,19 @@ def verify_manifest(
         bundle is present, and no present signature failed verification
         (``stub`` / recorded ``sigstore`` are advisory). ``signature_verified``
         and ``entailment_ok`` are reported as separate side-signals.
+
+    ``expected_public_key`` is an optional trust anchor: the base64-encoded raw
+    Ed25519 public key the verifier expects the manifest to be signed by. It
+    defaults to ``$FINDEVIL_EXPECTED_ED25519_PUBKEY`` so a deployment can pin
+    the signer ambiently. When set, an ``ed25519`` manifest whose embedded
+    public key does not match the pin fails ``signature_verified`` (and, since
+    ``ed25519`` is not advisory, ``overall``) — this is the fail-closed identity
+    check that distinguishes a trusted signer from a self-signed throwaway key.
+    Ed25519 alone proves only integrity and local key continuity, not identity,
+    so WITHOUT a pin any well-formed self-signed bundle still verifies
+    cryptographically; supplying the pin (or the sigstore tier) is what binds a
+    run to a known signer. The pin scopes to the ``ed25519`` branch only —
+    ``stub`` and ``sigstore`` behavior is unchanged.
     """
     obj = json.loads(manifest_path.read_text(encoding="utf-8"))
 
@@ -441,7 +515,14 @@ def verify_manifest(
     sig = obj.get("signature") or {}
     sig_present = bool(sig.get("bundle_b64") and sig.get("payload_sha256"))
     sig_kind = str(sig.get("kind") or "stub")
-    sig_verified = _signature_verified(sig_present, sig_kind, sig, obj)
+    import os
+
+    pinned_key = (
+        expected_public_key
+        if expected_public_key is not None
+        else os.environ.get("FINDEVIL_EXPECTED_ED25519_PUBKEY")
+    )
+    sig_verified = _signature_verified(sig_present, sig_kind, sig, obj, pinned_key)
 
     # 5. Offline entailment re-verification (separate honest signal, like
     # signature_verified — does NOT gate overall). Vacuously True when the log
@@ -468,13 +549,22 @@ def verify_manifest(
     # `overall` requires the chain, Merkle root, and leaf count to verify and a
     # signature bundle to be present. A `stub` (dev/offline placeholder) or a
     # recorded `sigstore` bundle is advisory — it does not gate `overall`, so
-    # dev/offline stub runs still verify end-to-end. But a signature that is
-    # present and was cryptographically checked yet did NOT verify (a forged or
-    # corrupted `ed25519` bundle, or an unknown signer kind) is a hard failure:
-    # `overall` must not stay true for a signature that fails verification.
+    # dev/offline stub runs still verify end-to-end. But a signature that was
+    # cryptographically checked yet did NOT verify is a hard failure: `overall`
+    # must not stay true for it. Crucially, whether a real cryptographic check
+    # applies is decided by the BUNDLE CONTENTS, not the manifest's self-declared
+    # `kind`: if the bundle carries Ed25519 key + signature material it MUST
+    # verify no matter what `kind` claims, so relabeling `kind` from `ed25519`
+    # to an advisory tier cannot skip the check and let a tampered/forged body
+    # pass. An unknown non-advisory `kind` still fails closed.
     # `signature_verified` remains the separate, field-level crypto signal.
     advisory_sig_kinds = ("stub", "sigstore")
-    sig_failed = sig_present and sig_kind not in advisory_sig_kinds and sig_verified is not True
+    bundle_ed25519 = sig_present and _bundle_has_ed25519_material(sig)
+    sig_failed = (
+        sig_present
+        and (bundle_ed25519 or sig_kind not in advisory_sig_kinds)
+        and sig_verified is not True
+    )
     overall = (
         audit_status is True
         and rebuild_status is True
@@ -500,6 +590,7 @@ def _signature_verified(
     kind: str,
     sig: dict[str, Any] | None = None,
     manifest_obj: dict[str, Any] | None = None,
+    expected_public_key: str | None = None,
 ) -> bool | str:
     """Honest answer to 'was the signature cryptographically verified?'.
 
@@ -507,17 +598,28 @@ def _signature_verified(
     proof) and never falsely claims to have verified a sigstore bundle it did
     not. An ``ed25519`` bundle embeds its public key, so it IS verified here,
     offline: the canonical manifest body (everything except ``signature``) is
-    rebuilt and checked against the embedded signature. A real sigstore bundle
-    is *recorded* for offline verification by a party that supplies the
+    rebuilt and checked against the embedded signature. When
+    ``expected_public_key`` is supplied, the embedded key must additionally
+    match that pinned trust anchor or verification fails closed. A real sigstore
+    bundle is *recorded* for offline verification by a party that supplies the
     expected signer identity (a deployment policy this library can't assume) —
     so we report that explicitly rather than overclaim.
+
+    The verification path is chosen from the bundle CONTENTS, not the
+    manifest's self-declared ``kind``: a bundle that structurally carries
+    Ed25519 key + signature material is verified cryptographically no matter
+    what ``kind`` claims. This is what stops relabeling ``kind`` from
+    ``ed25519`` to an advisory tier (``sigstore``/``stub``) from skipping the
+    real signature check on an otherwise-verifiable bundle.
     """
     if not present:
         return "no signature bundle present"
+    if _bundle_has_ed25519_material(sig or {}):
+        return _verify_ed25519_signature(sig or {}, manifest_obj or {}, expected_public_key)
     if kind == "stub":
         return "stub signature: deterministic dev/offline placeholder, not cryptographic proof"
     if kind == "ed25519":
-        return _verify_ed25519_signature(sig or {}, manifest_obj or {})
+        return _verify_ed25519_signature(sig or {}, manifest_obj or {}, expected_public_key)
     if kind == "sigstore":
         return (
             "sigstore bundle present and recorded; offline cryptographic verification "
@@ -526,7 +628,34 @@ def _signature_verified(
     return f"unknown signer kind {kind!r}"
 
 
-def _verify_ed25519_signature(sig: dict[str, Any], manifest_obj: dict[str, Any]) -> bool | str:
+def _bundle_has_ed25519_material(sig: dict[str, Any]) -> bool:
+    """True when the embedded bundle structurally carries Ed25519 public-key +
+    signature material, independent of the manifest's self-declared ``kind``.
+
+    The signature verification path is selected from this — not from the
+    untrusted ``signature.kind`` label — so relabeling ``kind`` to an advisory
+    tier can never route an otherwise-verifiable bundle around the real check.
+    Fails closed: an undecodable / non-object bundle returns ``False`` (the
+    declared-``kind`` path then reports it honestly).
+    """
+    import base64
+
+    try:
+        bundle = json.loads(base64.b64decode(str(sig.get("bundle_b64") or "")))
+    except (ValueError, TypeError):
+        return False
+    return (
+        isinstance(bundle, dict)
+        and isinstance(bundle.get("public_key_b64"), str)
+        and isinstance(bundle.get("signature_b64"), str)
+    )
+
+
+def _verify_ed25519_signature(
+    sig: dict[str, Any],
+    manifest_obj: dict[str, Any],
+    expected_public_key: str | None = None,
+) -> bool | str:
     """Offline cryptographic verification of a LocalEd25519Signer bundle.
 
     Rebuilds the exact bytes that were signed — the JCS-canonicalized manifest
@@ -534,6 +663,15 @@ def _verify_ed25519_signature(sig: dict[str, Any], manifest_obj: dict[str, Any])
     which signs ``canonicalize_json(_to_json_safe(body, exclude_signature=True))``)
     — and verifies the embedded Ed25519 signature against the embedded public
     key. Returns ``True`` only on a genuine cryptographic pass.
+
+    A signature verifying against a key embedded in the same bundle only proves
+    the body was not altered after signing (integrity + local key continuity);
+    it does NOT prove *who* signed, since a case fabricated from scratch and
+    self-signed with a throwaway keypair verifies just as cleanly. When
+    ``expected_public_key`` (a base64 raw Ed25519 public key) is supplied as a
+    trust anchor, the embedded key must match it or verification fails closed —
+    binding the run to a known signer. A malformed pin also fails closed (never
+    passes, never crashes).
     """
     import base64
 
@@ -543,6 +681,22 @@ def _verify_ed25519_signature(sig: dict[str, Any], manifest_obj: dict[str, Any])
         signature_b64 = bundle["signature_b64"]
     except (KeyError, ValueError, TypeError) as exc:
         return f"ed25519 bundle malformed: {exc}"
+    # Trust-anchor pin: when the verifier supplies an expected public key, the
+    # bundle's embedded key must match it. Compared on decoded raw bytes so
+    # base64 padding/whitespace differences don't cause a false mismatch. A
+    # missing/undecodable pin or embedded key fails closed rather than falling
+    # through to the (unpinned) self-verification below.
+    if expected_public_key:
+        try:
+            embedded_raw = base64.b64decode(str(public_key_b64), validate=True)
+            expected_raw = base64.b64decode(str(expected_public_key), validate=True)
+        except (ValueError, TypeError) as exc:
+            return f"ed25519 pinned-key check failed: could not decode public key: {exc}"
+        if not embedded_raw or embedded_raw != expected_raw:
+            return (
+                "ed25519 signer key does not match the pinned expected public key: "
+                "the manifest is signed by an untrusted key"
+            )
     # Mirror the sign path: the signed body excludes BOTH ``signature`` and the
     # after-signing ``transparency_log`` anchor, so exclude both when rebuilding
     # the bytes to verify. (See ``_to_json_safe(exclude_signature=True)``.)
@@ -612,6 +766,7 @@ __all__ = [
     "ManifestVerification",
     "RunManifest",
     "UncitedFindingError",
+    "UnverifiedFindingError",
     "build_manifest",
     "verify_manifest",
     "write_manifest",
@@ -634,6 +789,10 @@ def _demo_run() -> None:  # pragma: no cover
                 "tool_call_id": "tc-1",
                 "output_hash": "a" * 64,
             },
+        )
+        log.append(
+            "verifier_action",
+            {"finding_id": "f-1", "action": "approved", "reason": "byte-for-byte replay match"},
         )
         log.append(
             "finding_approved",

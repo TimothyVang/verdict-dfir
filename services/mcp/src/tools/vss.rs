@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::tools::disk::case_dir;
+use crate::tools::disk::{case_dir, validate_mount_point_under_case};
 
 /// Cap on surfaced shadow stores so a pathological listing cannot bloat output.
 const MAX_STORES: usize = 256;
@@ -115,6 +115,8 @@ pub enum VssError {
         path: PathBuf,
         source: std::io::Error,
     },
+    #[error("mount_point must resolve under the case mounts directory: {0}")]
+    MountPointOutsideCase(PathBuf),
 }
 
 /// Enumerate the Volume Shadow Copies in `image_path`. Degrades to
@@ -211,6 +213,16 @@ pub fn vss_mount(input: &VssMountInput) -> Result<VssMountOutput, VssError> {
         .mount_point
         .clone()
         .unwrap_or_else(|| case.join("mounts").join(&mount_id));
+    // A caller-supplied mount_point must land under the case's derived mounts/
+    // area — never at an arbitrary host path or inside the source evidence /
+    // case root. Validate (fail-closed) *before* create_dir_all so the directory
+    // is never materialized at an out-of-case path.
+    let mount_point = if input.mount_point.is_some() {
+        validate_mount_point_under_case(&case, &mount_point)
+            .map_err(|_| VssError::MountPointOutsideCase(mount_point.clone()))?
+    } else {
+        mount_point
+    };
     std::fs::create_dir_all(&mount_point).map_err(|source| VssError::MountPoint {
         path: mount_point.clone(),
         source,

@@ -65,7 +65,7 @@ def _finding(
         tool_call_id="tc-1",
         artifact_path=artifact_path,
         confidence=confidence,
-        description="logon from 192.168.1.5",
+        description="suspicious logon event observed",
         counter_hypothesis=counter_hypothesis,
     )
 

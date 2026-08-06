@@ -32,11 +32,13 @@ from findevil_agent_mcp.sanitize import ROLE_TOKENS, _is_invisible
 # services/agent_mcp/tests/ -> services/mcp/src/sanitize.rs
 _RUST_SANITIZE = pathlib.Path(__file__).resolve().parents[2] / "mcp" / "src" / "sanitize.rs"
 
-# Scan the whole Basic Multilingual Plane when deriving a mirror's stripped set
-# from a predicate or a parsed range list. Every code point either mirror strips
-# today (BIDI controls, zero-width chars, BOM) lives well inside this bound; a
-# new arm anywhere in the BMP is still caught by the comparison.
-_BMP_MAX = 0xFFFF
+# Scan the entire Unicode range when deriving a mirror's stripped set from a
+# predicate or a parsed range list. This was capped at the BMP (0xFFFF), which
+# silently excluded the supplementary-plane arms — the Unicode Tag block
+# (U+E0000-U+E007F, ASCII smuggling) and variation selectors supplement
+# (U+E0100-U+E01EF) — from the Python side while still parsing them out of the
+# Rust source, so the two sets could never match once either arm was added.
+_UNICODE_MAX = 0x10FFFF
 
 
 # --------------------------------------------------------------------------- #
@@ -108,7 +110,7 @@ def _python_role_tokens() -> set[tuple[str, str]]:
 
 def _python_invisible_codepoints() -> set[int]:
     """The set of BMP code points the Python ``_is_invisible`` predicate strips."""
-    return {cp for cp in range(_BMP_MAX + 1) if _is_invisible(cp)}
+    return {cp for cp in range(_UNICODE_MAX + 1) if _is_invisible(cp)}
 
 
 # --------------------------------------------------------------------------- #

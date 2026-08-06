@@ -238,8 +238,12 @@ pub fn hayabusa_scan(input: &HayabusaInput) -> Result<HayabusaOutput, HayabusaEr
     let limit = input.limit.unwrap_or(DEFAULT_LIMIT);
 
     // Hayabusa writes JSON to a file (the CLI doesn't reliably stream
-    // a clean JSON document to stdout — its progress UI mixes in).
-    let output_dir = std::env::temp_dir();
+    // a clean JSON document to stdout — its progress UI mixes in). Stage it
+    // under the case directory (self-enforced containment), not the OS temp
+    // dir — otherwise containment depends entirely on an external TMPDIR being
+    // set. Mirrors srum_parse/pst_parse/bulk_extract.
+    let output_dir = crate::tools::case_id::case_scratch_dir(&input.case_id, "hayabusa")
+        .map_err(|e| HayabusaError::OutputParse(e.to_string()))?;
     let output_file = output_dir.join(format!(
         "hayabusa-{}-{}.json",
         std::process::id(),
@@ -284,7 +288,7 @@ pub fn hayabusa_scan(input: &HayabusaInput) -> Result<HayabusaOutput, HayabusaEr
     let stderr_tail = truncate_to(String::from_utf8_lossy(&proc.stderr).into_owned(), 4096);
 
     if !proc.status.success() {
-        let _ = std::fs::remove_file(&output_file);
+        let _ = std::fs::remove_dir_all(&output_dir);
         return Err(HayabusaError::SubprocessFailed {
             exit_code: proc.status.code().unwrap_or(-1),
             stderr: stderr_tail,
@@ -294,6 +298,7 @@ pub fn hayabusa_scan(input: &HayabusaInput) -> Result<HayabusaOutput, HayabusaEr
     let body = match std::fs::read_to_string(&output_file) {
         Ok(b) => b,
         Err(err) => {
+            let _ = std::fs::remove_dir_all(&output_dir);
             return Err(HayabusaError::OutputParse(format!(
                 "could not read output {}: {err}",
                 output_file.display()
@@ -302,7 +307,7 @@ pub fn hayabusa_scan(input: &HayabusaInput) -> Result<HayabusaOutput, HayabusaEr
     };
     // Best-effort cleanup; we don't propagate the error if remove
     // fails because the scan succeeded already.
-    let _ = std::fs::remove_file(&output_file);
+    let _ = std::fs::remove_dir_all(&output_dir);
 
     parse_alerts(&body, limit, stderr_tail)
 }

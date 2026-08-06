@@ -43,7 +43,7 @@ class TestManifestFinalize:
         assert Path(result.manifest_path).is_file()
         assert len(result.merkle_root_hex) == 64
         assert result.leaf_count == 4  # 2 tool_outputs + 2 findings
-        assert result.audit_log_record_count == 7
+        assert result.audit_log_record_count == 9  # +2 verifier_action (not leaves)
         assert len(result.signature_payload_sha256) == 64
         # Stub signer produces a deterministic cert fingerprint.
         assert result.signature_cert_fingerprint is not None

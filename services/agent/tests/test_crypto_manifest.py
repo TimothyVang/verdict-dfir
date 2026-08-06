@@ -66,6 +66,16 @@ def _seed_log(path: Path) -> AuditLog:
         "tool_call_output",
         {"tool_call_id": "tc-2", "output_hash": "b" * 64, "row_count": 12},
     )
+    # The verifier's disposition precedes the seal — only findings the verifier
+    # approved (or evidence-backed-downgraded) are sealable (UnverifiedFindingError).
+    log.append(
+        "verifier_action",
+        {"finding_id": "f-1", "action": "approved", "reason": "replay matched"},
+    )
+    log.append(
+        "verifier_action",
+        {"finding_id": "f-2", "action": "downgraded", "reason": "output_sha256 drift"},
+    )
     log.append(
         "finding_approved",
         {"finding_id": "f-1", "tool_call_id": "tc-1", "confidence": "CONFIRMED"},
@@ -95,7 +105,7 @@ class TestBuildManifest:
         assert manifest.version == MANIFEST_VERSION
         assert manifest.case_id == "case-001"
         assert manifest.run_id == "rt-1"
-        assert manifest.audit_log_record_count == 7
+        assert manifest.audit_log_record_count == 9  # +2 verifier_action (not leaves)
         assert len(manifest.leaves) == 4  # 2 tool_call_outputs + 2 findings
         assert all(isinstance(leaf, ManifestLeaf) for leaf in manifest.leaves)
         # Tool-output leaves use the declared output_hash.
@@ -137,6 +147,10 @@ class TestBuildManifest:
         # adds these kinds to build_manifest's leaf selection, this fails loudly.
         log = AuditLog(tmp_path / "audit.jsonl")
         log.append("tool_call_output", {"tool_call_id": "tc-1", "output_hash": "a" * 64})
+        log.append(
+            "verifier_action",
+            {"finding_id": "f-1", "action": "approved", "reason": "replay matched"},
+        )
         log.append(
             "finding_approved",
             {"finding_id": "f-1", "tool_call_id": "tc-1", "confidence": "CONFIRMED"},
@@ -376,6 +390,35 @@ class TestVerifyManifest:
         # A flipped signature bit must fail overall, not just the side-signal.
         assert result.overall is False
 
+    def test_relabeling_kind_cannot_downgrade_ed25519_check(self, tmp_path: Path) -> None:
+        # An ed25519-signed manifest is tampered in a body field the Merkle root
+        # does NOT cover (``extra``) — caught only by the signature. The attacker
+        # then relabels ``signature.kind`` to an advisory tier ("sigstore") and
+        # leaves the (now-stale) ed25519 bundle in place, trying to route the
+        # real crypto check around the advisory branch. The verification path is
+        # chosen from the bundle CONTENTS, not the declared ``kind``, so the
+        # stale ed25519 signature is still checked and ``overall`` stays False.
+        from findevil_agent.crypto.signer import LocalEd25519Signer
+
+        log = _seed_log(tmp_path / "audit.jsonl")
+        manifest = build_manifest(
+            case_id="case-relabel",
+            run_id="ver-relabel",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=LocalEd25519Signer(key_path=tmp_path / "signing.key"),
+            extra={"image_path": "/evidence/original.E01"},
+        )
+        path = write_manifest(manifest, tmp_path / "run.manifest.json")
+        obj = json.loads(path.read_text(encoding="utf-8"))
+        # Tamper an unprotected body field, then relabel the signature tier.
+        obj["extra"]["image_path"] = "/evidence/FORGED.E01"
+        obj["signature"]["kind"] = "sigstore"
+        path.write_text(json.dumps(obj), encoding="utf-8")
+
+        result = verify_manifest(path)
+        assert result.overall is False
+
     def test_records_signer_kind_and_honest_verification(self, tmp_path: Path) -> None:
         log = _seed_log(tmp_path / "audit.jsonl")
         manifest = build_manifest(
@@ -580,6 +623,11 @@ class TestCitationGate:
         log = AuditLog(tmp_path / "audit.jsonl")
         log.append("tool_call_start", {"tool_call_id": "tc-1", "tool": "evtx_query"})
         log.append("tool_call_output", {"tool_call_id": "tc-1", "output_hash": "a" * 64})
+        # An approving verifier_action so this fixture isolates the *citation*
+        # gate; the verifier-approval gate is exercised by TestVerifierApprovalGate.
+        fid = finding_payload.get("finding_id")
+        if fid:
+            log.append("verifier_action", {"finding_id": fid, "action": "approved"})
         log.append("finding_approved", finding_payload)
         return log
 
@@ -612,6 +660,79 @@ class TestCitationGate:
 
     def test_seal_accepts_cited_finding(self, tmp_path: Path) -> None:
         log = self._log_with(tmp_path, {"finding_id": "f-ok", "tool_call_id": "tc-1"})
+        self._seal(log)  # must not raise
+
+
+class TestVerifierApprovalGate:
+    """Citing a real tool_call_id is necessary but NOT sufficient: a
+    finding_approved record must also have an approving verifier_action
+    (approved/downgraded) recorded earlier in the chain. A finding the verifier
+    rejected — or never ran verify_finding over — must refuse to seal, even
+    though its cited tool_call_id is a genuine tool_call_output."""
+
+    def _base_log(self, tmp_path: Path) -> AuditLog:
+        log = AuditLog(tmp_path / "audit.jsonl")
+        log.append("tool_call_start", {"tool_call_id": "tc-1", "tool": "evtx_query"})
+        log.append("tool_call_output", {"tool_call_id": "tc-1", "output_hash": "a" * 64})
+        return log
+
+    def _seal(self, log: AuditLog) -> None:
+        build_manifest(
+            case_id="case-vgate",
+            run_id="vgate-1",
+            started_at="2026-04-24T00:00:00Z",
+            audit_log=log,
+            signer=StubSigner(run_id="vgate-1"),
+        )
+
+    def test_seal_refuses_finding_never_verified(self, tmp_path: Path) -> None:
+        import pytest
+
+        from findevil_agent.crypto.manifest import UnverifiedFindingError
+
+        # A genuine tool_call_output for tc-1 and a finding citing it, but the
+        # verifier never ran for f-9 — the pre-fix hole. Must refuse to seal.
+        log = self._base_log(tmp_path)
+        log.append("finding_approved", {"finding_id": "f-9", "tool_call_id": "tc-1"})
+        with pytest.raises(UnverifiedFindingError, match="f-9"):
+            self._seal(log)
+
+    def test_seal_refuses_finding_the_verifier_rejected(self, tmp_path: Path) -> None:
+        import pytest
+
+        from findevil_agent.crypto.manifest import UnverifiedFindingError
+
+        log = self._base_log(tmp_path)
+        log.append(
+            "verifier_action",
+            {"finding_id": "f-9", "action": "rejected", "reason": "sha256 drift"},
+        )
+        log.append("finding_approved", {"finding_id": "f-9", "tool_call_id": "tc-1"})
+        with pytest.raises(UnverifiedFindingError, match="f-9"):
+            self._seal(log)
+
+    def test_seal_accepts_approved_finding(self, tmp_path: Path) -> None:
+        log = self._base_log(tmp_path)
+        log.append("verifier_action", {"finding_id": "f-9", "action": "approved"})
+        log.append("finding_approved", {"finding_id": "f-9", "tool_call_id": "tc-1"})
+        self._seal(log)  # must not raise
+
+    def test_seal_accepts_downgraded_finding(self, tmp_path: Path) -> None:
+        # downgraded survives the judge with lowered confidence, so it still
+        # ships as a signed leaf — an approving disposition for the seal gate.
+        log = self._base_log(tmp_path)
+        log.append("verifier_action", {"finding_id": "f-9", "action": "downgraded"})
+        log.append("finding_approved", {"finding_id": "f-9", "tool_call_id": "tc-1"})
+        self._seal(log)  # must not raise
+
+    def test_redispatch_rejected_then_downgraded_is_sealable(self, tmp_path: Path) -> None:
+        # The real re-dispatch path: a first rejected pass, then a terminal
+        # downgraded pass for the SAME finding. Presence of an approving
+        # disposition (not absence of a rejecting one) keeps it sealable.
+        log = self._base_log(tmp_path)
+        log.append("verifier_action", {"finding_id": "f-9", "action": "rejected"})
+        log.append("verifier_action", {"finding_id": "f-9", "action": "downgraded"})
+        log.append("finding_approved", {"finding_id": "f-9", "tool_call_id": "tc-1"})
         self._seal(log)  # must not raise
 
 

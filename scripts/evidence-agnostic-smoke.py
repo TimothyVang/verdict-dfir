@@ -6,10 +6,16 @@ image it was last tested on. This smoke fails if production code, docstrings, or
 finding descriptions hard-code values keyed to one specific image (the NIST
 "Hacking Case" / SCHARDT.dd it was tuned on) or reference golden/benchmark IDs.
 
-Scope: ``scripts/`` and ``services/`` ``.py``/``.rs`` PRODUCTION code. Test files,
-``goldens/``, build output, and this script are excluded (benchmark coupling is
-allowed there). Detection must key on general DFIR signatures; descriptions must
-report what was actually parsed — see CLAUDE.md "Evidence-agnostic (hard rule)".
+Scope: PRODUCTION executable code under ``scripts/`` and ``services/`` —
+``.py``/``.rs``/``.sh`` files plus extensionless entrypoints whose shebang names a
+shell/python interpreter (e.g. ``scripts/verdict``, ``scripts/setup``). Test files,
+``goldens/``, build output, this script, and named benchmark/fixture harnesses are
+excluded (benchmark coupling is allowed there — see ``EXCLUDE_FILES``). Doctrine
+prose (``agent-config/*.md``) and the web surface (``apps/web``) are out of this
+executable-code gate's scope; they carry their own lint/type gates and are
+presentation, not detection logic. Detection must key on general DFIR signatures;
+descriptions must report what was actually parsed — see CLAUDE.md
+"Evidence-agnostic (hard rule)".
 
 Run: ``python scripts/evidence-agnostic-smoke.py`` (exit 1 on any violation).
 Part of ``scripts/run-all-smokes.sh``.
@@ -210,22 +216,46 @@ EXCLUDE_DIR_PARTS = {
     "goldens",
     "migrations",
 }
-EXCLUDE_FILES = {"evidence-agnostic-smoke.py"}
-EXTS = {".py", ".rs"}
+EXCLUDE_FILES = {
+    "evidence-agnostic-smoke.py",
+    # Fixture fetcher: its reference to the nhc-003 / NIST fixture image is
+    # intrinsic and load-bearing (the same carve-out that exempts goldens/ and
+    # tests). It produces no Findings and cannot be decoupled from the named
+    # fixture without gutting it.
+    "fetch-fixtures.sh",  # downloads the named NIST Hacking Case fixture image
+}
+EXTS = {".py", ".rs", ".sh"}
+# Extensionless entrypoints (e.g. scripts/verdict) are scanned when their shebang
+# names a shell or python interpreter.
+_SHEBANG_RE = re.compile(rb"\b(?:sh|bash|zsh|dash|ksh|python[0-9.]*)")
+
+
+def _has_script_shebang(path: Path) -> bool:
+    try:
+        with path.open("rb") as fh:
+            first = fh.readline(256)
+    except OSError:
+        return False
+    return first.startswith(b"#!") and bool(_SHEBANG_RE.search(first))
 
 
 def _eligible(path: Path) -> bool:
-    if path.suffix not in EXTS or path.name in EXCLUDE_FILES:
+    if path.name in EXCLUDE_FILES:
         return False
+    if path.suffix not in EXTS:
+        # Only extensionless shell/python entrypoints qualify beyond the ext set.
+        if path.suffix or not _has_script_shebang(path):
+            return False
     parts = {p.lower() for p in path.relative_to(REPO).parts}
     if parts & EXCLUDE_DIR_PARTS:
         return False
-    # A *_test.rs / test_*.py file outside a tests/ dir is still test code.
+    # A *_test.rs / test_*.py / *_test.sh file outside a tests/ dir is still test code.
     name = path.name.lower()
     return not (
         name.startswith("test_")
         or name.endswith("_test.py")
         or name.endswith("_test.rs")
+        or name.endswith("_test.sh")
     )
 
 
@@ -254,7 +284,8 @@ def main() -> int:
 
     print("=== evidence-agnostic smoke ===")
     print(
-        f"  scanned {scanned} production .py/.rs files under {', '.join(INCLUDE_DIRS)}/"
+        f"  scanned {scanned} production .py/.rs/.sh files (+ shell/python entrypoints)"
+        f" under {', '.join(INCLUDE_DIRS)}/"
     )
     if violations:
         print(

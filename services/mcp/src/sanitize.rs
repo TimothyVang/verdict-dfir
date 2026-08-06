@@ -43,7 +43,8 @@ const ROLE_TOKENS: &[(&str, &str)] = &[
 ];
 
 /// Invisible Unicode with no legitimate role in forensic *text*: BIDI
-/// overrides/isolates/marks (Trojan Source) and zero-width code points.
+/// overrides/isolates/marks (Trojan Source), zero-width code points, variation
+/// selectors, and the Tag block (the "ASCII smuggling" carrier).
 const fn is_invisible_control(c: char) -> bool {
     matches!(
         c as u32,
@@ -51,7 +52,10 @@ const fn is_invisible_control(c: char) -> bool {
             | 0x2066..=0x2069 // LRI RLI FSI PDI
             | 0x200B..=0x200F // ZWSP ZWNJ ZWJ LRM RLM
             | 0x2060          // word joiner
-            | 0xFEFF // BOM / zero-width no-break space
+            | 0xFEFF          // BOM / zero-width no-break space
+            | 0xFE00..=0xFE0F // variation selectors VS1-VS16
+            | 0xE0100..=0xE01EF // variation selectors supplement VS17-VS256
+            | 0xE0000..=0xE007F // Unicode Tag block (ASCII smuggling)
     )
 }
 

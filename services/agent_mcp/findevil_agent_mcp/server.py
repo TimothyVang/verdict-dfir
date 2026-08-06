@@ -93,7 +93,12 @@ def _to_text_content(payload: Any, *, tool: str | None = None) -> list[TextConte
     # the MCP-output->LLM sanitizer (mirrors services/mcp/src/sanitize.rs). Log
     # what was neutralized as counts only, never the payload.
     body, sanitized = sanitize_value(body)
-    text = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    # ensure_ascii=False to match the Rust mirror. serde_json::to_string emits
+    # raw UTF-8, so leaving Python's default escaping on meant any non-ASCII
+    # string VALUE — routine in DFIR output — serialized as \uXXXX here and
+    # literally there, hashing differently across the two surfaces. Sorting the
+    # keys (9337d05) fixed only the other half of that divergence.
+    text = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     if sanitized:
         structlog.get_logger(SERVER_NAME).warning(
             "agent_mcp_sanitized_tool_output",

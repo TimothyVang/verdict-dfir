@@ -41,6 +41,18 @@ _IPV4 = re.compile(r"^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1
 # path is corroborating context; the bare filename it ends in is the anchor).
 _FILENAME = re.compile(r"^[^\\/]+\.[A-Za-z0-9][A-Za-z0-9_-]{0,7}$")
 
+# Whole-token identity-anchor scanners for FREE TEXT (a finding's description).
+# The anchor-shape regexes above are ``^…$``-anchored for whole-STRING
+# classification of a single asserted value; scanning prose needs the same
+# shapes bounded to word tokens so a hash/IP embedded in a sentence is still
+# found. IPv6 has no clean word-boundary form, so it is scanned per whitespace/
+# punctuation token via :func:`_is_ipv6`.
+_HASH_TOKEN = re.compile(r"\b[0-9a-fA-F]{32}\b|\b[0-9a-fA-F]{40}\b|\b[0-9a-fA-F]{64}\b")
+_IPV4_TOKEN = re.compile(
+    r"\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b"
+)
+_TEXT_TOKEN_SPLIT = re.compile(r"[\s,;()\[\]{}<>\"'`]+")
+
 # Token-boundary contains matching. Plain substring containment lets an
 # incidental fragment launder a claim ("cain" must not match inside "mccain"),
 # so a contains anchor must align to TOKEN boundaries: a match whose
@@ -49,12 +61,6 @@ _FILENAME = re.compile(r"^[^\\/]+\.[A-Za-z0-9][A-Za-z0-9_-]{0,7}$")
 # maximal run of these characters.
 _ALNUM = re.compile(r"[0-9A-Za-z]")
 _ALNUM_RUN = re.compile(r"[0-9A-Za-z]+")
-# Minimum length of a needle's alphanumeric run for boundary enforcement to
-# apply. A needle whose longest alphanumeric run is shorter than this (or which
-# has none, e.g. a bare separator) carries no laundering-prone token, so it
-# keeps the legacy plain-containment behavior rather than strict alignment —
-# tightening only where it cannot weaken a true-positive anchor.
-_MIN_TOKEN_LEN = 2
 
 
 @dataclass(frozen=True)
@@ -145,6 +151,65 @@ def _is_ipv6(token: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def identity_anchors_in_text(text: str) -> list[str]:
+    """Every forgery-resistant IDENTITY anchor (cryptographic hash, IPv4/IPv6)
+    that appears as a whole token in free text, de-duplicated, order preserved.
+
+    These are the anchor classes with no legitimate near-miss reading (see
+    :func:`is_identity_anchor`): a value of this shape stated in a finding's
+    prose is a specific claim the cited evidence must actually contain. Plain
+    prose numbers/counts are deliberately NOT scanned — they have no
+    deterministic ground truth to diff and are governed by the multiplicity
+    guard on ``asserted_values`` instead.
+    """
+    seen: set[str] = set()
+    anchors: list[str] = []
+
+    def _add(tok: str) -> None:
+        if tok and tok not in seen:
+            seen.add(tok)
+            anchors.append(tok)
+
+    for m in _HASH_TOKEN.finditer(text):
+        _add(m.group(0))
+    for m in _IPV4_TOKEN.finditer(text):
+        _add(m.group(0))
+    for raw in _TEXT_TOKEN_SPLIT.split(text):
+        tok = raw.strip()
+        if ":" in tok and _is_ipv6(tok):
+            _add(tok)
+    return anchors
+
+
+def unentailed_identity_anchors(text: str, parsed_output: dict[str, Any]) -> list[str]:
+    """Identity anchors named in ``text`` that are ABSENT from the cited tool
+    output — i.e. laundered claims.
+
+    The verifier already proves the cited output reproduces byte-for-byte and
+    that ``asserted_values`` entail; this closes the parallel gap that the
+    free-text description (what the analyst actually reads) is never checked, so
+    a fabricated hash/IP in the prose rides through on one unrelated-but-true
+    asserted value. Presence is a deterministic, case-insensitive containment
+    test against the serialized output — the same ground truth entailment
+    trusts — so a replay reproduces the identical decision.
+
+    Containment goes through ``_contains_token``, the same token-boundary
+    matcher the record path uses. Plain substring containment laundered the
+    exact class this guard exists to catch: a description claiming
+    ``203.0.113.9`` was satisfied by an output holding ``203.0.113.99``, and a
+    fabricated 32-char MD5 was satisfied by a 64-char SHA-256 sharing its
+    prefix.
+    """
+    if not text:
+        return []
+    blob = json.dumps(parsed_output or {}, default=str)
+    return [
+        anchor
+        for anchor in identity_anchors_in_text(text)
+        if not _contains_token(anchor, blob)
+    ]
 
 
 def check_entailment(
@@ -317,9 +382,14 @@ def recheck_entailment_slice(slice_: Any) -> bool | str:
                 constraints = json.loads(expected)
             except (ValueError, TypeError):
                 return f"record slice expected is not JSON at {path}"
-            text = str(actual).lower()
-            if not isinstance(constraints, dict) or not all(
-                str(v).strip().lower() in text for v in constraints.values()
+            # Re-check with the same token-boundary-aware matcher the live
+            # record path uses (``_matches_record`` -> ``_contains_token``), not
+            # plain substring containment, so an incidental fragment (e.g.
+            # "cain" inside "mccain") cannot launder a sealed record match. The
+            # sealed slice only carries the stringified record, so the token
+            # matcher runs over that text rather than per field.
+            if not isinstance(constraints, dict) or not constraints or not all(
+                _contains_token(str(v), str(actual)) for v in constraints.values()
             ):
                 return f"sealed record value no longer satisfies the assertion at {path}"
         elif not _matches(expected, actual, mode):
@@ -393,16 +463,17 @@ def _contains_token(needle: str, haystack: str) -> bool:
     identical decision.
 
     Empty needles keep their established "field present" semantics (they match
-    any leaf, including a JSON ``null`` read as an empty string). Needles whose
-    longest alphanumeric run is below :data:`_MIN_TOKEN_LEN` fall back to plain
-    containment, since such a fragment carries no laundering-prone token and
-    boundary enforcement there could only weaken a legitimate anchor.
+    any leaf, including a JSON ``null`` read as an empty string). Boundary
+    enforcement applies to any needle carrying at least one alphanumeric
+    character — including a single digit or letter — so ``"3"`` matches the
+    standalone token ``"3"`` but never launders itself in from inside ``"13"``.
+    A needle with no alphanumeric run at all (e.g. a bare separator) keeps plain
+    containment; enforcement there is a no-op since it has no alphanumeric edge.
     """
     needle = needle.strip().lower()
     if not needle:
         return True
-    runs = _ALNUM_RUN.findall(needle)
-    enforce = bool(runs) and max(len(run) for run in runs) >= _MIN_TOKEN_LEN
+    enforce = bool(_ALNUM_RUN.findall(needle))
     for line in haystack.lower().splitlines() or [""]:
         start = 0
         while True:

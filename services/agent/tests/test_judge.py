@@ -27,12 +27,14 @@ def _f(
     description: str = "evtx logon",
     tool_call_id: str = "tc-1",
     mitre: str | None = None,
+    artifact_offset: str | None = None,
 ) -> Finding:
     return Finding(
         case_id="c",
         finding_id=finding_id,
         tool_call_id=tool_call_id,
         artifact_path=artifact_path,
+        artifact_offset=artifact_offset,
         confidence=confidence,
         description=description,
         mitre_technique=mitre,
@@ -222,6 +224,86 @@ class TestBothPoolsFindings:
         assert (
             len(merged) == 3
         ), f"distinct findings from one tool call collapsed into {len(merged)}"
+
+    def test_distinct_offsets_do_not_false_merge_across_pools(self) -> None:
+        # Two cross-pool findings sharing tool_call_id + artifact_path +
+        # mitre_technique but pointing at DIFFERENT subjects (distinct
+        # artifact_offset) are NOT the same claim. They must stay apart so
+        # neither description is silently dropped in a blended merge — the
+        # collision the finding_id-prefix convention could not catch when the
+        # ids happen to collide or omit the pool tag.
+        a = PoolStats(
+            pool="A",
+            findings=[
+                _f(
+                    "dup",
+                    pool="A",
+                    confidence="CONFIRMED",
+                    artifact_path="nitroba.pcap",
+                    tool_call_id="tc-1",
+                    mitre="T1071.001",
+                    artifact_offset="stream-7",
+                    description="anon-email POST to willselfdestruct.com",
+                )
+            ],
+        )
+        b = PoolStats(
+            pool="B",
+            findings=[
+                _f(
+                    "dup",
+                    pool="B",
+                    confidence="CONFIRMED",
+                    artifact_path="nitroba.pcap",
+                    tool_call_id="tc-1",
+                    mitre="T1071.001",
+                    artifact_offset="stream-42",
+                    description="authenticated webmail session to mail.google.com",
+                )
+            ],
+        )
+        merged = judge_findings(a, b)
+        assert len(merged) == 2, f"distinct-offset claims false-merged into {len(merged)}"
+        descriptions = {m.finding.description for m in merged}
+        assert "anon-email POST to willselfdestruct.com" in descriptions
+        assert "authenticated webmail session to mail.google.com" in descriptions
+
+    def test_same_offset_still_merges_across_pools(self) -> None:
+        # Control for the test above: the SAME subject (identical
+        # artifact_offset) seen by both pools still corroborates into one
+        # MergedFinding — the offset discriminator only splits genuinely
+        # different subjects, it does not block real corroboration.
+        a = PoolStats(
+            pool="A",
+            findings=[
+                _f(
+                    "f-A-x",
+                    pool="A",
+                    confidence="CONFIRMED",
+                    artifact_path="nitroba.pcap",
+                    tool_call_id="tc-1",
+                    mitre="T1071.001",
+                    artifact_offset="stream-7",
+                )
+            ],
+        )
+        b = PoolStats(
+            pool="B",
+            findings=[
+                _f(
+                    "f-B-x",
+                    pool="B",
+                    confidence="CONFIRMED",
+                    artifact_path="nitroba.pcap",
+                    tool_call_id="tc-1",
+                    mitre="T1071.001",
+                    artifact_offset="stream-7",
+                )
+            ],
+        )
+        merged = judge_findings(a, b)
+        assert len(merged) == 1
+        assert merged[0].finding.pool_origin == "merged"
 
     def test_disagreeing_pools_drop_to_hypothesis(self) -> None:
         a = PoolStats(

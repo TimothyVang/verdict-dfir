@@ -848,6 +848,37 @@ class TestCommandAndControlGate:
         assert outcomes[0].gate == "COMMAND_AND_CONTROL"
 
 
+class TestExfiltrationGate:
+    """EXFILTRATION needs a collection/staging class + a network/process class."""
+
+    def test_uncorroborated_exfil_downgraded(self) -> None:
+        # Staging class only (archived RAR) — no network/process movement evidence.
+        f = _f(
+            "f-1",
+            "Collected documents were archived into a multi-part RAR file",
+            mitre="T1560.001",
+            confidence="CONFIRMED",
+        )
+        refined, outcomes = correlate([f])
+        assert refined[0].confidence == "INFERRED"
+        assert outcomes[0].action == "downgraded"
+        assert outcomes[0].gate == "EXFILTRATION"
+
+    def test_corroborated_exfil_kept(self) -> None:
+        # staging (staged/archive/rar) + network (connection) movement evidence.
+        f = _f(
+            "f-1",
+            "Data staged into a RAR archive then uploaded over an outbound "
+            "HTTPS network connection to a web service",
+            mitre="T1567.002",
+            confidence="CONFIRMED",
+        )
+        refined, outcomes = correlate([f])
+        assert refined[0].confidence == "CONFIRMED"
+        assert outcomes[0].action == "kept"
+        assert outcomes[0].gate == "EXFILTRATION"
+
+
 class TestLsassCeiling:
     """LSASS memory-access-only claims cannot exceed INFERRED without a dump
     artifact or a 4624/4688 corroboration — a deterministic anti-overclaim cap."""

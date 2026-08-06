@@ -8,8 +8,10 @@
 use std::collections::{BTreeMap, VecDeque};
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::Command;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use chrono::Utc;
 use schemars::JsonSchema;
@@ -222,6 +224,8 @@ pub enum DiskError {
     MountNotMounted(String),
     #[error("mount root not found: {0}")]
     MountRootNotFound(PathBuf),
+    #[error("mount_point must resolve under the case mounts directory: {0}")]
+    MountPointOutsideCase(PathBuf),
     #[error("unsupported on this platform without mode=mock")]
     UnsupportedPlatform,
     #[error("subprocess failed ({status}): {stderr_tail}")]
@@ -230,6 +234,8 @@ pub enum DiskError {
     EwfSegmentSet(String),
     #[error("io error at {path}: {source}")]
     Io { path: PathBuf, source: io::Error },
+    #[error("session resource ledger is locked by another writer: {0}")]
+    LedgerLocked(PathBuf),
     #[error("cannot serialize session resource ledger: {0}")]
     Serialize(#[from] serde_json::Error),
 }
@@ -245,6 +251,15 @@ pub fn disk_mount(input: &DiskMountInput) -> Result<DiskMountOutput, DiskError> 
         .mount_point
         .clone()
         .unwrap_or_else(|| case_dir.join("mounts").join(&mount_id));
+    // A caller-supplied mount_point must land under the case's derived mounts/
+    // area — never at an arbitrary host path or inside the source evidence /
+    // case root. Validate (fail-closed) *before* create_dir so the directory is
+    // never materialized at an out-of-case path.
+    let mount_point = if input.mount_point.is_some() {
+        validate_mount_point_under_case(&case_dir, &mount_point)?
+    } else {
+        mount_point
+    };
     create_dir(&mount_point)?;
     let image_paths = match input.mode {
         DiskMode::Mock => vec![input.image_path.clone()],
@@ -308,7 +323,7 @@ pub fn disk_extract_artifacts(
 ) -> Result<DiskExtractArtifactsOutput, DiskError> {
     let case_dir = case_dir(&input.case_id)?;
     let ledger_path = case_dir.join(LEDGER_NAME);
-    let mut ledger = read_ledger(&ledger_path)?;
+    let ledger = read_ledger(&ledger_path)?;
     let mount = ledger
         .resources
         .iter()
@@ -394,22 +409,29 @@ pub fn disk_extract_artifacts(
     }
 
     let now = now_iso();
-    ledger.resources.push(SessionResource {
-        id: extract_id.clone(),
-        resource_type: "disk_extract_artifacts".to_string(),
-        status: "extracted".to_string(),
-        created_at: now.clone(),
-        updated_at: now,
-        image_path: Some(image_path),
-        mount_point: mount.mount_point,
-        fs_root: mount.fs_root,
-        parent_id: Some(input.mount_id.clone()),
-        output_dir: Some(output_dir.clone()),
-        artifacts: artifacts.clone(),
-        command: vec!["fls".to_string(), "icat".to_string()],
-        note: "extracted disk artifacts directly from the image via The Sleuth Kit".to_string(),
-    });
-    write_ledger(&ledger_path, &ledger)?;
+    // Append the new extract row through the locked upsert helper: the mount
+    // fields read above are immutable, and the long Sleuth Kit extraction ran
+    // outside the lock, so the critical section stays a short read-modify-write
+    // that can't lose a concurrent writer's entry.
+    upsert_resource(
+        &ledger_path,
+        SessionResource {
+            id: extract_id.clone(),
+            resource_type: "disk_extract_artifacts".to_string(),
+            status: "extracted".to_string(),
+            created_at: now.clone(),
+            updated_at: now,
+            image_path: Some(image_path),
+            mount_point: mount.mount_point,
+            fs_root: mount.fs_root,
+            parent_id: Some(input.mount_id.clone()),
+            output_dir: Some(output_dir.clone()),
+            artifacts: artifacts.clone(),
+            command: vec!["fls".to_string(), "icat".to_string()],
+            note: "extracted disk artifacts directly from the image via The Sleuth Kit"
+                .to_string(),
+        },
+    )?;
 
     Ok(DiskExtractArtifactsOutput {
         case_id: input.case_id.clone(),
@@ -431,6 +453,10 @@ pub fn disk_extract_artifacts(
 pub fn disk_unmount(input: &DiskUnmountInput) -> Result<DiskUnmountOutput, DiskError> {
     let case_dir = case_dir(&input.case_id)?;
     let ledger_path = case_dir.join(LEDGER_NAME);
+    // Hold the ledger lock across the whole in-place read-modify-write: unlike
+    // extract, this mutates an existing row by index, so a fresh locked read and
+    // the status write must be atomic. `umount` is fast, so the hold is short.
+    let _lock = LedgerLock::acquire(&ledger_path)?;
     let mut ledger = read_ledger(&ledger_path)?;
     let idx = ledger
         .resources
@@ -1716,6 +1742,63 @@ pub(crate) fn case_dir(case_id: &str) -> Result<PathBuf, DiskError> {
     }
 }
 
+/// Reject a caller-supplied `mount_point` that does not resolve under the
+/// case's designated `mounts/` directory. Derived staging must never land at an
+/// arbitrary host path or inside the source evidence / case root, so a `..`
+/// escape, a symlink escape, or a sibling path (`mounts-evil`) is refused
+/// fail-closed. The mount point need not exist yet: the deepest existing
+/// ancestor is canonicalized (resolving symlinks) and the remaining lexical
+/// components are appended, then the result must be the mounts root or a
+/// descendant of it. Shared with `vss_mount`, which has the identical pattern.
+/// On success returns the RESOLVED mount point. Callers must use that value:
+/// validating the caller's string and then operating on the original leaves a
+/// TOCTOU window in which a symlink swapped between check and use sends the
+/// mount outside the case.
+pub(crate) fn validate_mount_point_under_case(
+    case_dir: &Path,
+    mount_point: &Path,
+) -> Result<PathBuf, DiskError> {
+    // Anchor on the canonicalized case dir (it exists) + the literal `mounts`
+    // segment. The mounts dir itself may not exist on the first mount, so it is
+    // not canonicalized directly; a symlinked `mounts` therefore fails to match
+    // and is rejected, which is the desired fail-closed behavior.
+    let mounts_root = case_dir
+        .canonicalize()
+        .map_err(|_| DiskError::MountPointOutsideCase(mount_point.to_path_buf()))?
+        .join("mounts");
+    let resolved = resolve_existing_prefix(mount_point);
+    if resolved.starts_with(&mounts_root) {
+        Ok(resolved)
+    } else {
+        Err(DiskError::MountPointOutsideCase(mount_point.to_path_buf()))
+    }
+}
+
+/// Resolve `path` by canonicalizing the deepest existing prefix (following
+/// symlinks) and appending the remaining components lexically, resolving `.`
+/// and `..` without touching the filesystem. Pure enough to be deterministic
+/// for a path whose tail does not yet exist.
+fn resolve_existing_prefix(path: &Path) -> PathBuf {
+    let mut resolved = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(prefix) => resolved.push(prefix.as_os_str()),
+            Component::RootDir => resolved.push(Component::RootDir.as_os_str()),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                resolved.pop();
+            }
+            Component::Normal(part) => {
+                resolved.push(part);
+                if let Ok(canonical) = resolved.canonicalize() {
+                    resolved = canonical;
+                }
+            }
+        }
+    }
+    resolved
+}
+
 fn findevil_home() -> Result<PathBuf, DiskError> {
     if let Ok(v) = std::env::var("FINDEVIL_HOME") {
         if !v.is_empty() {
@@ -1733,6 +1816,57 @@ fn findevil_home() -> Result<PathBuf, DiskError> {
         }
     }
     Err(DiskError::CaseNotFound("FINDEVIL_HOME".to_string()))
+}
+
+/// Longest a ledger mutation waits for a peer writer before failing closed.
+const LEDGER_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
+/// Poll interval while waiting for the ledger lock file to be released.
+const LEDGER_LOCK_POLL: Duration = Duration::from_millis(25);
+
+/// Advisory cross-process lock guarding the whole-file read-modify-write of the
+/// session-resource ledger. Two ledger-mutating calls for the same case (e.g.
+/// two `findevil-mcp` processes over one `FINDEVIL_HOME`) would otherwise
+/// interleave read → write and silently drop one writer's resource entry,
+/// leaking the underlying mount/extract on disk.
+///
+/// The pinned 1.88 toolchain has no portable `std` file lock (`File::lock`
+/// landed in 1.89) and adding an `fs2`/`libc` dependency would churn the pinned
+/// workspace lockfile, so this uses an existence-as-lock sibling file created
+/// with `O_EXCL` (`create_new`). Acquisition blocks up to
+/// `LEDGER_LOCK_TIMEOUT` and then fails closed with `LedgerLocked` rather than
+/// stealing the lock — a racy stale-reclaim would reintroduce the very
+/// lost-update it closes. The guard removes the lock file on `Drop`.
+struct LedgerLock {
+    path: PathBuf,
+}
+
+impl LedgerLock {
+    fn acquire(ledger_path: &Path) -> Result<Self, DiskError> {
+        let path = ledger_path.with_extension("lock");
+        let deadline = Instant::now() + LEDGER_LOCK_TIMEOUT;
+        loop {
+            match fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+            {
+                Ok(_) => return Ok(Self { path }),
+                Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {
+                    if Instant::now() >= deadline {
+                        return Err(DiskError::LedgerLocked(path));
+                    }
+                    thread::sleep(LEDGER_LOCK_POLL);
+                }
+                Err(source) => return Err(DiskError::Io { path, source }),
+            }
+        }
+    }
+}
+
+impl Drop for LedgerLock {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
 }
 
 fn read_ledger(path: &Path) -> Result<SessionLedger, DiskError> {
@@ -1755,6 +1889,7 @@ fn write_ledger(path: &Path, ledger: &SessionLedger) -> Result<(), DiskError> {
 }
 
 fn upsert_resource(path: &Path, resource: SessionResource) -> Result<(), DiskError> {
+    let _lock = LedgerLock::acquire(path)?;
     let mut ledger = read_ledger(path)?;
     ledger.resources.retain(|r| r.id != resource.id);
     ledger.resources.push(resource);
@@ -1801,7 +1936,8 @@ mod tests {
         artifact_subrank, case_dir, class_priority, classify_artifact_path, direct_tsk_mount,
         ewfmount_available, is_missing_binary, mock_list, parse_fls_line, parse_mmls_partitions,
         parse_mmls_primary_partition_offset, safe_join, select_artifacts, unmount_steps,
-        wanted_kinds, Candidate, DiskError, FlsEntry, DIRECT_TSK_COMMAND,
+        validate_mount_point_under_case, wanted_kinds, Candidate, DiskError, FlsEntry,
+        LedgerLock, DIRECT_TSK_COMMAND,
     };
     use std::path::Path;
 
@@ -1826,6 +1962,31 @@ mod tests {
                 "{rel:?} left a .. component: {joined:?}"
             );
         }
+    }
+
+    #[test]
+    fn ledger_lock_is_mutually_exclusive_and_releases_on_drop() {
+        // The advisory lock behind the ledger read-modify-write must exclude a
+        // second holder while the first is live, and free the sibling `.lock`
+        // file on drop so the next writer can proceed. Tested without waiting
+        // the full acquire timeout by probing the O_EXCL sentinel directly.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let ledger_path = dir.path().join("session_resources.json");
+        let lock_path = ledger_path.with_extension("lock");
+
+        let guard = LedgerLock::acquire(&ledger_path).expect("first acquire");
+        assert!(lock_path.exists(), "lock sentinel should exist while held");
+        // A concurrent holder (the create_new acquire path) cannot take it.
+        let contended = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&lock_path);
+        assert!(contended.is_err(), "second holder must not acquire the lock");
+
+        drop(guard);
+        assert!(!lock_path.exists(), "lock sentinel should be gone after drop");
+        // Now the lock is free, so a fresh acquire succeeds.
+        let _reacquire = LedgerLock::acquire(&ledger_path).expect("re-acquire after release");
     }
 
     #[test]
@@ -2484,6 +2645,48 @@ Units are in 512-byte sectors
         match case_dir("..") {
             Err(DiskError::InvalidCaseId(_)) => {}
             other => panic!("expected InvalidCaseId for .., got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn validate_mount_point_confines_to_case_mounts_dir() {
+        let case = tempfile::tempdir().expect("tempdir");
+        let case_dir = case.path();
+        let mounts = case_dir.join("mounts");
+        std::fs::create_dir_all(&mounts).expect("create mounts");
+
+        // A fresh mount id under mounts/ (tail does not yet exist) is accepted.
+        assert!(
+            validate_mount_point_under_case(case_dir, &mounts.join("disk-mount-1")).is_ok(),
+            "a path under the case mounts dir must be accepted"
+        );
+
+        // The case root itself, and anything directly under it (e.g. the
+        // evidence area), must be rejected — derived staging never lands there.
+        for outside in [case_dir.to_path_buf(), case_dir.join("evidence")] {
+            match validate_mount_point_under_case(case_dir, &outside) {
+                Err(DiskError::MountPointOutsideCase(_)) => {}
+                other => panic!("expected MountPointOutsideCase for {outside:?}, got {other:?}"),
+            }
+        }
+
+        // A `..` escape out of mounts/ back into the case root is rejected.
+        match validate_mount_point_under_case(case_dir, &mounts.join("..").join("evil")) {
+            Err(DiskError::MountPointOutsideCase(_)) => {}
+            other => panic!("expected MountPointOutsideCase for .. escape, got {other:?}"),
+        }
+
+        // A sibling whose name merely shares the `mounts` prefix must not pass a
+        // component-aware containment check.
+        match validate_mount_point_under_case(case_dir, &case_dir.join("mounts-evil")) {
+            Err(DiskError::MountPointOutsideCase(_)) => {}
+            other => panic!("expected MountPointOutsideCase for mounts-evil, got {other:?}"),
+        }
+
+        // An absolute host path far outside the case is rejected.
+        match validate_mount_point_under_case(case_dir, Path::new("/tmp")) {
+            Err(DiskError::MountPointOutsideCase(_)) => {}
+            other => panic!("expected MountPointOutsideCase for /tmp, got {other:?}"),
         }
     }
 }

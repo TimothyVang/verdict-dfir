@@ -214,14 +214,19 @@ pub fn plaso_parse(input: &PlasoParseInput) -> Result<PlasoParseOutput, PlasoPar
     let l2t = resolve_binary("log2timeline.py")?;
     let psort = resolve_binary("psort.py")?;
 
+    // Stage decoded output under the case directory (self-enforced containment),
+    // not the OS temp dir — otherwise containment depends entirely on an external
+    // TMPDIR being set. Mirrors srum_parse/pst_parse/bulk_extract.
+    let scratch = crate::tools::case_id::case_scratch_dir(&input.case_id, "plaso")
+        .map_err(|e| PlasoParseError::OutputRead(e.to_string()))?;
     let tag = format!("{}-{}", std::process::id(), nanosecond_tag());
-    let storage = std::env::temp_dir().join(format!("plaso-{}-{tag}.plaso", input.parser));
-    let out_file = std::env::temp_dir().join(format!("plaso-{}-{tag}.jsonl", input.parser));
-    // Pin plaso's per-stage run-logs to temp instead of the process CWD (the repo
-    // root), then clean them up — otherwise each parse litters the working tree
-    // with log2timeline-<ts>.log.gz / psort-<ts>.log.gz.
-    let l2t_log = std::env::temp_dir().join(format!("plaso-{}-{tag}.l2t.log.gz", input.parser));
-    let psort_log = std::env::temp_dir().join(format!("plaso-{}-{tag}.psort.log.gz", input.parser));
+    let storage = scratch.join(format!("plaso-{}-{tag}.plaso", input.parser));
+    let out_file = scratch.join(format!("plaso-{}-{tag}.jsonl", input.parser));
+    // Pin plaso's per-stage run-logs to the case scratch dir instead of the
+    // process CWD (the repo root), then clean them up — otherwise each parse
+    // litters the working tree with log2timeline-<ts>.log.gz / psort-<ts>.log.gz.
+    let l2t_log = scratch.join(format!("plaso-{}-{tag}.l2t.log.gz", input.parser));
+    let psort_log = scratch.join(format!("plaso-{}-{tag}.psort.log.gz", input.parser));
 
     let l2t_stderr = run_stage(
         &l2t,
@@ -232,6 +237,7 @@ pub fn plaso_parse(input: &PlasoParseInput) -> Result<PlasoParseOutput, PlasoPar
         Ok(s) => s,
         Err(e) => {
             cleanup(&[&storage, &out_file, &l2t_log, &psort_log]);
+            let _ = std::fs::remove_dir_all(&scratch);
             return Err(e);
         }
     };
@@ -245,6 +251,7 @@ pub fn plaso_parse(input: &PlasoParseInput) -> Result<PlasoParseOutput, PlasoPar
         Ok(s) => s,
         Err(e) => {
             cleanup(&[&storage, &out_file, &l2t_log, &psort_log]);
+            let _ = std::fs::remove_dir_all(&scratch);
             return Err(e);
         }
     };
@@ -261,6 +268,7 @@ pub fn plaso_parse(input: &PlasoParseInput) -> Result<PlasoParseOutput, PlasoPar
         out
     });
     cleanup(&[&storage, &out_file, &l2t_log, &psort_log]);
+    let _ = std::fs::remove_dir_all(&scratch);
     result
 }
 

@@ -35,7 +35,12 @@ import os
 from posixpath import basename as _posix_basename
 from typing import Any
 
-from findevil_agent.entailment import check_entailment, check_expectation, entailment_slice
+from findevil_agent.entailment import (
+    check_entailment,
+    check_expectation,
+    entailment_slice,
+    unentailed_identity_anchors,
+)
 from findevil_agent.events import Finding, VerifierAction
 from findevil_agent.mcp_client import McpClient
 from findevil_agent.replay import (
@@ -213,6 +218,61 @@ def reverify_finding(
             ),
         )
 
+    # Preflight gate 3 — INFERENCE PROVENANCE (default-on; opt out via
+    # FIND_EVIL_REQUIRE_DERIVED_FROM=0). An INFERRED finding with no
+    # asserted_values rests its entire fidelity on the confirmed facts it cites
+    # in ``derived_from`` (SOUL.md / JUDGING.md §"IR Accuracy" ≥2-fact rule) —
+    # the entailment block below is skipped for it because it has no single
+    # re-extractable value. The events.py schema only checks that derived_from
+    # is a NON-empty list, so without this gate an inference could ride to a
+    # verdict on its OWN tool replay while its derivation points at a
+    # fabricated/never-recorded tool_call_id. Here the derivation is re-bound
+    # against the audit log: every entry must resolve to a recorded tool call,
+    # and at least two DISTINCT recorded facts must back the inference. (Whether
+    # those facts were themselves CONFIRMED / entailment-passed is cross-finding
+    # state this per-finding verifier does not hold; that check stays with the
+    # judge/correlator.) An inference that instead declares asserted_values is
+    # exempt — its fidelity is covered by the entailment check below.
+    if (
+        os.environ.get("FIND_EVIL_REQUIRE_DERIVED_FROM") != "0"
+        and finding.confidence == "INFERRED"
+        and not finding.asserted_values
+        and finding.derived_from
+    ):
+        missing = [d for d in finding.derived_from if d not in tool_call_index]
+        recorded_distinct = [
+            d for d in dict.fromkeys(finding.derived_from) if d in tool_call_index
+        ]
+        if missing or len(recorded_distinct) < 2:
+            if missing:
+                reason = (
+                    f"inference provenance: INFERRED finding {finding.finding_id} "
+                    f"derives from fact(s) not found in the audit log: {missing!r}"
+                )
+                drift_class = "derived_from_missing_record"
+            else:
+                reason = (
+                    f"inference provenance: INFERRED finding {finding.finding_id} "
+                    f"rests on {len(recorded_distinct)} distinct recorded fact(s); an "
+                    "inference must cite at least two confirmed facts (SOUL.md ≥2-fact rule)"
+                )
+                drift_class = "derived_from_under_corroborated"
+            return (
+                VerifierAction(
+                    case_id=finding.case_id,
+                    action="rejected",
+                    finding_id=finding.finding_id,
+                    reason=reason,
+                ),
+                CallReplay(
+                    missing_replay_artifact(
+                        tool_call_id=finding.tool_call_id,
+                        drift_class=drift_class,
+                        reason=reason,
+                    )
+                ),
+            )
+
     artifact = replay_tool_call(
         tool_call_id=finding.tool_call_id,
         record=record,
@@ -331,6 +391,37 @@ def reverify_finding(
                     ),
                     replay,
                 )
+        # Description laundering guard. Entailment only inspects
+        # ``asserted_values``/``expectation``; the free-text ``description`` is
+        # what the analyst actually reads, and nothing above checks it. A finding
+        # can satisfy the entailment gate with one unrelated-but-true assertion
+        # while its description states a DIFFERENT, fabricated identity anchor
+        # that is never verified. Re-scan the description for forgery-resistant
+        # IDENTITY anchors (cryptographic hash / IP address) and require each to
+        # be present in the cited re-run output. A missing one is a laundered
+        # claim, not a near-miss, so reject outright regardless of tier —
+        # mirroring the ``identity_failures`` hard-reject above. Runs
+        # independently of the ``asserted_values`` block, since the whole gap is
+        # "asserted_values true, description lies". Scope (deliberate): only
+        # identity anchors are checked; plain prose numbers/counts have no
+        # deterministic ground truth to diff and stay governed by the
+        # asserted_values entailment + multiplicity gates.
+        desc_launder = unentailed_identity_anchors(
+            finding.description, artifact.parsed_output or {}
+        )
+        if desc_launder:
+            return (
+                VerifierAction(
+                    case_id=finding.case_id,
+                    action="rejected",
+                    finding_id=finding.finding_id,
+                    reason=(
+                        "description asserts identity anchor(s) not found in cited "
+                        "tool output: " + ", ".join(desc_launder)
+                    ),
+                ),
+                replay,
+            )
         return (
             VerifierAction(
                 case_id=finding.case_id,

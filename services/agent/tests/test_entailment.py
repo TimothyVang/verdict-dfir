@@ -290,11 +290,23 @@ class TestContainsTokenBoundary:
         asserted = [AssertedValue(path="note", expected="", match="contains")]
         assert check_entailment(asserted, {"note": "anything"}).passed is True
 
-    def test_short_needle_below_min_token_len_keeps_plain_containment(self) -> None:
-        # A single-character fragment carries no laundering-prone token, so the
-        # legacy plain-containment behavior is preserved (no false rejection).
-        asserted = [AssertedValue(path="flag", expected="x", match="contains")]
-        assert check_entailment(asserted, {"flag": "axb"}).passed is True
+    def test_single_char_needle_is_token_bounded(self) -> None:
+        # A single alphanumeric character is still laundering-prone ("x" inside
+        # "axb", "3" inside "13"), so boundary enforcement applies to it too and
+        # an incidental single-character substring must NOT entail.
+        glued = [AssertedValue(path="flag", expected="x", match="contains")]
+        assert check_entailment(glued, {"flag": "axb"}).passed is False
+        assert check_entailment(glued, {"flag": "x"}).passed is True
+
+    def test_single_digit_needle_not_laundered_by_larger_number(self) -> None:
+        # Regression: expected "3" must not be entailed by the value 13, nor "1"
+        # by 15 — the digit must sit on a token boundary, not anywhere inside.
+        three = [AssertedValue(path="n", expected="3", match="contains")]
+        assert check_entailment(three, {"n": 13}).passed is False
+        assert check_entailment(three, {"n": 3}).passed is True
+        assert check_entailment(three, {"n": "value: 3"}).passed is True
+        one = [AssertedValue(path="n", expected="1", match="contains")]
+        assert check_entailment(one, {"n": 15}).passed is False
 
     def test_sealed_token_bounded_slice_rechecks_true(self) -> None:
         # Determinism: a confirmed token-bounded contains seal still rechecks.

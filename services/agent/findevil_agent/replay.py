@@ -29,6 +29,11 @@ DriftClass = Literal[
     # without the benign alternative it must have ruled out.
     "artifact_rebind_mismatch",
     "counter_hypothesis_missing",
+    # Inference-provenance vetoes (raised before replay): an INFERRED finding
+    # resting on ``derived_from`` cites a fact absent from the audit log, or
+    # fewer than two distinct recorded facts.
+    "derived_from_missing_record",
+    "derived_from_under_corroborated",
 ]
 
 
