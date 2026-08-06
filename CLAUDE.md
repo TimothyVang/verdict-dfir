@@ -36,7 +36,7 @@ VERDICT is a local-first DFIR (digital forensics & incident response) agent plat
 |---|---|---|
 | [`caseforge-core`](https://github.com/TimothyVang/caseforge-core) | Headless **controller**: privacy routing, model selection, structured findings, custody validation, the `caseforge` CLI. | the **driver** |
 | [`verdict-opencode`](https://github.com/TimothyVang/verdict-opencode) | The agent **runtime** — a branded fork of [opencode](https://github.com/sst/opencode); the `verdict` binary is built from it. | the **engine** |
-| **verdict-dfir-beta** / this repo | The **forensic toolkit**: `findevil-mcp` (Rust, 34 read-only tools) + `findevil-agent-mcp` (Python, 14 custody/crypto tools) + DFIR doctrine (`agent-config/`) + hash-chained custody. Consumed by caseforge via `VERDICT_DFIR_HOME`. | the **evidence lab** (you are here) |
+| **verdict-dfir-beta** / this repo | The **forensic toolkit**: `findevil-mcp` (Rust, 43 read-only tools) + `findevil-agent-mcp` (Python, 14 custody/crypto tools) + DFIR doctrine (`agent-config/`) + hash-chained custody. Consumed by caseforge via `VERDICT_DFIR_HOME`. | the **evidence lab** (you are here) |
 
 **Runtime flow:** `caseforge` (controls + guards) → `verdict` binary (runs the agent) → **this repo's `findevil` MCP tools (do the forensics)** → hash-chained custody → `caseforge verify`.
 
@@ -112,7 +112,7 @@ These rules are part of the product safety boundary.
 - Product/audit-chain servers: `findevil-mcp` and `findevil-agent-mcp`.
 - Operator convenience servers: `n8n-mcp`, `playwright`, `puppeteer`, and `qmd`.
 
-Only the two product servers can emit audit-chain tool calls for Findings. The product surface is 48 audit-chained product tools: 34 Rust DFIR tools in `findevil-mcp` plus 14 Python crypto/ACH/memory/ACP/expert-feedback/accuracy/ai-tradecraft tools in `findevil-agent-mcp`. The operator convenience servers must never emit Findings, satisfy Finding citations, or mutate evidence.
+Only the two product servers can emit audit-chain tool calls for Findings. The product surface is 57 audit-chained product tools: 43 Rust DFIR tools in `findevil-mcp` plus 14 Python crypto/ACH/memory/ACP/expert-feedback/accuracy/ai-tradecraft tools in `findevil-agent-mcp`. The operator convenience servers must never emit Findings, satisfy Finding citations, or mutate evidence.
 
 Do not add a broad filesystem, shell, Docker, Kubernetes, browser, GitHub, fetch, or raw-command MCP to the product surface. Do not add an `execute_shell` tool. Long-tail DFIR execution belongs behind allow-listed typed tools such as `vol_run`, `ez_parse`, `plaso_parse`, `mac_triage`, and `cloud_audit`.
 
@@ -219,7 +219,7 @@ Operating notes for large cases (so a run does not have to be hand-driven):
 
 When modifying VERDICT, keep changes small and evidence-safe.
 
-- **Branch model.** Contributors fork the repo and open pull requests against the `develop` branch; never push to `main` (the published release line). Maintainers integrate `develop`, and publish to a release line only after review and explicit approval. Releases are cut with `git ship` (push + tag + GitHub Release over plain `git` + the platform CLI — no CI runners). See [docs/contribution-model.md](docs/contribution-model.md).
+- **Branch model.** `master` is the single long-lived line — both the published, release-quality line and the contribution line. Contributors fork the repo and open pull requests against `master`. Maintainers integrate `master` and publish releases only after review and explicit approval. Releases are cut with `git ship` (push + tag + GitHub Release over plain `git` + the platform CLI — no CI runners). See [docs/contribution-model.md](docs/contribution-model.md).
 - Prefer surgical diffs over rewrites.
 - **Path-agnostic always.** Scripts and code must work regardless of the caller's CWD and machine. Derive the repo root at runtime — bash: `REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"`; Python: `Path(__file__).resolve().parent.parent`. Use `$HOME`/`~`, never a hard-coded `/home/<user>`. Make environment-specific paths env-overridable defaults (`${VAR:-default}`, e.g. the SIFT-guest `/home/sansforensics/...` paths). Never hard-code an absolute machine path or assume the CWD is the repo root.
 - **Repo layout (one folder for everything).** The repo root holds only config/manifest files and the load-bearing public docs; everything else lives in a named top-level directory. Enforced two ways: `scripts/repo-layout-smoke.py` (wired into `scripts/run-all-smokes.sh`) fails the gate on any stray tracked-or-un-ignored root entry, and `scripts/hooks/guard-root-writes.py` is a PreToolUse hook that blocks an agent (Claude/Codex) from writing a new root file/folder in real time. Never create files at the root — put new code under `scripts/`/`services/`/`apps/`, docs under `docs/`, assets under `assets/`. See [docs/repo-layout.md](docs/repo-layout.md) for the canonical tree and how to add a new sanctioned root entry.

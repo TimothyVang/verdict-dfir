@@ -10,7 +10,7 @@ finishing the rollout. Written for whoever extends this next.
 1. **No separate `submit_finding` tool.** Every finding — deterministic emitter
    or LLM — already flows through `verify_finding`, which validates into the
    `Finding` model (so the schema gate fires) and runs the entailment check. A
-   second recording tool would be redundant and would widen the locked 45-tool
+   second recording tool would be redundant and would widen the locked 57-tool
    product surface. The gateway already exists; we strengthened it.
 
 2. **The verdict is already load-bearing — no `compute_verdict` surgery.**

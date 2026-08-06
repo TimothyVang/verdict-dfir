@@ -34,13 +34,13 @@ backed by composed cryptographic primitives across three tiers:
 ```
    evidence file (.e01 / .img / .evtx)
        │
-       ▼  sha2 = 0.10 (Rust, in-process)
+       ▼  sha2 = 0.11 (Rust, in-process)
    image_hash (32-byte SHA-256, committed at case_open)
        │
        ▼  audit_append (append-only JSONL with prev_hash)
    audit chain  (each record: { kind, payload, prev_hash, seq, ts })
        │
-       ▼  rs_merkle = 1.4 (Rust, in-process)
+       ▼  hand-rolled Merkle tree (pure stdlib, Python + Rust mirrors)
    Merkle tree over canonical-JSON record bytes
        │
        ▼  signer tier (Ed25519 default; Sigstore for identity; stub for tests)
@@ -51,9 +51,9 @@ Each link's role:
 
 | # | Primitive | What it proves | Library |
 |---|---|---|---|
-| 1 | SHA-256 of the evidence | The image we read is the image we received | `sha2 = 0.10` (Rust) |
+| 1 | SHA-256 of the evidence | The image we read is the image we received | `sha2 = 0.11` (Rust) |
 | 2 | Audit hash chain | No record was deleted, reordered, or back-dated after the fact | `services/agent/findevil_agent/crypto/audit_log.py` |
-| 3 | rs_merkle tree | The set of records named in the manifest is the set the agent actually wrote | `rs_merkle = 1.4.0` (Rust) |
+| 3 | Merkle tree | The set of records named in the manifest is the set the agent actually wrote | hand-rolled, pure stdlib — `services/agent/findevil_agent/crypto/merkle.py` (Python) mirrored byte-for-byte by `services/mcp/src/crypto/merkle.rs` (Rust); no external Merkle crate dependency |
 | 4 | manifest signature | See signer tiers below — every run is signed; the tier determines what the signature proves | `cryptography` (ed25519) / `sigstore = 3.x` |
 
 **Signer tiers** (choose with `--signer` / `FINDEVIL_SIGNER`; the manifest
@@ -86,14 +86,14 @@ services/mcp/                                    ← (Rust DFIR tool MCP)
 └── (every tool emits _meta.output_sha256 over its canonical JSON output)
 
 services/agent/findevil_agent/crypto/            ← (M2 crypto stack)
-├── audit.py                                     — link 2: prev_hash chain
-├── merkle.py                                    — link 3: rs_merkle tree
+├── audit_log.py                                 — link 2: prev_hash chain
+├── merkle.py                                    — link 3: hand-rolled Merkle tree (pure stdlib)
 ├── signer.py                                    — link 4: Ed25519/Sigstore/stub signer tiers
 └── manifest.py                                  — composes 2/3/4 into run.manifest.json
 
 services/agent_mcp/findevil_agent_mcp/tools/     ← (Python MCP wrapping the above)
 ├── audit_append.py                              ↘  one MCP tool per link
-├── audit_verify.py                              ↘  11 Python tools total — see TOOLS.md
+├── audit_verify.py                              ↘  14 Python tools total — see TOOLS.md
 ├── manifest_finalize.py                         ↘  (the OTS pair was removed under A5)
 └── manifest_verify.py                           ↘
 ```

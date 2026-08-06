@@ -2443,6 +2443,7 @@ mod tests {
             "vss_mount",
             "hashset_lookup",
             "thumbcache_parse",
+            "bulk_extract",
         ];
         assert_eq!(names.len(), expected.len());
         for want in expected {

@@ -12,8 +12,8 @@ What each artifact type proves and doesn't prove. Read before reviewing agent fi
 
 **Key fields:**
 - `run_count` — total recorded executions (saturates at 128 on older Windows)
-- `last_run_times[]` — up to 8 most recent timestamps, UTC
-- `loaded_files[]` — DLLs / supporting files loaded at startup (useful for identifying dropped loaders)
+- `last_run_times_iso[]` — up to 8 most recent timestamps, UTC
+- `file_references[]` — DLLs / supporting files loaded at startup (useful for identifying dropped loaders)
 
 **Caveat:** Prefetch is disabled by default on SSDs in some Windows builds and can be disabled via Group Policy. Absence of a Prefetch file does not prove a binary never ran — verify via ShimCache, Amcache, or EVTX 4688 before concluding absence of execution.
 

@@ -17,7 +17,7 @@ const CREDITS: Credit[] = [
   { label: "Source", value: "github.com/TimothyVang/verdict-dfir", mono: true },
   { label: "License", value: "Apache-2.0" },
   { label: "Continuous integration", value: "L0 · L1 · L2 · L3 — all green", tone: C.confirmed },
-  { label: "Tool surface", value: "32 Rust · 13 Python", mono: true },
+  { label: "Tool surface", value: "43 Rust · 14 Python", mono: true },
 ];
 
 export function OutroScene() {

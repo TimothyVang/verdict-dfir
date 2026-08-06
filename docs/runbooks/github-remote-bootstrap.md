@@ -131,7 +131,7 @@ Only cut or refresh release assets after confirming the workflow registrations a
   with `gh repo delete <your-username>/find-evil` (irreversible).
 * **First push hangs because the repo has 80 GB of test
   forensics in the working tree.**  Verify `.gitignore` is
-  excluding `test-forensics/` (it should be; line 95-101).
+  excluding `test-forensics/` (it should be; see the `/test-forensics/` rule near line 177).
   `git status --ignored` shows what would be committed.
 * **L0 or L1 fail on first push.**  Most likely cause: a
   toolchain mismatch with the GHA runner (Rust 1.88 / Python

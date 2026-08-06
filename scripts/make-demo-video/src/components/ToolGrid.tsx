@@ -20,7 +20,7 @@ interface ToolGroup {
   tools: string[];
 }
 
-// The 45-tool surface, verbatim: 32 Rust DFIR tools + 13 Python crypto/ACH
+// The 57-tool surface, verbatim: 43 Rust DFIR tools + 14 Python crypto/ACH
 // tools, regrouped by the question each answers.
 const GROUPS: ToolGroup[] = [
   {

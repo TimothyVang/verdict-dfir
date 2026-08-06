@@ -9,8 +9,8 @@ map of what VERDICT is, the open problems (including the hard one — keeping th
 contributors can plug in.
 
 VERDICT is a DFIR agent where **Claude Code is the engine** (Amendment A2). It is three subsystems:
-a Rust MCP server (`services/mcp/`, 32 DFIR tools), a Python MCP server
-(`services/agent_mcp/`, 13 crypto/ACH/memory tools), and a Next.js dashboard (`apps/web/`). The two
+a Rust MCP server (`services/mcp/`, 43 DFIR tools), a Python MCP server
+(`services/agent_mcp/`, 14 crypto/ACH/memory tools), and a Next.js dashboard (`apps/web/`). The two
 MCP servers are standard MCP, so any MCP-capable agent can drive the tool surface — Claude Code is the
 reference agent, not the only one.
 
@@ -103,9 +103,8 @@ New behavior follows **TDD**: write the failing test (RED), implement (GREEN), r
 
 ## Submitting changes
 
-- **Fork and branch.** Fork this repo, branch off **`develop`**, and open your PR against `develop`
-  (not `main`). `main` is the published release snapshot; `develop` is the contribution line that is
-  never overwritten by a publish.
+- **Fork and branch.** Fork this repo, branch off **`master`**, and open your PR against `master`.
+  `master` is the repo's only long-lived branch — both the published line and the contribution line.
 - **Conventional Commits.** `feat(scope):`, `fix(scope):`, `test(scope):`, `docs(scope):`,
   `chore(scope):`, `refactor(scope):`. Active scopes include `mcp`, `agent`, `verdict`, `fleet`,
   `sandbox`, `ci`, `tooling`, `deps`, `plan`. One logical change per commit.
@@ -119,11 +118,11 @@ New behavior follows **TDD**: write the failing test (RED), implement (GREEN), r
 - **Run the gates locally before you open the PR** — `bash scripts/run-all-smokes.sh` plus the
   per-language suites above. The project does **not** depend on GitHub Actions runners: a
   maintainer runs these same commands on your branch and reviews the diff. Two approvals (including a
-  maintainer / code-owner) auto-merge it into `develop`.
-- Open a PR with a clear summary and a test plan, and keep the branch current with `develop` before
+  maintainer / code-owner) auto-merge it into `master`.
+- Open a PR with a clear summary and a test plan, and keep the branch current with `master` before
   requesting review.
 
-Maintainers integrate `develop` and cut releases with `git ship` (push + tag + GitHub Release over
+Maintainers integrate `master` and cut releases with `git ship` (push + tag + GitHub Release over
 plain `git` + the platform CLI — no CI runners). See [docs/releasing.md](docs/releasing.md).
 
 Unsure about a term? See [docs/glossary.md](docs/glossary.md).

@@ -17,14 +17,15 @@ The single positional argument is the **Case directory**. There are no other fla
 
 ## 1. What it consumes
 
-Everything the renderer reads lives inside the one Case directory you pass in. The
-three files `main()` loads unconditionally (a missing one is a hard error):
+Everything the renderer reads lives inside the one Case directory you pass in.
+`main()` loads `run.manifest.json` and `verdict.json` unconditionally — a missing
+one is a hard error:
 
 | File | Role |
 |---|---|
-| `run.manifest.json` | Signed, hash-chained manifest (rs_merkle root plus the effective signer tier: Ed25519 by default, Sigstore when identity/transparency is configured, or explicit stub fallback). Drives the chain-of-custody figure and the offline-verification appendix. |
+| `run.manifest.json` | Signed, hash-chained manifest (Merkle root plus the effective signer tier: Ed25519 by default, Sigstore when identity/transparency is configured, or explicit stub fallback). Drives the chain-of-custody figure and the offline-verification appendix. |
 | `verdict.json` | The Verdict word plus every structured payload the report renders (see below). |
-| `audit.jsonl` | Append-only, hash-chained audit log (`prev_hash` per line). Parsed line-by-line for the chain-of-custody figure; bad lines are skipped, not fatal. |
+| `audit.jsonl` | Append-only, hash-chained audit log (`prev_hash` per line). Optional at read time: if the file is absent the chain-of-custody figure just renders with no records; if present, parsed line-by-line and bad lines are skipped, not fatal. |
 
 The **Findings** come from `verdict.json` under `findings` (the merged, judged set),
 with rollups under `findings_summary` (`contradictions_surfaced`, `soul_md_kept`,
@@ -50,7 +51,7 @@ Optional **sidecar files** in the Case dir are read only if present:
 `customer_release_gate.final.json` (final release-gate state). Each is best-effort:
 absent or malformed JSON degrades gracefully instead of failing the render.
 
-> Only the **48 product tools** (34 Rust + 14 Python) are audit-chained, so every
+> Only the **57 product tools** (43 Rust + 14 Python) are audit-chained, so every
 > Finding the report prints cites a `tool_call_id` traceable back through `audit.jsonl`.
 > See `docs/reference/mcp-and-tools.md` for the tool surface.
 
@@ -82,18 +83,17 @@ case file:
 | PNG | Source |
 |---|---|
 | `chain_of_custody.png` | `audit.jsonl` + `run.manifest.json` (hash-chained custody) |
-| `findings_table.png` | merged Findings (first 20) |
 | `psscan_timeline.png` | `psscan.json` process-creation events (only if present) |
-| `practitioner_coverage.png` | `attck_practitioner_coverage` |
 | `process_view_comparison.png` | `tool_calls` (pslist vs psscan vs psxview) |
 | `attack_story_timeline.png` | `attack_story.attack_chain` beats |
 
 The **scorecard**, **event-sequence story strip**, and **event-composition bars** are
-vector HTML/CSS figures (no PNG) injected into `REPORT.html` after pandoc.
+vector HTML/CSS figures (no PNG) injected into `REPORT.html` after pandoc. **Findings**
+and **ATT&CK/practitioner coverage** are Markdown tables, not PNGs — there is no
+`findings_table.png` or `practitioner_coverage.png`.
 
 **ATT&CK coverage** renders as a Markdown table from `attack_coverage.targets` /
-`attck_practitioner_coverage`, including which `attck_data_sources_seen` were observed,
-backed by the practitioner figure.
+`attck_practitioner_coverage`, including which `attck_data_sources_seen` were observed.
 
 The **normalized timeline** drives the Tier-1 key-events table and the entity rollup
 (every account, host, address, and process, with first/last appearance and the

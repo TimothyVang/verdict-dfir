@@ -21,7 +21,7 @@ session *is* the engine. You point it at evidence (a memory image, Windows Event
 a packet capture, or a whole multi-host case folder) and it:
 
 1. opens a read-only **Case** and SHA-256s the evidence,
-2. drives a **narrow, typed, read-only** tool surface (48 product tools — 34 Rust DFIR tools + 14
+2. drives a **narrow, typed, read-only** tool surface (57 product tools — 43 Rust DFIR tools + 14
    Python crypto/memory tools; **no `execute_shell`, ever**),
 3. **verifies every Finding** (re-runs the cited tool and compares output hashes),
 4. and writes a **scoped verdict** — `SUSPICIOUS` / `INDETERMINATE` / `NO_EVIL` — plus an analyst
