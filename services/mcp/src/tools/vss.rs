@@ -217,10 +217,12 @@ pub fn vss_mount(input: &VssMountInput) -> Result<VssMountOutput, VssError> {
     // area — never at an arbitrary host path or inside the source evidence /
     // case root. Validate (fail-closed) *before* create_dir_all so the directory
     // is never materialized at an out-of-case path.
-    if input.mount_point.is_some() {
+    let mount_point = if input.mount_point.is_some() {
         validate_mount_point_under_case(&case, &mount_point)
-            .map_err(|_| VssError::MountPointOutsideCase(mount_point.clone()))?;
-    }
+            .map_err(|_| VssError::MountPointOutsideCase(mount_point.clone()))?
+    } else {
+        mount_point
+    };
     std::fs::create_dir_all(&mount_point).map_err(|source| VssError::MountPoint {
         path: mount_point.clone(),
         source,

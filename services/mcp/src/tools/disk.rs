@@ -255,9 +255,11 @@ pub fn disk_mount(input: &DiskMountInput) -> Result<DiskMountOutput, DiskError> 
     // area — never at an arbitrary host path or inside the source evidence /
     // case root. Validate (fail-closed) *before* create_dir so the directory is
     // never materialized at an out-of-case path.
-    if input.mount_point.is_some() {
-        validate_mount_point_under_case(&case_dir, &mount_point)?;
-    }
+    let mount_point = if input.mount_point.is_some() {
+        validate_mount_point_under_case(&case_dir, &mount_point)?
+    } else {
+        mount_point
+    };
     create_dir(&mount_point)?;
     let image_paths = match input.mode {
         DiskMode::Mock => vec![input.image_path.clone()],
@@ -1748,10 +1750,14 @@ pub(crate) fn case_dir(case_id: &str) -> Result<PathBuf, DiskError> {
 /// ancestor is canonicalized (resolving symlinks) and the remaining lexical
 /// components are appended, then the result must be the mounts root or a
 /// descendant of it. Shared with `vss_mount`, which has the identical pattern.
+/// On success returns the RESOLVED mount point. Callers must use that value:
+/// validating the caller's string and then operating on the original leaves a
+/// TOCTOU window in which a symlink swapped between check and use sends the
+/// mount outside the case.
 pub(crate) fn validate_mount_point_under_case(
     case_dir: &Path,
     mount_point: &Path,
-) -> Result<(), DiskError> {
+) -> Result<PathBuf, DiskError> {
     // Anchor on the canonicalized case dir (it exists) + the literal `mounts`
     // segment. The mounts dir itself may not exist on the first mount, so it is
     // not canonicalized directly; a symlinked `mounts` therefore fails to match
@@ -1762,7 +1768,7 @@ pub(crate) fn validate_mount_point_under_case(
         .join("mounts");
     let resolved = resolve_existing_prefix(mount_point);
     if resolved.starts_with(&mounts_root) {
-        Ok(())
+        Ok(resolved)
     } else {
         Err(DiskError::MountPointOutsideCase(mount_point.to_path_buf()))
     }
