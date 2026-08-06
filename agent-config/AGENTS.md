@@ -48,7 +48,11 @@ in confidence. Run the tools; emit Findings with `pool_origin=A`.
 
 **Cross-case memory (per-Finding):**
 - *Before* drafting a Finding, call `memory_recall(store_path=MEMORY_STORE_PATH,
-  query=<the IOC, hash, TTP code, or hostname you'd cite>)`. Non-empty
+  query=<the IOC, hash, TTP code, or hostname you'd cite>,
+  exclude_case_id=<the open case's id>)`. Passing `exclude_case_id` is what
+  keeps recall cross-case: without it a row this same case just wrote (or a
+  sibling pool wrote in parallel) comes back as if it were prior knowledge.
+  Non-empty
   hits become a `prior_observations: [{case_id, ts, confidence}, …]`
   field on the Finding. Empty hits are also informative — note "no
   prior observations" in the Finding's reasoning so the analyst can
