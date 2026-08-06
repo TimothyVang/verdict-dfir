@@ -237,7 +237,7 @@ pub fn plaso_parse(input: &PlasoParseInput) -> Result<PlasoParseOutput, PlasoPar
         Ok(s) => s,
         Err(e) => {
             cleanup(&[&storage, &out_file, &l2t_log, &psort_log]);
-            let _ = std::fs::remove_dir(&scratch);
+            let _ = std::fs::remove_dir_all(&scratch);
             return Err(e);
         }
     };
@@ -251,7 +251,7 @@ pub fn plaso_parse(input: &PlasoParseInput) -> Result<PlasoParseOutput, PlasoPar
         Ok(s) => s,
         Err(e) => {
             cleanup(&[&storage, &out_file, &l2t_log, &psort_log]);
-            let _ = std::fs::remove_dir(&scratch);
+            let _ = std::fs::remove_dir_all(&scratch);
             return Err(e);
         }
     };
@@ -268,7 +268,7 @@ pub fn plaso_parse(input: &PlasoParseInput) -> Result<PlasoParseOutput, PlasoPar
         out
     });
     cleanup(&[&storage, &out_file, &l2t_log, &psort_log]);
-    let _ = std::fs::remove_dir(&scratch);
+    let _ = std::fs::remove_dir_all(&scratch);
     result
 }
 
