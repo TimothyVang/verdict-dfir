@@ -194,11 +194,22 @@ def unentailed_identity_anchors(text: str, parsed_output: dict[str, Any]) -> lis
     asserted value. Presence is a deterministic, case-insensitive containment
     test against the serialized output — the same ground truth entailment
     trusts — so a replay reproduces the identical decision.
+
+    Containment goes through ``_contains_token``, the same token-boundary
+    matcher the record path uses. Plain substring containment laundered the
+    exact class this guard exists to catch: a description claiming
+    ``203.0.113.9`` was satisfied by an output holding ``203.0.113.99``, and a
+    fabricated 32-char MD5 was satisfied by a 64-char SHA-256 sharing its
+    prefix.
     """
     if not text:
         return []
-    blob = json.dumps(parsed_output or {}, default=str).lower()
-    return [anchor for anchor in identity_anchors_in_text(text) if anchor.lower() not in blob]
+    blob = json.dumps(parsed_output or {}, default=str)
+    return [
+        anchor
+        for anchor in identity_anchors_in_text(text)
+        if not _contains_token(anchor, blob)
+    ]
 
 
 def check_entailment(
