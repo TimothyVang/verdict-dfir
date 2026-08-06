@@ -25,15 +25,52 @@ Design goals:
 
 from __future__ import annotations
 
-import fcntl
 import hashlib
 import json
 import os
 import threading
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+try:  # POSIX
+    import fcntl
+except ImportError:  # pragma: no cover - Windows
+    fcntl = None  # type: ignore[assignment]
+    import msvcrt
+
+
+def _lock_exclusive(f: Any) -> None:
+    """Blocking exclusive lock over the whole audit log.
+
+    A bare ``import fcntl`` at module scope makes this module unimportable on
+    Windows, and cross-platform.yml runs the Python suite on windows-latest, so
+    conftest's import of AuditLog would fail at collection.
+    """
+    if fcntl is not None:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        return
+    # msvcrt locks a byte range from the current offset; byte 0 is the
+    # conventional whole-file sentinel. LK_LOCK gives up after ~10 retries, so
+    # loop to preserve the blocking contract the POSIX path provides.
+    f.seek(0)
+    while True:
+        try:
+            msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+            return
+        except OSError:
+            time.sleep(0.1)
+
+
+def _unlock(f: Any) -> None:
+    if fcntl is not None:
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        return
+    f.seek(0)
+    msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+
 
 # ---------------------------------------------------------------------------
 # Canonicalization — RFC 8785 JCS, approximated.
@@ -201,7 +238,7 @@ class AuditLog:
         with self._lock:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with self.path.open("a+b") as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                _lock_exclusive(f)
                 try:
                     # Re-derive the true tail under the lock: another writer may
                     # have appended since this instance was constructed, so the
@@ -225,7 +262,7 @@ class AuditLog:
                     self._next_seq += 1
                     return record
                 finally:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    _unlock(f)
 
     # ------------------------------------------------------------------
     # Reader / verifier.
