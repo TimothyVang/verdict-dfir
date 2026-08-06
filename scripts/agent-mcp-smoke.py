@@ -389,6 +389,10 @@ def synthetic_flow(client: StdioClient) -> int:
             ("tool_call_output", {"tool_call_id": "tc-3", "output_hash": "c" * 64}),
             ("tool_call_start", {"tool_call_id": "tc-4", "tool": "mft_timeline"}),
             ("tool_call_output", {"tool_call_id": "tc-4", "output_hash": "d" * 64}),
+            # The seal gate walks the chain in order and requires an approving
+            # verifier_action ahead of every finding_approved, so these come first.
+            ("verifier_action", {"finding_id": "f-A-1", "action": "approved"}),
+            ("verifier_action", {"finding_id": "f-B-1", "action": "approved"}),
             (
                 "finding_approved",
                 {
