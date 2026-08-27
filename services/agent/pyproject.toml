@@ -26,7 +26,7 @@ dependencies = [
   # Claude Agent SDK — still here because the `anthropic` types
   # (Tool, Message, etc.) appear in shared type definitions even
   # though the orchestrator no longer makes API calls itself.
-  "anthropic>=0.45,<1.0",
+  "anthropic>=0.45,<2.0",
 
   # Pydantic v2 for the AgentEvent union + all typed models.
   "pydantic>=2.7,<3.0",
