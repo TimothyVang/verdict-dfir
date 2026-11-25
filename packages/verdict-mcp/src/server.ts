@@ -1,4 +1,5 @@
 import { createInterface } from "node:readline"
+import { callBridgedTool, listBridgedTools, type BridgeTarget } from "./bridge.js"
 import { DairDirector } from "./dair.js"
 import { runDoctor } from "./doctor.js"
 import { EvidenceSource, VerdictMcpError } from "./evidence.js"
@@ -214,6 +215,33 @@ export class VerdictMcpSession {
           additionalProperties: false,
         },
       },
+      {
+        name: "bridge_list_tools",
+        description: "List read-only forensic tools exposed by bridged Rust findevil-mcp (34 tools) or Python findevil-agent-mcp (14 custody tools).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            target: { type: "string", enum: ["findevil", "custody"] },
+          },
+          required: ["target"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "bridge_call_tool",
+        description: "Invoke a read-only tool on Rust findevil-mcp or Python custody MCP and wrap its output in a canonical REA EvidenceRecord with FTS5 indexing.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            target: { type: "string", enum: ["findevil", "custody"] },
+            tool_name: { type: "string" },
+            arguments: { type: "object" },
+            detail: { type: "string", enum: ["summary", "complete"] },
+          },
+          required: ["target", "tool_name"],
+          additionalProperties: false,
+        },
+      },
     ]
   }
 
@@ -344,6 +372,23 @@ export class VerdictMcpSession {
             String(args.target ?? ""),
           ) as unknown as Record<string, unknown>
           break
+        case "bridge_list_tools": {
+          const target = String(args.target ?? "findevil") as BridgeTarget
+          result = listBridgedTools(this.repoRoot, target) as unknown as Record<string, unknown>
+          break
+        }
+        case "bridge_call_tool": {
+          const target = String(args.target ?? "findevil") as BridgeTarget
+          const toolName = String(args.tool_name ?? "")
+          const toolArgs = (args.arguments && typeof args.arguments === "object" ? args.arguments : {}) as Record<string, unknown>
+          const rec = callBridgedTool(this.ledger, this.repoRoot, target, toolName, toolArgs)
+          const detail = args.detail === "complete" ? "complete" : "summary"
+          result =
+            detail === "complete"
+              ? (rec as unknown as Record<string, unknown>)
+              : { detail: "summary", normalized_result: this.ledger.summarize(rec) }
+          break
+        }
         default:
           throw new VerdictMcpError("invalid_request", `Unknown tool '${name}'. Call tools/list to inspect available operations.`)
       }

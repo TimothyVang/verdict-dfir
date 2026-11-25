@@ -14,7 +14,8 @@ import {
 } from "@verdict/caseforge-sdk"
 import { EvidenceLedger, runDoctor, runIntake, startStdioServer, type EvidenceBundle } from "@verdict/mcp"
 import { writeCaseReportPack } from "@verdict/report"
-
+import { runInvestigatePipeline } from "./investigate.js"
+import { runSetup, type SetupClient } from "./setup.js"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, "..", "..", "..", "..")
 
@@ -36,9 +37,10 @@ function printHelp(): void {
 
 Usage:
   verdict doctor [--json]
-  verdict setup [--client claude|codex|cursor|opencode|all] [--json]
+  verdict setup [--client claude|cursor|codex|all] [--apply] [--home <dir>] [--json]
   verdict models [--privacy local-only|redacted-cloud|cloud-ok] [--evidence sensitive|synthetic|public] [--json]
   verdict intake <path> [--detail summary|complete] [--evidence-output <file>] [--json]
+  verdict investigate <evidence-path> --out-dir <dir> [--case-id <id>] [--privacy local-only|redacted-cloud|cloud-ok] [--evidence sensitive|synthetic|public] [--json]
   verdict report <bundle.json> --out-dir <dir> [--case-id <id>] [--json]
   verdict verify <run-dir> [--json]
   verdict serve [--audit-log <file>]
@@ -70,24 +72,33 @@ async function main(): Promise<void> {
     }
 
     case "setup": {
-      const client = flagValue(rest, "--client") ?? "all"
-      const entryScript = resolve(REPO_ROOT, "packages/verdict-cli/dist/src/cli.js")
-      const plan = {
-        mode: "read-only-plan",
-        client,
-        mcp_server: {
-          name: "verdict",
-          command: "node",
-          args: [entryScript, "serve"],
-        },
-        skills_path: resolve(REPO_ROOT, ".agents/skills/verdict-dfir/SKILL.md"),
-        plugins: {
-          claude: resolve(REPO_ROOT, ".claude-plugin/plugin.json"),
-          codex: resolve(REPO_ROOT, ".codex-plugin/plugin.json"),
-          cursor: resolve(REPO_ROOT, ".cursor-plugin/plugin.json"),
-        },
+      const client = (flagValue(rest, "--client") ?? "all") as SetupClient
+      const apply = rest.includes("--apply")
+      const homeDir = flagValue(rest, "--home")
+      const res = runSetup({ repoRoot: REPO_ROOT, client, apply, homeDir })
+      console.log(JSON.stringify(res, null, 2))
+      return
+    }
+
+    case "investigate": {
+      const evidencePath = rest.find((a) => !a.startsWith("-"))
+      const outDir = flagValue(rest, "--out-dir")
+      if (!evidencePath || !outDir) {
+        console.error("error: verdict investigate requires <evidence-path> --out-dir <dir>")
+        process.exit(2)
       }
-      console.log(JSON.stringify(plan, null, 2))
+      const caseId = flagValue(rest, "--case-id") ?? "case"
+      const privacy = (flagValue(rest, "--privacy") ?? DEFAULT_PRIVACY_MODE) as PrivacyMode
+      const evidenceClass = (flagValue(rest, "--evidence") ?? "sensitive") as EvidenceClass
+      const summary = runInvestigatePipeline({
+        evidencePath,
+        outDir,
+        caseId,
+        repoRoot: REPO_ROOT,
+        privacy,
+        evidenceClass,
+      })
+      console.log(JSON.stringify(summary, null, 2))
       return
     }
 

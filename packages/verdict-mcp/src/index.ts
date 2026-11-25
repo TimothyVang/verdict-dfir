@@ -46,3 +46,6 @@ export type { CuriosityProbe, DairAssessment, InvestigationPhase } from "./dair.
 
 export { triageBinary } from "./re_bridge.js"
 export type { BinaryTriageResult } from "./re_bridge.js"
+
+export { callBridgedTool, listBridgedTools, resolveBridgeSpec } from "./bridge.js"
+export type { BridgeTarget } from "./bridge.js"
