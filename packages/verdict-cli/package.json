@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@verdict/caseforge-sdk": "*",
-    "@verdict/mcp": "*"
+    "@verdict/mcp": "*",
+    "@verdict/report": "*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -10,11 +10,13 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @verdict/caseforge-sdk && npm run build -w @verdict/mcp && npm run build -w @verdict/cli && npm run build -w @verdict/caseforge-tui && npm run build -w @verdict/caseforge-cli",
-    "build:core": "npm run build -w @verdict/caseforge-sdk && npm run build -w @verdict/mcp && npm run build -w @verdict/cli",
+    "build": "npm run build -w @verdict/caseforge-sdk && npm run build -w @verdict/mcp && npm run build -w @verdict/report && npm run build -w @verdict/cli && npm run build -w @verdict/caseforge-tui && npm run build -w @verdict/caseforge-cli",
+    "build:core": "npm run build -w @verdict/caseforge-sdk && npm run build -w @verdict/mcp && npm run build -w @verdict/report && npm run build -w @verdict/cli",
     "test:mcp": "node --test packages/verdict-mcp/test/*.test.mjs",
+    "test:report": "node --test packages/verdict-report/test/*.test.mjs",
     "test:cli": "node --test packages/verdict-cli/test/*.test.mjs",
-    "test": "npm run test:mcp && npm run test:cli",
+    "test": "npm run test:mcp && npm run test:report && npm run test:cli && npm run attack:custody",
+    "attack:custody": "node scripts/attack-custody.mjs",
     "doctor": "node packages/verdict-cli/dist/src/cli.js doctor",
     "serve": "node packages/verdict-cli/dist/src/cli.js serve",
     "build:rust": "cargo build --release -p findevil-mcp",

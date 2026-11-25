@@ -49,10 +49,12 @@ export class EvidenceLedger {
   private readonly records = new Map<string, EvidenceRecord>()
   private readonly ordered: EvidenceRecord[] = []
   private readonly auditPath: string | null
+  private readonly onRetain: ((record: EvidenceRecord) => void) | null
   private lastHash: string | null = null
 
-  constructor(opts?: { auditPath?: string }) {
+  constructor(opts?: { auditPath?: string; onRetain?: (record: EvidenceRecord) => void }) {
     this.auditPath = opts?.auditPath ?? null
+    this.onRetain = opts?.onRetain ?? null
   }
 
   retain<T extends Record<string, unknown>>(input: RetainEvidenceInput<T>): EvidenceRecord<T> {
@@ -93,7 +95,9 @@ export class EvidenceLedger {
       mkdirSync(dirname(this.auditPath), { recursive: true })
       appendFileSync(this.auditPath, `${line}\n`, "utf8")
     }
-
+    if (this.onRetain) {
+      this.onRetain(record)
+    }
     return record
   }
 

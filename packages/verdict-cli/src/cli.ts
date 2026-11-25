@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import {
@@ -11,7 +12,8 @@ import {
   type ModelCandidate,
   type PrivacyMode,
 } from "@verdict/caseforge-sdk"
-import { EvidenceLedger, runDoctor, runIntake, startStdioServer } from "@verdict/mcp"
+import { EvidenceLedger, runDoctor, runIntake, startStdioServer, type EvidenceBundle } from "@verdict/mcp"
+import { writeCaseReportPack } from "@verdict/report"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, "..", "..", "..", "..")
@@ -37,6 +39,7 @@ Usage:
   verdict setup [--client claude|codex|cursor|opencode|all] [--json]
   verdict models [--privacy local-only|redacted-cloud|cloud-ok] [--evidence sensitive|synthetic|public] [--json]
   verdict intake <path> [--detail summary|complete] [--evidence-output <file>] [--json]
+  verdict report <bundle.json> --out-dir <dir> [--case-id <id>] [--json]
   verdict verify <run-dir> [--json]
   verdict serve [--audit-log <file>]
 `)
@@ -123,6 +126,34 @@ async function main(): Promise<void> {
       const detail = flagValue(rest, "--detail") === "complete" ? "complete" : "summary"
       const output = detail === "complete" ? rec : { detail: "summary", normalized_result: ledger.summarize(rec) }
       console.log(JSON.stringify(output, null, 2))
+      return
+    }
+
+    case "report": {
+      const bundleFile = rest.find((a) => !a.startsWith("-"))
+      const outDir = flagValue(rest, "--out-dir")
+      if (!bundleFile || !outDir) {
+        console.error("error: verdict report requires <bundle.json> --out-dir <dir>")
+        process.exit(2)
+      }
+      const caseId = flagValue(rest, "--case-id") ?? "case"
+      const bundle = JSON.parse(readFileSync(resolve(bundleFile), "utf8")) as EvidenceBundle
+      const ledger = new EvidenceLedger()
+      ledger.importBundle(bundle)
+      const chain = ledger.verifyAuditChain()
+      const written = writeCaseReportPack(
+        {
+          case_id: caseId,
+          verdict: "INDETERMINATE",
+          basis: `Generated from authenticated bundle ${bundle.bundle_id} (${bundle.record_count} records).`,
+          audit_chain_ok: chain.ok,
+          bundle,
+          findings: [],
+          unknowns: [],
+        },
+        resolve(outDir),
+      )
+      console.log(JSON.stringify(written, null, 2))
       return
     }
 

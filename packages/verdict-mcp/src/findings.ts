@@ -113,6 +113,22 @@ export class FindingsStore {
       )
     }
 
+    // TRUDI negative_from_truncated gate: refuse absence/refuted claims backed only by incomplete/truncated evidence
+    const assertsAbsence = requestedStatus === "refuted" || /\b(absent|no match|not present|no evidence of|clean)\b/i.test(input.claim)
+    if (assertsAbsence && citedRecords.every((r) => r.coverage.status !== "complete")) {
+      throw new VerdictMcpError(
+        "forensic_rule_violation",
+        "Refusing absence/negative finding backed solely by partial or unknown coverage evidence (TRUDI negative_from_truncated gate).",
+        {
+          details: { rule: "negative_from_truncated", coverages: citedRecords.map((r) => r.coverage.status) },
+          remediation: {
+            action: "Re-run with a narrower filter or complete coverage before asserting absence.",
+          },
+          recovery: { kind: "supply_corroboration", operation: "record_finding" },
+        },
+      )
+    }
+
     // Mulder rule: validate ISO-8601 timestamps; auto-nullify fabricated/malformed ones
     let eventTimestamp: string | null = null
     let timestampWarning: string | undefined

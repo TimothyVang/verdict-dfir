@@ -35,3 +35,14 @@ export { runDoctor } from "./doctor.js"
 export type { ToolProbe } from "./doctor.js"
 
 export { startStdioServer, VerdictMcpSession } from "./server.js"
+export { CaseFtsIndex } from "./fts.js"
+export type { FtsHit } from "./fts.js"
+
+export { triageLinuxDisk } from "./linux.js"
+export type { LinuxArtifactHit } from "./linux.js"
+
+export { DairDirector } from "./dair.js"
+export type { CuriosityProbe, DairAssessment, InvestigationPhase } from "./dair.js"
+
+export { triageBinary } from "./re_bridge.js"
+export type { BinaryTriageResult } from "./re_bridge.js"

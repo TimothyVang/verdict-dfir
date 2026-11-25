@@ -1,9 +1,13 @@
 import { createInterface } from "node:readline"
+import { DairDirector } from "./dair.js"
+import { runDoctor } from "./doctor.js"
 import { EvidenceSource, VerdictMcpError } from "./evidence.js"
 import { FindingsStore, RecordFindingInput } from "./findings.js"
+import { CaseFtsIndex } from "./fts.js"
 import { runIntake } from "./intake.js"
 import { AnalysisViewQuery, EvidenceLedger } from "./ledger.js"
-import { runDoctor } from "./doctor.js"
+import { triageLinuxDisk } from "./linux.js"
+import { triageBinary } from "./re_bridge.js"
 import { UnknownsRegistry } from "./unknowns.js"
 
 interface JsonRpcRequest {
@@ -15,15 +19,22 @@ interface JsonRpcRequest {
 
 export class VerdictMcpSession {
   readonly ledger: EvidenceLedger
+  readonly fts: CaseFtsIndex
   readonly unknowns: UnknownsRegistry
   readonly findings: FindingsStore
+  readonly dair: DairDirector
   readonly repoRoot: string
 
-  constructor(opts?: { repoRoot?: string; auditPath?: string }) {
+  constructor(opts?: { repoRoot?: string; auditPath?: string; ftsDbPath?: string }) {
     this.repoRoot = opts?.repoRoot ?? process.cwd()
-    this.ledger = new EvidenceLedger({ auditPath: opts?.auditPath })
+    this.fts = new CaseFtsIndex(opts?.ftsDbPath ?? ":memory:")
+    this.ledger = new EvidenceLedger({
+      auditPath: opts?.auditPath,
+      onRetain: (record) => this.fts.indexRecord(record),
+    })
     this.unknowns = new UnknownsRegistry()
     this.findings = new FindingsStore()
+    this.dair = new DairDirector()
   }
 
   listTools() {
@@ -144,6 +155,65 @@ export class VerdictMcpSession {
           additionalProperties: false,
         },
       },
+      {
+        name: "search_evidence",
+        description: "Full-text SQLite FTS5 search across all retained case Evidence records with BM25 ranking and evidence_id provenance.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: { type: "string" },
+            artifact_class: { type: "string" },
+            limit: { type: "number" },
+          },
+          required: ["query"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "triage_linux_disk",
+        description: "Read-only Linux dead-disk parser pack: inspects ld.so.preload, sudoers, SSH authorized_keys, cron, systemd, auth logs, and /var/www webshells.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            rootfs: { type: "string" },
+            detail: { type: "string", enum: ["summary", "complete"] },
+          },
+          required: ["rootfs"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "triage_binary",
+        description: "Execution-free binary & malware triage (PE/ELF/Mach-O format, Shannon entropy, suspicious strings, optional CAPA/REA bridge).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            invoke_external: { type: "boolean" },
+            detail: { type: "string", enum: ["summary", "complete"] },
+          },
+          required: ["path"],
+          additionalProperties: false,
+        },
+      },
+      {
+        name: "conduct_assess",
+        description: "TRUDI-style DAIR phase director: evaluates sealed session state and emits next phase, priority_tools, coverage audit, and curiosity_budget.",
+        inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      },
+      {
+        name: "record_curiosity_probe",
+        description: "Spend 1 unit of active DAIR curiosity_budget to log an off-plan read-only exploratory probe with explicit rationale.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            rationale: { type: "string" },
+            target: { type: "string" },
+          },
+          required: ["rationale", "target"],
+          additionalProperties: false,
+        },
+      },
     ]
   }
 
@@ -235,6 +305,43 @@ export class VerdictMcpSession {
         case "export_evidence_bundle":
           result = this.ledger.exportBundle(
             typeof args.output_path === "string" ? args.output_path : undefined,
+          ) as unknown as Record<string, unknown>
+          break
+        case "search_evidence": {
+          const hits = this.fts.search(String(args.query ?? ""), {
+            artifact_class: typeof args.artifact_class === "string" ? args.artifact_class : undefined,
+            limit: typeof args.limit === "number" ? args.limit : undefined,
+          })
+          result = { query: String(args.query ?? ""), indexed_docs: this.fts.count(), hits }
+          break
+        }
+        case "triage_linux_disk": {
+          const rec = triageLinuxDisk(this.ledger, String(args.rootfs ?? ""))
+          const detail = args.detail === "complete" ? "complete" : "summary"
+          result =
+            detail === "complete"
+              ? (rec as unknown as Record<string, unknown>)
+              : { detail: "summary", normalized_result: this.ledger.summarize(rec) }
+          break
+        }
+        case "triage_binary": {
+          const rec = triageBinary(this.ledger, String(args.path ?? ""), {
+            invokeExternal: Boolean(args.invoke_external),
+          })
+          const detail = args.detail === "complete" ? "complete" : "summary"
+          result =
+            detail === "complete"
+              ? (rec as unknown as Record<string, unknown>)
+              : { detail: "summary", normalized_result: this.ledger.summarize(rec) }
+          break
+        }
+        case "conduct_assess":
+          result = this.dair.assess(this.ledger, this.findings, this.unknowns) as unknown as Record<string, unknown>
+          break
+        case "record_curiosity_probe":
+          result = this.dair.recordCuriosityProbe(
+            String(args.rationale ?? ""),
+            String(args.target ?? ""),
           ) as unknown as Record<string, unknown>
           break
         default:
