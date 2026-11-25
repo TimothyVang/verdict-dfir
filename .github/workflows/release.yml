@@ -1,0 +1,209 @@
+name: Release
+
+# Glue Spec #4 §4, post-A2 packaging. Triggered by semver tags (`vX.Y.Z`).
+# The historical `v-submit` tags remain supported for SANS submission evidence.
+# Verifies L3 green, builds offline report.html, uploads artifacts to GH
+# Release, pushes release=true score to the leaderboard, posts #releases
+# Slack. The GHCR image is best-effort so package permissions cannot block the
+# v-submit Devpost path.
+
+on:
+  push:
+    tags: ['v[0-9]*', 'v-submit', 'v-smoke', 'v-submit-smoke']
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  l3-gate:
+    if: github.repository == 'TimothyVang/verdict-dfir'
+    name: Verify L3 green on tagged commit
+    runs-on: ubuntu-24.04
+    outputs:
+      l3_green: ${{ steps.verify.outputs.l3_green }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate release tag
+        run: |
+          set -euo pipefail
+          case "${GITHUB_REF_NAME}" in
+            v-submit|v-smoke|v-submit-smoke) exit 0 ;;
+          esac
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Release tags must be semver (vX.Y.Z) or an explicit historical/smoke exception."
+            exit 1
+          fi
+      - name: Verify nightly L3 green on this SHA
+        id: verify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # Look for a successful l3-nightly run whose head SHA matches
+          # the tag's commit OR is an ancestor within the last 24h.
+          GREEN=$(gh run list \
+            --workflow=l3-nightly.yml \
+            --branch=master \
+            --status=success \
+            --limit=5 \
+            --json headSha,databaseId \
+            --jq "[.[] | select(.headSha == \"${TARGET_SHA}\")] | length")
+          if [[ "${GREEN:-0}" -gt 0 ]]; then
+            echo "l3_green=true" >> "$GITHUB_OUTPUT"
+          else
+            if [[ "${GITHUB_REF_NAME}" != "v-smoke" && "${GITHUB_REF_NAME}" != "v-submit-smoke" ]]; then
+              echo "::error::No l3-nightly green run on ${TARGET_SHA}. Final release tags require L3 evidence."
+              exit 1
+            fi
+            echo "::warning::No l3-nightly green run on ${TARGET_SHA}. Smoke release will continue, but this is not submission-ready."
+            echo "l3_green=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # build-deb job removed 2026-04-27 — Amendment A2 + dockerfile-a2-decision.md
+  # "Option B". The .deb wrapped a Python CLI that A2 dropped; under
+  # "Claude Code IS the orchestrator", the .deb has no runtime to
+  # package. ghcr image (build-docker below) still ships for CI build-
+  # state reproduction. Devpost submission delivery is `git clone` +
+  # `scripts/install.sh` + `claude .` per A2 §2.4.
+
+  build-docker:
+    if: github.repository == 'TimothyVang/verdict-dfir'
+    name: Build + push Docker image
+    needs: l3-gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+      - name: Derive image tags
+        id: tags
+        run: |
+          OWNER_LC="${GITHUB_REPOSITORY_OWNER,,}"
+          {
+            echo "tags<<EOF"
+            echo "ghcr.io/${OWNER_LC}/find-evil:${GITHUB_REF_NAME}"
+            if [[ "${GITHUB_REF_NAME}" != "v-smoke" && "${GITHUB_REF_NAME}" != "v-submit-smoke" ]]; then
+              echo "ghcr.io/${OWNER_LC}/find-evil:latest"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Build + push
+        id: docker_build
+        continue-on-error: true
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+      - name: Report GHCR best-effort failure
+        if: steps.docker_build.outcome == 'failure'
+        run: |
+          echo "::warning::GHCR image publish failed; release artifacts continue through the GitHub Release path."
+
+  build-report:
+    if: github.repository == 'TimothyVang/verdict-dfir'
+    name: Build offline report.html
+    needs: l3-gate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0 }
+      - name: Build report.html
+        run: |
+          test -f pnpm-workspace.yaml
+          test -d apps/web
+          pnpm install --frozen-lockfile
+          pnpm --filter @findevil/web run build:lib
+          cp apps/web/dist/report.html report.html
+          python3 scripts/validate-submission-assets.py --report report.html
+          ls -lh report.html
+      - name: Upload report.html
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-${{ github.ref_name }}
+          path: report.html
+          retention-days: 30
+
+  publish:
+    if: github.repository == 'TimothyVang/verdict-dfir' && !contains(github.ref_name, 'smoke')
+    name: Publish GitHub Release
+    needs: [l3-gate, build-report]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download report.html
+        uses: actions/download-artifact@v4
+        with:
+          name: report-${{ github.ref_name }}
+          path: dist/
+      - name: Create / update GH release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "v-submit" ]]; then
+            release_title="VERDICT — SANS Find Evil! 2026 submission"
+            release_notes="Historical hackathon submission release. Semver tags are the forward product release line."
+          else
+            release_title="VERDICT ${GITHUB_REF_NAME}"
+            release_notes="Auto-generated VERDICT release. See README.md, docs/architecture.md, and docs/release-surface.md."
+          fi
+          if ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "${release_title}" \
+              --notes "${release_notes}" \
+              --draft=false
+          fi
+          gh release edit "${GITHUB_REF_NAME}" \
+            --title "${release_title}" \
+            --notes "${release_notes}"
+          for f in dist/*; do
+            gh release upload "${GITHUB_REF_NAME}" "$f" --clobber
+          done
+
+      - name: Push leaderboard score (release=true)
+        env:
+          LEADERBOARD_API_KEY: ${{ secrets.LEADERBOARD_API_KEY }}
+        run: |
+          if [[ -x scripts/push-leaderboard-score.sh ]]; then
+            bash scripts/push-leaderboard-score.sh \
+              --commit-sha "${GITHUB_SHA}" \
+              --run-id "${GITHUB_RUN_ID}" \
+              --release true \
+              --tag "${GITHUB_REF_NAME}" \
+              || true
+          fi
+
+      - name: Slack #releases
+        if: env.SLACK_WEBHOOK_RELEASES != ''
+        env:
+          SLACK_WEBHOOK_RELEASES: ${{ secrets.SLACK_WEBHOOK_RELEASES }}
+        run: |
+          msg="[find-evil CI] release | PASS | ${GITHUB_SHA:0:7} | ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}
+          ${GITHUB_REF_NAME} shipped — report.html attached; GHCR image is best-effort."
+          curl -fsSL -X POST "${SLACK_WEBHOOK_RELEASES}" \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -nR --arg t "$msg" '{text:$t}')" \
+            || true

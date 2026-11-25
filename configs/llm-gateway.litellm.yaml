@@ -1,0 +1,75 @@
+# llm-gateway.litellm.yaml
+#
+# Purpose: TEMPLATE LiteLLM proxy configuration for caseforge-core's
+#          planned universal LLM gateway. When wired, the proxy presents ONE
+#          OpenAI-compatible surface and fans out to local + cloud backends,
+#          so the engine can talk to a single base_url and let the gateway
+#          (plus the privacy router) enforce backend selection.
+#
+# Status:  PLANNED (Phase 3). NOT YET WIRED. This is a starting template, not a
+#          live config. Do not point production at it until Phase 3 lands.
+#
+# Security: Keys use os.environ/{env} placeholders resolved by LiteLLM at load
+#           time. NEVER commit a real key. Local backends need no key.
+#
+# Usage (future): litellm --config configs/llm-gateway.litellm.yaml
+#
+# schema_version: 1
+
+model_list:
+
+  # ---- LOCAL backends (no key; keep evidence on-host) ------------------------
+
+  - model_name: local-ollama
+    litellm_params:
+      model: openai/llama3.1:8b            # openai/ prefix => OpenAI-compatible driver
+      api_base: http://localhost:11434/v1
+      api_key: "none"                       # Ollama is unauthenticated locally
+    model_info:
+      privacy_location: local
+
+  - model_name: local-vllm
+    litellm_params:
+      model: openai/qwen2.5-coder:32b
+      api_base: http://localhost:8000/v1
+      api_key: "none"                       # vLLM unauthenticated by default
+    model_info:
+      privacy_location: local
+
+  # ---- CLOUD backends (keys from environment) --------------------------------
+
+  - model_name: openrouter
+    litellm_params:
+      model: openrouter/openai/gpt-5.5
+      api_key: os.environ/OPENROUTER_API_KEY
+    model_info:
+      privacy_location: cloud
+
+  - model_name: zai
+    litellm_params:
+      model: openai/glm-4.6                  # OpenAI-compatible driver against Z.AI
+      api_base: https://api.z.ai/api/paas/v4
+      api_key: os.environ/ZAI_API_KEY
+    model_info:
+      privacy_location: cloud
+
+  - model_name: openai
+    litellm_params:
+      model: openai/gpt-5.5
+      api_key: os.environ/OPENAI_API_KEY
+    model_info:
+      privacy_location: cloud
+
+# ------------------------------------------------------------------------------
+# Proxy-level settings (template defaults; tune in Phase 3).
+# ------------------------------------------------------------------------------
+litellm_settings:
+  drop_params: true              # tolerate provider-specific param differences
+  request_timeout: 600
+
+general_settings:
+  # Master key for the proxy itself; virtual/team keys are minted against it.
+  # Placeholder only -- resolved from the environment, never hardcoded.
+  master_key: os.environ/LITELLM_MASTER_KEY
+  # Reminder: the caseforge privacy router still gates which model_name a
+  # sensitive request may target based on model_info.privacy_location.

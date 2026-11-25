@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# caseforge — VERDICT entrypoint.
+#   caseforge                → launch the agent runtime TUI (the opencode fork), like `opencode`
+#   caseforge <cmd> [args…]  → run the caseforge controller CLI
+#                              (doctor · models · investigate · verify · tui · fleet · …)
+# Safe to symlink onto PATH (e.g. ~/.local/bin/caseforge): symlinks are resolved.
+set -euo pipefail
+
+resolve_self() {
+  local source dir target
+  source="${BASH_SOURCE[0]}"
+  while [ -L "$source" ]; do
+    dir="$(cd -P "$(dirname "$source")" && pwd)"
+    target="$(readlink "$source")"
+    case "$target" in
+      /*) source="$target" ;;
+      *) source="$dir/$target" ;;
+    esac
+  done
+  dir="$(cd -P "$(dirname "$source")" && pwd)"
+  printf '%s/%s\n' "$dir" "$(basename "$source")"
+}
+
+SELF="$(resolve_self)"
+BIN_DIR="$(cd "$(dirname "$SELF")" && pwd)"   # <umbrella>/caseforge/bin
+ROOT="$(cd "$BIN_DIR/.." && pwd)"             # <umbrella>/caseforge
+
+# No subcommand → drop into the locked VERDICT agent TUI, just like opencode.
+if [ "$#" -eq 0 ]; then
+  exec "$BIN_DIR/verdict" --agent verdict
+fi
+
+# Otherwise run the built controller CLI (build it first if needed).
+CLI="$ROOT/packages/caseforge-cli/dist/src/cli.js"
+if [ ! -f "$CLI" ]; then
+  echo "[caseforge] building…" >&2
+  (cd "$ROOT" && npm run build >/dev/null 2>&1)
+fi
+exec node "$CLI" "$@"

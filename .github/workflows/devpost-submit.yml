@@ -1,0 +1,160 @@
+name: Devpost Submit
+
+# Glue Spec #4 §9. Triggered by `git push origin v-submit`.
+# Waits for release.yml to finish, assembles find-evil-submission.zip
+# via scripts/package-devpost.sh, uploads to the GH Release, posts
+# #releases Slack. Manual Devpost form upload follows.
+
+on:
+  push:
+    tags: ['v-submit', 'v-submit-smoke']
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  wait-release:
+    name: Wait for release.yml to finish on v-submit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    outputs:
+      ok: ${{ steps.wait.outputs.ok }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Poll for successful release.yml
+        id: wait
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          deadline=$(( $(date +%s) + 1800 ))  # 30 min
+          while [[ $(date +%s) -lt ${deadline} ]]; do
+            if gh run list \
+              --workflow=release.yml \
+              --status=success \
+              --limit=5 \
+              --json headSha \
+              --jq "[.[] | select(.headSha == \"${TARGET_SHA}\")] | length" \
+              | grep -qv '^0$'; then
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 120
+          done
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+          exit 1
+
+  package:
+    name: Assemble submission zip
+    needs: wait-release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify DEMO_VIDEO_URL set
+        env:
+          DEMO_VIDEO_URL: ${{ vars.DEMO_VIDEO_URL }}
+        run: |
+          if [[ -z "${DEMO_VIDEO_URL}" && "${GITHUB_REF_NAME}" == "v-submit" ]]; then
+            echo "::error::DEMO_VIDEO_URL is empty. Set with:"
+            echo "::error::  gh variable set DEMO_VIDEO_URL --body 'https://youtu.be/<id>'"
+            exit 1
+          fi
+          if [[ -z "${DEMO_VIDEO_URL}" ]]; then
+            echo "::warning::DEMO_VIDEO_URL is empty; smoke package will use smoke-only placeholder"
+          fi
+
+      - name: Download release artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p release-assets
+          gh release download "${GITHUB_REF_NAME}" --dir release-assets --pattern '*'
+          ls -lh release-assets/
+          if [[ ! -f release-assets/readiness-packet.zip ]]; then
+            echo "::warning::No readiness-packet.zip release asset found; Devpost package will omit the optional expert-review packet."
+          fi
+
+      - name: Download L3 verdicts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p logs/l3
+          # Prefer the full weekly matrix when GitHub has indexed it, but allow
+          # the required same-SHA nightly gate to supply the final package.
+          downloaded=false
+          for source in \
+            "l3-weekly-goldens.yml:l3-weekly-verdicts:weekly" \
+            "l3-nightly.yml:l3-verdicts:nightly"
+          do
+            IFS=: read -r workflow artifact label <<< "${source}"
+            run_id=$(gh run list \
+              --workflow="${workflow}" \
+              --branch=master \
+              --status=success \
+              --limit=20 \
+              --json databaseId,headSha \
+              --jq "[.[] | select(.headSha == \"${TARGET_SHA}\")] | .[0].databaseId // \"\"" \
+              2>/dev/null || true)
+            if [[ -z "${run_id:-}" ]]; then
+              echo "::warning::No same-SHA ${label} L3 run found via ${workflow}"
+              continue
+            fi
+            if gh run download "${run_id}" --name "${artifact}" --dir logs/l3; then
+              echo "Downloaded ${label} L3 verdicts from run ${run_id}"
+              downloaded=true
+              break
+            fi
+            echo "::warning::Run ${run_id} did not expose artifact ${artifact}"
+          done
+          if [[ "${downloaded}" != "true" && "${GITHUB_REF_NAME}" == "v-submit" ]]; then
+            echo "::error::No same-SHA L3 verdict artifacts found for final submission"
+            exit 1
+          fi
+          if [[ -z "$(find logs/l3 -name '*-verdict.json' -print -quit)" && "${GITHUB_REF_NAME}" == "v-submit" ]]; then
+            echo "::error::Downloaded L3 artifacts did not include verdict JSON"
+            exit 1
+          fi
+
+      - name: Convert verdicts to CSV
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "v-submit-smoke" && -z "$(find logs/l3 -name '*-verdict.json' -print -quit)" ]]; then
+            echo 'fixture,findings_matched' > benchmark-results.csv
+          else
+            python3 scripts/json-to-benchmark-csv.py logs/l3 > benchmark-results.csv
+            python3 scripts/validate-submission-assets.py --benchmark benchmark-results.csv
+          fi
+          cat benchmark-results.csv
+
+      - name: Run package-devpost.sh
+        env:
+          DEMO_VIDEO_URL: ${{ vars.DEMO_VIDEO_URL }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          ACCURACY: ${{ vars.LAST_KNOWN_ACCURACY || '0' }}
+          DATE: ${{ github.event.head_commit.timestamp || github.event.ref }}
+          FINDEVIL_DEVPOST_MODE: ${{ github.ref_name == 'v-submit-smoke' && 'smoke' || 'strict' }}
+          READINESS_PACKET_ZIP: release-assets/readiness-packet.zip
+        run: |
+          bash scripts/package-devpost.sh
+          ls -lh find-evil-submission.zip
+
+      - name: Upload to GH Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" find-evil-submission.zip --clobber
+
+      - name: Slack #releases
+        if: env.SLACK_WEBHOOK_RELEASES != ''
+        env:
+          SLACK_WEBHOOK_RELEASES: ${{ secrets.SLACK_WEBHOOK_RELEASES }}
+        run: |
+          msg="[find-evil CI] devpost-submit | PASS | ${GITHUB_SHA:0:7} | ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/v-submit
+          Devpost package ready — find-evil-submission.zip uploaded. Download it and attach to the Devpost form manually."
+          curl -fsSL -X POST "${SLACK_WEBHOOK_RELEASES}" \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -nR --arg t "$msg" '{text:$t}')" \
+            || true

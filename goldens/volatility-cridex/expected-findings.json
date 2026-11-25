@@ -1,0 +1,58 @@
+{
+  "_comment": [
+    "Ground truth for the Volatility Cridex banking-trojan memory image.",
+    "Source: canonical download (downloads.volatilityfoundation.org) is currently DEAD;",
+    "repo read-only since May 2025; no published authoritative hash. Awaiting a verified",
+    "mirror (a SANS-hosted copy with hashes was requested in the thread).",
+    "Tier: RED for SOURCING (do not rely until hosted), but the IOCs are canonical and",
+    "well documented. memory-class case. Classic signal: reader_sl.exe spawned by",
+    "explorer.exe with injected code and outbound C2."
+  ],
+  "case_id": "volatility-cridex",
+  "source_url": "https://downloads.volatilityfoundation.org/volatility3/images/cridex.vmem",
+  "license": "Volatility Foundation sample — CC-BY (attribution required)",
+  "verdict": "CONFIRMED_EVIL",
+  "min_recall_percent": 50,
+  "findings": [
+    {
+      "finding_id": "cr-001",
+      "description": "Malicious process reader_sl.exe running, spawned by explorer.exe",
+      "mitre_technique": "T1055",
+      "confidence": "CONFIRMED",
+      "artifact_class": "memory",
+      "artifact_hint": "vol pslist/pstree: reader_sl.exe child of explorer.exe"
+    },
+    {
+      "finding_id": "cr-002",
+      "description": "Code injection / hollowed RWX region detected in a host process",
+      "mitre_technique": "T1055.012",
+      "confidence": "CONFIRMED",
+      "artifact_class": "memory",
+      "artifact_hint": "vol malfind: injected region in explorer.exe / reader_sl.exe"
+    },
+    {
+      "finding_id": "cr-003",
+      "description": "Outbound C2 network connections from the infected host",
+      "mitre_technique": "T1071.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "memory",
+      "artifact_hint": "vol netscan/connections to banking-trojan C2"
+    },
+    {
+      "finding_id": "cr-004",
+      "description": "Anomalous parent-child relationship consistent with trojan injection",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "memory",
+      "artifact_hint": "Process tree: explorer.exe -> reader_sl.exe"
+    },
+    {
+      "finding_id": "cr-005",
+      "description": "Persistence mechanism registered by the trojan",
+      "mitre_technique": "T1547.001",
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "memory",
+      "artifact_hint": "Registry Run key recovered from memory hives"
+    }
+  ]
+}

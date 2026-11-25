@@ -1,0 +1,161 @@
+name: release-binaries
+
+# Prebuilt findevil-mcp binaries attached to the GitHub Release, so end users can
+# skip the 5-10 min source compile: scripts/install.sh fetches these (checksum-
+# verified) when FINDEVIL_MCP_PREBUILT=1 + FINDEVIL_MCP_VERSION=<tag> are set.
+# Semver tags (`vX.Y.Z`) are the forward release line; `v-submit` remains only
+# for historical SANS submission parity.
+# The triples below are exactly the ones scripts/install.sh host_triple() maps.
+#
+# Additive + isolated: this is a SEPARATE workflow from release.yml. It does NOT
+# gate on L3 and does NOT touch the v-submit critical path — a failed leg shows
+# an isolated red check, never blocks the release.
+#
+# Cross-target setup: most MCP logic is Rust, but some dependencies compile C
+# shims for the target (for example zstd-sys). Linux aarch64 therefore needs
+# both a cross linker and the target libc headers; the libewf/libyara/libfuse
+# packages in docker/l1-devbase.Dockerfile remain subprocess-tool dependencies.
+#
+# VALIDATION: before relying on this for v-submit, push a smoke tag (e.g.
+# `v-smoke`) and confirm every tarball + the merged SHA256SUMS attach to that
+# release. install.sh fetches the four Unix triples below; Windows users build
+# from source (cargo build --release) or run under WSL.
+
+on:
+  push:
+    tags: ['v[0-9]*', 'v-submit', 'v-smoke', 'v-submit-smoke']
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  build:
+    if: github.repository == 'TimothyVang/verdict-dfir'
+    name: build ${{ matrix.triple }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - triple: x86_64-unknown-linux-gnu
+            os: ubuntu-24.04
+            cross_pkgs: ""
+          - triple: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04
+            cross_pkgs: gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+          - triple: x86_64-apple-darwin
+            os: macos-14 # arm64 runner; Apple toolchain cross-compiles x86_64 natively
+            cross_pkgs: ""
+          - triple: aarch64-apple-darwin
+            os: macos-14
+            cross_pkgs: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${GITHUB_REF_NAME}" in
+            v-submit|v-smoke|v-submit-smoke) exit 0 ;;
+          esac
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Release tags must be semver (vX.Y.Z) or an explicit historical/smoke exception."
+            exit 1
+          fi
+
+      - name: Install Rust 1.88 (target ${{ matrix.triple }})
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.88.0"
+          targets: ${{ matrix.triple }}
+
+      - name: Cross toolchain (linux aarch64 only)
+        if: matrix.cross_pkgs != ''
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ${{ matrix.cross_pkgs }}
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+
+      - name: Build release binary
+        run: cargo build --release --locked -p findevil-mcp --target "${{ matrix.triple }}"
+
+      - name: Package tarball + per-triple checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          tarball="findevil-mcp-${{ matrix.triple }}.tar.xz"
+          tar -C "target/${{ matrix.triple }}/release" -cJf "${tarball}" findevil-mcp
+          # shasum exists on both macOS and Linux; output matches sha256sum -c format.
+          shasum -a 256 "${tarball}" > "${tarball}.sha256"
+          cat "${tarball}.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.triple }}
+          path: |
+            findevil-mcp-${{ matrix.triple }}.tar.xz
+            findevil-mcp-${{ matrix.triple }}.tar.xz.sha256
+
+  publish:
+    if: github.repository == 'TimothyVang/verdict-dfir' && !contains(github.ref_name, 'smoke')
+    name: assemble + upload to release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Merge checksums into SHA256SUMS
+        run: |
+          set -euo pipefail
+          cd dist
+          cat findevil-mcp-*.tar.xz.sha256 > SHA256SUMS
+          echo "--- SHA256SUMS ---"; cat SHA256SUMS
+
+      - name: Upload to the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd dist
+          tag="${GITHUB_REF_NAME}"
+          # release.yml is the only job allowed to create the public Release,
+          # because it is gated on L3 evidence. This workflow only attaches
+          # prebuilt binaries after that Release exists.
+          repo="${GITHUB_REPOSITORY}"
+          for _ in {1..30}; do
+            if gh release view "${tag}" --repo "${repo}" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 10
+          done
+          if ! gh release view "${tag}" --repo "${repo}" >/dev/null 2>&1; then
+            echo "::error::Release ${tag} does not exist; release.yml must create it after L3 succeeds."
+            exit 1
+          fi
+          for _ in {1..30}; do
+            release_green=$(gh run list \
+              --workflow=release.yml \
+              --branch="${tag}" \
+              --repo "${repo}" \
+              --limit=20 \
+              --json headSha,headBranch,status,conclusion \
+              --jq "[.[] | select(.headSha == \"${GITHUB_SHA}\" and .headBranch == \"${tag}\" and .status == \"completed\" and .conclusion == \"success\")] | length")
+            if [[ "${release_green:-0}" -gt 0 ]]; then
+              break
+            fi
+            sleep 10
+          done
+          if [[ "${release_green:-0}" -eq 0 ]]; then
+            echo "::error::No successful Release workflow found for ${GITHUB_SHA}; refusing to upload binaries."
+            exit 1
+          fi
+          gh release upload "${tag}" findevil-mcp-*.tar.xz SHA256SUMS --repo "${repo}" --clobber

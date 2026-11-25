@@ -1,0 +1,14 @@
+# Require owner review before CI/release policy changes can alter required gates.
+.github/CODEOWNERS @TimothyVang
+.github/workflows/** @TimothyVang
+docker/l1-compose.yml @TimothyVang
+docker/*.Dockerfile @TimothyVang
+scripts/*smoke*.py @TimothyVang
+scripts/readiness-gate.ps1 @TimothyVang
+scripts/setup-branch-protection.sh @TimothyVang
+scripts/validate-l3-evidence.py @TimothyVang
+scripts/l3-run-goldens.sh @TimothyVang
+scripts/validate-submission-assets.py @TimothyVang
+scripts/json-to-benchmark-csv.py @TimothyVang
+scripts/tool-count-guard.py @TimothyVang
+docs/release-evidence/** @TimothyVang

@@ -1,0 +1,82 @@
+name: Bug report
+description: Report a reproducible VERDICT problem.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach private evidence or unredacted case output. Include paths,
+        hashes, and log snippets only when safe to publish.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and the exact command or workflow.
+      placeholder: scripts/verdict evidence/sample.evtx failed during ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should VERDICT have done instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: evidence-type
+    attributes:
+      label: Evidence type
+      options:
+        - memory
+        - EVTX
+        - disk image
+        - PCAP/network
+        - Velociraptor collection
+        - mixed case folder
+        - no evidence / setup only
+        - other
+    validations:
+      required: true
+  - type: dropdown
+    id: run-mode
+    attributes:
+      label: Run mode
+      options:
+        - local
+        - --sift
+        - /verdict skill
+        - dashboard/report only
+        - CI/smoke
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Minimal commands or actions that reproduce the issue.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Rust/Python/Node versions, and relevant `scripts/doctor.sh` output.
+      placeholder: |
+        OS:
+        Rust:
+        Python:
+        Node:
+        Doctor summary:
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Safe logs or case metadata
+      description: Redact local paths, usernames, hostnames, and sensitive artifact content.
+      render: text

@@ -1,0 +1,28 @@
+{
+  "name": "@verdict/mcp",
+  "version": "1.0.0",
+  "description": "Unified REA-for-DFIR MCP server: canonical Evidence envelope, retained views, explicit unknowns, hash-chained audit ledger, and API-boundary citation gate.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "Timothy Vang",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

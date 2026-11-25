@@ -1,0 +1,96 @@
+# ingest-profiles.yaml
+#
+# Purpose: Maps each evidence type to the intended Rust ingest pipeline steps and
+#          the findevil-mcp tools those normalized artifacts should feed. This
+#          lets the agent pick an ingest profile by evidence type and know which
+#          tools become available downstream.
+#
+# Status:  PLANNED (Phase 12). STUB ONLY. The Rust ingest core is NOT yet built;
+#          `steps` name intended stages, not implemented code. Treat every step
+#          as a design placeholder subject to change.
+#
+# Notes:   Ingest is local-by-default -- raw evidence must not egress. Any
+#          derived text that would go to a cloud model is still gated by the
+#          privacy router.
+#
+# schema_version: 1
+
+profiles:
+
+  disk_image:
+    description: Full disk image (E01/raw/VMDK) -> filesystem + artifact extraction.
+    accepts_extensions: [".e01", ".raw", ".dd", ".img", ".vmdk"]
+    steps:                          # intended Rust ingest stages (not yet implemented)
+      - verify_hash                 # confirm image integrity (MD5/SHA)
+      - mount_readonly              # read-only mount / image parse
+      - carve_filesystem            # enumerate partitions + filesystems
+      - extract_artifacts          # registry, prefetch, $MFT, event logs, browser, etc.
+      - timeline_normalize          # emit normalized supertimeline rows
+    feeds_findevil_tools:
+      - findevil.filesystem_scan
+      - findevil.registry_analyze
+      - findevil.timeline_query
+      - findevil.persistence_hunt
+
+  memory_image:
+    description: Volatile memory capture -> process/network/injection analysis.
+    accepts_extensions: [".mem", ".raw", ".lime", ".dmp", ".vmem"]
+    steps:
+      - verify_hash
+      - detect_profile              # OS/kernel profile detection
+      - extract_processes           # process list, DLLs, handles
+      - extract_network             # connections, sockets
+      - scan_injection              # malfind-style injected-code detection
+    feeds_findevil_tools:
+      - findevil.process_tree
+      - findevil.netconn_analyze
+      - findevil.injection_scan
+
+  evtx:
+    description: Windows Event Log files -> normalized event records.
+    accepts_extensions: [".evtx"]
+    steps:
+      - parse_evtx                  # decode EVTX binary XML
+      - normalize_events            # map to common event schema
+      - timeline_normalize
+    feeds_findevil_tools:
+      - findevil.event_query
+      - findevil.logon_analyze
+      - findevil.timeline_query
+
+  pcap:
+    description: Packet capture -> flow + protocol metadata (payload gated).
+    accepts_extensions: [".pcap", ".pcapng"]
+    steps:
+      - parse_packets
+      - reconstruct_flows           # sessionize into flows
+      - extract_metadata            # DNS, HTTP, TLS SNI, JA3, etc.
+    feeds_findevil_tools:
+      - findevil.flow_analyze
+      - findevil.dns_hunt
+      - findevil.ioc_match
+
+  velociraptor_zip:
+    description: Velociraptor offline-collector export archive.
+    accepts_extensions: [".zip"]
+    steps:
+      - unpack_archive
+      - map_collector_results       # map VQL artifact outputs
+      - normalize_events
+      - timeline_normalize
+    feeds_findevil_tools:
+      - findevil.artifact_query
+      - findevil.persistence_hunt
+      - findevil.timeline_query
+
+  fleet:
+    description: Fleet (osquery) host/query results -> normalized host telemetry.
+    accepts_extensions: [".json", ".ndjson"]
+    steps:
+      - parse_results               # osquery result rows
+      - normalize_host_telemetry
+      - correlate_hosts             # cross-host correlation
+    feeds_findevil_tools:
+      - findevil.host_query
+      - findevil.software_inventory
+      - findevil.ioc_match

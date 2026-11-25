@@ -1,0 +1,261 @@
+services:
+  # Spec #3 §4.2 — L1 dev-base runs `cargo test / pytest / pnpm build+test`
+  # inside an Ubuntu 22.04 image that matches SIFT's base. Used both for
+  # local iteration and inside GHA (.github/workflows/l1-unit.yml).
+  #
+  # Usage:
+  #   docker compose -f docker/l1-compose.yml up --build --exit-code-from l1
+  #
+  # The `--exit-code-from l1` surfaces L1's exit code so CI fails on a
+  # red test run without parsing logs.
+  l1:
+    build:
+      context: ..
+      dockerfile: docker/l1-devbase.Dockerfile
+      args:
+        DEV_UID: "${UID:-1000}"
+        DEV_GID: "${GID:-1000}"
+    image: findevil/l1-devbase:local
+    container_name: findevil-l1
+    # Running as `dev` matches the unprivileged-user invariant from Spec #2 §1.
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /workspace
+    volumes:
+      # Mount repo read-write for test output (target/, .pytest_cache/, etc.).
+      - ..:/workspace
+      # Share cargo / pnpm / uv caches across runs for speed.
+      - l1-cargo-registry:/home/dev/.cargo/registry
+      - l1-cargo-git:/home/dev/.cargo/git
+      - l1-cargo-target:/home/dev/.cargo-target
+      - l1-uv-cache:/home/dev/.cache/uv
+      - l1-node-workspace:/home/dev/l1-node-workspace
+    environment:
+      CARGO_HOME: /home/dev/.cargo
+      CARGO_TARGET_DIR: /home/dev/.cargo-target
+      CARGO_BUILD_JOBS: "1"
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      # lld uses substantially less memory than GNU ld for Rust MCP links,
+      # which keeps local Docker Desktop L1 viable.
+      RUSTFLAGS: "-D warnings -C link-arg=-fuse-ld=lld -C link-arg=-Wl,-z,nostart-stop-gc"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      CI: "1"
+      FINDEVIL_L1_DOCKER: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+      NODE_OPTIONS: "--max-old-space-size=1024"
+      PNPM_CONFIG_CHILD_CONCURRENCY: "1"
+      PNPM_CONFIG_NETWORK_CONCURRENCY: "1"
+      PNPM_CONFIG_WORKSPACE_CONCURRENCY: "1"
+      UV_CACHE_DIR: /home/dev/.cache/uv
+      UV_SYSTEM_PYTHON: "true"
+    # Self-skipping test sequence — matches the command exact-match in
+    # BUILD_PLAN_v2.md §10 and sandbox plan Task 3.
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+
+        if [ -f Cargo.toml ]; then
+          echo "== cargo test --workspace --locked =="
+          cargo test --workspace --locked
+          echo "== cargo build --workspace --locked =="
+          cargo build --workspace --locked
+        else
+          echo "-- no Cargo.toml yet, skipping Rust --"
+        fi
+
+        # Run pytest in every services/*/pyproject.toml directory. There is
+        # no repo-root pyproject — each Python service is its own uv project
+        # (services/agent, services/agent_mcp) so we iterate.
+        python_any=false
+        for proj in services/agent services/agent_mcp; do
+          if [ -f "$$proj/pyproject.toml" ]; then
+            python_any=true
+            venv_dir="/home/dev/.cache/uv/venvs/$${proj//\//-}"
+            coverage_dir="/home/dev/.cache/coverage/$${proj//\//-}"
+            pytest_cache_dir="/home/dev/.cache/pytest/$${proj//\//-}"
+            mkdir -p "$$coverage_dir" "$$pytest_cache_dir"
+            echo "== ($$proj) uv sync --extra dev =="
+            (cd "$$proj" && (UV_PROJECT_ENVIRONMENT="$$venv_dir" uv sync --extra dev --frozen 2>/dev/null || UV_PROJECT_ENVIRONMENT="$$venv_dir" uv sync --extra dev))
+            echo "== ($$proj) uv run pytest -xvs --cov =="
+            (cd "$$proj" && \
+              COVERAGE_FILE="$$coverage_dir/.coverage" \
+              UV_PROJECT_ENVIRONMENT="$$venv_dir" \
+              uv run pytest -xvs --cov -o cache_dir="$$pytest_cache_dir")
+          fi
+        done
+        if [ "$$python_any" = "false" ]; then
+          echo "-- no Python projects yet, skipping --"
+        fi
+
+        if [ -f pnpm-workspace.yaml ] || [ -f package.json ]; then
+          node_packages="$$(find apps -mindepth 2 -maxdepth 2 -name package.json -print | sort)"
+          if [ "$$node_packages" != "apps/web/package.json" ]; then
+            echo "L1 Node isolation only supports the current apps/web workspace package." >&2
+            echo "Update docker/l1-compose.yml before adding more apps/* packages:" >&2
+            printf '%s\n' "$$node_packages" >&2
+            exit 1
+          fi
+
+          node_workspace="/home/dev/l1-node-workspace"
+          mkdir -p "$$node_workspace/apps"
+          rm -rf \
+            "$$node_workspace/apps/web" \
+            "$$node_workspace/pnpm-lock.yaml" \
+            "$$node_workspace/pnpm-workspace.yaml"
+          cp pnpm-lock.yaml pnpm-workspace.yaml "$$node_workspace/"
+          tar -C apps \
+            --exclude='web/node_modules' \
+            --exclude='web/.next' \
+            --exclude='web/dist' \
+            --exclude='web/coverage' \
+            -cf - web | tar -C "$$node_workspace/apps" -xf -
+          (
+            cd "$$node_workspace"
+            export PNPM_STORE_DIR="$$node_workspace/.pnpm-store"
+            echo "== pnpm fetch --frozen-lockfile =="
+            pnpm fetch \
+              --frozen-lockfile \
+              --prefer-offline \
+              --store-dir "$$PNPM_STORE_DIR"
+            echo "== pnpm install --frozen-lockfile =="
+            pnpm install \
+              --frozen-lockfile \
+              --ignore-scripts \
+              --offline \
+              --store-dir "$$PNPM_STORE_DIR" \
+              --package-import-method=hardlink
+            echo "== pnpm -r lint =="
+            pnpm -r lint
+            echo "== pnpm -r typecheck =="
+            pnpm -r typecheck
+            echo "== pnpm -r build =="
+            pnpm -r build
+            echo "== pnpm -r test =="
+            pnpm -r test
+          )
+        else
+          echo "-- no pnpm workspace yet, skipping Node --"
+        fi
+
+        # End-to-end MCP smoke. cargo build above already produced
+        # findevil-mcp in Cargo's debug target dir; agent_mcp's uv venv
+        # was synced. Both smokes spawn the server as a subprocess
+        # over stdio JSON-RPC and assert tool registration + error
+        # paths. Failure here is more informative than a unit-test
+        # failure because it catches integration drift between the
+        # tool registration table, the dispatcher, and the
+        # ToolAnnotations schema all at once.
+        if [ -x "$${CARGO_TARGET_DIR:-target}/debug/findevil-mcp" ] && [ -f scripts/rust-mcp-smoke.py ]; then
+          echo "== scripts/rust-mcp-smoke.py (Rust MCP end-to-end) =="
+          # rust-mcp-smoke honors CARGO_TARGET_DIR when present.
+          python3 scripts/rust-mcp-smoke.py
+        else
+          echo "-- skipping rust-mcp-smoke (binary or script absent) --"
+        fi
+
+        if [ -d services/agent_mcp ] && [ -f scripts/agent-mcp-smoke.py ]; then
+          echo "== scripts/agent-mcp-smoke.py (Python agent_mcp end-to-end) =="
+          UV_PROJECT_ENVIRONMENT="/home/dev/.cache/uv/venvs/services-agent_mcp" \
+            uv run --directory services/agent_mcp python ../../scripts/agent-mcp-smoke.py
+        else
+          echo "-- skipping agent-mcp-smoke (services/agent_mcp or script absent) --"
+        fi
+
+        # Lock in the compute_verdict policy. The verdict semantics
+        # (SUSPICIOUS / INDETERMINATE / NO_EVIL triggers) are
+        # documented in docs/verdict-semantics.md and implemented in
+        # find_evil_auto.py; this smoke ensures they don't drift
+        # apart silently. ~50ms wall-clock.
+        if [ -f scripts/verdict-policy-smoke.py ]; then
+          echo "== scripts/verdict-policy-smoke.py (compute_verdict policy lock) =="
+          python3 scripts/verdict-policy-smoke.py
+        fi
+
+        # Same idea for fleet_correlate's COMMON_WIN_PROCS filter +
+        # 14-char Volatility-truncation matcher + selfscore aggregate.
+        # docs/false-positives.md "Fleet cross-host correlation" entry
+        # describes these as the load-bearing FP mitigations.
+        if [ -f scripts/fleet-policy-smoke.py ]; then
+          echo "== scripts/fleet-policy-smoke.py (FP filter + selfscore_aggregate lock) =="
+          python3 scripts/fleet-policy-smoke.py
+        fi
+
+        # Customer-facing report QA, expert signoff, visual evidence, and
+        # overclaim-prevention policy are part of the readiness gate.
+        if [ -f scripts/report-policy-smoke.py ]; then
+          echo "== scripts/report-policy-smoke.py (report QA + expert signoff lock) =="
+          python3 scripts/report-policy-smoke.py
+        fi
+
+        # docs/demo-script-a2.md has a hard 5:00 cap (Devpost rule)
+        # encoded as 9 beats with explicit start/end timestamps. The
+        # smoke parses the beat-map table and asserts the 9 beats
+        # sum to 300s and are contiguous — catches a contributor
+        # who edits one beat without adjusting adjacent ones.
+        if [ -f scripts/demo-script-smoke.py ] && [ -f docs/demo-script-a2.md ]; then
+          echo "== scripts/demo-script-smoke.py (5:00 demo timing lock) =="
+          python3 scripts/demo-script-smoke.py
+        elif [ -f scripts/demo-script-smoke.py ]; then
+          echo "-- skipping demo-script-smoke (docs/demo-script-a2.md absent) --"
+        fi
+
+        # Lock in the launcher invariants from the 6-iteration
+        # prose-vs-code audit (commits 102c59e, ec85639, 43cdbdd,
+        # c167aec, 6f22382, cc4e93e). bash -n on every shell launcher
+        # in scripts/ + assertion that no `claude-code` invocations
+        # or `claude .` (positional arg) usages have crept back in.
+        # Catches both the catastrophic c167aec class (entry script
+        # exec'd a non-existent binary) and the cosmetic cc4e93e
+        # class (missed remnant in extension-less file).
+        if [ -f scripts/launcher-smoke.py ]; then
+          echo "== scripts/launcher-smoke.py (launcher invariants lock) =="
+          python3 scripts/launcher-smoke.py
+        fi
+
+        # Lock in the documented Spec/code divergences from CLAUDE.md.
+        # Three iterations of the divergence-sweep procedure (commits
+        # 782f364, e6ddc2d, fb319dd) cleaned active drift; this smoke
+        # asserts none of the bad-half patterns has been re-introduced.
+        # Covers 5 of the 6 documented divergences (the 6th is
+        # declarative — Cargo.lock-committed — and has nothing to scan).
+        if [ -f scripts/divergence-smoke.py ]; then
+          echo "== scripts/divergence-smoke.py (Spec/code divergence locks) =="
+          python3 scripts/divergence-smoke.py
+        fi
+
+        # Path-existence audit graduated to a smoke after two
+        # iterations of manual sweeps caught 7 broken `\`path/to\``
+        # references in operator-facing docs (commits 5e01954,
+        # 385c867).  Asserts every backtick-quoted path resolves
+        # to a real file or dir.  Allow-list covers URLs, MCP wire
+        # identifiers, runtime/install paths, deferred widget/future
+        # surfaces, and documented-removed-but-quoted paths.
+        if [ -f scripts/path-existence-smoke.py ]; then
+          echo "== scripts/path-existence-smoke.py (every backtick-path resolves) =="
+          python3 scripts/path-existence-smoke.py
+        fi
+
+        # Self-test the audit-smoke regexes themselves.  Each smoke
+        # reports "all clean" only because its regex is correct;
+        # this gate runs synthetic positive + negative cases against
+        # divergence-smoke / launcher-smoke / path-existence-smoke
+        # so a regex over-broadening or over-narrowing fails CI
+        # rather than silently letting bugs through.
+        if [ -f scripts/smoke-regex-tests.py ]; then
+          echo "== scripts/smoke-regex-tests.py (audit-smoke regex/helper policy self-tests) =="
+          python3 scripts/smoke-regex-tests.py
+        fi
+
+        echo "READINESS_L1_PASS"
+        echo "L1 complete."
+
+volumes:
+  l1-cargo-registry:
+  l1-cargo-git:
+  l1-cargo-target:
+  l1-uv-cache:
+  l1-node-workspace:

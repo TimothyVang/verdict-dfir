@@ -1,0 +1,16 @@
+[package]
+name = "caseforge-fleet"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "DFIR investigation multiplexer for caseforge (clean-room, herdr-inspired). Launches and monitors multiple verdict/caseforge investigations."
+
+[[bin]]
+name = "caseforge-fleet"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = "1"
+ratatui = "0.29"
+portable-pty = "0.8"
+anyhow = "1"

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="verdict-investigation-flow">
+    <mxGraphModel dx="1400" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="1460" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="t1" value="VERDICT — autonomous DFIR investigation &amp; agent-team flow" style="text;html=1;fontSize=20;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="Claude Code is the engine (Amendment A2). One supervisor session forks conceptual roles as native subagents over a typed, read-only MCP surface (no execute_shell); every step is appended to a hash-chained, offline-verifiable custody chain." style="text;html=1;fontSize=12;fontColor=#555555;align=center;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="40" y="54" width="1180" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 1 — intake -->
+        <mxCell id="b1" value="1 · Evidence intake — read-only custody" style="swimlane;html=1;startSize=30;fillColor=#f9f9f9;strokeColor=#999999;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="1180" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ev" value="Evidence vault (read-only)&#xa;.E01 · .dd · .raw · memory · EVTX · PCAP · Velociraptor&#xa;raw images stay custody-only until a parser succeeds" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="b1">
+          <mxGeometry x="40" y="48" width="320" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="co" value="case_open&#xa;SHA-256 the evidence · issue case_id · open case dir&#xa;(mandatory first step)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="b1">
+          <mxGeometry x="520" y="55" width="340" height="64" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 2 — supervisor -->
+        <mxCell id="b2" value="2 · Supervisor — owns the plan (Claude Code · Amendment A2)" style="swimlane;html=1;startSize=30;fillColor=#f9f9f9;strokeColor=#999999;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="1180" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="sup" value="Supervisor&#xa;reads PLAYBOOK.md → per-evidence-type tool sequence · resolves MEMORY_STORE_PATH once&#xa;decomposes goals → dispatches Pool A + Pool B in parallel · merges results · never touches evidence directly" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="b2">
+          <mxGeometry x="280" y="40" width="620" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 3 — agent army -->
+        <mxCell id="b3" value="3 · Agent army — parallel ACH pools · same typed read-only MCP surface, opposite reasoning priors" style="swimlane;html=1;startSize=30;fillColor=#f9f9f9;strokeColor=#999999;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="390" width="1180" height="360" as="geometry" />
+        </mxCell>
+        <mxCell id="mcp" value="Typed MCP tool surface — read-only · NO execute_shell&#xa;registry_query · evtx_query · vol_pslist / psscan / psxview / malfind · prefetch_parse&#xa;mft_timeline · usnjrnl_query · yara_scan · disk/PCAP/cloud verbs · …" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="b3">
+          <mxGeometry x="330" y="44" width="520" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="pa" value="Pool A — persistence-biased&#xa;(attacker is STAYING)&#xa;&#xa;• Run / RunOnce · Services · Scheduled Tasks (4698)&#xa;• WMI subscriptions · IFEO debugger hijacks&#xa;• LSASS modules · driver tampering (vol_*)&#xa;• Prefetch / Amcache execution provenance&#xa;&#xa;→ emits Findings (pool_origin = A)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="b3">
+          <mxGeometry x="20" y="145" width="420" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="pb" value="Pool B — exfiltration-biased&#xa;(attacker is TAKING)&#xa;&#xa;• Staging dirs · archive creation (mft / usnjrnl)&#xa;• certutil / bitsadmin / IWR download (evtx 4688)&#xa;• Large rename-then-delete patterns (usnjrnl)&#xa;• USB writes · outbound endpoints (evtx 5156)&#xa;&#xa;→ emits Findings (pool_origin = B)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="b3">
+          <mxGeometry x="740" y="145" width="420" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="mem" value="Cross-case memory&#xa;(Hermes FTS5)&#xa;&#xa;recall BEFORE drafting&#xa;remember AFTER CONFIRMED&#xa;(prior IOCs / hashes / TTPs —&#xa;context, never evidence)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="b3">
+          <mxGeometry x="480" y="150" width="220" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 4 — reconciliation -->
+        <mxCell id="b4" value="4 · Adversarial reconciliation — Heuer's ACH (structure the reasoning to disprove, not confirm)" style="swimlane;html=1;startSize=30;fillColor=#f9f9f9;strokeColor=#999999;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="780" width="1180" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="dc" value="detect_contradictions&#xa;Pool A vs Pool B disagreement&#xa;surfaced as kind = contradiction&#xa;(a first-class output, BEFORE&#xa;reconciliation)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="b4">
+          <mxGeometry x="20" y="110" width="265" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="vf" value="verifier · verify_finding&#xa;re-runs each cited tool_call_id&#xa;output SHA-256 must match&#xa;byte-for-byte&#xa;VETO: no tool_call_id → reject" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="b4">
+          <mxGeometry x="315" y="110" width="265" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="jg" value="judge · judge_findings&#xa;credibility-weighted merge&#xa;score = base_conf × pool_credibility&#xa;reconciles confidence labels" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="b4">
+          <mxGeometry x="610" y="110" width="255" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="cr" value="correlator · correlate_findings&#xa;enforces the ≥2 artifact-class rule&#xa;single-source claims → downgrade&#xa;organic tier flip → verdict_revision" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="b4">
+          <mxGeometry x="895" y="110" width="285" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 5 — verdict -->
+        <mxCell id="b5" value="5 · Scoped verdict" style="swimlane;html=1;startSize=30;fillColor=#f9f9f9;strokeColor=#999999;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1060" width="1180" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="vd" value="VERDICT (scoped) + verified Findings&#xa;SUSPICIOUS · INDETERMINATE · NO_EVIL  —  never a whole-environment clean bill of health" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;" vertex="1" parent="b5">
+          <mxGeometry x="280" y="40" width="640" height="58" as="geometry" />
+        </mxCell>
+
+        <!-- BAND 6 — custody + outputs -->
+        <mxCell id="b6" value="6 · Custody &amp; outputs — offline-verifiable" style="swimlane;html=1;startSize=30;fillColor=#f9f9f9;strokeColor=#999999;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1200" width="1180" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="rq" value="report_qa&#xa;QA gate before custody" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="b6">
+          <mxGeometry x="20" y="65" width="180" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="mf" value="manifest_finalize&#xa;Merkle root · Ed25519 sign" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="b6">
+          <mxGeometry x="240" y="65" width="220" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="mv" value="manifest_verify&#xa;offline: chain → root → sig" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="b6">
+          <mxGeometry x="500" y="65" width="210" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="out" value="Outputs&#xa;verdict.json · coverage_manifest.json&#xa;REPORT.html / .pdf · run.manifest.json" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="b6">
+          <mxGeometry x="750" y="52" width="215" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="au" value="audit.jsonl&#xa;hash-chained&#xa;(prev_hash)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;strokeWidth=2;" vertex="1" parent="b6">
+          <mxGeometry x="1000" y="52" width="160" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- EDGES — main flow -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="ev" target="co"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="co" target="sup"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="dispatch ∥" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;" edge="1" parent="1" source="sup" target="pa"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="dispatch ∥" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;" edge="1" parent="1" source="sup" target="pb"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- pools use the shared MCP surface; surface reads evidence -->
+        <mxCell id="e5" value="typed calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;dashed=1;endArrow=none;" edge="1" parent="1" source="pa" target="mcp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="typed calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;dashed=1;endArrow=none;" edge="1" parent="1" source="pb" target="mcp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" value="read-only" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;dashed=1;" edge="1" parent="1" source="mcp" target="ev"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- pools and cross-case memory -->
+        <mxCell id="e8" value="recall / remember" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;dashed=1;endArrow=none;" edge="1" parent="1" source="pa" target="mem"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" value="recall / remember" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;dashed=1;endArrow=none;" edge="1" parent="1" source="pb" target="mem"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- findings into reconciliation -->
+        <mxCell id="e10" value="Findings (A)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;" edge="1" parent="1" source="pa" target="dc"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e11" value="Findings (B)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;" edge="1" parent="1" source="pb" target="dc"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- reconciliation chain -->
+        <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="dc" target="vf"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e13" value="pool_handoff · IBM-ACP" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;" edge="1" parent="1" source="vf" target="jg"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="jg" target="cr"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- to verdict, custody -->
+        <mxCell id="e15" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="cr" target="vd"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e16" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="vd" target="rq"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e17" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="rq" target="mf"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e18" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="mf" target="mv"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="mv" target="out"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- custody spine -->
+        <mxCell id="e20" value="Merkle root over chain" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;" edge="1" parent="1" source="mf" target="au"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e21" value="append: every tool call · acp_handoff · contradiction · verdict_revision" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;dashed=1;fontColor=#6c8ebf;" edge="1" parent="1" source="cr" target="au"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

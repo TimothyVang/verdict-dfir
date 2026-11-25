@@ -1,0 +1,40 @@
+# VERDICT DFIR
+
+> VERDICT is a free, open-source (Apache-2.0) digital-forensics & incident-response (DFIR) agent that
+> runs inside an MCP-capable LLM agent (Claude Code is the reference agent). Point it at supported
+> evidence and it opens a Case, drives a typed read-only MCP tool surface, verifies every Finding
+> against the cited evidence, and writes a signed, offline-verifiable Verdict plus an analyst report.
+
+Load-bearing guarantees: evidence is read-only; the audit log is append-only and hash-chained; every
+reportable Finding must cite a `tool_call_id` that the verifier re-runs and hash-compares; there is no
+`execute_shell` tool — the narrow typed tool surface is the security model. Verdict words are strictly
+scoped — `NO_EVIL` means "no reportable Finding in the artifacts actually examined," never a clean
+bill of health for a whole environment.
+
+## Start here
+
+- [README](README.md): what VERDICT is, the core claims, and the one-shot run path.
+- [INSTALL](INSTALL.md): prerequisites and the install path (`bash scripts/setup`).
+- [QUICKSTART](QUICKSTART.md): run modes (local, SIFT, fleet, watch) and environment choices.
+
+## Architecture and guarantees
+
+- [Architecture](docs/architecture.md): subsystems, trust boundaries, prompt-vs-architectural guardrails, audit-visible self-correction.
+- [MCP servers and tools](docs/reference/mcp-and-tools.md): the typed read-only tool inventory.
+- [Verdict semantics](docs/verdict-semantics.md): what SUSPICIOUS / INDETERMINATE / NO_EVIL do and do not mean.
+- [Fact fidelity](docs/fact-fidelity.md): the deterministic entailment check — a Finding cannot assert a value absent from its cited evidence.
+- [Cryptographic attestation](docs/cryptographic-attestation.md): custody, the signed manifest, and offline verification.
+
+## Contributing
+
+- [Contribution model](docs/contribution-model.md): branch model (`main` vs `develop`), the local-gate CI (no Actions runners required), and `git ship` releases.
+- [CONTRIBUTING](CONTRIBUTING.md): exact build / test / submit commands and the non-negotiable invariants.
+- [Help wanted](docs/help-wanted.md): the open problems and where to plug in.
+- [Operating contract for agents](CLAUDE.md): the rules an LLM agent must follow when changing this repo.
+- [Agent surface map](AGENTS.md): package layout and what agents may and may not touch.
+
+## Notes for LLM agents working in this repo
+
+- Claude Code (or any MCP-capable agent) is the investigation engine; do not reintroduce a removed orchestrator (`graph.py`, `api.py`, `cli.py`, `supervisor.py`, `specialists/`) or add `langgraph` / `fastapi` to the agent loop.
+- Do not treat limited coverage as "clean", "cleared", or "no compromise"; report only what was actually parsed, with a cited `tool_call_id`.
+- To contribute code: fork, branch off `develop`, run `bash scripts/run-all-smokes.sh` plus the per-language suites locally, then open a pull request against `develop` (never `main`).

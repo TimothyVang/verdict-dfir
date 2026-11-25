@@ -1,0 +1,145 @@
+{
+  "version": 1,
+  "goal": "99 percent DFIR automation with 1 percent human expert PDF signoff",
+  "signoff_model": "The agent prepares an evidence-bound signoff packet; the human expert remains final authority for customer release.",
+  "source_files": [
+    "agent-config/SOUL.md",
+    "agent-config/MEMORY.md",
+    "agent-config/PLAYBOOK.md",
+    "agent-config/EXPERT.md"
+  ],
+  "supported_domains": {
+    "autonomous_today": [
+      "windows_memory",
+      "windows_evtx",
+      "disk_custody_registration",
+      "timeline_normalization",
+      "evidence_backed_pdf_reporting",
+      "miss-feedback-loop"
+    ],
+    "partial_today": [
+      "disk_content_analysis_without_mount",
+      "exfiltration_without_network_telemetry",
+      "malware_capability_without_reverse_engineering",
+      "identity_compromise_from_single_log_source"
+    ],
+    "escalation_only": [
+      "legal_notification",
+      "attribution",
+      "unsupported_cloud_or_saas",
+      "mobile_forensics",
+      "ot_ics_forensics",
+      "failed_report_qa"
+    ]
+  },
+  "claim_rules": [
+    {
+      "id": "finding_tool_call_required",
+      "severity": "blocker",
+      "category": "citation",
+      "requirement": "Every Finding must cite a non-empty tool_call_id that exists in the case tool-call list.",
+      "fail_behavior": "block_customer_pdf"
+    },
+    {
+      "id": "verify_finding_replay_embedded",
+      "severity": "blocker",
+      "category": "reproducibility",
+      "requirement": "Customer-ready reports must embed verifier replay evidence for each Finding and every replay must match the audited tool output.",
+      "fail_behavior": "block_customer_pdf"
+    },
+    {
+      "id": "verify_finding_replay_failures",
+      "severity": "blocker",
+      "category": "reproducibility",
+      "requirement": "A verifier rejection or replay failure must force INDETERMINATE or blocked customer release, never NO_EVIL.",
+      "fail_behavior": "block_customer_pdf"
+    },
+    {
+      "id": "execution_requires_two_current_artifact_classes",
+      "severity": "blocker",
+      "category": "execution",
+      "requirement": "Execution claims require at least two current-case artifact classes. Prefetch is preferred; Amcache, ShimCache, memory-only process evidence, YARA, Hayabusa, and malfind are not standalone execution proof.",
+      "fail_behavior": "downgrade_or_block"
+    },
+    {
+      "id": "exfiltration_requires_staging_and_movement",
+      "severity": "blocker",
+      "category": "exfiltration",
+      "requirement": "Exfiltration claims require staging or collection evidence plus network, tool, or data-movement evidence.",
+      "fail_behavior": "downgrade_or_block"
+    },
+    {
+      "id": "no_evil_is_scoped",
+      "severity": "warning",
+      "category": "verdict",
+      "requirement": "NO_EVIL means no reportable Finding in the artifact classes examined. It must not imply environment-wide assurance.",
+      "fail_behavior": "require_scope_caveat"
+    },
+    {
+      "id": "disk_auto_mode_custody_only",
+      "severity": "blocker",
+      "category": "coverage",
+      "requirement": "Raw disk auto mode is custody-only unless mounted or extracted artifacts are supplied and parsed.",
+      "fail_behavior": "force_indeterminate_or_expert_review"
+    },
+    {
+      "id": "visuals_do_not_upgrade_confidence",
+      "severity": "warning",
+      "category": "reporting",
+      "requirement": "Charts, evidence cards, screenshots, and PDF exhibits support cited tool output but never create Findings or raise confidence.",
+      "fail_behavior": "require_report_caveat"
+    },
+    {
+      "id": "no_attribution",
+      "severity": "blocker",
+      "category": "language",
+      "requirement": "Never assert actor attribution from supplied host artifacts.",
+      "fail_behavior": "block_customer_pdf"
+    },
+    {
+      "id": "no_forbidden_unqualified_language",
+      "severity": "blocker",
+      "category": "language",
+      "requirement": "Customer-visible Finding and report text must not use unqualified language that overstates scope, attribution, execution, compromise, or malware status.",
+      "fail_behavior": "block_customer_pdf"
+    }
+  ],
+  "report_quality": {
+    "required_sections": [
+      "bottom_line_up_front",
+      "qa_expert_signoff",
+      "findings_summary",
+      "timeline",
+      "figures",
+      "scope_and_coverage",
+      "limitations",
+      "recommendations",
+      "chain_of_custody"
+    ],
+    "ready_for_customer_pdf_requires": [
+      "no_blocking_qa_failures",
+      "all_findings_cited",
+      "scope_limitations_visible",
+      "no_forbidden_unqualified_language",
+      "replay_match",
+      "expert_signoff_required",
+      "explicit_expert_approval"
+    ]
+  },
+  "forbidden_unqualified_terms": [
+    "clean",
+    "cleared",
+    "disproven",
+    "absent",
+    "no compromise",
+    "absence of compromise",
+    "absence of the technique",
+    "attributed to",
+    "malware operator",
+    "the attacker",
+    "is malware",
+    "breach confirmed",
+    "customer-ready",
+    "customer ready"
+  ]
+}

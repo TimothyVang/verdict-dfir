@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "verdict": {
+      "command": "node",
+      "args": ["packages/verdict-cli/dist/src/cli.js", "serve"]
+    }
+  }
+}

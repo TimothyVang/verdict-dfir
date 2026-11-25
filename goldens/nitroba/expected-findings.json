@@ -1,0 +1,60 @@
+{
+  "_comment": [
+    "Ground truth for the Nitroba University Harassment scenario (network forensics).",
+    "Source: https://digitalcorpora.org/corpora/scenarios/nitroba-university-harassment-scenario/",
+    "Tier: GREEN (score against) — published pcap with confirmed hashes; strongest",
+    "scoring case in the thread. Attribution turns on a Gmail session cookie observed",
+    "in the capture. We declare WHAT a correct triage must surface; the agent maps each",
+    "to a tool_call_id at run time.",
+    "Contamination note (not enforced per project decision): scenario writeups exist",
+    "online, but the attribution chain lives in the live pcap, so a correct run must",
+    "actually parse the capture."
+  ],
+  "case_id": "nitroba",
+  "source_url": "https://digitalcorpora.org/corpora/scenarios/nitroba-university-harassment-scenario/",
+  "license": "Digital Corpora — freely redistributable for research/education",
+  "verdict": "CONFIRMED_EVIL",
+  "min_recall_percent": 80,
+  "findings": [
+    {
+      "finding_id": "nit-001",
+      "description": "Harassing email sent through the willselfdestruct.com anonymous remailer from an internal host",
+      "mitre_technique": "T1071.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "network",
+      "artifact_hint": "HTTP POST to willselfdestruct.com in the pcap"
+    },
+    {
+      "finding_id": "nit-002",
+      "description": "Source host of the harassing traffic identified by internal IP address",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "network",
+      "artifact_hint": "pcap conversation/endpoint statistics (host 192.168.1.64)"
+    },
+    {
+      "finding_id": "nit-003",
+      "description": "Gmail/webmail session cookie in the capture attributes the host to a named individual",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "network",
+      "artifact_hint": "HTTP Cookie headers for mail.google.com sessions"
+    },
+    {
+      "finding_id": "nit-004",
+      "description": "Social-media (Facebook/MySpace) logins corroborate the suspect's identity",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "network",
+      "artifact_hint": "HTTP requests carrying named-account sessions"
+    },
+    {
+      "finding_id": "nit-005",
+      "description": "Timeline of harassing-email sends correlates with the suspect host's browsing activity",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "network",
+      "artifact_hint": "pcap timestamps cross-referenced across flows"
+    }
+  ]
+}

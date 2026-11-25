@@ -1,0 +1,287 @@
+/* VERDICT v2 report theme.
+   Mirrors the brand bible and apps/web/lib/verdict-ui.tsx: Midnight Ink, Paper
+   Cream, Electric Cobalt, Soft Lilac, Seafoam, Signal Coral, and Butter Yellow.
+   Kept in sync with _DEFAULT_CSS in scripts/render_report.py. */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --paper: #101426;
+  --surface: #12131a;
+  --inset: #0c1020;
+  --ink: #f5f1e8;
+  --muted: #b8a8ff;
+  --faint: #7f789c;
+  --hairline: #27304a;
+  --accent: #4d5dff;
+  --accent-light: #b8a8ff;
+  --alert: #ff6257;
+  --confirmed: #73d9c2;
+  --inferred: #ffd76a;
+  --hypothesis: #4d5dff;
+  --mono: "JetBrains Mono", "Courier New", monospace;
+  --serif: "Archivo", Impact, system-ui, sans-serif;
+  --grotesk: "Archivo", system-ui, -apple-system, sans-serif;
+}
+
+@page { margin: 0; }
+
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+body {
+  background: #101426;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 1.5cm 1.6cm 2cm;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  background-image:
+    linear-gradient(rgba(245, 241, 232, 0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 241, 232, 0.026) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* Masthead — heavy editorial sans. */
+h1 {
+  font-family: var(--serif);
+  font-weight: 900;
+  color: var(--ink);
+  font-size: 2.5em;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+  margin: 0 0 0.35em;
+  border: none;
+}
+
+/* Tier banners (Technical Report / Internal) — page break + cobalt band. */
+h1.tier-break {
+  page-break-before: always;
+  font-family: var(--grotesk);
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-size: 1.15em;
+  font-weight: 700;
+  color: var(--ink);
+  background: linear-gradient(90deg, rgba(77, 93, 255, 0.24), rgba(184, 168, 255, 0.06));
+  border: none;
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  padding: 0.65em 0.9em;
+  margin: 0 0 1.4em;
+}
+
+/* Section labels — grotesk uppercase + hairline rule. */
+h2 {
+  font-family: var(--grotesk);
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  font-size: 1.02em;
+  font-weight: 600;
+  color: var(--accent-light);
+  margin: 2.6em 0 1em;
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid var(--hairline);
+}
+
+h3 {
+  font-family: var(--grotesk);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 1.8em 0 0.7em;
+}
+
+p, li { color: var(--ink); }
+a {
+  color: var(--accent-light);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(77, 93, 255, 0.45);
+}
+strong { color: var(--ink); font-weight: 700; }
+em { color: var(--muted); }
+
+/* Figures presented as light "mounted exhibits" pinned to the dark case file. */
+img {
+  max-width: 100%;
+  display: block;
+  margin: 1.8em auto;
+  background: #fbfaf6;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.5);
+}
+
+/* Code. */
+code {
+  background: var(--inset);
+  color: var(--accent-light);
+  padding: 0.12em 0.45em;
+  border-radius: 4px;
+  border: 1px solid var(--hairline);
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+pre {
+  background: var(--inset);
+  color: var(--ink);
+  padding: 1.1em 1.4em;
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+  overflow-x: auto;
+}
+pre code { background: none; border: none; padding: 0; color: inherit; }
+
+/* Cryptographic-attestation blockquote — cobalt crypto card. */
+blockquote {
+  font-family: var(--mono);
+  color: var(--ink);
+  margin: 1.4em 0;
+  background: rgba(77, 93, 255, 0.1);
+  border: 1px solid rgba(77, 93, 255, 0.45);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  padding: 0.9em 1.3em;
+}
+blockquote strong { color: var(--accent-light); }
+
+/* Tables — dark surface, hairline grid, cobalt-tinted header. */
+table {
+  border-collapse: collapse;
+  margin: 1.3em 0;
+  width: 100%;
+  font-size: 0.84em;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+}
+th {
+  background: rgba(77, 93, 255, 0.16);
+  color: var(--accent-light);
+  font-family: var(--grotesk);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+  font-size: 0.95em;
+  padding: 0.55em 0.8em;
+  border: 1px solid var(--hairline);
+  text-align: left;
+}
+td {
+  padding: 0.5em 0.8em;
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  vertical-align: top;
+}
+/* Wide data tables (e.g. the 10-column event ledger) carry long unbreakable
+   tokens — file paths, hostnames, timestamps. Let cells wrap so the table fits
+   the reading column instead of overflowing to the right (and so it fits the
+   narrower PDF page). */
+th, td { overflow-wrap: anywhere; word-break: break-word; }
+tr:nth-child(even) td { background: rgba(245, 241, 232, 0.025); }
+
+hr { border: none; border-top: 1px solid var(--hairline); margin: 2.4em 0; }
+
+/* Masthead kicker + tagline (pandoc bracketed spans). */
+.kicker {
+  font-family: var(--grotesk);
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  font-size: 0.72em;
+  font-weight: 600;
+  color: var(--accent);
+}
+.tagline {
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: 1px;
+  font-size: 0.86em;
+}
+
+/* Semantic confidence + verdict keywords (wrapped post-render). */
+.conf-confirmed, .verdict-confirmed { color: var(--confirmed); font-weight: 700; }
+.conf-inferred, .verdict-inferred { color: var(--inferred); font-weight: 700; }
+.conf-hypothesis { color: var(--accent-light); font-weight: 700; }
+.verdict-alert { color: var(--alert); font-weight: 700; }
+
+/* ===================================================================== */
+/* Native HTML/CSS report figures (scorecard / story-strip / composition) */
+/* ===================================================================== */
+.vfig { background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: 10px; padding: 18px 20px; margin: 1.6em 0;
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.4); page-break-inside: avoid; }
+.vfig-title { font-family: var(--grotesk); text-transform: uppercase;
+  letter-spacing: 2px; font-size: 0.78em; font-weight: 600; color: var(--muted);
+  margin-bottom: 14px; }
+.vfig-sub { color: var(--faint); letter-spacing: 1px; }
+.vfig-note { font-family: var(--grotesk); font-size: 0.72em; color: var(--faint);
+  margin-top: 12px; letter-spacing: 0.5px; }
+.vchip { display: inline-block; font-family: var(--grotesk); font-size: 0.72em;
+  font-weight: 700; letter-spacing: 0.5px; padding: 2px 10px; border-radius: 6px;
+  margin-right: 8px; border: 1px solid currentColor; }
+.vchip-confirmed { color: var(--confirmed); background: rgba(115, 217, 194, 0.12); }
+.vchip-inferred { color: var(--inferred); background: rgba(255, 215, 106, 0.12); }
+.vchip-hypothesis { color: var(--accent-light); background: rgba(77, 93, 255, 0.12); border-color: var(--hypothesis); }
+
+/* Scorecard */
+.vsc { display: flex; gap: 0; padding: 0; overflow: hidden; }
+.vsc-rail { width: 6px; flex: 0 0 6px; background: var(--accent); }
+.vsc-alert .vsc-rail { background: var(--alert); }
+.vsc-confirmed .vsc-rail { background: var(--confirmed); }
+.vsc-inferred .vsc-rail { background: var(--inferred); }
+.vsc-body { padding: 18px 22px; flex: 1; }
+.vsc-top { display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 10px; }
+.vsc-verdict { font-family: var(--grotesk); font-weight: 700; font-size: 1.1em;
+  letter-spacing: 3px; }
+.vsc-verdict-alert { color: var(--alert); }
+.vsc-verdict-confirmed { color: var(--confirmed); }
+.vsc-verdict-inferred { color: var(--inferred); }
+.vsc-cert { font-family: var(--grotesk); font-size: 0.72em; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); }
+.vsc-headline { font-family: var(--serif); font-size: 1.35em; line-height: 1.2;
+  color: var(--ink); margin-bottom: 10px; }
+.vsc-meta { font-family: var(--mono); font-size: 0.85em; color: var(--accent-light);
+  margin-bottom: 12px; }
+.vsc-chips { margin-top: 4px; }
+
+/* Composition bars */
+.vcomp-row { display: flex; align-items: center; gap: 12px; margin: 7px 0;
+  font-family: var(--mono); font-size: 0.82em; }
+.vcomp-label { flex: 0 0 220px; color: var(--ink); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.vcomp-track { flex: 1; height: 14px; background: rgba(245, 241, 232, 0.05);
+  border-radius: 7px; overflow: hidden; }
+.vcomp-fill { display: block; height: 100%; background: var(--accent);
+  border-radius: 7px; }
+.vcomp-crit .vcomp-fill { background: var(--alert); }
+.vcomp-crit .vcomp-label { color: var(--alert); font-weight: 700; }
+.vcomp-count { flex: 0 0 56px; text-align: right; color: var(--muted); }
+.vcomp-flag { color: var(--alert); }
+
+/* Story-strip sequence */
+.vseq-list { list-style: none; margin: 0; padding: 0 0 0 6px;
+  border-left: 2px solid var(--hairline); }
+.vseq-item { position: relative; padding: 0 0 16px 22px; display: flex; gap: 14px; }
+.vseq-item:last-child { padding-bottom: 0; }
+.vseq-dot { position: absolute; left: -7px; top: 4px; width: 11px; height: 11px;
+  border-radius: 50%; background: var(--hypothesis); border: 2px solid var(--paper); }
+.vseq-evil .vseq-dot { background: var(--alert); box-shadow: 0 0 0 3px rgba(255, 98, 87, 0.25); }
+.vseq-ctx .vseq-dot { background: var(--faint); }
+.vseq-time { flex: 0 0 150px; font-family: var(--mono); font-size: 0.76em;
+  color: var(--muted); padding-top: 2px; }
+.vseq-body { flex: 1; }
+.vseq-action { font-family: var(--mono); font-size: 0.88em; color: var(--ink);
+  line-height: 1.45; }
+.vseq-evil .vseq-action { color: var(--ink); font-weight: 600; }
+.vseq-who { font-family: var(--mono); font-size: 0.74em; color: var(--muted);
+  margin-top: 3px; }
+.vseq-flag { display: inline-block; font-family: var(--grotesk); font-size: 0.68em;
+  font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--alert);
+  border: 1px solid var(--alert); border-radius: 5px; padding: 1px 7px; margin-left: 6px; }
+.vseq-tag { display: inline-block; font-family: var(--grotesk); font-size: 0.66em;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--faint); margin-left: 6px; }

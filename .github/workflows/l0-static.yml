@@ -1,0 +1,284 @@
+name: L0 Static Checks
+
+# Spec #3 §4.1 — fastest possible structural gate on PRs and branch pushes.
+# Runs on PRs and master pushes. Required status check on master (see glue Spec #4 §6).
+# Budget: 30-60s wall clock on ubuntu-24.04.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: l0-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  workflow-lint:
+    name: actionlint + yamllint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: actionlint (GitHub Actions workflows)
+        uses: raven-actions/actionlint@v2
+        with:
+          files: '.github/workflows/*.yml'
+      - name: yamllint
+        run: |
+          pip install --quiet yamllint
+          yamllint --format github .github/ docker/ 2>/dev/null || yamllint --format github .github/
+
+  shell-lint:
+    name: shellcheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck (*.sh under scripts/)
+        uses: ludeeus/action-shellcheck@master
+        with:
+          severity: error
+          scandir: './scripts'
+          format: gcc
+
+  dockerfile-lint:
+    name: hadolint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: hadolint on docker/*.Dockerfile (if present)
+        run: |
+          if ls docker/*.Dockerfile >/dev/null 2>&1; then
+            docker run --rm -i hadolint/hadolint:v2.12.0 \
+              < docker/l1-devbase.Dockerfile || true
+          else
+            echo "No Dockerfiles yet — skip."
+          fi
+
+  python-lint:
+    name: ruff check + format --check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: install ruff
+        run: pip install 'ruff==0.7.4'
+      - name: ruff check
+        run: |
+          if [ -f pyproject.toml ] || find . -maxdepth 3 -name '*.py' -not -path './*/venv/*' -print -quit | grep -q .; then
+            ruff check .
+          else
+            echo "No Python sources yet — skip."
+          fi
+      - name: ruff format --check
+        run: |
+          if [ -f pyproject.toml ] || find . -maxdepth 3 -name '*.py' -not -path './*/venv/*' -print -quit | grep -q .; then
+            ruff format --check .
+          else
+            echo "No Python sources yet — skip."
+          fi
+
+  rust-lint:
+    name: cargo check + clippy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo check --workspace
+        run: |
+          if [ -f Cargo.toml ]; then
+            cargo check --workspace --locked
+          else
+            echo "No Rust workspace yet — skip."
+          fi
+      - name: cargo clippy --deny warnings
+        run: |
+          if [ -f Cargo.toml ]; then
+            cargo clippy --workspace --all-targets --locked -- -D warnings
+          else
+            echo "No Rust workspace yet — skip."
+          fi
+      - name: cargo fmt --check
+        run: |
+          if [ -f Cargo.toml ]; then
+            cargo fmt --all --check
+          else
+            echo "No Rust workspace yet — skip."
+          fi
+
+  typescript-lint:
+    name: tsc + eslint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - name: install
+        run: |
+          if [ -f pnpm-workspace.yaml ] || [ -f package.json ]; then
+            pnpm install --frozen-lockfile
+          else
+            echo "No Node workspace yet — skip."
+          fi
+      - name: tsc --noEmit
+        run: |
+          if [ -f pnpm-workspace.yaml ]; then
+            pnpm -r exec tsc --noEmit
+          else
+            echo "No TS workspace yet — skip."
+          fi
+      - name: eslint
+        run: |
+          if [ -f pnpm-workspace.yaml ]; then
+            pnpm -r lint
+          else
+            echo "No TS workspace yet — skip."
+          fi
+
+  docs-consistency:
+    name: docs cross-references intact
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: verify current documentation surface
+        run: |
+          # The public source tree now ships a reduced current-docs surface:
+          # historical specs/plans/templates/sample runs are intentionally omitted
+          # and documented in docs/release-surface.md. Guard the current canonical
+          # surface rather than re-requiring archived material.
+          # Root operator docs (README + INSTALL + QUICKSTART + CHANGELOG +
+          # CLAUDE.md) - deleting any of these breaks the front-page
+          # contract for operators/contributors.
+          for doc in CLAUDE.md README.md INSTALL.md CONTRIBUTING.md QUICKSTART.md CHANGELOG.md; do
+            test -f "$doc" || { echo "missing root doc: $doc"; exit 1; }
+          done
+          # Canonical analyst-facing docs under docs/ (referenced from
+          # CLAUDE.md, README.md, QUICKSTART.md as deep-dives).
+          for doc in docs/architecture.md \
+                     docs/accuracy-report.md \
+                     docs/DATASET.md \
+                     docs/cryptographic-attestation.md \
+                     docs/verdict-semantics.md \
+                     docs/false-positives.md \
+                     docs/glossary.md \
+                     docs/evidence-answer-keys.md \
+                     docs/release-surface.md \
+                     docs/reference/mcp-and-tools.md \
+                     docs/reference/dependencies.md \
+                     docs/reference/environment-variables.md \
+                     docs/using/running-verdict.md; do
+            test -f "$doc" || { echo "missing canonical doc: $doc"; exit 1; }
+          done
+          grep -q 'docs/specs/' docs/release-surface.md || {
+            echo "release surface must document omitted docs/specs/"; exit 1;
+          }
+          grep -q 'docs/sample-run/' docs/release-surface.md || {
+            echo "release surface must document omitted docs/sample-run/"; exit 1;
+          }
+          # agent-config/ files - the runtime DFIR agent identity
+          # ingested by Claude Code on session start (per CLAUDE.md
+          # "Agent investigation prompt"). Deleting any breaks the
+          # ingest order and the agent boots without that piece of
+          # its identity.
+          for cfg in agent-config/SOUL.md \
+                     agent-config/AGENTS.md \
+                     agent-config/PLAYBOOK.md \
+                     agent-config/TOOLS.md \
+                     agent-config/MEMORY.md \
+                     agent-config/HEARTBEAT.md \
+                     agent-config/JUDGING.md; do
+            test -f "$cfg" || { echo "missing agent-config: $cfg"; exit 1; }
+          done
+          echo "All required docs present."
+
+  tool-count-guard:
+    name: tool count matches docs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: verify MCP registry count matches docs
+        run: python3 scripts/tool-count-guard.py
+
+  amendment-a2-guard:
+    name: Amendment A2 invariants (custom orchestrator dropped)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: dropped Python orchestrator files must not reappear
+        run: |
+          # VERDICT keeps the Amendment A2 invariant: the original custom
+          # Python orchestrator (graph.py / api.py / cli.py / supervisor.py
+          # / specialists/) stays dropped, with the deterministic
+          # scripts/find_evil_auto.py engine as the default and Claude Code
+          # itself driving the typed MCP surface. If a future contributor
+          # regenerates any of those files (e.g. by re-running an old TDD
+          # plan), the architectural claim "Direct Agent Extension §1 +
+          # Custom MCP Server §2" silently becomes false. Catch it at L0.
+          #
+          # ALLOWED: the strictly opt-in agent loop under
+          # services/agent/findevil_agent/agentloop/ (exposed via
+          # `scripts/verdict --agent`) is NOT a resurrection of the dropped
+          # surfaces and is deliberately absent from the banned list below.
+          # The content check that follows still forbids langgraph/fastapi
+          # imports anywhere under findevil_agent/, including agentloop/.
+          #
+          # See docs/architecture.md for the public architecture contract.
+          banned=(
+            services/agent/findevil_agent/graph.py
+            services/agent/findevil_agent/api.py
+            services/agent/findevil_agent/cli.py
+            services/agent/findevil_agent/supervisor.py
+            services/agent/findevil_agent/specialists
+          )
+          violation=0
+          for path in "${banned[@]}"; do
+            if [ -e "$path" ]; then
+              echo "ERROR: Amendment A2 forbids '$path' (was dropped 2026-04-25)."
+              violation=1
+            fi
+          done
+          if [ "$violation" -eq 1 ]; then
+            echo
+            echo "If you genuinely need to revive the custom orchestrator,"
+            echo "update docs/architecture.md and the release contract first."
+            exit 1
+          fi
+          echo "Amendment A2 compliance: path check OK (no resurrected orchestrator files)."
+      - name: orchestrator code must not reappear under any filename
+        run: |
+          # The path-based check above blocks the exact files A2 dropped.
+          # This second pass blocks the ARCHITECTURAL pattern: if anyone
+          # adds LangGraph/FastAPI orchestrator code back under a
+          # different filename (e.g. agent_graph.py, runner.py), the
+          # path check would miss it. The Option-B guard uses the same
+          # content-pattern technique for LiteLLM resurrection.
+          #
+          # Match logic: code lines that *use* the orchestrator imports
+          # (not lines that merely document the prohibition). A leading
+          # `#` is excluded so docstrings/comments documenting the rule
+          # itself don't trip the guard.
+          if [ -d services/agent/findevil_agent ]; then
+            if grep -rn -E '^[^#]*\b(import langgraph|from langgraph|StateGraph\(|from fastapi import|from fastapi\.|import fastapi\b)' \
+              services/agent/findevil_agent/ \
+              --include='*.py'; then
+              echo "ERROR: Amendment A2 forbids LangGraph/FastAPI orchestrator code"
+              echo "       in services/agent/findevil_agent/."
+              echo "       Reference: docs/architecture.md"
+              exit 1
+            fi
+            echo "Amendment A2 compliance: content check OK (no orchestrator imports)."
+          else
+            echo "No services/agent/findevil_agent/ — skip content check."
+          fi

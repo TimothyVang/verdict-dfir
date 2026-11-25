@@ -1,0 +1,187 @@
+# model-routes.yaml
+#
+# Purpose: Named model routes for caseforge-core. A route binds a stable
+#          route id to a concrete {provider, base_url, model, tool_calling,
+#          privacy_locations}. Agent code selects a route by id and never hard-
+#          codes a provider or URL.
+#
+# Status:  ACTIVE (Phase 1). Routes reference providers defined in
+#          provider-capabilities.yaml.
+#
+# --- PRIVACY ROUTER CONTRACT --------------------------------------------------
+# `privacy_locations` is the ONLY field the privacy router checks when deciding
+# whether a given piece of evidence-derived context may be sent over a route:
+#
+#   * ["local"]  -> data stays on the host; safe for sensitive/seized evidence.
+#   * ["cloud"]  -> data egresses to a third party; router BLOCKS it unless the
+#                   case/material is explicitly marked non-sensitive.
+#
+# A route may list multiple locations only when the endpoint can be either
+# (e.g. a litellm gateway pointed at mixed backends); the router then treats the
+# route as cloud-tainted and requires explicit non-sensitive marking.
+# ------------------------------------------------------------------------------
+#
+# Security: API keys are placeholders of the form {env:VAR_NAME}, resolved from
+#           the environment at load time. NEVER commit a real key.
+#
+# schema_version: 1
+
+routes:
+
+  # ---- LOCAL routes (privacy_locations: [local]) -----------------------------
+
+  local-vllm:
+    provider: local-vllm
+    base_url: http://localhost:8000/v1
+    model: qwen2.5-coder:32b        # example; any model served by the local vLLM instance
+    api_key: null                    # local vLLM is unauthenticated by default
+    tool_calling: true
+    privacy_locations: [local]
+
+  local-ollama:
+    provider: local-ollama
+    base_url: http://localhost:11434/v1
+    model: llama3.1:8b               # example; NOTE: small local models are unreliable at tools
+    api_key: null
+    tool_calling: unknown
+    privacy_locations: [local]
+
+  # llama.cpp `llama-server` OpenAI-compatible endpoint. Tool calling depends on
+  # the GGUF chat template; quantized small models are inconsistent (see
+  # provider-capabilities.yaml). Override endpoint/model with VERDICT_LLM_BASEURL
+  # / VERDICT_LLM_MODEL.
+  local-llamacpp:
+    provider: local-llamacpp
+    base_url: http://localhost:8080/v1
+    model: qwen2.5-coder:32b
+    api_key: null
+    tool_calling: unknown
+    privacy_locations: [local]
+
+  # LM Studio local server (default port 1234). Tool support is per loaded model.
+  local-lmstudio:
+    provider: local-lmstudio
+    base_url: http://localhost:1234/v1
+    model: qwen2.5-coder:32b
+    api_key: null
+    tool_calling: unknown
+    privacy_locations: [local]
+
+  # Self-hosted NVIDIA NIM microservice. Local inference calls need no API key
+  # (the NGC key is only needed to pull the container image).
+  local-nim:
+    provider: local-nim
+    base_url: http://localhost:8000/v1
+    model: meta/llama-3.1-8b-instruct
+    api_key: null
+    tool_calling: unknown
+    privacy_locations: [local]
+
+  # Self-hosted Ollama on a remote box on YOUR network (e.g. a DGX Spark GB10).
+  # Still privacy_locations: [local] — evidence stays on your own hardware, no
+  # cloud egress. Override the endpoint/model at runtime without editing this file:
+  #   export VERDICT_LLM_BASEURL=http://<spark-ip>:11434/v1
+  #   export VERDICT_LLM_MODEL=gpt-oss:20b            # tool-capable on Spark Ollama
+  # then:  caseforge investigate <case> --privacy local-only --route spark-ollama
+  spark-ollama:
+    provider: local-ollama
+    base_url: http://SPARK-HOST:11434/v1   # set to your Spark; VERDICT_LLM_BASEURL overrides
+    model: gpt-oss:20b                       # VERDICT_LLM_MODEL overrides
+    api_key: null
+    tool_calling: true
+    privacy_locations: [local]
+
+  # ---- CLOUD routes (privacy_locations: [cloud]) -----------------------------
+
+  # ChatGPT subscription OAuth through the external VERDICT runtime.
+  # This is NOT OpenAI Platform API billing and must not use OPENAI_API_KEY.
+  # Authenticate with:
+  #   caseforge auth login --method headless
+  # or:
+  #   caseforge auth login --method browser
+  chatgpt-oauth:
+    provider: openai
+    model: gpt-5.5
+    api_key: null
+    auth: chatgpt-oauth
+    tool_calling: true
+    privacy_locations: [cloud]
+
+  openrouter:
+    provider: openrouter
+    base_url: https://openrouter.ai/api/v1
+    model: openai/gpt-5.5            # example route target through the aggregator
+    api_key: "{env:OPENROUTER_API_KEY}"
+    tool_calling: true
+    privacy_locations: [cloud]
+
+  zai-direct:
+    provider: zai
+    base_url: https://api.z.ai/api/paas/v4
+    model: glm-4.6                   # direct Z.AI GLM family
+    api_key: "{env:ZAI_API_KEY}"
+    tool_calling: true
+    privacy_locations: [cloud]
+
+  openai-api:
+    provider: openai
+    base_url: https://api.openai.com/v1
+    model: gpt-5.5                    # reliably drives tools in the bench harness
+    auth: api-key
+    api_key: "{env:OPENAI_API_KEY}"
+    tool_calling: true
+    privacy_locations: [cloud]
+
+  # xAI Grok cloud API (not local Ollama / not Spark).
+  # Requires XAI_API_KEY. Privacy: cloud — use only with synthetic / public /
+  # operator-approved evidence under cloud-ok (or redacted-cloud after redaction).
+  #   export XAI_API_KEY=...
+  #   caseforge investigate <path> --privacy cloud-ok --evidence synthetic --route xai-grok
+  # Override model: VERDICT_LLM_MODEL is NOT used for cloud routes; set model
+  # below or add a second route (e.g. xai-grok-mini) if you need another Grok id.
+  # SuperGrok *subscription* OAuth (preferred for personal Grok plans).
+  # Does NOT use XAI_API_KEY. Login:
+  #   caseforge auth login --provider xai --method headless
+  #   caseforge auth login --provider xai --method browser
+  xai-grok-oauth:
+    provider: xai
+    model: grok-3
+    api_key: null
+    auth: xai-oauth
+    tool_calling: true
+    privacy_locations: [cloud]
+
+  # Platform API key billing (console.x.ai API keys) — not subscription OAuth.
+  xai-grok:
+    provider: xai
+    base_url: https://api.x.ai/v1
+    model: grok-3                     # engine model ref → xai/grok-3
+    auth: api-key
+    api_key: "{env:XAI_API_KEY}"
+    tool_calling: true
+    privacy_locations: [cloud]
+
+  xai-grok-mini:
+    provider: xai
+    base_url: https://api.x.ai/v1
+    model: grok-3-mini
+    auth: api-key
+    api_key: "{env:XAI_API_KEY}"
+    tool_calling: true
+    privacy_locations: [cloud]
+
+# ------------------------------------------------------------------------------
+# Optional default selection policy (advisory; the CaseForge router enforces it).
+# ------------------------------------------------------------------------------
+routing_policy:
+  # For sensitive/seized evidence the router restricts selection to local-only.
+  sensitive_default: spark-ollama
+  # For explicitly non-sensitive work, prefer ChatGPT subscription OAuth.
+  # For Grok cloud instead: non_sensitive_default: xai-grok (requires XAI_API_KEY).
+  non_sensitive_default: chatgpt-oauth
+  notes: >-
+    Selection is a suggestion only. The privacy router has final say and will
+    reject any route whose privacy_locations include "cloud" when the active
+    material is not marked non-sensitive. xai-grok is cloud egress — never the
+    default for seized/real evidence under local-only.
+

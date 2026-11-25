@@ -1,0 +1,46 @@
+# Workspace manifest. Member crates live under services/.
+#
+# Spec #2 §4.1 — currently only services/mcp exists. As the MCP
+# server grows (additional crates for crypto, widgets), add them
+# here.
+
+[workspace]
+resolver = "2"
+members = [
+    "services/mcp",
+]
+
+# Pinned toolchain is Rust 1.88 (see rust-toolchain.toml + docker/l1-devbase.Dockerfile).
+# Spec #2 §16 says 1.83; the bump is documented in CLAUDE.md
+# "Spec/code divergences (code wins)" #1.
+
+[workspace.package]
+edition = "2021"
+# Rust 1.88 — bumped from the 1.83 spec pin to accommodate
+# transitive deps (clap_builder 4.6, etc.) that now require
+# edition-2024 stabilization (Rust ≥1.85). rust-toolchain.toml
+# is the authoritative pin.
+rust-version = "1.88"
+license = "Apache-2.0"
+repository = "https://github.com/"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+# Allow a few pedantic lints that are noise for our style.
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+[profile.release]
+# Optimize for runtime (the MCP server is long-lived in a
+# SIFT-bound subprocess); codegen-units=1 + LTO trades compile time
+# for hot-path speed.
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

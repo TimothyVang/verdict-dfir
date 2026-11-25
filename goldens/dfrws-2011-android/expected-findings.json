@@ -1,0 +1,45 @@
+{
+  "_comment": [
+    "Ground truth PLACEHOLDER for the DFRWS 2011 Forensic Challenge (Android).",
+    "Source: https://github.com/dfrws/dfrws2011-challenge",
+    "Tier: RED (not ready, do not rely) — evidence currently lives on a personal",
+    "Dropbox (can vanish) and needs mirroring + recompute. TRAP: the README hashes are",
+    "labeled MD5 but are actually SHA1 — do NOT chase a phantom mismatch; recompute and",
+    "pin both MD5 and SHA256 when a clean local copy exists.",
+    "",
+    "Verdict is UNKNOWN and recall target is low on purpose: this golden is a stub to",
+    "reserve the case id and record the SHA1-mislabel trap. Replace the findings with",
+    "the real answer key after a verified mirror + manual walkthrough."
+  ],
+  "case_id": "dfrws-2011-android",
+  "source_url": "https://github.com/dfrws/dfrws2011-challenge",
+  "license": "DFRWS Forensic Challenge — public for research/education",
+  "verdict": "UNKNOWN",
+  "min_recall_percent": 40,
+  "findings": [
+    {
+      "finding_id": "da-001",
+      "description": "Messaging/contact artifacts indicating illicit communication",
+      "mitre_technique": null,
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "disk",
+      "artifact_hint": "SQLite stores for SMS/contacts (mmssms.db, contacts2.db)"
+    },
+    {
+      "finding_id": "da-002",
+      "description": "Application data revealing relevant user activity",
+      "mitre_technique": null,
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "disk",
+      "artifact_hint": "/data/data/<app> SQLite + shared_prefs"
+    },
+    {
+      "finding_id": "da-003",
+      "description": "Deleted/recovered records relevant to the investigation",
+      "mitre_technique": null,
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "disk",
+      "artifact_hint": "SQLite freelist/WAL carving"
+    }
+  ]
+}

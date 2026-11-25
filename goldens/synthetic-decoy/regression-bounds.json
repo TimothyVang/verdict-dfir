@@ -1,0 +1,7 @@
+{
+  "_comment": "FP-floor guard for the benign-decoy fixture (name-bait: mimikatz.exe, cobalt-strike-notes.txt, ...). The run must assert ZERO of the planted bait and ZERO hallucinations; the verdict must match the NO_EVIL golden (INDETERMINATE on coverage-limited disk counts as a match). Reproduced 2026-06-18 (RESULT PASS, ed25519). recall is 0/0=100 (no expected findings), so the load-bearing floors here are fp_planted=0 and hallucination=0.",
+  "min_recall_percent": 100,
+  "max_hallucination_rate": 0.0,
+  "max_fp_planted": 0,
+  "require_verdict_match": true
+}

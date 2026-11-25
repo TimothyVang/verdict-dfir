@@ -1,0 +1,27 @@
+{
+  "name": "@verdict/caseforge-sdk",
+  "version": "0.1.0",
+  "description": "Headless DFIR agentic core: opencode SDK controller, privacy-mode router, structured findings, and VERDICT custody validation.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "Timothy Vang",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": { "import": "./dist/src/index.js", "types": "./dist/src/index.d.ts" }
+  },
+  "files": ["dist/src", "src", "vendor"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@opencode-ai/sdk": "file:./vendor/opencode-sdk",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": { "node": ">=20" }
+}

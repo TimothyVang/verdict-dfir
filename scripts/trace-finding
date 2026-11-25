@@ -1,0 +1,356 @@
+#!/usr/bin/env python3
+"""trace-finding — standalone, offline "trace any finding to its tool execution".
+
+A judge can run this against any completed case directory (e.g. tmp/auto-runs/<case-id>)
+with NOTHING but a Python 3 interpreter — no MCP server, no venv, no network — and
+get, for every Finding:
+
+    verdict word  <-  Finding  <-  tool_call_id  <-  audit.jsonl record  <-  Merkle leaf
+
+It also re-verifies the hash-chained audit log from scratch (mirroring
+findevil_agent.crypto.audit_log.verify): re-canonicalizes each line, checks seq
+monotonicity, and replays every prev_hash link. This is the standalone
+offline-verify CLI that complements the full crypto check in the `manifest_verify`
+MCP tool (which additionally rebuilds the rs_merkle root and checks the signature
+bundle).
+
+Usage:
+    scripts/trace-finding <run-dir> [finding_id]
+
+    <run-dir>     a directory holding audit.jsonl, verdict.json, run.manifest.json
+    [finding_id]  trace only this finding (default: every finding in verdict.json)
+
+Exit code 0 iff the audit chain is intact AND every traced finding resolves to a
+tool execution and a Merkle leaf; 1 otherwise.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+_CANONICAL_SEPARATORS = (",", ":")
+
+
+def _canonicalize(obj: Any) -> bytes:
+    """RFC-8785-compatible canonical bytes — identical to audit_log.canonicalize_json."""
+    return json.dumps(
+        obj, sort_keys=True, separators=_CANONICAL_SEPARATORS, ensure_ascii=True
+    ).encode("ascii")
+
+
+def _sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+class TraceError(RuntimeError):
+    """A run directory is malformed or the audit chain is broken."""
+
+
+def _load_json_object(path: Path) -> dict[str, Any]:
+    try:
+        obj = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise TraceError(f"unable to read {path.name}: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise TraceError(f"invalid JSON: {exc}") from exc
+    if not isinstance(obj, dict):
+        raise TraceError(f"{path.name} is not a JSON object")
+    return obj
+
+
+def _load_records(audit_path: Path) -> list[dict[str, Any]]:
+    """Verify the hash chain and return the parsed records in order.
+
+    Replays the same three checks as AuditLog.verify: seq monotonic from 0, each
+    line in canonical form, and prev_hash == SHA-256 of the previous raw line.
+    """
+    if not audit_path.is_file():
+        raise TraceError(f"no audit.jsonl in {audit_path.parent}")
+    records: list[dict[str, Any]] = []
+    prev_hash = ""
+    count = 0
+    with audit_path.open("rb") as handle:
+        for raw in handle:
+            raw = raw.rstrip(b"\n")
+            if not raw:
+                continue
+            try:
+                obj = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                raise TraceError(f"seq {count}: invalid JSON: {exc}") from exc
+            if not isinstance(obj, dict):
+                raise TraceError(f"seq {count}: line is not a JSON object")
+            if obj.get("seq") != count:
+                raise TraceError(
+                    f"seq {count}: expected seq={count}, got {obj.get('seq')}"
+                )
+            if obj.get("prev_hash") != prev_hash:
+                raise TraceError(
+                    f"seq {count}: prev_hash break "
+                    f"(declared={obj.get('prev_hash')!r}, expected={prev_hash!r})"
+                )
+            if _canonicalize(obj) != raw:
+                raise TraceError(
+                    f"seq {count}: line is not in canonical form (tampered)"
+                )
+            records.append(obj)
+            prev_hash = _sha256(raw)
+            count += 1
+    return records
+
+
+def _check_manifest(
+    records: list[dict[str, Any]], manifest: dict[str, Any]
+) -> tuple[set[str], list[str]]:
+    """Cross-check the manifest against the verified audit log.
+
+    Returns (leaf_record_ids, problems). Confirms the final-hash closes the chain,
+    the record count matches, and every declared leaf resolves to an audit record.
+    """
+    problems: list[str] = []
+    leaves = manifest.get("leaves", [])
+    leaf_ids: set[str] = set()
+    if not isinstance(leaves, list):
+        problems.append("manifest leaves is not a list")
+        leaves = []
+    for index, leaf in enumerate(leaves):
+        if not isinstance(leaf, dict):
+            problems.append(f"manifest leaf {index} is not an object")
+            continue
+        record_id = leaf.get("record_id")
+        if record_id:
+            leaf_ids.add(str(record_id))
+
+    if manifest.get("audit_log_record_count") not in (None, len(records)):
+        problems.append(
+            f"manifest record count {manifest.get('audit_log_record_count')} "
+            f"!= {len(records)} audit records"
+        )
+
+    # The chain's final hash must close over the last line.
+    if records:
+        last_canonical = _canonicalize(records[-1])
+        final = _sha256(last_canonical)
+        if manifest.get("audit_log_final_hash") not in (None, final):
+            problems.append(
+                "manifest audit_log_final_hash does not match the last audit line"
+            )
+
+    # Every leaf must resolve: a tool_call_output's tool_call_id, or a finding_id.
+    tool_call_ids = {
+        str(r["payload"].get("tool_call_id"))
+        for r in records
+        if r.get("kind") == "tool_call_output"
+        and r.get("payload", {}).get("tool_call_id")
+    }
+    finding_ids = {
+        str(r["payload"].get("finding_id"))
+        for r in records
+        if r.get("payload", {}).get("finding_id")
+    }
+    resolvable = tool_call_ids | finding_ids
+    unresolved = sorted(rid for rid in leaf_ids if rid and rid not in resolvable)
+    if unresolved:
+        problems.append(
+            f"{len(unresolved)} manifest leaf record_id(s) do not resolve: {unresolved[:5]}"
+        )
+    return leaf_ids, problems
+
+
+def _index_tool_calls(
+    records: list[dict[str, Any]],
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Map tool_call_id -> {"start": record, "output": record}."""
+    index: dict[str, dict[str, dict[str, Any]]] = {}
+    for record in records:
+        payload = record.get("payload", {})
+        tcid = payload.get("tool_call_id")
+        if not tcid:
+            continue
+        slot = index.setdefault(str(tcid), {})
+        if record.get("kind") == "tool_call_start":
+            slot["start"] = record
+        elif record.get("kind") == "tool_call_output":
+            slot["output"] = record
+    return index
+
+
+def _index_approved_findings(records: list[dict[str, Any]]) -> set[str]:
+    """Return Finding ids that were sealed as approved in the audit chain."""
+    approved: set[str] = set()
+    for record in records:
+        if record.get("kind") != "finding_approved":
+            continue
+        payload = record.get("payload", {})
+        finding = payload.get("finding", {})
+        fid = finding.get("finding_id") or payload.get("finding_id")
+        if fid:
+            approved.add(str(fid))
+    return approved
+
+
+def _latest_verdict_artifact_sha(records: list[dict[str, Any]]) -> str | None:
+    """Return the latest audited verdict.json SHA-256, if the run recorded one."""
+    for record in reversed(records):
+        if record.get("kind") == "verdict_artifact":
+            sha = record.get("payload", {}).get("sha256")
+            return str(sha) if sha else None
+    return None
+
+
+def _trace_one(
+    finding: dict[str, Any],
+    tool_calls: dict[str, dict[str, dict[str, Any]]],
+    leaf_ids: set[str],
+    approved_finding_ids: set[str],
+) -> bool:
+    """Print the finding -> tool_call -> audit -> Merkle-leaf chain. Return True if intact."""
+    fid = str(finding.get("finding_id") or finding.get("id") or "?")
+    conf = finding.get("confidence", "?")
+    tcid = str(finding.get("tool_call_id") or "")
+    mitre = finding.get("mitre_technique") or "-"
+    desc = (finding.get("description") or "").replace("\n", " ")
+    if len(desc) > 100:
+        desc = desc[:97] + "..."
+
+    print(f"\nFinding {fid}  [{conf}]  {mitre}")
+    print(f"  {desc}")
+
+    ok = True
+    if not tcid:
+        print(
+            "  └─ NO tool_call_id  -- finding is not traceable (verifier should have vetoed it)"
+        )
+        return False
+    print(f"  └─ tool_call_id {tcid}")
+
+    calls = tool_calls.get(tcid, {})
+    start = calls.get("start")
+    output = calls.get("output")
+    if start:
+        tool = start.get("payload", {}).get("tool", "?")
+        print(f"       ├─ audit seq {start.get('seq')}  tool_call_start   tool={tool}")
+    else:
+        print("       ├─ audit tool_call_start  -- MISSING")
+        ok = False
+    if output:
+        out_hash = str(output.get("payload", {}).get("output_hash") or "")
+        print(
+            f"       ├─ audit seq {output.get('seq')}  tool_call_output  output_sha256={out_hash[:16]}..."
+        )
+    else:
+        print("       ├─ audit tool_call_output -- MISSING")
+        ok = False
+
+    tc_leaf = tcid in leaf_ids
+    f_leaf = fid in leaf_ids
+    approved = fid in approved_finding_ids
+    print(
+        f"       └─ Merkle leaf: tool_call_id {'present' if tc_leaf else 'MISSING'}"
+        f" | finding_id {'present' if f_leaf else 'MISSING'}"
+    )
+    if approved:
+        print("          finding_approved: present")
+    else:
+        print("          finding_approved: MISSING")
+    return ok and tc_leaf and f_leaf and approved
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) < 2:
+        print(__doc__)
+        return 2
+    run_dir = Path(argv[1])
+    only_finding = argv[2] if len(argv) > 2 else None
+
+    audit_path = run_dir / "audit.jsonl"
+    verdict_path = run_dir / "verdict.json"
+    manifest_path = run_dir / "run.manifest.json"
+
+    try:
+        records = _load_records(audit_path)
+    except TraceError as exc:
+        print(f"AUDIT CHAIN BROKEN: {exc}")
+        return 1
+    print(f"VERDICT trace -- {run_dir}")
+    print(
+        f"audit chain: OK -- {len(records)} records, seq monotonic, every line canonical, prev_hash chain intact"
+    )
+
+    manifest: dict[str, Any] = {}
+    leaf_ids: set[str] = set()
+    if manifest_path.is_file():
+        try:
+            manifest = _load_json_object(manifest_path)
+        except TraceError as exc:
+            print(f"manifest:    BROKEN -- {exc}")
+            return 1
+        leaf_ids, problems = _check_manifest(records, manifest)
+        if problems:
+            for problem in problems:
+                print(f"manifest:    BROKEN -- {problem}")
+            return 1
+        else:
+            print(
+                f"manifest:    OK -- final hash closes the chain; {len(leaf_ids)} leaves all resolve to audit records"
+            )
+    else:
+        print("manifest:    (no run.manifest.json -- leaf checks skipped)")
+
+    if not verdict_path.is_file():
+        print("verdict:     (no verdict.json -- nothing to trace)")
+        return 1
+    verdict_artifact_sha = _latest_verdict_artifact_sha(records)
+    if verdict_artifact_sha:
+        try:
+            actual_verdict_sha = _sha256(verdict_path.read_bytes())
+        except OSError as exc:
+            print(f"verdict:     BROKEN -- unable to read verdict.json: {exc}")
+            return 1
+        if actual_verdict_sha != verdict_artifact_sha:
+            print(
+                "verdict:     BROKEN -- verdict.json sha256 does not match "
+                f"audited verdict_artifact (actual={actual_verdict_sha}, "
+                f"expected={verdict_artifact_sha})"
+            )
+            return 1
+        print("verdict:     artifact hash OK")
+    try:
+        verdict = _load_json_object(verdict_path)
+    except TraceError as exc:
+        print(f"verdict:     BROKEN -- {exc}")
+        return 1
+    findings = verdict.get("findings") or []
+    if only_finding:
+        findings = [
+            f
+            for f in findings
+            if str(f.get("finding_id") or f.get("id")) == only_finding
+        ]
+        if not findings:
+            print(f"no finding with id {only_finding!r} in {verdict_path}")
+            return 1
+    print(
+        f"verdict:     {verdict.get('verdict', '?')}  ({len(findings)} finding(s) traced)"
+    )
+
+    tool_calls = _index_tool_calls(records)
+    approved_finding_ids = _index_approved_findings(records)
+    traced_ok = sum(
+        1 for f in findings if _trace_one(f, tool_calls, leaf_ids, approved_finding_ids)
+    )
+
+    print(
+        f"\nTRACE {'OK' if traced_ok == len(findings) and findings else 'INCOMPLETE'}: "
+        f"{traced_ok}/{len(findings)} findings resolve to an approved finding, "
+        "tool execution, and Merkle leaves."
+    )
+    return 0 if (traced_ok == len(findings) and findings) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

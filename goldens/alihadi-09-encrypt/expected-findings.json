@@ -1,0 +1,53 @@
+{
+  "_comment": [
+    "Ground truth for Ali Hadi case #9 'Encrypt Them All' (AES/BitLocker/GPG).",
+    "Source: https://archive.org/details/anti-forensics-case-2",
+    "Tier: YELLOW (build/test, score with care) — answers gated.",
+    "",
+    "FALSE-POSITIVE CONTROL. This case is deliberately marked SUSPICION, not MALICE:",
+    "encryption tooling and encrypted containers are present, but their mere presence",
+    "is NOT proof of malicious intent. The correct VERDICT word is INDETERMINATE",
+    "('saw leads, couldn't corroborate'). A run that escalates to SUSPICIOUS or",
+    "CONFIRMED_EVIL fails the verdict-match check in scripts/score-recall.py. Findings",
+    "here are intentionally INFERRED/HYPOTHESIS — none should be asserted CONFIRMED."
+  ],
+  "case_id": "alihadi-09-encrypt",
+  "source_url": "https://archive.org/details/anti-forensics-case-2",
+  "license": "Ali Hadi DFIR challenges — free for research/education (answers gated)",
+  "verdict": "INDETERMINATE",
+  "min_recall_percent": 50,
+  "findings": [
+    {
+      "finding_id": "ae-001",
+      "description": "GPG encryption artifacts present on disk",
+      "mitre_technique": "T1027",
+      "confidence": "INFERRED",
+      "artifact_class": "disk",
+      "artifact_hint": "GPG keyrings / .gpg files; GPG4Win install traces"
+    },
+    {
+      "finding_id": "ae-002",
+      "description": "BitLocker-protected or otherwise encrypted volume/container present",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "disk",
+      "artifact_hint": "BitLocker metadata / encrypted container signatures"
+    },
+    {
+      "finding_id": "ae-003",
+      "description": "AES-encrypted files present without corroborating evidence of malicious intent",
+      "mitre_technique": null,
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "disk",
+      "artifact_hint": "High-entropy files; encryption-tool MRU"
+    },
+    {
+      "finding_id": "ae-004",
+      "description": "Encryption tooling installed/executed on the host",
+      "mitre_technique": "T1588.002",
+      "confidence": "INFERRED",
+      "artifact_class": "prefetch",
+      "artifact_hint": "Prefetch/registry for GPG/VeraCrypt-class tooling"
+    }
+  ]
+}

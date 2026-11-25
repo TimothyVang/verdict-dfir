@@ -1,0 +1,85 @@
+name: L1 Unit + Build
+
+# Spec #3 §4.2 — runs cargo/pytest/pnpm inside the L1 Ubuntu 22.04
+# dev-base image. Required status check on master per glue Spec #4 §6.
+# Budget: 2-5min wall clock on GHA standard runner.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: l1-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  unit-build:
+    name: L1 unit/build (Ubuntu 22.04 devbase)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # GHA cache keyed on the Dockerfile hash so we only rebuild when
+      # toolchain versions change, not on every commit.
+      - name: Cache L1 devbase image
+        uses: actions/cache@v4
+        with:
+          path: /tmp/l1-devbase-image.tar
+          key: l1-devbase-${{ hashFiles('docker/l1-devbase.Dockerfile') }}
+
+      - name: Build or load L1 devbase image
+        run: |
+          set -euo pipefail
+          if [ -f /tmp/l1-devbase-image.tar ]; then
+            echo "Loading cached L1 devbase image..."
+            docker load --input /tmp/l1-devbase-image.tar
+          else
+            echo "Building L1 devbase image..."
+            docker build \
+              --file docker/l1-devbase.Dockerfile \
+              --tag findevil/l1-devbase:local \
+              --build-arg DEV_UID=1000 \
+              --build-arg DEV_GID=1000 \
+              .
+            docker save --output /tmp/l1-devbase-image.tar findevil/l1-devbase:local
+          fi
+          docker image ls findevil/l1-devbase:local
+
+      - name: Prepare writable L1 scratch directory
+        run: |
+          mkdir -p tmp
+          chmod 0777 tmp
+
+      - name: Run L1 (cargo test / pytest / pnpm build+test)
+        env:
+          UID: 1000
+          GID: 1000
+        run: |
+          docker compose -f docker/l1-compose.yml up \
+            --exit-code-from l1 \
+            --abort-on-container-exit
+
+      - name: Upload L1 artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l1-failure-artifacts
+          path: |
+            target/**/test-output/**
+            .pytest_cache/**
+            **/coverage.xml
+            **/junit.xml
+          if-no-files-found: ignore
+          retention-days: 7

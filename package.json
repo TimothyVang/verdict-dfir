@@ -1,0 +1,26 @@
+{
+  "name": "verdict-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VERDICT — REA for DFIR: unified local-first DFIR MCP, CLI, CaseForge privacy/model controller, Rust forensic toolkit, and cryptographic custody spine.",
+  "license": "Apache-2.0",
+  "author": "Timothy Vang",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @verdict/caseforge-sdk && npm run build -w @verdict/mcp && npm run build -w @verdict/cli && npm run build -w @verdict/caseforge-tui && npm run build -w @verdict/caseforge-cli",
+    "build:core": "npm run build -w @verdict/caseforge-sdk && npm run build -w @verdict/mcp && npm run build -w @verdict/cli",
+    "test:mcp": "node --test packages/verdict-mcp/test/*.test.mjs",
+    "test:cli": "node --test packages/verdict-cli/test/*.test.mjs",
+    "test": "npm run test:mcp && npm run test:cli",
+    "doctor": "node packages/verdict-cli/dist/src/cli.js doctor",
+    "serve": "node packages/verdict-cli/dist/src/cli.js serve",
+    "build:rust": "cargo build --release -p findevil-mcp",
+    "check:rust": "cargo check --workspace"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "skill_name": "dev-loop",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "The LNK lane in scripts/find_evil_auto.py just drops the finding when lecmd returns -32602. I want it to re-route to a registry USBSTOR query instead and emit the finding from there. Write a failing test first, then keep iterating until that test passes and the agent suite is green, then open a PR to dev.",
+      "expected_output": "Runs an OODA+TDD loop: writes a red test, makes a bounded change, verifies green, commits on a fix/ branch, pushes to origin, opens a PR against TimothyVang/dev-verdict-github with a test plan. Never touches release.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "run dev-loop: add a regression test that asserts recall on the SCHARDT golden stays at the documented number, and don't stop until it's green.",
+      "expected_output": "Defines an observable DoD, writes the test, iterates to green, records receipts, and either ships a PR (done) or stops in a named terminal state (blocked/exhausted/stagnated) rather than claiming success.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Can you explain what the LNK fallback code currently does? I'm just trying to understand it, not change anything yet.",
+      "expected_output": "Should NOT run the build/commit/PR loop — this is a read-only understanding question. The skill is for driving a change to a verified, committed finish, not for explanation.",
+      "files": []
+    }
+  ]
+}

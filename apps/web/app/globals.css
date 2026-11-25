@@ -1,0 +1,56 @@
+/* Tailwind v4 — CSS-first import. */
+@import "tailwindcss";
+
+/* VERDICT v2 brand tokens (mirror lib/verdict-ui.tsx + Remotion editorial.ts).
+ * Exposed as Tailwind utilities for the surfaces still styled with classes
+ * (/codex, DashboardNav): bg-paper, text-ink, border-hairline, text-accent,
+ * font-serif/grotesk/mono, etc. */
+@theme {
+  --color-paper: #101426;
+  --color-paper-edge: #080b18;
+  --color-surface: #12131a;
+  --color-ink: #f5f1e8;
+  --color-ink-muted: #b8a8ff;
+  --color-ink-faint: #7f789c;
+  --color-hairline: #27304a;
+  --color-accent: #4d5dff;
+  --color-alert: #ff6257;
+  --color-confirmed: #73d9c2;
+  --color-inferred: #ffd76a;
+  --color-hypothesis: #4d5dff;
+
+  --font-serif: var(--font-archivo), Impact, system-ui, sans-serif;
+  --font-grotesk: var(--font-archivo), system-ui, sans-serif;
+  --font-mono: var(--font-jbm), "JetBrains Mono", monospace;
+}
+
+/* Midnight base so first paint reads as the brand-bible evidence lab, never a
+ * white flash. JetBrains Mono is the base; display/grotesk are applied per token. */
+body {
+  background: #101426;
+  color: #f5f1e8;
+  font-family: var(--font-jbm), "JetBrains Mono", "Courier New", monospace;
+}
+
+/* Subtle editorial reveal for page containers / panels. Mirrors the demo's
+ * fade+rise. Gated behind prefers-reduced-motion. */
+@keyframes verdictReveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.verdict-reveal {
+  animation: verdictReveal 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verdict-reveal {
+    animation: none;
+  }
+}

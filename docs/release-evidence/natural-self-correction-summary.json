@@ -1,0 +1,31 @@
+{
+ "version": 1,
+ "purpose": "Stage One Check 11 / Stage Two criterion 1: committed structured evidence that self-correction is visible in the audit logs, not only in the demo video.",
+ "generated_at_utc": "2026-06-15T15:50:49Z",
+ "source_run": {
+  "audit_chain": "audit.jsonl (hash-chained, 311 records)",
+  "case_id": "b6068a27-011f-4e9f-8f30-de9741e98f7e",
+  "arc_ts_utc": "2026-06-12T00:57:24Z",
+  "note": "Raw generated run directories remain gitignored. This packet commits a compact verbatim excerpt (seq 169-183) sufficient to inspect the self-correction arc; each record keeps its seq, ts, and prev_hash."
+ },
+ "organic": {
+  "fault_injection_present": false,
+  "statement": "This is a natural run: the string fault_injection never appears in the audit chain. The errors are real tool failures, not injected conditions."
+ },
+ "self_correction_arc": {
+  "trigger": "registry_query repeatedly failed on truncated Windows RegBack hives (SAM, SECURITY, SOFTWARE): 'registry hive parse failed ... hive truncated (header too small)'.",
+  "adjustment": "course_correction action = 'narrow (skip this key; continue remaining hive triage)' \u2014 the agent abandons the unreadable hive and continues other lanes instead of fabricating a result.",
+  "escalation": "after consecutive failures, heartbeat_failure action = 'escalate' with recovery = 'partial-report posture; continue remaining lanes and seal an honest INDETERMINATE/partial Verdict over what was examined'.",
+  "counts": {
+   "course_correction_events_in_run": 6,
+   "heartbeat_failure_events_in_run": 5,
+   "total_records": 311
+  }
+ },
+ "how_to_verify": [
+  "Read natural-self-correction-trace.jsonl: tool_call_output (tc-086) carries the real error string; the following course_correction records the adjusted plan; heartbeat_failure records the escalation with a rising consecutive_failures counter.",
+  "Each record carries seq, ts, and prev_hash from the live audit chain; the excerpt is contiguous so prev_hash links each record to the one before it within the window."
+ ],
+ "excerpt_sha256": "a6e160c3674f5eeb39441fc3bdacbac5c8fe8655253bd586e979c29db57e662f",
+ "excerpt_seq_range": "169-183"
+}

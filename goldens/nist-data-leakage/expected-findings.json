@@ -1,0 +1,73 @@
+{
+  "_comment": [
+    "Ground truth for the NIST CFReDS Data Leakage Case (insider exfil + anti-forensics).",
+    "Source: https://cfreds.nist.gov/all/NIST/DataLeakageCase (public domain, 17 USC 105).",
+    "Tier: GREEN (score against) — NIST ships a step-by-step answer key. Maps onto the",
+    "Dungan-style insider-exfil starter case. The insider used multiple exfil channels",
+    "(USB, cloud, webmail, print) and ran anti-forensic wiping to cover tracks.",
+    "We enumerate the channels/behaviors a correct run must surface."
+  ],
+  "case_id": "nist-data-leakage",
+  "source_url": "https://cfreds.nist.gov/all/NIST/DataLeakageCase",
+  "license": "Public domain (17 USC 105)",
+  "verdict": "CONFIRMED_EVIL",
+  "min_recall_percent": 60,
+  "findings": [
+    {
+      "finding_id": "dl-001",
+      "description": "USB mass-storage device connected and used to stage confidential data",
+      "mitre_technique": "T1052.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "registry",
+      "artifact_hint": "SYSTEM hive USBSTOR + setupapi.dev.log"
+    },
+    {
+      "finding_id": "dl-002",
+      "description": "Cloud storage (e.g. Google Drive) used as an exfiltration channel",
+      "mitre_technique": "T1567.002",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Browser history / cache for cloud-storage uploads"
+    },
+    {
+      "finding_id": "dl-003",
+      "description": "Personal webmail used to send confidential files off the host",
+      "mitre_technique": "T1567",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Browser history + webmail attachment artifacts"
+    },
+    {
+      "finding_id": "dl-004",
+      "description": "Anti-forensic wiping/cleaning tool executed to destroy evidence",
+      "mitre_technique": "T1070.004",
+      "confidence": "CONFIRMED",
+      "artifact_class": "prefetch",
+      "artifact_hint": "Prefetch + MFT for CCleaner/Eraser-class tooling"
+    },
+    {
+      "finding_id": "dl-005",
+      "description": "Confidential documents archived/compressed for staging before exfil",
+      "mitre_technique": "T1560",
+      "confidence": "INFERRED",
+      "artifact_class": "mft",
+      "artifact_hint": "Archive creation in MFT timeline near exfil events"
+    },
+    {
+      "finding_id": "dl-006",
+      "description": "Printing used as an alternate exfiltration channel",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "registry",
+      "artifact_hint": "Print spooler artifacts / EMF spool files"
+    },
+    {
+      "finding_id": "dl-007",
+      "description": "Deletion of staged files immediately after copy (anti-forensics)",
+      "mitre_technique": "T1070",
+      "confidence": "INFERRED",
+      "artifact_class": "usnjrnl",
+      "artifact_hint": "USN journal delete records following copy events"
+    }
+  ]
+}

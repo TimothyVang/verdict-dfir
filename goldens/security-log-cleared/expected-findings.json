@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "Answer key for the staged Windows Security EVTX log-clear live-test case.",
+    "This declares the expected bad fact only; it does not copy raw EVTX data.",
+    "Run with: bash scripts/verdict evidence/DE_1102_security_log_cleared.evtx",
+    "Local-only until upstream EVTX sample provenance is documented."
+  ],
+  "case_id": "security-log-cleared",
+  "source_url": "local-only EVTX attack sample; raw fixture not redistributed",
+  "license": "VERDICT-authored answer key; raw EVTX provenance must be verified before publishing or redistributing the fixture",
+  "verdict": "SUSPICIOUS",
+  "min_recall_percent": 100,
+  "findings": [
+    {
+      "finding_id": "slc-001",
+      "description": "Windows Security audit log was cleared, producing Event ID 1102 anti-forensics evidence",
+      "mitre_technique": "T1070.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "evtx",
+      "artifact_hint": "Security EVTX EID 1102 audit-log clear event"
+    }
+  ]
+}

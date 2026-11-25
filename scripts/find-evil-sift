@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+# find-evil-sift — SIFT VM helper: ensures the VM is running and Claude Code
+# talks stdio to its MCP servers over SSH (the interactive in-VM path).
+# For the one-command headless workflow, use:  scripts/verdict --sift <evidence>
+#
+# First run: defer to scripts/sift-vm-bootstrap.sh (one-time, ~15 min).
+# Subsequent runs: detect VM state, boot if stopped, get fresh IP from
+# VMware Tools, sync .mcp.json.sift to that IP, swap configs, launch
+# Claude Code.
+#
+# Hypervisor preference: VMware Workstation (vmrun) → VirtualBox
+# (VBoxManage). The bootstrap is VMware-only today; VirtualBox path
+# is a stub for future extension.
+#
+# Knobs (env): VM_NAME, SSH_KEY, GUEST_USER, GUEST_REPO_PATH.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${REPO_ROOT}"
+
+VM_NAME="${VM_NAME:-Find-Evil-SIFT}"
+# VM working dir is OS-specific (matches scripts/sift-vm-bootstrap.sh).
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) VM_DIR="${VM_DIR:-$HOME/Documents/Virtual Machines/${VM_NAME}}" ;;
+  *)                    VM_DIR="${VM_DIR:-$HOME/vmware/${VM_NAME}}" ;;
+esac
+VM_VMX="${VM_DIR}/${VM_NAME}.vmx"
+SSH_KEY="${SIFT_SSH_KEY:-$HOME/.ssh/sift_key}"
+GUEST_USER="${GUEST_USER:-sansforensics}"
+GUEST_REPO_PATH="${GUEST_REPO_PATH:-/home/sansforensics/find-evil}"
+
+VMRUN_WIN="/c/Program Files (x86)/VMware/VMware Workstation/vmrun.exe"
+
+RESTORE_ON_EXIT=1
+for arg in "$@"; do
+  case "${arg}" in
+    --no-restore) RESTORE_ON_EXIT=0 ;;
+  esac
+done
+
+log()  { printf '[find-evil-sift] %s\n' "$*" >&2; }
+warn() { printf '[find-evil-sift] WARN: %s\n' "$*" >&2; }
+fail() { printf '[find-evil-sift] FAIL: %s\n' "$*" >&2; exit 1; }
+
+to_winpath() {
+  local p="$1"
+  if [[ "$p" == /c/* ]]; then
+    echo "C:\\${p#/c/}" | sed 's|/|\\|g'
+  elif [[ "$p" == /[a-z]/* ]]; then
+    local drive="${p:1:1}"
+    echo "${drive^^}:\\${p#/?/}" | sed 's|/|\\|g'
+  else
+    cygpath -w "$p" 2>/dev/null || echo "$p"
+  fi
+}
+
+# ---------------------------------------------------------------------
+# Detect hypervisor: VMware Workstation (Windows/WSL) or libvirt (Linux)
+# ---------------------------------------------------------------------
+HYPERVISOR=""
+if [[ -f "$VMRUN_WIN" ]]; then
+  HYPERVISOR="vmware"
+  VMRUN="$VMRUN_WIN"
+elif command -v vmrun &>/dev/null; then
+  # VMware Workstation on Linux — vmrun on PATH. Same code path as Windows
+  # (to_winpath is a no-op on native Linux paths).
+  HYPERVISOR="vmware"
+  VMRUN="$(command -v vmrun)"
+elif command -v virsh &>/dev/null; then
+  HYPERVISOR="libvirt"
+else
+  fail "No supported hypervisor found. Expected VMware Workstation (vmrun) or libvirt (virsh). Set VM_NAME to the libvirt domain name or ensure vmrun is on PATH."
+fi
+log "hypervisor: $HYPERVISOR"
+
+# ---------------------------------------------------------------------
+# 1. Pre-flight: VM exists?
+# ---------------------------------------------------------------------
+if [[ "$HYPERVISOR" == "vmware" ]]; then
+  [[ -f "$VM_VMX" ]] || fail "VM not converted yet at: $VM_VMX
+  Run: bash scripts/sift-vm-bootstrap.sh"
+  [[ -f "$SSH_KEY" ]] || fail "SSH key missing at $SSH_KEY — run sift-vm-bootstrap.sh"
+else
+  # libvirt: domain must already exist (operator imports OVA via virt-manager or virsh define)
+  virsh dominfo "$VM_NAME" &>/dev/null \
+    || fail "libvirt domain '$VM_NAME' not found. Import the OVA with virt-manager or virsh define. Set VM_NAME env var if the domain has a different name."
+  [[ -f "$SSH_KEY" ]] || fail "SSH key missing at $SSH_KEY"
+fi
+
+# ---------------------------------------------------------------------
+# 2. Boot if not running
+# ---------------------------------------------------------------------
+if [[ "$HYPERVISOR" == "vmware" ]]; then
+  VMX_WIN=$(to_winpath "$VM_VMX")
+  if "$VMRUN" -T ws list | grep -qF "$VMX_WIN"; then
+    log "VM already running"
+  else
+    log "VM not running; starting headless..."
+    "$VMRUN" -T ws start "$VMX_WIN" nogui
+  fi
+else
+  DOMAIN_STATE=$(virsh domstate "$VM_NAME" 2>/dev/null || echo "unknown")
+  if [[ "$DOMAIN_STATE" == "running" ]]; then
+    log "VM already running"
+  else
+    log "VM not running (state: $DOMAIN_STATE); starting..."
+    virsh start "$VM_NAME" \
+      || fail "virsh start '$VM_NAME' failed — check 'virsh dominfo $VM_NAME' for details"
+  fi
+fi
+
+# ---------------------------------------------------------------------
+# 3. Discover guest IP
+# ---------------------------------------------------------------------
+log "waiting for guest IP (up to 90s)..."
+GUEST_IP=""
+for i in $(seq 1 45); do
+  if [[ "$HYPERVISOR" == "vmware" ]]; then
+    if GUEST_IP=$("$VMRUN" -T ws getGuestIPAddress "$VMX_WIN" 2>/dev/null); then
+      if [[ -n "$GUEST_IP" && "$GUEST_IP" != "unknown" && "$GUEST_IP" != *error* ]]; then
+        log "  guest IP (VMware Tools): $GUEST_IP"; break
+      fi
+    fi
+  else
+    # libvirt: try virsh domifaddr first (requires guest agent or arp)
+    GUESS=$(virsh domifaddr "$VM_NAME" 2>/dev/null \
+      | awk '/ipv4/{gsub(/\/[0-9]+/,"",$4); print $4}' \
+      | head -1)
+    if [[ -n "$GUESS" ]]; then
+      GUEST_IP="$GUESS"; log "  guest IP (virsh domifaddr): $GUEST_IP"; break
+    fi
+    # fallback: arp-scan / hostname resolution if operator sets SIFT_VM_IP
+    if [[ -n "${SIFT_VM_IP:-}" ]]; then
+      GUEST_IP="$SIFT_VM_IP"; log "  guest IP (SIFT_VM_IP env): $GUEST_IP"; break
+    fi
+  fi
+  sleep 2
+done
+[[ -n "$GUEST_IP" && "$GUEST_IP" != "unknown" ]] || fail "VM didn't report a usable IP within 90s. Set SIFT_VM_IP=<ip> to override."
+
+# ---------------------------------------------------------------------
+# 4. Verify SSH actually reaches the VM
+# ---------------------------------------------------------------------
+log "verifying SSH ${GUEST_USER}@${GUEST_IP}..."
+if ! ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=5 \
+    -o StrictHostKeyChecking=accept-new \
+    "${GUEST_USER}@${GUEST_IP}" \
+    "test -x ${GUEST_REPO_PATH}/target/release/findevil-mcp" >/dev/null 2>&1; then
+  warn "SSH or remote binary missing. Re-run scripts/sift-vm-bootstrap.sh."
+  fail "cannot proceed without a built findevil-mcp inside the VM"
+fi
+log "  SSH ok; remote binary present."
+
+# ---------------------------------------------------------------------
+# 5. Re-sync .mcp.json.sift with current IP (in case DHCP changed)
+# ---------------------------------------------------------------------
+log "syncing .mcp.json.sift with current IP..."
+python3 - "$GUEST_IP" "$SSH_KEY" "$GUEST_USER" "$GUEST_REPO_PATH" <<'PY' || warn "could not refresh .mcp.json.sift (continuing)"
+import json, sys, pathlib
+ip, key, user, repo = sys.argv[1:]
+p = pathlib.Path(".mcp.json.sift")
+data = json.loads(p.read_text(encoding="utf-8"))
+for name, server in data["mcpServers"].items():
+    args = []
+    skip = 0
+    seen_user_at = False
+    for a in server["args"]:
+        if skip:
+            skip -= 1
+            continue
+        if a in ("-p",):
+            skip = 1
+            continue
+        if a == "-i":
+            args.extend(["-i", key])
+            skip = 1
+            continue
+        if "@" in a and not seen_user_at and (a.endswith("@localhost") or "@" in a):
+            args.append(f"{user}@{ip}")
+            seen_user_at = True
+            continue
+        if "/home/sansforensics/find-evil" in a:
+            args.append(a.replace("/home/sansforensics/find-evil", repo))
+            continue
+        args.append(a)
+    server["args"] = args
+p.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+
+# ---------------------------------------------------------------------
+# 6. Activate SIFT-mode .mcp.json
+# ---------------------------------------------------------------------
+if [[ -f .mcp.json ]] && ! diff -q .mcp.json .mcp.json.sift >/dev/null 2>&1; then
+  log "backing up local .mcp.json → .mcp.json.local"
+  cp -f .mcp.json .mcp.json.local
+fi
+log "activating SIFT-mode .mcp.json"
+cp -f .mcp.json.sift .mcp.json
+
+restore_local() {
+  if [[ "${RESTORE_ON_EXIT}" == "1" && -f .mcp.json.local ]]; then
+    log "restoring local .mcp.json"
+    mv -f .mcp.json.local .mcp.json
+  fi
+}
+trap restore_local EXIT
+
+# ---------------------------------------------------------------------
+# 7. Hand off to Claude Code
+# ---------------------------------------------------------------------
+log "launching Claude Code (SIFT-mode); guest at ${GUEST_USER}@${GUEST_IP}"
+log "  prompt suggestion: investigate ${GUEST_REPO_PATH}/fixtures/single-evtx/Security.evtx"
+
+if command -v claude >/dev/null 2>&1; then
+  # `claude` (the official Claude Code CLI) opens an interactive session
+  # in cwd; no positional path arg per `claude --help`. We're already in
+  # ${REPO_ROOT} per line 19.
+  claude
+else
+  log "'claude' not found on PATH — open Claude Code manually in:"
+  log "  ${REPO_ROOT}"
+  log "Install: https://docs.anthropic.com/en/docs/claude-code/install"
+fi

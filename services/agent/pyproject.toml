@@ -1,0 +1,134 @@
+# Spec #2 §4.2 + Amendment A1 + Amendment A2. Python agent library —
+# crypto chain-of-custody (M2) + ACH judge/verifier/correlator (M4).
+# Under A2, Claude Code is the canonical interactive/cloud runtime and this
+# library is wrapped by `services/agent_mcp/` as MCP tools. The beta-native
+# Phase 4 loop is limited to `findevil_agent/agentloop/`. The pre-A2
+# orchestrator (graph.py / api.py / cli.py / supervisor.py / specialists/)
+# remains dropped; LangGraph and FastAPI remain forbidden.
+
+[project]
+name = "findevil-agent"
+version = "0.1.0"
+description = "Find Evil! custody and ACH library with the beta-native Phase 4 agent loop."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "Find Evil! team" },
+]
+
+# Pinned exact ranges per Spec #2 §16. Upgrading any of these
+# without a spec amendment is a silent contract break.
+#
+# A2 deltas (removed from this list):
+#   - langgraph, langgraph-checkpoint-sqlite — the allowed native loop is framework-free
+#   - fastapi, uvicorn[standard], sse-starlette — no Product app server
+dependencies = [
+  # Anthropic client/types support Claude-backed provider operation.
+  "anthropic>=0.45,<1.0",
+
+  # Pydantic v2 for the AgentEvent union + all typed models.
+  "pydantic>=2.7,<3.0",
+  # Generate TypeScript from Pydantic — kept for the bonus Next.js SPA
+  # path; harmless under A2.
+  "pydantic-to-typescript>=2.0",
+
+  # M2 cryptographic chain-of-custody stack. Pinned per Spec #2 §16.
+  # Sigstore is the opt-in identity/transparency tier; the default
+  # manifest signer is local Ed25519 and verifies offline.
+  # opentimestamps-client was removed in Amendment A5 along with
+  # the OpenTimestamps + Bitcoin tier of the custody chain.
+  "sigstore==3.*",
+
+  # L1 DuckDB per case.
+  "duckdb>=0.10",
+
+  # MITRE ATT&CK technique lookup (official maintainer).
+  "mitreattack-python>=5.4,<6.0",
+
+  # Structured logging.
+  "structlog>=24.4",
+
+  # HTTP client for downstream tooling that imports findevil-agent.
+  "httpx>=0.27",
+
+  # Unified multi-provider LLM/embedding factory (OpenRouter, Anthropic,
+  # OpenAI, Groq, Ollama, …). Provider selected via FINDEVIL_LLM_PROVIDER.
+  "esperanto>=2.0,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=5.0",
+  "ruff>=0.7.4",
+  "mypy>=1.11",
+  "respx>=0.21",
+]
+
+# PEP 735 dependency group — uv installs the `dev` group BY DEFAULT on a bare
+# `uv run` / `uv sync` (unlike the `[project.optional-dependencies]` extra above,
+# which only installs under `--extra dev`). Without this, the documented test
+# command `uv run --directory services/agent pytest` would NOT install pytest
+# into the venv, fall through PATH to a user-global pytest shebanged to the
+# system Python, and import the system `cryptography` (missing `_cffi_backend`)
+# instead of the venv copy — failing every crypto signer/manifest test in a
+# fresh worktree. Keeping both the extra (for `--extra dev` / install.sh / pip)
+# and this group (for default `uv run`) keeps the documented command honest.
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=5.0",
+  "ruff>=0.7.4",
+  "mypy>=1.11",
+  "respx>=0.21",
+]
+
+# Under A2 there is no `find-evil` Python console script. Launch through
+# scripts/find-evil (Claude Code) or scripts/verdict --agent (beta-native).
+# The pre-A2 entry point targeted findevil_agent.cli:main, which remains removed.
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["findevil_agent"]
+
+[tool.uv]
+# sigstore 3.x has a transitive prerelease pin (sigstore-protobuf-specs);
+# uv refuses by default. Allow prereleases project-wide so the dep tree
+# resolves. Same setting applied in services/agent_mcp/pyproject.toml.
+prerelease = "allow"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["logs/**", ".venv/**"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+  "integration: requires SIFT tooling or a live claude CLI",
+  "slow: takes longer than ~5s",
+]
+asyncio_mode = "auto"
+filterwarnings = [
+  "error",
+  "ignore::DeprecationWarning:pydantic.*",
+]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+warn_unused_ignores = true

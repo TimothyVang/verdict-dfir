@@ -1,0 +1,2293 @@
+#!/usr/bin/env bash
+# verdict — the one VERDICT command. Point at evidence, get a signed verdict.
+#
+# This is the single entry point. It replaces the old per-mode launchers
+# (find-evil-auto / find-evil-run / find-evil-live / find-evil-sift): there is
+# one workflow, not five. "Where the tools run" (local host vs. the SANS SIFT
+# VM) is the --sift flag, not a separate command.
+#
+# Usage:
+#   scripts/verdict <evidence> [options]
+#
+# Pipeline (no human input required after launch):
+#   preflight (doctor) → build the MCP server if needed → investigate via the
+#   typed MCP pipeline → open the live dashboard at the case → signed verdict
+#   + report.
+#
+# Options:
+#   --sift            run the DFIR tools inside the SANS SIFT VM over SSH
+#                     (default: tools on the local host). Requires the VM to be
+#                     bootstrapped once: bash scripts/sift-vm-bootstrap.sh
+#   --fleet           whole multi-host case in ONE command: per-host
+#                     investigations -> cross-host correlation -> FLEET_REPORT.
+#                     Auto-detected when <evidence> is a folder with hosts/ or
+#                     disks/ (the whole-case layout). Resumable: re-run the
+#                     same command and completed hosts are skipped.
+#   --watch           no path? wait for a file dropped into evidence/, then go
+#                     (debounced until the copy finishes). Omitting both a path
+#                     and --watch uses the newest file already in evidence/.
+#   --no-dashboard    don't auto-open the web dashboard
+#   --skip-build      assume target/release/findevil-mcp is already built
+#   --dry-run         print each stage without running anything
+#   --keep-sift-staging
+#                     keep the copied VM staging path after a successful --sift
+#                     run (default: remove current-run staging on success)
+#   --unattended      no interactive prompts (forwarded to the engine)
+# (parallel is the DEFAULT) independent tool calls (verify re-runs + disk-artifact
+#                     parses) run concurrently; the verdict + audit chain are
+#                     identical to serial
+#   --no-parallel     run fully serially (alias: --sequential) — the escape hatch
+#   --workers N       max concurrent lanes (default 2; each lane is its own
+#                     findevil-mcp process, so a higher count can over-subscribe a
+#                     RAM-constrained host — raise only after a parity check)
+#   --run-summary F   also write a machine-readable JSON pointer to F
+#   --case-id ID      pin the case id to a safe basename-like value
+#   -- <args...>      forward any remaining args to the engine
+#
+# SIFT mounted-evidence mode:
+#   Set FINDEVIL_SIFT_HOST_EVIDENCE_ROOT=/host/evidence and
+#   FINDEVIL_SIFT_GUEST_EVIDENCE_ROOT=/mnt/verdict-evidence when that host
+#   evidence root is mounted read-only inside SIFT. Host paths under the host
+#   root are rewritten to the guest root and SCP staging is skipped.
+#
+# Output: tmp/auto-runs/<case-id>/  (audit.jsonl, run.manifest.json,
+#         verdict.json, REPORT.{md,html,pdf})
+
+set -euo pipefail
+export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${REPO_ROOT}"
+
+DASH="http://localhost:3000"
+EVIDENCE_DIR="${REPO_ROOT}/evidence"
+SIFT=0
+FLEET=0
+NO_DASHBOARD=0
+SKIP_BUILD=0
+DRY=0
+WATCH=0
+EVIDENCE=""
+RUN_SUMMARY=""
+CASE_ID=""
+CASE_ID_OVERRIDE=""
+PASSTHROUGH=()
+AGENT_MODE=0   # --agent: run the engine under the 3.11 agent venv (host python3 may be 3.10)
+AGENT_PROVIDER=""
+AGENT_PROVIDER_SET=0
+KEEP_SIFT_STAGING=0
+SIFT_STAGING_ROOT=""
+SIFT_STAGING_PARENT=""
+STAGED_REMOTE_PATH=""
+CASE_ROOT="tmp/auto-runs"
+CASE_DIR=""
+CASE_STAGING_DIR=""
+CASE_SUMMARY_DIR=""
+CASE_LOG_DIR=""
+CASE_ARTIFACT_DIR=""
+CASE_EVIDENCE_REF_DIR=""
+CASE_DIR_REJECTED_SENTINEL="__VERDICT_CASE_DIR_REJECTED__"
+CASE_DIR_MARKER=".verdict-case-marker"
+RESTORE_MCP=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --sift)          SIFT=1; shift ;;
+    --fleet)         FLEET=1; shift ;;
+    --no-dashboard)  NO_DASHBOARD=1; shift ;;
+    --skip-build)    SKIP_BUILD=1; shift ;;
+    --dry-run)       DRY=1; shift ;;
+    --keep-sift-staging) KEEP_SIFT_STAGING=1; shift ;;
+    --watch)         WATCH=1; shift ;;
+    --run-summary)   if [[ $# -lt 2 ]]; then printf '\033[31m[verdict] FAIL:\033[0m --run-summary requires a value\n' >&2; exit 1; fi; RUN_SUMMARY="$2"; shift 2 ;;
+    --case-id)       if [[ $# -lt 2 ]]; then printf '\033[31m[verdict] FAIL:\033[0m --case-id requires a value\n' >&2; exit 1; fi; CASE_ID_OVERRIDE="$2"; shift 2 ;;
+    --case-id=*)     CASE_ID_OVERRIDE="${1#--case-id=}"; shift ;;
+    --parallel)      PASSTHROUGH+=("--parallel"); shift ;;
+    --no-parallel|--sequential) PASSTHROUGH+=("--no-parallel"); shift ;;
+    --workers)       PASSTHROUGH+=("--workers" "$2"); shift 2 ;;   # value-bearing
+    --agent)         AGENT_MODE=1; PASSTHROUGH+=("--agent"); shift ;;
+    --acknowledge-evidence-egress) PASSTHROUGH+=("--acknowledge-evidence-egress"); shift ;;
+    --agent-provider)   if [[ $# -lt 2 ]]; then printf '\033[31m[verdict] FAIL:\033[0m --agent-provider requires a value\n' >&2; exit 1; fi; AGENT_PROVIDER="$2"; AGENT_PROVIDER_SET=1; PASSTHROUGH+=("--agent-provider" "$2"); shift 2 ;;
+    --agent-provider=*) AGENT_PROVIDER="${1#--agent-provider=}"; AGENT_PROVIDER_SET=1; PASSTHROUGH+=("$1"); shift ;;
+    --agent-model)      PASSTHROUGH+=("--agent-model" "$2"); shift 2 ;;       # value-bearing
+    --agent-model=*)    PASSTHROUGH+=("$1"); shift ;;
+    --agent-max-steps)  PASSTHROUGH+=("--agent-max-steps" "$2"); shift 2 ;;   # value-bearing
+    --agent-max-steps=*) PASSTHROUGH+=("$1"); shift ;;
+    --)              shift; PASSTHROUGH+=("$@"); break ;;
+    -*)              PASSTHROUGH+=("$1"); shift ;;   # forward unknown flags (e.g. --unattended)
+    *)               if [[ -z "${EVIDENCE}" ]]; then EVIDENCE="$1"; else PASSTHROUGH+=("$1"); fi; shift ;;
+  esac
+done
+
+log()  { printf '\033[36m[verdict]\033[0m %s\n' "$*" >&2; }
+ok()   { printf '   \033[32m✓\033[0m %s\n' "$*" >&2; }
+warn() { printf '   \033[33m!\033[0m %s\n' "$*" >&2; }
+fail() { printf '\033[31m[verdict] FAIL:\033[0m %s\n' "$*" >&2; exit 1; }
+url_up() { [[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$1" 2>/dev/null)" != "000" ]]; }
+
+agent_manifest_verified() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+
+try:
+    summary = json.load(open(sys.argv[1], encoding="utf-8"))
+except (OSError, json.JSONDecodeError):
+    raise SystemExit(1)
+raise SystemExit(0 if summary.get("result", {}).get("manifest_verify_overall") is True else 1)
+PY
+}
+
+case_root_abs() {
+  if [[ "${CASE_ROOT}" == /* ]]; then
+    printf '%s' "${CASE_ROOT}"
+  else
+    printf '%s/%s' "${REPO_ROOT}" "${CASE_ROOT}"
+  fi
+}
+
+case_root_components_safe() {
+  local case_root="$1"
+  python3 - "${case_root}" <<'PY'
+import os
+import stat
+import sys
+
+
+def fail(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+target = os.path.abspath(sys.argv[1])
+current = os.sep
+for part in [p for p in target.split(os.sep) if p]:
+    next_path = os.path.join(current, part)
+    try:
+        st = os.lstat(next_path)
+    except FileNotFoundError:
+        os.mkdir(next_path, 0o755)
+        st = os.lstat(next_path)
+    if stat.S_ISLNK(st.st_mode):
+        fail(f"case root component is a symlink: {next_path}")
+    if not stat.S_ISDIR(st.st_mode):
+        fail(f"case root component is not a directory: {next_path}")
+    current = next_path
+PY
+}
+
+ensure_case_root() {
+  local case_root="$1"
+  case_root_components_safe "${case_root}" || fail "unsafe case root: ${case_root}"
+}
+
+ensure_case_layout_dir() {
+  local case_dir="$1" rel="$2" path part
+  local -a parts
+  path="${case_dir}"
+  IFS=/ read -r -a parts <<<"${rel}"
+  for part in "${parts[@]}"; do
+    path="${path}/${part}"
+    if [[ -L "${path}" ]]; then
+      fail "case layout path is a symlink: ${path}"
+    fi
+    if [[ -e "${path}" && ! -d "${path}" ]]; then
+      fail "case layout path is not a directory: ${path}"
+    fi
+    if [[ ! -e "${path}" ]]; then
+      mkdir -- "${path}" || fail "could not create case layout directory: ${path}"
+    fi
+  done
+}
+
+initialize_case_layout() {
+  local case_dir="$1" case_root_real case_dir_real
+  ensure_case_root "$(case_root_abs)"
+  [[ -L "${case_dir}" ]] && fail "case directory is a symlink: ${case_dir}"
+  [[ -d "${case_dir}" ]] || fail "case directory does not exist: ${case_dir}"
+  case_root_real="$(realpath -e -- "$(case_root_abs)")"
+  case_dir_real="$(realpath -e -- "${case_dir}")"
+  case "${case_dir_real}" in
+    "${case_root_real}"/*) ;;
+    *) fail "case directory resolved outside case root: ${case_dir}" ;;
+  esac
+  CASE_STAGING_DIR="${case_dir}/staging"
+  CASE_SUMMARY_DIR="${case_dir}/summaries"
+  CASE_LOG_DIR="${case_dir}/logs"
+  CASE_ARTIFACT_DIR="${case_dir}/artifacts"
+  CASE_EVIDENCE_REF_DIR="${case_dir}/evidence"
+  ensure_case_layout_dir "${case_dir}" "staging/local"
+  ensure_case_layout_dir "${case_dir}" "staging/sift"
+  ensure_case_layout_dir "${case_dir}" "summaries"
+  ensure_case_layout_dir "${case_dir}" "logs"
+  ensure_case_layout_dir "${case_dir}" "artifacts/proof"
+  ensure_case_layout_dir "${case_dir}" "artifacts/derived"
+  ensure_case_layout_dir "${case_dir}" "evidence"
+}
+
+sync_case_summary() {
+  local summary="$1" dest summary_abs dest_abs
+  [[ -n "${CASE_SUMMARY_DIR:-}" && -f "${summary}" ]] || return 0
+  dest="${CASE_SUMMARY_DIR}/run-summary.json"
+  summary_abs="$(realpath -m -- "${summary}")"
+  dest_abs="$(realpath -m -- "${dest}")"
+  [[ "${summary_abs}" == "${dest_abs}" ]] && return 0
+  copy_case_sidecar "${summary}" "${dest}"
+}
+
+reject_case_sidecar_path() {
+  local path="$1"
+  if [[ -L "${path}" ]]; then
+    fail "case sidecar path is a symlink: ${path}"
+  fi
+  if [[ -e "${path}" && ! -f "${path}" ]]; then
+    fail "case sidecar path is not a regular file: ${path}"
+  fi
+}
+
+case_sidecar_parent_real() {
+  local dest="$1" dir case_dir_real parent_real
+  [[ -n "${CASE_DIR:-}" ]] || fail "case sidecar destination requires a resolved case directory: ${dest}"
+  dir="$(dirname -- "${dest}")"
+  if [[ -L "${dir}" ]]; then
+    fail "case sidecar parent is a symlink: ${dir}"
+  fi
+  if [[ ! -d "${dir}" ]]; then
+    fail "case sidecar parent is not a directory: ${dir}"
+  fi
+  case_dir_real="$(realpath -e -- "${CASE_DIR}")"
+  parent_real="$(realpath -e -- "${dir}")"
+  case "${parent_real}" in
+    "${case_dir_real}"/*) printf '%s' "${parent_real}" ;;
+    *) fail "case sidecar parent resolved outside case directory: ${dir}" ;;
+  esac
+}
+
+case_sidecar_tmp() {
+  local dest="$1" dir base
+  reject_case_sidecar_path "${dest}"
+  case_sidecar_parent_real "${dest}" >/dev/null
+  dir="$(dirname -- "${dest}")"
+  base="$(basename -- "${dest}")"
+  mktemp "${dir}/.${base}.tmp.XXXXXX"
+}
+
+publish_case_sidecar_tmp() {
+  local tmp="$1" dest="$2" tmp_parent dest_parent
+  reject_case_sidecar_path "${dest}"
+  dest_parent="$(case_sidecar_parent_real "${dest}")"
+  tmp_parent="$(realpath -e -- "$(dirname -- "${tmp}")")"
+  [[ "${tmp_parent}" == "${dest_parent}" ]] || fail "case sidecar temp parent mismatch: ${tmp}"
+  [[ ! -L "${tmp}" && -f "${tmp}" ]] || fail "case sidecar temp is not a regular file: ${tmp}"
+  mv -fT -- "${tmp}" "${dest}"
+}
+
+copy_case_sidecar() {
+  local src="$1" dest="$2" tmp
+  tmp="$(case_sidecar_tmp "${dest}")"
+  if cp -- "${src}" "${tmp}"; then
+    publish_case_sidecar_tmp "${tmp}" "${dest}"
+  else
+    rm -f -- "${tmp}" 2>/dev/null || true
+    fail "could not copy case sidecar: ${dest}"
+  fi
+}
+
+prepare_requested_run_summary_path() {
+  local requested="$1" create_parent="${2:-1}"
+  python3 - "${REPO_ROOT}" "${requested}" "${create_parent}" <<'PY' || fail "unsafe --run-summary path (keep it under project tmp/, never inside evidence): ${requested}"
+import os
+import stat
+import sys
+
+
+def fail(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+repo_root = os.path.abspath(sys.argv[1])
+requested = sys.argv[2]
+create_parent = sys.argv[3] == "1"
+target = requested if os.path.isabs(requested) else os.path.join(repo_root, requested)
+target = os.path.abspath(target)
+project_tmp = os.path.join(repo_root, "tmp")
+try:
+    if os.path.commonpath([project_tmp, target]) != project_tmp:
+        fail("run summary must be under the project tmp directory")
+except ValueError:
+    fail("run summary must be under the project tmp directory")
+
+parent = os.path.dirname(target)
+relative_parent = os.path.relpath(parent, repo_root)
+if relative_parent == os.curdir:
+    parts = []
+else:
+    if relative_parent.startswith(os.pardir + os.sep) or relative_parent == os.pardir:
+        fail("run summary parent is outside the repository")
+    parts = relative_parent.split(os.sep)
+
+current = repo_root
+for part in parts:
+    current = os.path.join(current, part)
+    try:
+        st = os.lstat(current)
+    except FileNotFoundError:
+        if not create_parent:
+            break
+        os.mkdir(current, 0o755)
+        st = os.lstat(current)
+    if stat.S_ISLNK(st.st_mode):
+        fail(f"run summary parent component is a symlink: {current}")
+    if not stat.S_ISDIR(st.st_mode):
+        fail(f"run summary parent component is not a directory: {current}")
+
+try:
+    st = os.lstat(target)
+except FileNotFoundError:
+    pass
+else:
+    if stat.S_ISLNK(st.st_mode):
+        fail(f"run summary path is a symlink: {target}")
+    if not stat.S_ISREG(st.st_mode):
+        fail(f"run summary path is not a regular file: {target}")
+
+print(target)
+PY
+}
+
+copy_requested_run_summary() {
+  local src="$1" dest tmp src_abs dest_abs dir base
+  [[ -n "${RUN_SUMMARY:-}" && -f "${src}" ]] || return 0
+  dest="$(prepare_requested_run_summary_path "${RUN_SUMMARY}")"
+  src_abs="$(realpath -m -- "${src}")"
+  dest_abs="$(realpath -m -- "${dest}")"
+  [[ "${src_abs}" == "${dest_abs}" ]] && return 0
+  dir="$(dirname -- "${dest}")"
+  base="$(basename -- "${dest}")"
+  prepare_requested_run_summary_path "${dest}" >/dev/null
+  tmp="$(mktemp "${dir}/.${base}.tmp.XXXXXX")"
+  if cp -- "${src}" "${tmp}"; then
+    prepare_requested_run_summary_path "${dest}" >/dev/null
+    [[ ! -L "${tmp}" && -f "${tmp}" ]] || fail "run summary temp is not a regular file: ${tmp}"
+    mv -fT -- "${tmp}" "${dest}"
+  else
+    rm -f -- "${tmp}" 2>/dev/null || true
+    fail "could not copy run summary: ${dest}"
+  fi
+}
+
+resolve_case_dir_from_summary() {
+  local summary="$1" case_root="$2"
+  python3 - "${summary}" "${case_root}" <<'PY' 2>/dev/null || true
+import json
+import os
+import stat
+import sys
+from pathlib import Path
+
+try:
+    summary = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    raise SystemExit(0)
+
+case_root = Path(os.path.abspath(sys.argv[2]))
+case_id = summary.get("case_id")
+rejected = False
+explicit_candidates = (
+    summary.get("local_run_dir"),
+    summary.get("run_dir"),
+    summary.get("case_dir"),
+)
+
+
+def has_symlink_component(path, root):
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return False
+    current = root
+    for part in relative.parts:
+        current = current / part
+        try:
+            st = os.lstat(current)
+        except FileNotFoundError:
+            return False
+        if stat.S_ISLNK(st.st_mode):
+            return True
+    return False
+
+for candidate in explicit_candidates:
+    if not candidate:
+        continue
+    path = Path(os.path.abspath(candidate))
+    try:
+        path.relative_to(case_root)
+    except ValueError:
+        rejected = True
+        continue
+    if has_symlink_component(path, case_root):
+        rejected = True
+        continue
+    if path.is_dir():
+        print(str(path.resolve()))
+        raise SystemExit(0)
+
+if rejected:
+    print("__VERDICT_CASE_DIR_REJECTED__")
+    raise SystemExit(0)
+
+if case_id:
+    path = Path(os.path.abspath(case_root / str(case_id)))
+    try:
+        path.relative_to(case_root)
+    except ValueError:
+        print("__VERDICT_CASE_DIR_REJECTED__")
+        raise SystemExit(0)
+    if has_symlink_component(path, case_root):
+        print("__VERDICT_CASE_DIR_REJECTED__")
+        raise SystemExit(0)
+    if path.is_dir():
+        print(str(path.resolve()))
+PY
+}
+
+newest_case_dir_with_audit() {
+  local case_root="$1" case_root_real d candidate candidate_real
+  case_root_real="$(realpath -e -- "${case_root}" 2>/dev/null)" || return 0
+  while IFS= read -r d; do
+    candidate="${d%/}"
+    [[ -L "${candidate}" ]] && continue
+    [[ -d "${candidate}" && -f "${candidate}/audit.jsonl" ]] || continue
+    candidate_real="$(realpath -e -- "${candidate}" 2>/dev/null)" || continue
+    case "${candidate_real}" in
+      "${case_root_real}"/*)
+        printf '%s' "${candidate_real}"
+        return 0
+        ;;
+    esac
+  done < <(ls -dt "${case_root}"/*/ 2>/dev/null || true)
+}
+
+resolve_case_dir_with_fallback() {
+  local summary="$1" case_root="$2" case_dir
+  ensure_case_root "${case_root}"
+  case_dir="$(resolve_case_dir_from_summary "${summary}" "${case_root}")"
+  if [[ "${case_dir}" == "${CASE_DIR_REJECTED_SENTINEL}" ]]; then
+    warn "run summary referenced a case directory outside ${case_root}; skipping dashboard/automation fallback"
+    return 0
+  fi
+  if [[ -n "${case_dir}" ]]; then
+    printf '%s' "${case_dir}"
+    return 0
+  fi
+  newest_case_dir_with_audit "${case_root}"
+}
+
+create_owned_case_dir() {
+  local case_dir="$1" case_root="$2" case_root_real case_dir_real
+  ensure_case_root "${case_root}"
+  case_root_real="$(realpath -e -- "${case_root}")"
+  if [[ -e "${case_dir}" || -L "${case_dir}" ]]; then
+    fail "case dir already exists for --case-id: ${case_dir}"
+  fi
+  mkdir -- "${case_dir}" || fail "could not create case dir: ${case_dir}"
+  case_dir_real="$(realpath -e -- "${case_dir}")"
+  case "${case_dir_real}" in
+    "${case_root_real}"/*) ;;
+    *) fail "case dir resolved outside case root: ${case_dir}" ;;
+  esac
+  : >"${case_dir}/${CASE_DIR_MARKER}"
+}
+
+reclaim_incomplete_case_dir() {
+  local case_dir="${1:-${CASE_DIR:-}}" case_root_real case_dir_real
+  [[ -n "${case_dir}" && -d "${case_dir}" ]] || return 0
+  [[ -f "${case_dir}/${CASE_DIR_MARKER}" ]] || return 0
+  if ! case_root_components_safe "$(case_root_abs)" >/dev/null 2>&1; then
+    warn "refusing to reclaim case dir because case root is unsafe: $(case_root_abs)"
+    return 0
+  fi
+  case_root_real="$(realpath -e -- "$(case_root_abs)" 2>/dev/null)" || return 0
+  case_dir_real="$(realpath -e -- "${case_dir}" 2>/dev/null)" || return 0
+  case "${case_dir_real}" in
+    "${case_root_real}"/*) ;;
+    *) warn "refusing to reclaim case dir outside case root: ${case_dir}"; return 0 ;;
+  esac
+  if [[ ! -f "${case_dir}/verdict.json" ]]; then
+    rm -rf "${case_dir}" 2>/dev/null || true
+    log "reclaimed incomplete case dir: ${case_dir}"
+  fi
+}
+
+restore_mcp_config() {
+  if [[ "${RESTORE_MCP:-0}" == "1" && -f .mcp.json.local.bak ]]; then
+    mv -f .mcp.json.local.bak .mcp.json
+  fi
+}
+
+cleanup_on_exit() {
+  restore_mcp_config
+  reclaim_incomplete_case_dir
+}
+
+is_guest_mounted_evidence() {
+  local path="$1"
+  case "${path}" in
+    /mnt/hgfs/*|/media/hgfs/*|/mnt/verdict-evidence/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+safe_guest_mounted_evidence_path() {
+  local value="$1" normalized
+  normalized="/${value#/}/"
+  if [[ -z "${value}" || ! "${value}" =~ ^/[[:alnum:]_./+-]+$ || "${normalized}" == *"/../"* || "${normalized}" == *"/./"* ]]; then
+    fail "--sift: unsafe guest-mounted evidence path: ${value}"
+  fi
+  case "${value}" in
+    /mnt/hgfs/*|/media/hgfs/*|/mnt/verdict-evidence/*) printf '%s' "${value}" ;;
+    *) fail "--sift: unsupported guest-mounted evidence root: ${value}" ;;
+  esac
+}
+
+# open_dashboard <abs-case-dir> — start the dashboard if down (with the repo
+# root + an absolute allow-listed root so /api/audit accepts the case path
+# regardless of the dev server's cwd) and open it deep-linked to the case.
+open_dashboard() {
+  local case_dir="$1"
+  [[ "${NO_DASHBOARD}" == "1" || -z "${case_dir}" ]] && return 0
+  if ! url_up "${DASH}"; then
+    log "starting the dashboard (pnpm dev, ~10s)…"
+    ( FINDEVIL_REPO_ROOT="${REPO_ROOT}" \
+      FINDEVIL_DASHBOARD_EXTRA_ROOTS="$(case_root_abs)" \
+      pnpm --filter @findevil/web dev >/tmp/verdict-dashboard.log 2>&1 & ) \
+      || warn "could not start dashboard (is pnpm installed?)"
+    for _ in $(seq 1 40); do url_up "${DASH}" && break; sleep 1; done
+  fi
+  if url_up "${DASH}"; then
+    local target
+    target="${DASH}/?case=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "${case_dir}")"
+    command -v xdg-open >/dev/null 2>&1 && xdg-open "${target}" >/dev/null 2>&1 || true
+    ok "dashboard: ${target}"
+  else
+    warn "dashboard slow to start — open ${DASH}/?case=${case_dir} manually"
+  fi
+}
+
+# Bytes of a file, or recursive bytes of a directory (a mixed case folder),
+# 0 if missing. Used to debounce a drop until the copy finishes.
+_evidence_size() {
+  local p="$1"
+  if [[ -d "${p}" ]]; then du -sb "${p}" 2>/dev/null | cut -f1
+  elif [[ -f "${p}" ]]; then stat -c%s "${p}" 2>/dev/null
+  else echo 0; fi
+}
+
+safe_guest_basename() {
+  local value="$1"
+  if [[ -z "${value}" || "${value}" == "." || "${value}" == ".." || "${value}" == -* || ! "${value}" =~ ^[[:alnum:]_][[:alnum:]_.+-]*$ ]]; then
+    fail "--sift: unsafe evidence filename for --sift staging: ${value}"
+  fi
+  printf '%s' "${value}"
+}
+
+safe_case_id() {
+  local value="$1"
+  if [[ -z "${value}" || "${value}" == "." || "${value}" == ".." || "${value}" == -* || ! "${value}" =~ ^[[:alnum:]_][[:alnum:]_.+-]*$ ]]; then
+    fail "unsafe --case-id value: ${value}"
+  fi
+  printf '%s' "${value}"
+}
+
+safe_guest_user() {
+  local value="$1"
+  if [[ -z "${value}" || "${value}" == -* || ! "${value}" =~ ^[[:alnum:]_][[:alnum:]_.-]*$ ]]; then
+    fail "--sift: unsafe SIFT guest user: ${value}"
+  fi
+  printf '%s' "${value}"
+}
+
+safe_guest_dir() {
+  local value="$1" normalized
+  normalized="/${value#/}/"
+  if [[ -z "${value}" || ! "${value}" =~ ^/[[:alnum:]_./+-]+$ || "${normalized}" == *"/../"* || "${normalized}" == *"/./"* ]]; then
+    fail "--sift: unsafe SIFT guest evidence dir: ${value}"
+  fi
+  printf '%s' "${value}"
+}
+
+safe_sift_case_staging_parent() {
+  local value normalized guest_evidence_dir guest_repo_dir guest_case_root
+  value="$(safe_guest_dir "$1")"
+  normalized="${value%/}"
+  guest_evidence_dir="${GEVDIR:-}"
+  guest_evidence_dir="${guest_evidence_dir%/}"
+  guest_repo_dir="$(safe_guest_dir "${GUEST_REPO:-${FIND_EVIL_GUEST_REPO:-/home/sansforensics/find-evil}}")"
+  guest_repo_dir="${guest_repo_dir%/}"
+  guest_case_root="${guest_repo_dir}/tmp/auto-runs"
+  if [[ -n "${guest_evidence_dir}" ]]; then
+    case "${normalized}" in
+      "${guest_evidence_dir}"|"${guest_evidence_dir}"/*)
+        fail "--sift: SIFT case staging root must not be inside the configured guest evidence root: ${value}"
+        ;;
+    esac
+  fi
+  case "${normalized}" in
+    /mnt/hgfs/*|/media/hgfs/*|/mnt/verdict-evidence/*|/home/sansforensics/evidence/*|/home/sansforensics/evidence)
+      fail "--sift: SIFT case staging root must not be inside evidence or mounted evidence roots: ${value}"
+      ;;
+  esac
+  case "${normalized}" in
+    "${guest_case_root}"/*/staging/sift) printf '%s' "${normalized}" ;;
+    *) fail "--sift: SIFT case staging root must be under FIND_EVIL_GUEST_REPO/tmp/auto-runs/<case>/staging/sift: ${value}" ;;
+  esac
+}
+
+sift_case_id_from_staging_parent() {
+  local value="$1" rest
+  value="${value%/}"
+  rest="${value#*/tmp/auto-runs/}"
+  printf '%s' "${rest%/staging/sift}"
+}
+
+sift_staging_cleanup_root_allowed() {
+  local staging_parent="$1" root="$2" normalized_dir normalized_root prefix rest
+  normalized_dir="${staging_parent%/}"
+  normalized_root="${root%/}"
+  prefix="${normalized_dir}/"
+
+  [[ -n "${normalized_dir}" && "${normalized_dir}" == /* ]] || return 1
+  [[ -n "${normalized_root}" && "${normalized_root}" == "${prefix}"* ]] || return 1
+  case "/${normalized_root#/}/" in
+    *"/../"*|*"/./"*) return 1 ;;
+  esac
+
+  rest="${normalized_root#${prefix}}"
+  [[ -n "${rest}" && "${rest}" != */* ]] || return 1
+  [[ "${rest}" != "." && "${rest}" != ".." && "${rest}" != -* ]] || return 1
+  [[ "${rest}" =~ ^[[:alnum:]_][[:alnum:]_.+-]*$ ]] || return 1
+  return 0
+}
+
+safe_guest_path() {
+  local value="$1" normalized
+  normalized="/${value#/}/"
+  if [[ -z "${value}" || ! "${value}" =~ ^/[[:alnum:]_./+-]+$ || "${normalized}" == *"/../"* || "${normalized}" == *"/./"* ]]; then
+    fail "--sift: unsafe SIFT guest evidence path: ${value}"
+  fi
+  printf '%s' "${value}"
+}
+
+safe_guest_host() {
+  local value="$1"
+  if [[ -z "${value}" || "${value}" == -* || ! "${value}" =~ ^[[:alnum:]][[:alnum:].-]*$ || "${value}" == *..* || "${value}" == *[-.] ]]; then
+    fail "--sift: unsafe SIFT guest host/IP: ${value}"
+  fi
+  printf '%s' "${value}"
+}
+
+remote_quote() {
+  python3 - "$1" <<'PY'
+import shlex
+import sys
+
+print(shlex.quote(sys.argv[1]))
+PY
+}
+
+map_sift_mounted_evidence() {
+  local evidence="$1" host_root="${FINDEVIL_SIFT_HOST_EVIDENCE_ROOT:-}" guest_root="${FINDEVIL_SIFT_GUEST_EVIDENCE_ROOT:-}"
+  local mapped status
+
+  set +e
+  mapped="$(python3 - "${evidence}" "${host_root}" "${guest_root}" <<'PY'
+from pathlib import Path, PurePosixPath
+import os
+import sys
+
+evidence_s, host_root_s, guest_root_s = sys.argv[1:]
+if not host_root_s and not guest_root_s:
+    sys.exit(1)
+if not host_root_s or not guest_root_s:
+    print("set both FINDEVIL_SIFT_HOST_EVIDENCE_ROOT and FINDEVIL_SIFT_GUEST_EVIDENCE_ROOT", file=sys.stderr)
+    sys.exit(2)
+
+host_root = Path(host_root_s).expanduser()
+evidence = Path(evidence_s).expanduser()
+if not evidence.is_absolute():
+    evidence = Path.cwd() / evidence
+guest_root = PurePosixPath(guest_root_s)
+if not host_root.is_absolute() or not guest_root.is_absolute():
+    print("SIFT mounted evidence roots must be absolute", file=sys.stderr)
+    sys.exit(2)
+
+host_lexical = host_root.absolute()
+evidence_lexical = evidence.absolute()
+try:
+    lexically_under_host_root = os.path.commonpath(
+        [str(host_lexical), str(evidence_lexical)]
+    ) == str(host_lexical)
+except ValueError:
+    lexically_under_host_root = False
+
+try:
+    host_real = host_root.resolve(strict=True)
+    evidence_real = evidence.resolve(strict=True)
+except OSError as exc:
+    print(str(exc), file=sys.stderr)
+    sys.exit(2)
+
+try:
+    common = os.path.commonpath([str(host_real), str(evidence_real)])
+except ValueError:
+    sys.exit(1)
+if common != str(host_real):
+    if lexically_under_host_root:
+        print("evidence path escapes host evidence root through a symlink ancestor", file=sys.stderr)
+        sys.exit(2)
+    sys.exit(1)
+
+relative = evidence_real.relative_to(host_real)
+print(str(guest_root.joinpath(*relative.parts)))
+PY
+)"
+  status=$?
+  set -e
+
+  case "${status}" in
+    0)
+      local safe_mapped
+      if ! safe_mapped="$(safe_guest_path "${mapped}" 2>&1)"; then
+        printf '%s\n' "${safe_mapped}" >&2
+        return 2
+      fi
+      printf '%s' "${safe_mapped}"
+      ;;
+    1) return 1 ;;
+    *)
+      printf '%s\n' "--sift: invalid SIFT mounted evidence mapping (${mapped})" >&2
+      return 2
+      ;;
+  esac
+}
+
+verify_sift_guest_evidence_readable() {
+  local path="$1" require_readonly="${2:-0}" qpath verify_output
+  path="$(safe_guest_path "${path}")"
+  qpath="$(remote_quote "${path}")"
+  if ! verify_output="$("${SSHB[@]}" "${GADDR}" "set -e
+if [ -L ${qpath} ]; then
+  echo 'SIFT guest evidence path is a symlink' >&2
+  exit 1
+fi
+if [ -f ${qpath} ]; then
+  [ -r ${qpath} ] || { echo 'SIFT guest evidence file is not readable' >&2; exit 1; }
+elif [ -d ${qpath} ]; then
+  [ -r ${qpath} ] && [ -x ${qpath} ] || { echo 'SIFT guest evidence directory is not readable/searchable' >&2; exit 1; }
+elif [ -e ${qpath} ]; then
+  echo 'SIFT guest evidence path is not a regular file or directory' >&2
+  exit 1
+else
+  echo 'SIFT guest evidence path does not exist' >&2
+  exit 1
+fi
+if [ '${require_readonly}' = '1' ]; then
+  command -v findmnt >/dev/null 2>&1 || { echo 'findmnt missing; cannot verify read-only mount' >&2; exit 1; }
+  opts=\$(findmnt -T ${qpath} -no OPTIONS 2>/dev/null || true)
+  case ",\${opts}," in
+    *,ro,*) ;;
+    *) echo 'SIFT mounted evidence path is not on a read-only mount' >&2; exit 1 ;;
+  esac
+fi" 2>&1)"; then
+    verify_output="${verify_output//$'\n'/; }"
+    [[ ${#verify_output} -gt 240 ]] && verify_output="${verify_output:0:240}..."
+    fail "--sift: SIFT guest evidence path is not readable: ${path}${verify_output:+ (${verify_output})}"
+  fi
+}
+
+sift_local_evidence_identity() {
+  local path="$1"
+  python3 - "${path}" <<'PY'
+from pathlib import Path
+import hashlib
+import os
+import stat
+import sys
+
+path = Path(sys.argv[1])
+
+def hash_file(file_path: Path) -> str:
+    digest = hashlib.sha256()
+    with file_path.open('rb') as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+def fail_walk(exc: OSError) -> None:
+    print(f"could not traverse evidence directory: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    root_stat = path.lstat()
+except OSError as exc:
+    print(str(exc), file=sys.stderr)
+    sys.exit(1)
+
+if stat.S_ISLNK(root_stat.st_mode):
+    print("evidence path is a symlink", file=sys.stderr)
+    sys.exit(1)
+if stat.S_ISREG(root_stat.st_mode):
+    print(f"file {root_stat.st_size} {hash_file(path)}")
+elif stat.S_ISDIR(root_stat.st_mode):
+    digest = hashlib.sha256()
+    count = 0
+    total = 0
+    regular_entries = []
+    for root, dirs, files in os.walk(path, followlinks=False, onerror=fail_walk):
+        for name in dirs:
+            item = Path(root) / name
+            item_stat = item.lstat()
+            if stat.S_ISLNK(item_stat.st_mode):
+                print(f"evidence directory contains a symlink: {item}", file=sys.stderr)
+                sys.exit(1)
+            if not stat.S_ISDIR(item_stat.st_mode):
+                print(f"evidence directory contains a non-directory entry in directory set: {item}", file=sys.stderr)
+                sys.exit(1)
+        for name in files:
+            item = Path(root) / name
+            item_stat = item.lstat()
+            if stat.S_ISLNK(item_stat.st_mode):
+                print(f"evidence directory contains a symlink: {item}", file=sys.stderr)
+                sys.exit(1)
+            if not stat.S_ISREG(item_stat.st_mode):
+                print(f"evidence directory contains a non-regular file entry: {item}", file=sys.stderr)
+                sys.exit(1)
+            regular_entries.append(
+                (item.relative_to(path).as_posix(), item_stat.st_size, hash_file(item))
+            )
+    for rel, size, file_hash in sorted(regular_entries):
+        count += 1
+        total += size
+        digest.update(rel.encode("utf-8", "surrogateescape"))
+        digest.update(b"\0")
+        digest.update(str(size).encode("ascii"))
+        digest.update(b"\0")
+        digest.update(file_hash.encode("ascii"))
+        digest.update(b"\0")
+    print(f"dir {count} {total} {digest.hexdigest()}")
+else:
+    print("evidence path is not a regular file or directory", file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
+sift_remote_evidence_identity() {
+  local path="$1" qpath verify_output
+  path="$(safe_guest_path "${path}")"
+  qpath="$(remote_quote "${path}")"
+  if ! verify_output="$("${SSHB[@]}" "${GADDR}" "python3 - ${qpath} <<'PY'
+from pathlib import Path
+import hashlib
+import os
+import stat
+import sys
+
+path = Path(sys.argv[1])
+
+def hash_file(file_path: Path) -> str:
+    digest = hashlib.sha256()
+    with file_path.open('rb') as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+def fail_walk(exc: OSError) -> None:
+    print(f'could not traverse SIFT guest evidence directory: {exc}', file=sys.stderr)
+    sys.exit(1)
+
+try:
+    root_stat = path.lstat()
+except OSError as exc:
+    print(str(exc), file=sys.stderr)
+    sys.exit(1)
+
+if stat.S_ISLNK(root_stat.st_mode):
+    print('SIFT guest evidence path is a symlink', file=sys.stderr)
+    sys.exit(1)
+if stat.S_ISREG(root_stat.st_mode):
+    print(f'file {root_stat.st_size} {hash_file(path)}')
+elif stat.S_ISDIR(root_stat.st_mode):
+    digest = hashlib.sha256()
+    count = 0
+    total = 0
+    regular_entries = []
+    for root, dirs, files in os.walk(path, followlinks=False, onerror=fail_walk):
+        for name in dirs:
+            item = Path(root) / name
+            item_stat = item.lstat()
+            if stat.S_ISLNK(item_stat.st_mode):
+                print(f'SIFT guest evidence directory contains a symlink: {item}', file=sys.stderr)
+                sys.exit(1)
+            if not stat.S_ISDIR(item_stat.st_mode):
+                print(f'SIFT guest evidence directory contains a non-directory entry in directory set: {item}', file=sys.stderr)
+                sys.exit(1)
+        for name in files:
+            item = Path(root) / name
+            item_stat = item.lstat()
+            if stat.S_ISLNK(item_stat.st_mode):
+                print(f'SIFT guest evidence directory contains a symlink: {item}', file=sys.stderr)
+                sys.exit(1)
+            if not stat.S_ISREG(item_stat.st_mode):
+                print(f'SIFT guest evidence directory contains a non-regular file entry: {item}', file=sys.stderr)
+                sys.exit(1)
+            regular_entries.append(
+                (item.relative_to(path).as_posix(), item_stat.st_size, hash_file(item))
+            )
+    for rel, size, file_hash in sorted(regular_entries):
+        count += 1
+        total += size
+        digest.update(rel.encode('utf-8', 'surrogateescape'))
+        digest.update(b'\0')
+        digest.update(str(size).encode('ascii'))
+        digest.update(b'\0')
+        digest.update(file_hash.encode('ascii'))
+        digest.update(b'\0')
+    print(f'dir {count} {total} {digest.hexdigest()}')
+else:
+    print('SIFT guest evidence path is not a regular file or directory', file=sys.stderr)
+    sys.exit(1)
+PY" 2>&1)"; then
+    verify_output="${verify_output//$'\n'/; }"
+    [[ ${#verify_output} -gt 240 ]] && verify_output="${verify_output:0:240}..."
+    fail "--sift: could not verify mapped SIFT evidence identity: ${path}${verify_output:+ (${verify_output})}"
+  fi
+  printf '%s' "${verify_output}"
+}
+
+verify_sift_guest_evidence_identity() {
+  local local_path="$1" guest_path="$2" local_info local_type remote_info remote_type
+  if ! local_info="$(sift_local_evidence_identity "${local_path}" 2>&1)"; then
+    local_info="${local_info//$'\n'/; }"
+    [[ ${#local_info} -gt 240 ]] && local_info="${local_info:0:240}..."
+    fail "--sift: could not verify host evidence identity: ${local_path}${local_info:+ (${local_info})}"
+  fi
+  remote_info="$(sift_remote_evidence_identity "${guest_path}")"
+  local_type="${local_info%% *}"
+  remote_type="${remote_info%% *}"
+  [[ "${remote_type}" == "${local_type}" ]] \
+    || fail "--sift: mapped SIFT evidence type mismatch: host ${local_type}, guest ${remote_type} (${guest_path})"
+  [[ "${remote_info}" == "${local_info}" ]] \
+    || fail "--sift: mapped SIFT evidence identity mismatch: host ${local_info}, guest ${remote_info} (${guest_path})"
+}
+
+verdict_selftest_sift_sanitizers() {
+  local ok_value
+  ok_value="$(safe_guest_basename "evidence.E01")" && [[ "${ok_value}" == "evidence.E01" ]] || fail "selftest basename accept failed"
+  ok_value="$(safe_guest_user "sansforensics")" && [[ "${ok_value}" == "sansforensics" ]] || fail "selftest user accept failed"
+  ok_value="$(safe_guest_dir "/home/sansforensics/evidence")" && [[ "${ok_value}" == "/home/sansforensics/evidence" ]] || fail "selftest dir accept failed"
+  ok_value="$(safe_guest_mounted_evidence_path "/mnt/hgfs/evidence/sample.E01")" && [[ "${ok_value}" == "/mnt/hgfs/evidence/sample.E01" ]] || fail "selftest mounted evidence accept failed"
+  ok_value="$(safe_sift_case_staging_parent "/home/sansforensics/find-evil/tmp/auto-runs/case/staging/sift")" && [[ "${ok_value}" == "/home/sansforensics/find-evil/tmp/auto-runs/case/staging/sift" ]] || fail "selftest case staging parent accept failed"
+  ok_value="$(sift_case_id_from_staging_parent "/home/sansforensics/find-evil/tmp/auto-runs/case/staging/sift")" && [[ "${ok_value}" == "case" ]] || fail "selftest case staging id extraction failed"
+  ok_value="$(safe_guest_host "192.168.137.130")" && [[ "${ok_value}" == "192.168.137.130" ]] || fail "selftest host accept failed"
+
+  ( safe_guest_basename "." >/dev/null 2>&1 ) && fail "selftest basename dot reject failed"
+  ( safe_guest_basename ".." >/dev/null 2>&1 ) && fail "selftest basename dotdot reject failed"
+  ( safe_guest_basename "-Ftmp" >/dev/null 2>&1 ) && fail "selftest basename option reject failed"
+  ( safe_guest_basename "evil name.E01" >/dev/null 2>&1 ) && fail "selftest basename space reject failed"
+  ( safe_guest_user "-lroot" >/dev/null 2>&1 ) && fail "selftest user option reject failed"
+  ( safe_guest_dir "/home/sansforensics/evidence/../.ssh" >/dev/null 2>&1 ) && fail "selftest dir traversal reject failed"
+  ( safe_guest_dir "/home/sansforensics/evidence/./tmp" >/dev/null 2>&1 ) && fail "selftest dir dot reject failed"
+  ( safe_guest_mounted_evidence_path "/mnt/hgfs/evidence/../secret" >/dev/null 2>&1 ) && fail "selftest mounted evidence traversal reject failed"
+  ( safe_guest_mounted_evidence_path "/home/sansforensics/evidence/sample.E01" >/dev/null 2>&1 ) && fail "selftest mounted evidence root reject failed"
+  ( safe_sift_case_staging_parent "/home/sansforensics/evidence/case/staging/sift" >/dev/null 2>&1 ) && fail "selftest case staging evidence-root reject failed"
+  ( safe_sift_case_staging_parent "/mnt/hgfs/evidence/case/staging/sift" >/dev/null 2>&1 ) && fail "selftest case staging mounted-root reject failed"
+  ( safe_sift_case_staging_parent "/tmp/auto-runs/case/staging/sift" >/dev/null 2>&1 ) && fail "selftest case staging non-project-root reject failed"
+  ( safe_sift_case_staging_parent "/home/sansforensics/find-evil/tmp/staging/sift" >/dev/null 2>&1 ) && fail "selftest case staging non-case reject failed"
+  ( safe_guest_host "192.168.137.130;id" >/dev/null 2>&1 ) && fail "selftest host metachar reject failed"
+  ( safe_guest_host "-oProxyCommand=id" >/dev/null 2>&1 ) && fail "selftest host option reject failed"
+  printf 'sift sanitizer selftest OK\n'
+}
+
+local_evidence_type() {
+  local path="$1"
+  if [[ -L "${path}" ]]; then
+    printf 'unsupported'
+  elif [[ -d "${path}" ]]; then
+    printf 'dir'
+  elif [[ -f "${path}" ]]; then
+    printf 'file'
+  elif [[ -e "${path}" ]]; then
+    printf 'unsupported'
+  else
+    printf 'missing'
+  fi
+}
+
+local_evidence_size() {
+  local path="$1"
+  _evidence_size "${path}"
+}
+
+local_evidence_fingerprint() {
+  local path="$1" out
+  if ! out="$(python3 - "${path}" <<'PY'
+import hashlib
+import os
+import stat
+import sys
+
+root = sys.argv[1]
+
+
+def fail(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+def update_path(hasher, rel):
+    rel_bytes = os.fsencode(rel)
+    hasher.update(str(len(rel_bytes)).encode("ascii"))
+    hasher.update(b"\0")
+    hasher.update(rel_bytes)
+    hasher.update(b"\0")
+
+
+def update_file(hasher, path):
+    st = os.lstat(path)
+    if stat.S_ISLNK(st.st_mode):
+        fail("symlink evidence entries are unsupported")
+    if not stat.S_ISREG(st.st_mode):
+        fail("special evidence entries are unsupported")
+    hasher.update(str(st.st_size).encode("ascii"))
+    hasher.update(b"\0")
+    with open(path, "rb") as f:
+        while True:
+            chunk = f.read(1024 * 1024)
+            if not chunk:
+                break
+            hasher.update(chunk)
+
+
+def on_walk_error(error):
+    fail("cannot read evidence directory {}: {}".format(error.filename, error.strerror))
+
+
+if not os.path.exists(root) and not os.path.islink(root):
+    print("missing")
+    raise SystemExit(0)
+
+root_st = os.lstat(root)
+hasher = hashlib.sha256()
+if stat.S_ISLNK(root_st.st_mode):
+    fail("symlink evidence paths are unsupported")
+if stat.S_ISREG(root_st.st_mode):
+    hasher.update(b"file\0")
+    update_path(hasher, ".")
+    update_file(hasher, root)
+    print(hasher.hexdigest())
+    raise SystemExit(0)
+if not stat.S_ISDIR(root_st.st_mode):
+    fail("special evidence paths are unsupported")
+
+hasher.update(b"dir\0")
+hasher.update(b"D\0")
+update_path(hasher, ".")
+for current, dirs, files in os.walk(root, topdown=True, followlinks=False, onerror=on_walk_error):
+    dirs[:] = sorted(dirs, key=os.fsencode)
+    files = sorted(files, key=os.fsencode)
+    for dirname in dirs:
+        path = os.path.join(current, dirname)
+        st = os.lstat(path)
+        if stat.S_ISLNK(st.st_mode):
+            fail("symlink evidence entries are unsupported")
+        if not stat.S_ISDIR(st.st_mode):
+            fail("special evidence entries are unsupported")
+        hasher.update(b"D\0")
+        update_path(hasher, os.path.relpath(path, root))
+    for filename in files:
+        path = os.path.join(current, filename)
+        hasher.update(b"F\0")
+        update_path(hasher, os.path.relpath(path, root))
+        update_file(hasher, path)
+
+print(hasher.hexdigest())
+PY
+)"; then
+    fail "--sift: unsupported evidence path for staging fingerprint: ${path}"
+  fi
+  printf '%s' "${out}"
+}
+
+verdict_selftest_sift_staging() {
+  local tmp a b c f1 f2 symlink dangling type size fp_a fp_b fp_c fp_f1 fp_f2
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "${tmp}"' RETURN
+
+  mkdir -p "${tmp}/a/empty" "${tmp}/a/nested" "${tmp}/b/empty" "${tmp}/b/nested" "${tmp}/c/empty" "${tmp}/c/nested"
+  printf 'alpha\n' >"${tmp}/a/nested/file.txt"
+  printf 'alpha\n' >"${tmp}/b/nested/file.txt"
+  printf 'beta\n' >"${tmp}/c/nested/file.txt"
+  printf 'alpha\n' >"${tmp}/f1"
+  printf 'alpha\n' >"${tmp}/f2"
+  ln -s "${tmp}/a/nested/file.txt" "${tmp}/symlink" 2>/dev/null || true
+  ln -s "${tmp}/missing-target" "${tmp}/dangling" 2>/dev/null || true
+
+  a="${tmp}/a"
+  b="${tmp}/b"
+  c="${tmp}/c"
+  f1="${tmp}/f1"
+  f2="${tmp}/f2"
+  symlink="${tmp}/symlink"
+  dangling="${tmp}/dangling"
+
+  type="$(local_evidence_type "${a}")" && [[ "${type}" == "dir" ]] || fail "selftest staging type dir failed"
+  type="$(local_evidence_type "${f1}")" && [[ "${type}" == "file" ]] || fail "selftest staging type file failed"
+  type="$(local_evidence_type "${tmp}/missing")" && [[ "${type}" == "missing" ]] || fail "selftest staging type missing failed"
+  if [[ -L "${symlink}" ]]; then
+    type="$(local_evidence_type "${symlink}")" && [[ "${type}" == "unsupported" ]] || fail "selftest staging symlink type reject failed"
+    ( local_evidence_fingerprint "${symlink}" >/dev/null 2>&1 ) && fail "selftest staging symlink fingerprint reject failed"
+  fi
+  if [[ -L "${dangling}" ]]; then
+    type="$(local_evidence_type "${dangling}")" && [[ "${type}" == "unsupported" ]] || fail "selftest staging dangling symlink reject failed"
+  fi
+
+  size="$(local_evidence_size "${a}")" && [[ "${size:-0}" -gt 0 ]] || fail "selftest staging recursive size failed"
+
+  fp_a="$(local_evidence_fingerprint "${a}")"
+  fp_b="$(local_evidence_fingerprint "${b}")"
+  fp_c="$(local_evidence_fingerprint "${c}")"
+  fp_f1="$(local_evidence_fingerprint "${f1}")"
+  fp_f2="$(local_evidence_fingerprint "${f2}")"
+
+  [[ "${fp_a}" == "${fp_b}" ]] || fail "selftest staging identical directories mismatch"
+  [[ "${fp_a}" != "${fp_c}" ]] || fail "selftest staging changed directory not detected"
+  [[ "${fp_f1}" == "${fp_f2}" ]] || fail "selftest staging identical files mismatch"
+  [[ "${fp_a}" != "${fp_f1}" ]] || fail "selftest staging directory/file type collision"
+
+  printf 'sift staging selftest OK\n'
+}
+
+verdict_selftest_sift_cleanup_guard() {
+  local staging_parent root
+  staging_parent="/home/sansforensics/find-evil/tmp/auto-runs/case/staging/sift"
+  root="${staging_parent}/verdict-20260614T120000Z-123"
+
+  sift_staging_cleanup_root_allowed "${staging_parent}" "${root}" \
+    || fail "selftest cleanup guard rejected owned staging root"
+  ( sift_staging_cleanup_root_allowed "${staging_parent}" "/home/sansforensics/evidence/base-file-host" ) \
+    && fail "selftest cleanup guard accepted legacy root-level staging"
+  ( sift_staging_cleanup_root_allowed "${staging_parent}" "${staging_parent}" ) \
+    && fail "selftest cleanup guard accepted staging parent"
+  ( sift_staging_cleanup_root_allowed "${staging_parent}" "${staging_parent}/../base-file-host" ) \
+    && fail "selftest cleanup guard accepted traversal path"
+  ( sift_staging_cleanup_root_allowed "${staging_parent}" "/tmp/staging/sift/verdict-20260614T120000Z-123" ) \
+    && fail "selftest cleanup guard accepted wrong staging root"
+  ( sift_staging_cleanup_root_allowed "${staging_parent}" "${staging_parent}/-bad" ) \
+    && fail "selftest cleanup guard accepted option-like run id"
+  ( sift_staging_cleanup_root_allowed "${staging_parent}" "${staging_parent}/run/child" ) \
+    && fail "selftest cleanup guard accepted nested cleanup root"
+
+  printf 'sift cleanup guard selftest OK\n'
+}
+
+verdict_selftest_case_dir_resolution() {
+  local tmp case_root valid stale outside summary resolved symlink_target symlink_case
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "${tmp}"' RETURN
+  case_root="${tmp}/auto-runs"
+  valid="${case_root}/valid-case"
+  stale="${case_root}/stale-case"
+  outside="${tmp}/outside-case"
+  summary="${tmp}/summary.json"
+  symlink_target="${tmp}/symlink-target"
+  symlink_case="${case_root}/symlink-case"
+
+  mkdir -p "${valid}" "${stale}" "${outside}" "${symlink_target}"
+  : >"${stale}/audit.jsonl"
+  : >"${symlink_target}/audit.jsonl"
+
+  python3 - "${summary}" "${valid}" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "w", encoding="utf-8") as f:
+    json.dump({"case_dir": sys.argv[2]}, f)
+PY
+  resolved="$(resolve_case_dir_with_fallback "${summary}" "${case_root}")"
+  [[ "${resolved}" == "${valid}" ]] || fail "selftest case dir resolution rejected valid in-root summary path"
+
+  python3 - "${summary}" "${outside}" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "w", encoding="utf-8") as f:
+    json.dump({"case_dir": sys.argv[2]}, f)
+PY
+  resolved="$(resolve_case_dir_with_fallback "${summary}" "${case_root}")"
+  [[ -z "${resolved}" ]] || fail "selftest case dir resolution fell back after rejecting out-of-root summary path"
+
+  python3 - "${summary}" "${outside}" "$(basename "${stale}")" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "w", encoding="utf-8") as f:
+    json.dump({"case_dir": sys.argv[2], "case_id": sys.argv[3]}, f)
+PY
+  resolved="$(resolve_case_dir_with_fallback "${summary}" "${case_root}")"
+  [[ -z "${resolved}" ]] || fail "selftest case dir resolution used stale case_id after rejecting out-of-root summary path"
+  printf 'case dir resolution mixed rejection OK\n'
+
+  ln -s "${symlink_target}" "${symlink_case}" 2>/dev/null || true
+  python3 - "${summary}" "${symlink_case}" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "w", encoding="utf-8") as f:
+    json.dump({"case_dir": sys.argv[2]}, f)
+PY
+  resolved="$(resolve_case_dir_with_fallback "${summary}" "${case_root}")"
+  if [[ -L "${symlink_case}" ]]; then
+    [[ -z "${resolved}" ]] || fail "selftest case dir resolution accepted explicit symlinked case"
+    printf 'case dir explicit symlink rejection OK\n'
+  fi
+  rm -f "${summary}"
+  resolved="$(resolve_case_dir_with_fallback "${summary}" "${case_root}")"
+  if [[ -L "${symlink_case}" ]]; then
+    [[ "${resolved}" != "${symlink_target}" && "${resolved}" != "${symlink_case}" ]] \
+      || fail "selftest case dir resolution selected symlinked fallback case"
+    printf 'case dir fallback symlink rejection OK\n'
+  fi
+  [[ "${resolved}" == "${stale}" ]] || fail "selftest case dir resolution did not fall back when summary was absent"
+
+  printf 'case dir resolution selftest OK\n'
+}
+
+verdict_selftest_case_id_ownership() {
+  local tmp case_root owned existing unmarked symlink_target symlink_case root_parent root_symlink_target symlink_root_case old_case_root
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "${tmp}"' RETURN
+  old_case_root="${CASE_ROOT}"
+  case_root="${tmp}/auto-runs"
+  CASE_ROOT="${case_root}"
+  owned="${case_root}/owned-case"
+  existing="${case_root}/existing-case"
+  unmarked="${case_root}/unmarked-case"
+  symlink_target="${tmp}/outside"
+  symlink_case="${case_root}/symlink-case"
+  root_parent="${tmp}/root-parent"
+  root_symlink_target="${tmp}/root-outside"
+  symlink_root_case="${root_parent}/tmp/auto-runs/root-symlink-case"
+
+  create_owned_case_dir "${owned}" "${case_root}"
+  [[ -f "${owned}/${CASE_DIR_MARKER}" ]] || fail "selftest owned case dir marker missing"
+  ( create_owned_case_dir "${owned}" "${case_root}" >/dev/null 2>&1 ) \
+    && fail "selftest allowed reuse of owned case dir"
+
+  mkdir -p "${existing}" "${unmarked}" "${symlink_target}"
+  ( create_owned_case_dir "${existing}" "${case_root}" >/dev/null 2>&1 ) \
+    && fail "selftest allowed reuse of pre-existing case dir"
+  ln -s "${symlink_target}" "${symlink_case}" 2>/dev/null || true
+  if [[ -L "${symlink_case}" ]]; then
+    ( create_owned_case_dir "${symlink_case}" "${case_root}" >/dev/null 2>&1 ) \
+      && fail "selftest allowed symlinked case dir"
+  fi
+
+  mkdir -p "${root_parent}" "${root_symlink_target}"
+  ln -s "${root_symlink_target}" "${root_parent}/tmp" 2>/dev/null || true
+  if [[ -L "${root_parent}/tmp" ]]; then
+    ( create_owned_case_dir "${symlink_root_case}" "${root_parent}/tmp/auto-runs" >/dev/null 2>&1 ) \
+      && fail "selftest allowed symlinked case root component"
+    printf 'case root symlink rejection OK\n'
+  fi
+
+  reclaim_incomplete_case_dir "${unmarked}"
+  [[ -d "${unmarked}" ]] || fail "selftest removed unmarked case dir"
+  reclaim_incomplete_case_dir "${owned}"
+  [[ ! -e "${owned}" ]] || fail "selftest did not remove marker-owned incomplete case dir"
+  CASE_ROOT="${old_case_root}"
+
+  printf 'case id ownership selftest OK\n'
+}
+
+verdict_selftest_case_layout_ownership() {
+  local tmp case_root case_dir symlink_target summary_src sidecar_target summary_symlink_target
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "${tmp}"' RETURN
+  CASE_ROOT="${tmp}/auto-runs"
+  case_root="$(case_root_abs)"
+  case_dir="${case_root}/layout-case"
+  symlink_target="${tmp}/outside-logs"
+  summary_symlink_target="${tmp}/outside-summaries"
+
+  create_owned_case_dir "${case_dir}" "${case_root}"
+  initialize_case_layout "${case_dir}"
+  CASE_DIR="${case_dir}"
+  [[ -d "${case_dir}/logs" && -d "${case_dir}/summaries" ]] || fail "selftest case layout did not create sidecar directories"
+
+  summary_src="${tmp}/summary.json"
+  sidecar_target="${case_dir}/summaries/run-summary.json"
+  printf '{"ok": true}\n' >"${summary_src}"
+  copy_case_sidecar "${summary_src}" "${sidecar_target}"
+  [[ -f "${sidecar_target}" ]] || fail "selftest sidecar copy did not create summary"
+
+  rm -f "${sidecar_target}"
+  ln -s "${tmp}/outside-summary.json" "${sidecar_target}" 2>/dev/null || true
+  if [[ -L "${sidecar_target}" ]]; then
+    ( copy_case_sidecar "${summary_src}" "${sidecar_target}" >/dev/null 2>&1 ) \
+      && fail "selftest accepted symlinked sidecar file"
+    printf 'case sidecar symlink rejection OK\n'
+  fi
+
+  rm -rf "${case_dir}/summaries"
+  mkdir -p "${summary_symlink_target}"
+  ln -s "${summary_symlink_target}" "${case_dir}/summaries" 2>/dev/null || true
+  if [[ -L "${case_dir}/summaries" ]]; then
+    ( copy_case_sidecar "${summary_src}" "${case_dir}/summaries/run-summary.json" >/dev/null 2>&1 ) \
+      && fail "selftest accepted symlinked sidecar parent"
+    printf 'case sidecar parent symlink rejection OK\n'
+  fi
+
+  rm -rf "${case_dir}/logs"
+  mkdir -p "${symlink_target}"
+  ln -s "${symlink_target}" "${case_dir}/logs" 2>/dev/null || true
+  if [[ -L "${case_dir}/logs" ]]; then
+    ( initialize_case_layout "${case_dir}" >/dev/null 2>&1 ) \
+      && fail "selftest case layout accepted symlinked logs directory"
+  fi
+
+  printf 'case layout ownership selftest OK\n'
+}
+
+verdict_selftest_sift_mounted_evidence() {
+  local tmp host_root file mapped rel_mapped outside
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "${tmp}"' RETURN
+  host_root="${tmp}/host-evidence"
+  mkdir -p "${host_root}/cases/host-a" "${tmp}/host-evidence2"
+  file="${host_root}/cases/host-a/disk.E01"
+  outside="${tmp}/host-evidence2/disk.E01"
+  printf 'disk' >"${file}"
+  printf 'other' >"${outside}"
+
+  export FINDEVIL_SIFT_HOST_EVIDENCE_ROOT="${host_root}"
+  export FINDEVIL_SIFT_GUEST_EVIDENCE_ROOT="/mnt/verdict-evidence"
+
+  mapped="$(map_sift_mounted_evidence "${file}")"
+  [[ "${mapped}" == "/mnt/verdict-evidence/cases/host-a/disk.E01" ]] \
+    || fail "selftest mounted evidence mapping failed: ${mapped}"
+  [[ "$(sift_local_evidence_identity "${file}")" == file\ 4\ * ]] \
+    || fail "selftest mounted evidence file identity failed"
+  [[ "$(sift_local_evidence_identity "${host_root}/cases")" == dir\ 1\ 4\ * ]] \
+    || fail "selftest mounted evidence directory identity failed"
+  if ln -s "${outside}" "${host_root}/cases/host-a/linked.E01" 2>/dev/null; then
+    ( sift_local_evidence_identity "${host_root}/cases" >/dev/null 2>&1 ) \
+      && fail "selftest mounted evidence identity accepted a nested symlink"
+    rm -f "${host_root}/cases/host-a/linked.E01"
+  fi
+  if command -v mkfifo >/dev/null 2>&1 && mkfifo "${host_root}/cases/host-a/pipe" 2>/dev/null; then
+    ( sift_local_evidence_identity "${host_root}/cases" >/dev/null 2>&1 ) \
+      && fail "selftest mounted evidence identity accepted a non-regular entry"
+    rm -f "${host_root}/cases/host-a/pipe"
+  fi
+  rel_mapped="$(cd "${host_root}" && map_sift_mounted_evidence "cases/host-a/disk.E01")"
+  [[ "${rel_mapped}" == "/mnt/verdict-evidence/cases/host-a/disk.E01" ]] \
+    || fail "selftest mounted evidence relative mapping failed: ${rel_mapped}"
+  ( map_sift_mounted_evidence "${outside}" >/dev/null 2>&1 ) \
+    && fail "selftest mounted evidence accepted sibling prefix"
+  mkdir -p "${tmp}/escaped-root"
+  printf 'escape' >"${tmp}/escaped-root/disk.E01"
+  if ln -s "${tmp}/escaped-root" "${host_root}/cases/host-a/linkdir" 2>/dev/null; then
+    set +e
+    escaped_output="$(map_sift_mounted_evidence "${host_root}/cases/host-a/linkdir/disk.E01" 2>&1)"
+    escaped_status=$?
+    set -e
+    [[ "${escaped_status}" == "2" ]] \
+      || fail "selftest mounted evidence symlink ancestor escape returned ${escaped_status}, not hard-fail status 2 (${escaped_output})"
+    rm -f "${host_root}/cases/host-a/linkdir"
+  fi
+  FINDEVIL_SIFT_GUEST_EVIDENCE_ROOT=""
+  set +e
+  partial_output="$(map_sift_mounted_evidence "${file}" 2>&1)"
+  partial_status=$?
+  set -e
+  [[ "${partial_status}" == "2" ]] \
+    || fail "selftest mounted evidence partial env returned ${partial_status}, not hard-fail status 2 (${partial_output})"
+
+  printf 'sift mounted evidence selftest OK\n'
+}
+
+case "${FINDEVIL_VERDICT_SELFTEST:-}" in
+  sift-sanitizers)
+    verdict_selftest_sift_sanitizers
+    exit 0
+    ;;
+  sift-staging)
+    verdict_selftest_sift_staging
+    exit 0
+    ;;
+  sift-cleanup-guard)
+    verdict_selftest_sift_cleanup_guard
+    exit 0
+    ;;
+  case-dir-resolution)
+    verdict_selftest_case_dir_resolution
+    exit 0
+    ;;
+  case-id-ownership)
+    verdict_selftest_case_id_ownership
+    exit 0
+    ;;
+  case-layout-ownership)
+    verdict_selftest_case_layout_ownership
+    exit 0
+    ;;
+  sift-mounted-evidence)
+    verdict_selftest_sift_mounted_evidence
+    exit 0
+    ;;
+esac
+
+for passthrough_arg in "${PASSTHROUGH[@]}"; do
+  case "${passthrough_arg}" in
+    --case-id|--case-id=*) fail "--case-id must be a top-level verdict option, not passed after --" ;;
+  esac
+done
+if [[ "${AGENT_PROVIDER_SET}" == "1" ]]; then
+  case "${AGENT_PROVIDER}" in
+    anthropic|claude_cli|openai|openrouter|local|dgx) ;;
+    *) fail "unsupported --agent-provider: ${AGENT_PROVIDER}" ;;
+  esac
+fi
+if [[ "${AGENT_MODE}" == "1" && "${AGENT_PROVIDER_SET}" == "0" ]]; then
+  if [[ -v FINDEVIL_AGENT_PROVIDER ]]; then
+    AGENT_PROVIDER="${FINDEVIL_AGENT_PROVIDER}"
+  else
+    AGENT_PROVIDER="anthropic"
+  fi
+  case "${AGENT_PROVIDER}" in
+    anthropic|claude_cli|openai|openrouter|local|dgx) ;;
+    *) fail "unsupported agent provider: ${AGENT_PROVIDER:-<empty>}" ;;
+  esac
+fi
+[[ -n "${CASE_ID_OVERRIDE:-}" ]] && CASE_ID_OVERRIDE="$(safe_case_id "${CASE_ID_OVERRIDE}")"
+[[ -n "${RUN_SUMMARY:-}" ]] && RUN_SUMMARY="$(prepare_requested_run_summary_path "${RUN_SUMMARY}" 0)"
+if [[ "${SIFT}" == "1" ]]; then
+  CASE_ID="${CASE_ID_OVERRIDE:-auto-$(python3 -c 'import uuid;print(uuid.uuid4())')}"
+  CASE_DIR="$(case_root_abs)/${CASE_ID}"
+  create_owned_case_dir "${CASE_DIR}" "$(case_root_abs)"
+  initialize_case_layout "${CASE_DIR}"
+  trap cleanup_on_exit EXIT INT TERM
+fi
+
+# newest non-placeholder entry (file OR case folder) in a dir; empty if none.
+# -d keeps a dropped directory as the entry itself rather than expanding it.
+newest_evidence() {
+  ls -dt "$1"/* 2>/dev/null | grep -vE '/(README\.md|\.gitkeep)$' | head -1 || true
+}
+
+# wait_for_evidence <dir> — block until a file OR a case folder is dropped,
+# debounced until its (recursive) size stops growing (copy finished). Echoes the
+# path on stdout (logs to stderr).
+wait_for_evidence() {
+  local dir="$1" f s1 s2
+  mkdir -p "${dir}"
+  log "waiting — drop a file OR a case folder into ${dir}/ (pcap / memory / disk / .evtx / mixed folder) …"
+  while true; do
+    f="$(newest_evidence "${dir}")"
+    if [[ -n "${f}" && -e "${f}" ]]; then
+      s1="$(_evidence_size "${f}")"; sleep 1
+      s2="$(_evidence_size "${f}")"
+      if [[ "${s1}" == "${s2}" && "${s1:-0}" -gt 0 ]]; then echo "${f}"; return 0; fi
+    fi
+    sleep 1
+  done
+}
+
+validate_run_summary_path() {
+  local summary="$1" evidence="$2" host_root="${FINDEVIL_SIFT_HOST_EVIDENCE_ROOT:-}" default_root="${EVIDENCE_DIR}"
+  python3 - "${summary}" "${evidence}" "${host_root}" "${default_root}" <<'PY'
+from pathlib import Path
+import sys
+
+summary_s, evidence_s, host_root_s, default_root_s = sys.argv[1:]
+
+def resolved(path_s: str) -> Path:
+    path = Path(path_s).expanduser()
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    return path.resolve(strict=False)
+
+def is_relative_to(child: Path, parent: Path) -> bool:
+    try:
+        child.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+summary = resolved(summary_s)
+blocked_roots: list[tuple[str, Path]] = []
+
+if evidence_s:
+    evidence = Path(evidence_s).expanduser()
+    if not evidence.is_absolute():
+        evidence = Path.cwd() / evidence
+    if evidence.exists():
+        evidence_resolved = evidence.resolve(strict=False)
+        if summary == evidence_resolved:
+            print("run summary path equals the evidence path", file=sys.stderr)
+            sys.exit(2)
+        if evidence.is_dir():
+            blocked_roots.append(("evidence directory", evidence_resolved))
+        else:
+            blocked_roots.append(("evidence parent directory", evidence_resolved.parent))
+
+for label, root_s in (
+    ("configured SIFT host evidence root", host_root_s),
+    ("default evidence directory", default_root_s),
+):
+    if root_s:
+        blocked_roots.append((label, resolved(root_s)))
+
+for label, root in blocked_roots:
+    if summary == root or is_relative_to(summary, root):
+        print(f"run summary path is inside {label}: {root}", file=sys.stderr)
+        sys.exit(2)
+PY
+}
+
+# Resolve evidence: explicit arg > newest in evidence/ > wait for a drop.
+# --watch always blocks for a fresh drop. (dry-run resolves but never blocks.)
+if [[ -z "${EVIDENCE}" ]]; then
+  if [[ "${WATCH}" == "1" && "${DRY}" != "1" ]]; then
+    EVIDENCE="$(wait_for_evidence "${EVIDENCE_DIR}")"
+  else
+    EVIDENCE="$(newest_evidence "${EVIDENCE_DIR}")"
+    [[ -n "${EVIDENCE}" ]] && ok "using evidence: ${EVIDENCE}"
+    if [[ -z "${EVIDENCE}" && "${DRY}" != "1" ]]; then
+      EVIDENCE="$(wait_for_evidence "${EVIDENCE_DIR}")"
+    fi
+  fi
+fi
+[[ -n "${EVIDENCE}" || "${DRY}" == "1" ]] || fail "no evidence. Usage: scripts/verdict <evidence> | --watch (drop into evidence/)"
+ORIGINAL_EVIDENCE="${EVIDENCE}"
+
+if [[ "${AGENT_MODE}" == "1" ]]; then
+  agent_evidence_name="${EVIDENCE##*/}"
+  agent_evidence_name="${agent_evidence_name,,}"
+  if [[ "${FLEET}" == "1" || -d "${EVIDENCE}" || "${agent_evidence_name}" != *.evtx ]]; then
+    fail "--agent supports a single EVTX file only; non-EVTX, fleet, and directory evidence require the default deterministic mode"
+  fi
+fi
+
+# 0b. FLEET mode — one command for a whole multi-host case folder ------------
+# Auto-detected (a directory holding hosts/ or disks/ is the whole-case
+# layout) or forced with --fleet. Runs all three fleet stages end to end:
+# per-host investigations -> cross-host correlation -> fleet report.
+if [[ "${FLEET}" == "0" && -n "${EVIDENCE}" && -d "${EVIDENCE}" ]] \
+   && [[ -d "${EVIDENCE}/hosts" || -d "${EVIDENCE}/disks" ]]; then
+  FLEET=1
+  ok "multi-host case folder detected (hosts/ or disks/) — fleet mode"
+fi
+
+run_fleet() {
+  local case_root="${EVIDENCE}"
+  local name fleet_dir
+  name="$(basename "${case_root:-fleet}")"
+  fleet_dir="${REPO_ROOT}/tmp/fleet-runs/fleet-local-${name}"
+  log "FLEET — ${case_root:-"(SIFT-enumerated)"} (3 stages)"
+  if [[ "${DRY}" == "1" ]]; then
+    if [[ "${SIFT}" == "1" ]]; then
+      ok "DRY-RUN: python3 scripts/fleet_investigate.py   # stage 1 (per-host, in the SIFT VM)"
+    else
+      ok "DRY-RUN: bash scripts/run-whole-case-local.sh ${case_root} ${fleet_dir}   # stage 1 (per-host)"
+    fi
+    ok "DRY-RUN: python3 scripts/fleet_correlate.py   # stage 2 (cross-host correlation)"
+    ok "DRY-RUN: python3 scripts/render_fleet_report.py   # stage 3 (FLEET_REPORT)"
+    echo; log "done (dry-run)"
+    exit 0
+  fi
+  if [[ "${SIFT}" == "1" ]]; then
+    # SIFT fleet: fleet_investigate enumerates the VM's evidence share and
+    # writes its own timestamped fleet dir; stages 2-3 default to latest.
+    log "fleet 1/3 — per-host investigations inside the SIFT VM"
+    python3 scripts/fleet_investigate.py || fail "fleet_investigate failed"
+    fleet_dir=""
+  else
+    # Local fleet: resumable per-host runs (a host with a non-empty
+    # run-summary is skipped, so re-running the same command resumes), then
+    # fleet_local writes the correlate-ready fleet.json.
+    log "fleet 1/3 — per-host investigations (local, resumable)"
+    mkdir -p "${fleet_dir}"
+    bash scripts/run-whole-case-local.sh "${case_root}" "${fleet_dir}" \
+      || fail "whole-case run failed (see ${fleet_dir}/*.log)"
+  fi
+  log "fleet 2/3 — cross-host correlation"
+  if [[ -n "${fleet_dir}" ]]; then
+    python3 scripts/fleet_correlate.py "${fleet_dir}" || fail "fleet_correlate failed"
+  else
+    python3 scripts/fleet_correlate.py || fail "fleet_correlate failed"
+  fi
+  log "fleet 3/3 — fleet report (figures + FLEET_REPORT)"
+  if [[ -n "${fleet_dir}" ]]; then
+    python3 scripts/render_fleet_report.py "${fleet_dir}" \
+      || warn "render_fleet_report failed (matplotlib/pandoc are optional) — fleet_correlation.{json,md} still written"
+  else
+    python3 scripts/render_fleet_report.py \
+      || warn "render_fleet_report failed (matplotlib/pandoc are optional) — fleet_correlation.{json,md} still written"
+  fi
+  echo
+  log "fleet done"
+  [[ -n "${fleet_dir}" ]] && printf '   fleet  : %s\n' "${fleet_dir}" >&2
+  printf '   verdicts + correlation: fleet.json · fleet_correlation.{json,md} · FLEET_REPORT.md\n' >&2
+  exit 0
+}
+[[ "${FLEET}" == "1" ]] && run_fleet
+
+# 1. preflight ---------------------------------------------------------------
+log "1/4 preflight"
+if [[ "${DRY}" == "1" ]]; then
+  if [[ "${AGENT_MODE}" == "1" ]]; then
+    ok "DRY-RUN: FINDEVIL_DOCTOR_AGENT_PROVIDER=${AGENT_PROVIDER} bash scripts/doctor.sh"
+  elif [[ "${AGENT_MODE}" == "0" ]]; then
+    ok "DRY-RUN: FINDEVIL_DOCTOR_AGENT_PROVIDER=deterministic bash scripts/doctor.sh"
+  else
+    ok "DRY-RUN: env -u FINDEVIL_DOCTOR_AGENT_PROVIDER bash scripts/doctor.sh"
+  fi
+elif [[ -f scripts/doctor.sh ]]; then
+  if [[ "${AGENT_MODE}" == "1" ]]; then
+    FINDEVIL_DOCTOR_AGENT_PROVIDER="${AGENT_PROVIDER}" bash scripts/doctor.sh \
+      || fail "doctor reported missing dependencies — fix them, then re-run"
+  elif [[ "${AGENT_MODE}" == "0" ]]; then
+    FINDEVIL_DOCTOR_AGENT_PROVIDER=deterministic bash scripts/doctor.sh \
+      || fail "doctor reported missing dependencies — fix them, then re-run"
+  else
+    env -u FINDEVIL_DOCTOR_AGENT_PROVIDER bash scripts/doctor.sh \
+      || fail "doctor reported missing dependencies — fix them, then re-run"
+  fi
+else
+  warn "scripts/doctor.sh not found; skipping preflight"
+fi
+
+# 2. build the Rust MCP server if needed -------------------------------------
+log "2/4 build"
+if [[ "${DRY}" == "1" ]]; then
+  ok "DRY-RUN: cargo build --workspace --release --locked"
+elif [[ "${SIFT}" == "1" ]]; then
+  ok "--sift: the MCP server is built inside the VM by sift-vm-bootstrap; skipping host build"
+elif [[ "${SKIP_BUILD}" == "1" || -f target/release/findevil-mcp ]]; then
+  ok "findevil-mcp present (or --skip-build); skipping build"
+else
+  log "building findevil-mcp (cargo build --release)…"
+  cargo build --workspace --release --locked
+fi
+
+# 3. SIFT-VM toggle (where the tools run) ------------------------------------
+if [[ "${SIFT}" == "1" ]]; then
+  [[ -f .mcp.json.sift ]] || fail "--sift needs .mcp.json.sift (run: bash scripts/sift-vm-bootstrap.sh)"
+  cp -f .mcp.json .mcp.json.local.bak
+  cp -f .mcp.json.sift .mcp.json
+  RESTORE_MCP=1
+  trap cleanup_on_exit EXIT INT TERM
+  ok "--sift: MCP routed to the SANS SIFT VM over SSH"
+fi
+
+# 3b. SIFT evidence staging (automation: ONE command for ANY host path) -------
+# In --sift mode the typed tools run INSIDE the VM, so case_open needs a path the
+# guest can see. Resolve the guest IP (VMware Tools, else the DHCP lease), then:
+#   - a guest-mounted read-only evidence path (under /mnt/hgfs, /media/hgfs, or
+#     /mnt/verdict-evidence) -> validate it and use the in-VM path without copy
+#     staging; FINDEVIL_SIFT_HOST_EVIDENCE_ROOT/FINDEVIL_SIFT_GUEST_EVIDENCE_ROOT
+#     also rewrite a host path under that root onto its read-only guest mount;
+#   - any other host path that exists -> SCP it into a run-owned VM staging
+#     directory, rewrite EVIDENCE to that guest path, and remove that staging on
+#     success;
+#   - a path not on this host   -> assume it is already an in-VM path; use as-is.
+# A whole multi-host case folder is refused here (it belongs in the fleet
+# pipeline, not one VM). Override the guest evidence dir with
+# FIND_EVIL_GUEST_EVIDENCE_DIR.
+if [[ "${SIFT}" == "1" && "${DRY}" != "1" ]]; then
+  GUSER="${FIND_EVIL_GUEST_USER:-sansforensics}"
+  GUSER="$(safe_guest_user "${GUSER}")"
+  GKEY="${FIND_EVIL_SSH_KEY:-${HOME}/.ssh/sift_key}"
+  GEVDIR="$(safe_guest_dir "${FIND_EVIL_GUEST_EVIDENCE_DIR:-/home/${GUSER}/evidence}")"
+  GUEST_REPO="$(safe_guest_dir "${FIND_EVIL_GUEST_REPO:-/home/${GUSER}/find-evil}")"
+  if [[ -z "${FIND_EVIL_GUEST_IP:-}" ]]; then
+    FIND_EVIL_GUEST_IP="$(bash scripts/sift-guest-ip.sh 2>/dev/null || true)"
+  fi
+  [[ -n "${FIND_EVIL_GUEST_IP:-}" ]] || fail "--sift: could not resolve the SIFT VM IP. Start the VM, or set FIND_EVIL_GUEST_IP=<ip>."
+  FIND_EVIL_GUEST_IP="$(safe_guest_host "${FIND_EVIL_GUEST_IP}")"
+  export FIND_EVIL_GUEST_IP
+  ok "--sift: resolved SIFT VM at ${FIND_EVIL_GUEST_IP}"
+  # Point the live .mcp.json (interactive session) at the resolved VM too; the
+  # committed .mcp.json.sift template keeps its documentation-placeholder IP.
+  sed -i "s#192\.0\.2\.10#${FIND_EVIL_GUEST_IP}#g" .mcp.json 2>/dev/null || true
+  GADDR="${GUSER}@${FIND_EVIL_GUEST_IP}"
+  SSHB=(ssh -i "${GKEY}" -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=8 --)
+  remote_quote() {
+    python3 - "$1" <<'PY'
+import shlex
+import sys
+
+print(shlex.quote(sys.argv[1]))
+PY
+  }
+
+  validate_guest_mounted_evidence() {
+    local path
+    path="$(safe_guest_mounted_evidence_path "$1")"
+    "${SSHB[@]}" "${GADDR}" python3 - "${path}" <<'PY' 2>/dev/null || fail "--sift: unsafe guest-mounted evidence path: ${path}"
+import os
+import stat
+import sys
+
+root = sys.argv[1]
+allowed_roots = ("/mnt/hgfs", "/media/hgfs", "/mnt/verdict-evidence")
+
+
+def fail(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+def under_allowed_mount(path):
+    resolved = os.path.realpath(path)
+    return any(resolved == base or resolved.startswith(base + os.sep) for base in allowed_roots)
+
+
+def unescape_mount_path(value):
+    return value.replace("\\040", " ").replace("\\011", "\t").replace("\\012", "\n").replace("\\134", "\\")
+
+
+def require_read_only_mount(path):
+    resolved = os.path.realpath(path)
+    best_mount = None
+    best_options = None
+    with open("/proc/self/mountinfo", encoding="utf-8") as mountinfo:
+        for line in mountinfo:
+            fields = line.split()
+            if len(fields) < 6:
+                continue
+            mount_point = unescape_mount_path(fields[4])
+            if resolved == mount_point or resolved.startswith(mount_point.rstrip("/") + os.sep):
+                if best_mount is None or len(mount_point) > len(best_mount):
+                    best_mount = mount_point
+                    best_options = fields[5].split(",")
+    if best_mount is None:
+        fail(f"cannot identify mount for guest-mounted evidence: {path}")
+    if "ro" not in best_options:
+        fail(f"guest-mounted evidence must be on a read-only mount: {path}")
+
+
+def check_regular_or_dir(path, *, root_path=False):
+    try:
+        st = os.lstat(path)
+    except OSError as exc:
+        fail(f"cannot inspect {path}: {exc}")
+    if stat.S_ISLNK(st.st_mode):
+        fail(f"symlink evidence {'root' if root_path else 'entry'} is unsupported: {path}")
+    if stat.S_ISREG(st.st_mode) or stat.S_ISDIR(st.st_mode):
+        return st
+    fail(f"special evidence {'root' if root_path else 'entry'} is unsupported: {path}")
+
+
+check_regular_or_dir(root, root_path=True)
+if not under_allowed_mount(root):
+    fail(f"guest-mounted evidence resolved outside allowed mount roots: {root}")
+require_read_only_mount(root)
+
+if os.path.isdir(root):
+    def on_walk_error(error):
+        fail(f"cannot read evidence directory {error.filename}: {error.strerror}")
+
+    for current, dirs, files in os.walk(root, topdown=True, followlinks=False, onerror=on_walk_error):
+        for dirname in list(dirs):
+            path = os.path.join(current, dirname)
+            st = check_regular_or_dir(path)
+            if not stat.S_ISDIR(st.st_mode):
+                fail(f"non-directory entry in directory list is unsupported: {path}")
+            if not under_allowed_mount(path):
+                fail(f"evidence directory entry resolved outside allowed mount roots: {path}")
+            require_read_only_mount(path)
+        for filename in files:
+            path = os.path.join(current, filename)
+            st = check_regular_or_dir(path)
+            if not stat.S_ISREG(st.st_mode):
+                fail(f"non-file entry in file list is unsupported: {path}")
+            if not under_allowed_mount(path):
+                fail(f"evidence file entry resolved outside allowed mount roots: {path}")
+            require_read_only_mount(path)
+PY
+  }
+
+  prepare_sift_staging_parent() {
+    "${SSHB[@]}" "${GADDR}" python3 - "${SIFT_STAGING_PARENT}" "${GEVDIR}" "${GUEST_REPO}" <<'PY' 2>/dev/null || fail "--sift: unsafe SIFT staging parent: ${SIFT_STAGING_PARENT}"
+import os
+import stat
+import sys
+
+target = os.path.normpath(sys.argv[1])
+guest_evidence_dir = os.path.normpath(sys.argv[2])
+guest_repo = os.path.normpath(sys.argv[3])
+blocked_roots = ["/mnt/hgfs", "/media/hgfs", "/mnt/verdict-evidence", "/home/sansforensics/evidence"]
+
+
+def fail(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+def under(path, root):
+    root = root.rstrip("/")
+    return path == root or path.startswith(root + os.sep)
+
+
+if not target.startswith(os.sep):
+    fail("SIFT staging parent must be absolute")
+if not guest_repo.startswith(os.sep):
+    fail("SIFT guest repo must be absolute")
+try:
+    repo_st = os.lstat(guest_repo)
+except OSError as exc:
+    fail(f"SIFT guest repo is not available: {guest_repo}: {exc}")
+if stat.S_ISLNK(repo_st.st_mode):
+    fail(f"SIFT guest repo is a symlink: {guest_repo}")
+if not stat.S_ISDIR(repo_st.st_mode):
+    fail(f"SIFT guest repo is not a directory: {guest_repo}")
+guest_case_root = os.path.join(guest_repo, "tmp", "auto-runs")
+if not under(target, guest_case_root) or not target.endswith("/staging/sift"):
+    fail("SIFT staging parent is not under the guest project case staging/sift root")
+if os.path.exists(guest_evidence_dir):
+    blocked_roots.append(os.path.realpath(guest_evidence_dir))
+blocked_roots.append(os.path.realpath(guest_repo) + os.sep + "evidence")
+
+current = os.sep
+for part in [p for p in target.split(os.sep) if p]:
+    next_path = os.path.join(current, part)
+    try:
+        st = os.lstat(next_path)
+    except FileNotFoundError:
+        os.mkdir(next_path, 0o755)
+        st = os.lstat(next_path)
+    if stat.S_ISLNK(st.st_mode):
+        fail(f"SIFT staging parent component is a symlink: {next_path}")
+    if not stat.S_ISDIR(st.st_mode):
+        fail(f"SIFT staging parent component is not a directory: {next_path}")
+    real_next = os.path.realpath(next_path)
+    if any(under(real_next, root) for root in blocked_roots):
+        fail(f"SIFT staging parent resolved inside evidence or mounted evidence roots: {next_path}")
+    current = next_path
+
+parent_real = os.path.realpath(target)
+repo_real = os.path.realpath(guest_repo)
+case_root_real = os.path.join(repo_real, "tmp", "auto-runs")
+if not under(parent_real, case_root_real) or not parent_real.endswith("/staging/sift"):
+    fail("SIFT staging parent is not under the guest project case staging/sift root after realpath")
+PY
+  }
+
+  create_sift_staging_root() {
+    local qparent qroot
+    sift_staging_cleanup_root_allowed "${SIFT_STAGING_PARENT}" "${SIFT_STAGING_ROOT}" \
+      || fail "--sift: unsafe SIFT staging root: ${SIFT_STAGING_ROOT}"
+    qparent="$(remote_quote "${SIFT_STAGING_PARENT}")"
+    qroot="$(remote_quote "${SIFT_STAGING_ROOT}")"
+    "${SSHB[@]}" "${GADDR}" "set -e
+if [ -L ${qparent} ] || [ ! -d ${qparent} ]; then
+  echo 'SIFT staging parent is unsafe' >&2
+  exit 1
+fi
+parent_real=\$(realpath -e -- ${qparent})
+if [ -e ${qroot} ] || [ -L ${qroot} ]; then
+  echo 'run-owned SIFT staging root already exists' >&2
+  exit 1
+fi
+mkdir -- ${qroot}
+if [ -L ${qroot} ] || [ ! -d ${qroot} ]; then
+  echo 'run-owned SIFT staging root is unsafe' >&2
+  exit 1
+fi
+touch -- ${qroot}/.verdict-stage-marker
+root_real=\$(realpath -e -- ${qroot})
+if [ \"\$(dirname -- \"\${root_real}\")\" != \"\${parent_real}\" ]; then
+  echo 'run-owned SIFT staging root resolved outside staging parent' >&2
+  exit 1
+fi" 2>/dev/null || fail "--sift: run-owned SIFT staging root already exists or is unsafe: ${SIFT_STAGING_ROOT}"
+  }
+
+  cleanup_current_sift_staging() {
+    local qparent qroot
+    [[ -n "${SIFT_STAGING_ROOT:-}" && -n "${STAGED_REMOTE_PATH:-}" ]] || return 0
+    if [[ "${KEEP_SIFT_STAGING}" == "1" ]]; then
+      warn "--sift: kept SIFT staging for debugging: ${STAGED_REMOTE_PATH}"
+      return 0
+    fi
+    if ! sift_staging_cleanup_root_allowed "${SIFT_STAGING_PARENT}" "${SIFT_STAGING_ROOT}"; then
+      warn "--sift: refusing to clean unsafe SIFT staging root: ${SIFT_STAGING_ROOT}"
+      return 0
+    fi
+    qparent="$(remote_quote "${SIFT_STAGING_PARENT}")"
+    qroot="$(remote_quote "${SIFT_STAGING_ROOT}")"
+    if "${SSHB[@]}" "${GADDR}" "set -e
+[ ! -L ${qparent} ] && [ -d ${qparent} ]
+[ ! -L ${qroot} ] && [ -d ${qroot} ]
+[ -f ${qroot}/.verdict-stage-marker ]
+parent_real=\$(realpath -e -- ${qparent})
+root_real=\$(realpath -e -- ${qroot})
+[ \"\$(dirname -- \"\${root_real}\")\" = \"\${parent_real}\" ]
+rm -rf -- ${qroot}" 2>/dev/null; then
+      ok "--sift: cleaned SIFT staging: ${SIFT_STAGING_ROOT}"
+    else
+      warn "--sift: could not clean SIFT staging: ${SIFT_STAGING_ROOT}"
+    fi
+  }
+
+  remote_evidence_type() {
+    local path="$1" qpath out
+    qpath="$(remote_quote "${path}")"
+    if ! out="$("${SSHB[@]}" "${GADDR}" "if [ -L ${qpath} ]; then printf unsupported; elif [ -d ${qpath} ]; then printf dir; elif [ -f ${qpath} ]; then printf file; elif [ -e ${qpath} ]; then printf unsupported; else printf missing; fi" 2>/dev/null)"; then
+      fail "--sift: could not inspect staged evidence path in the SIFT VM (${path})"
+    fi
+    printf '%s' "${out}"
+  }
+
+  remote_evidence_fingerprint() {
+    local path="$1" out
+    if ! out="$("${SSHB[@]}" "${GADDR}" python3 - "${path}" <<'PY'
+import hashlib
+import os
+import stat
+import sys
+
+root = sys.argv[1]
+
+
+def fail(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+def update_path(hasher, rel):
+    rel_bytes = os.fsencode(rel)
+    hasher.update(str(len(rel_bytes)).encode("ascii"))
+    hasher.update(b"\0")
+    hasher.update(rel_bytes)
+    hasher.update(b"\0")
+
+
+def update_file(hasher, path):
+    st = os.lstat(path)
+    if stat.S_ISLNK(st.st_mode):
+        fail("symlink evidence entries are unsupported")
+    if not stat.S_ISREG(st.st_mode):
+        fail("special evidence entries are unsupported")
+    hasher.update(str(st.st_size).encode("ascii"))
+    hasher.update(b"\0")
+    with open(path, "rb") as f:
+        while True:
+            chunk = f.read(1024 * 1024)
+            if not chunk:
+                break
+            hasher.update(chunk)
+
+
+def on_walk_error(error):
+    fail("cannot read evidence directory {}: {}".format(error.filename, error.strerror))
+
+
+if not os.path.exists(root) and not os.path.islink(root):
+    print("missing")
+    raise SystemExit(0)
+
+root_st = os.lstat(root)
+hasher = hashlib.sha256()
+if stat.S_ISLNK(root_st.st_mode):
+    fail("symlink evidence paths are unsupported")
+if stat.S_ISREG(root_st.st_mode):
+    hasher.update(b"file\0")
+    update_path(hasher, ".")
+    update_file(hasher, root)
+    print(hasher.hexdigest())
+    raise SystemExit(0)
+if not stat.S_ISDIR(root_st.st_mode):
+    fail("special evidence paths are unsupported")
+
+hasher.update(b"dir\0")
+hasher.update(b"D\0")
+update_path(hasher, ".")
+for current, dirs, files in os.walk(root, topdown=True, followlinks=False, onerror=on_walk_error):
+    dirs[:] = sorted(dirs, key=os.fsencode)
+    files = sorted(files, key=os.fsencode)
+    for dirname in dirs:
+        path = os.path.join(current, dirname)
+        st = os.lstat(path)
+        if stat.S_ISLNK(st.st_mode):
+            fail("symlink evidence entries are unsupported")
+        if not stat.S_ISDIR(st.st_mode):
+            fail("special evidence entries are unsupported")
+        hasher.update(b"D\0")
+        update_path(hasher, os.path.relpath(path, root))
+    for filename in files:
+        path = os.path.join(current, filename)
+        hasher.update(b"F\0")
+        update_path(hasher, os.path.relpath(path, root))
+        update_file(hasher, path)
+
+print(hasher.hexdigest())
+PY
+)"; then
+      fail "--sift: could not fingerprint staged evidence path in the SIFT VM (${path})"
+    fi
+    printf '%s' "${out}"
+  }
+
+  promote_staged_directory() {
+    local tmp_remote="$1" final_remote="$2" old_remote qtmp qfinal qold
+    old_remote="${final_remote}.old-$(date +%s)-$$"
+    qtmp="$(remote_quote "${tmp_remote}")"
+    qfinal="$(remote_quote "${final_remote}")"
+    qold="$(remote_quote "${old_remote}")"
+    # Rollback preserves the previous staged directory if the final rename fails.
+    "${SSHB[@]}" "${GADDR}" "set -e
+if [ -e ${qold} ]; then
+  echo 'stale rollback path exists: ${old_remote}' >&2
+  exit 1
+fi
+if [ -e ${qfinal} ]; then
+  mv -T -- ${qfinal} ${qold}
+  if mv -T -- ${qtmp} ${qfinal}; then
+    rm -rf -- ${qold}
+  else
+    if [ ! -e ${qfinal} ] && [ -e ${qold} ]; then
+      mv -T -- ${qold} ${qfinal}
+    fi
+    exit 1
+  fi
+else
+  mv -T -- ${qtmp} ${qfinal}
+fi" 2>/dev/null || fail "--sift: could not promote staged directory into place (rollback attempted)"
+  }
+
+  if is_guest_mounted_evidence "${EVIDENCE}"; then
+    validate_guest_mounted_evidence "${EVIDENCE}"
+    ok "--sift: '${EVIDENCE}' is guest-mounted evidence — using read-only in-VM path without copy staging"
+  elif [[ -e "${EVIDENCE}" || -L "${EVIDENCE}" ]]; then
+    if [[ -d "${EVIDENCE}" && ( -d "${EVIDENCE}/hosts" || -d "${EVIDENCE}/disks" ) ]]; then
+      fail "--sift: '${EVIDENCE}' is a multi-host case folder — run: scripts/verdict ${EVIDENCE} --fleet (one command for all three fleet stages), or pass a single host's evidence."
+    fi
+    rbase="$(safe_guest_basename "$(basename "${EVIDENCE}")")"
+    SIFT_STAGE_ID="${FINDEVIL_VERDICT_STAGE_ID:-verdict-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
+    SIFT_STAGE_ID="$(safe_guest_basename "${SIFT_STAGE_ID}")"
+    [[ -n "${FINDEVIL_SIFT_CASE_STAGING_ROOT:-}" ]] \
+      || fail "--sift: host evidence copy needs FINDEVIL_SIFT_CASE_STAGING_ROOT pointing at the project case staging/sift directory inside the VM; mounted paths under /mnt/hgfs/ do not need copy staging"
+    SIFT_STAGING_PARENT="$(safe_sift_case_staging_parent "${FINDEVIL_SIFT_CASE_STAGING_ROOT}")"
+    [[ -n "${CASE_ID_OVERRIDE:-}" ]] \
+      || fail "--sift: host evidence copy requires --case-id matching FINDEVIL_SIFT_CASE_STAGING_ROOT; mounted paths under /mnt/hgfs/ do not need copy staging"
+    SIFT_STAGING_CASE_ID="$(sift_case_id_from_staging_parent "${SIFT_STAGING_PARENT}")"
+    [[ "${SIFT_STAGING_CASE_ID}" == "${CASE_ID_OVERRIDE}" ]] \
+      || fail "--sift: FINDEVIL_SIFT_CASE_STAGING_ROOT case (${SIFT_STAGING_CASE_ID}) does not match --case-id (${CASE_ID_OVERRIDE})"
+    SIFT_STAGING_ROOT="${SIFT_STAGING_PARENT}/${SIFT_STAGE_ID}"
+    remote="${SIFT_STAGING_ROOT}/${rbase}"
+    STAGED_REMOTE_PATH="${remote}"
+    ltype="$(local_evidence_type "${EVIDENCE}")"
+    [[ "${ltype}" == "file" || "${ltype}" == "dir" ]] || fail "--sift: unsupported evidence path type for staging: ${EVIDENCE}"
+    lsize="$(local_evidence_size "${EVIDENCE}")"
+    lfingerprint=""
+    prepare_sift_staging_parent
+    if [[ "$(remote_evidence_type "${SIFT_STAGING_ROOT}")" != "missing" ]]; then
+      fail "--sift: run-owned SIFT staging root already exists: ${SIFT_STAGING_ROOT}"
+    fi
+    free="$("${SSHB[@]}" "${GADDR}" "df -PB1 $(remote_quote "${SIFT_STAGING_PARENT}") 2>/dev/null | awk 'NR==2{print \$4}'" 2>/dev/null || echo "")"
+    [[ -z "${free}" || "${free}" =~ ^[0-9]+$ ]] || fail "--sift: non-numeric free-space value for ${SIFT_STAGING_PARENT}: ${free}"
+    if [[ -n "${free}" && "${lsize:-0}" -gt 0 ]] && (( lsize + lsize/10 > free )); then
+      fail "--sift: '${rbase}' (${lsize} B) will not fit in the SIFT VM (free ${free} B). Free space in the guest, or run locally (drop --sift)."
+    fi
+    create_sift_staging_root
+    if [[ "${ltype}" == "file" ]]; then
+      lfingerprint="$(local_evidence_fingerprint "${EVIDENCE}")"
+      tmp_remote="${SIFT_STAGING_ROOT}/.${rbase}.tmp-$(date +%s)-$$"
+      log "--sift: staging ${rbase} into the VM temp file (scp → ${GADDR}:${tmp_remote})…"
+      if ! scp -i "${GKEY}" -o StrictHostKeyChecking=accept-new -- "${EVIDENCE}" "${GADDR}:${tmp_remote}"; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: staging copy failed (scp to ${tmp_remote})"
+      fi
+      postfingerprint="$(local_evidence_fingerprint "${EVIDENCE}")"
+      tfingerprint="$(remote_evidence_fingerprint "${tmp_remote}")"
+      if [[ "${postfingerprint}" != "${lfingerprint}" ]]; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: evidence changed during staging; wait for the copy to finish and rerun (${EVIDENCE})"
+      fi
+      if [[ "${tfingerprint}" != "${postfingerprint}" ]]; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: staged file verification failed (${tmp_remote})"
+      fi
+      promote_staged_directory "${tmp_remote}" "${remote}"
+    else
+      lfingerprint="$(local_evidence_fingerprint "${EVIDENCE}")"
+      tmp_remote="${SIFT_STAGING_ROOT}/.${rbase}.tmp-$(date +%s)-$$"
+      "${SSHB[@]}" "${GADDR}" "mkdir -p $(remote_quote "${tmp_remote}")" 2>/dev/null \
+        || fail "--sift: could not create remote staging temp dir (${tmp_remote})"
+      log "--sift: staging ${rbase} into the VM temp dir (scp → ${GADDR}:${tmp_remote})…"
+      if ! scp -i "${GKEY}" -o StrictHostKeyChecking=accept-new -r -- "${EVIDENCE}/." "${GADDR}:${tmp_remote}/"; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: staging copy failed (scp to ${tmp_remote})"
+      fi
+      postfingerprint="$(local_evidence_fingerprint "${EVIDENCE}")"
+      tfingerprint="$(remote_evidence_fingerprint "${tmp_remote}")"
+      if [[ "${postfingerprint}" != "${lfingerprint}" ]]; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: evidence changed during staging; wait for the copy to finish and rerun (${EVIDENCE})"
+      fi
+      if [[ "${tfingerprint}" != "${postfingerprint}" ]]; then
+        "${SSHB[@]}" "${GADDR}" "rm -rf -- $(remote_quote "${tmp_remote}")" 2>/dev/null || true
+        fail "--sift: staged directory verification failed (${tmp_remote})"
+      fi
+      promote_staged_directory "${tmp_remote}" "${remote}"
+    fi
+    ok "--sift: staged → ${remote}"
+    EVIDENCE="${remote}"
+  else
+    verify_sift_guest_evidence_readable "${EVIDENCE}" 1
+    sift_remote_evidence_identity "${EVIDENCE}" >/dev/null
+    ok "--sift: '${EVIDENCE}' is not on this host — treating it as an in-VM path"
+  fi
+fi
+
+# 4. investigate -------------------------------------------------------------
+log "3/4 investigate — ${EVIDENCE}"
+if [[ -z "${CASE_DIR:-}" ]]; then
+  CASE_ID="${CASE_ID_OVERRIDE:-auto-$(python3 -c 'import uuid;print(uuid.uuid4())')}"
+  CASE_DIR="$(case_root_abs)/${CASE_ID}"
+  create_owned_case_dir "${CASE_DIR}" "$(case_root_abs)"
+  initialize_case_layout "${CASE_DIR}"
+  trap cleanup_on_exit EXIT INT TERM
+fi
+SUMMARY="${CASE_SUMMARY_DIR}/engine-run-summary.json"
+if [[ "${AGENT_MODE}" == "1" ]]; then
+  # --agent needs the 3.11+ findevil_agent package, which bare host python3 (may be
+  # 3.10) cannot import. Run the engine under the services/agent venv via `uv run
+  # --project` (keeps cwd at the repo root, so the local MCP launchers still resolve).
+  ENGINE=(uv run --project "${REPO_ROOT}/services/agent" python scripts/find_evil_auto.py "${EVIDENCE}" --run-summary "${SUMMARY}")
+else
+  ENGINE=(python3 scripts/find_evil_auto.py "${EVIDENCE}" --run-summary "${SUMMARY}")
+fi
+if [[ "${SIFT}" == "0" ]]; then
+  # Default = local host. Pin the case id so the dashboard can open LIVE —
+  # before the run — and tail the audit chain as each stage lands. The engine
+  # writes straight to this host dir (no SCP), so the stream is real-time.
+  # The dir is pinned (and mkdir'd) up front so the dashboard can open LIVE,
+  # but every artifact except audit.jsonl/status.json lands in one burst at
+  # finalize — so an interrupted run (Ctrl-C, timeout, crash before case_open)
+  # leaves an empty/audit-only "grave". Reclaim it on exit unless the run
+  # actually finalized; a finalized case always has verdict.json, so a kept
+  # dir is always a real case.
+  trap cleanup_on_exit EXIT INT TERM
+  export FIND_EVIL_LOCAL=1
+  export PYTHONPATH="${REPO_ROOT}/services/agent${PYTHONPATH:+:${PYTHONPATH}}"
+  ENGINE+=(--local --case-id "${CASE_ID}")
+else
+  ENGINE+=(--case-id "${CASE_ID}")
+fi
+[[ ${#PASSTHROUGH[@]} -gt 0 ]] && ENGINE+=("${PASSTHROUGH[@]}")
+if [[ "${DRY}" == "1" ]]; then
+  ok "DRY-RUN: ${ENGINE[*]}"
+  log "4/4 dashboard"
+  ok "DRY-RUN: open the live dashboard at the case"
+  echo; log "done (dry-run)"
+  exit 0
+fi
+
+# Local mode: open the dashboard LIVE before the engine runs.
+if [[ "${SIFT}" == "0" ]]; then
+  log "4/4 dashboard (live)"
+  open_dashboard "${CASE_DIR}"
+fi
+
+"${ENGINE[@]}"
+
+if [[ "${AGENT_MODE}" == "1" ]] && ! agent_manifest_verified "${SUMMARY}"; then
+  fail "native agent manifest verification failed; run incomplete / custody invalid"
+fi
+
+if [[ -n "${CASE_DIR:-}" ]]; then
+  sync_case_summary "${SUMMARY}"
+fi
+copy_requested_run_summary "${SUMMARY}"
+
+if [[ "${SIFT}" == "1" ]]; then
+  cleanup_current_sift_staging
+fi
+
+# 5. Resolve + open the case dir, THEN fire automation (below). SIFT resolves the
+#    case dir here after the post-run sync; local pinned it up front. Automation
+#    runs after this block so it fires in BOTH local and --sift mode. ----------
+if [[ "${SIFT}" == "1" ]]; then
+  log "4/4 dashboard"
+  [[ -n "${CASE_DIR:-}" ]] || fail "missing reserved SIFT case directory"
+  initialize_case_layout "${CASE_DIR}"
+  sync_case_summary "${SUMMARY}"
+  open_dashboard "${CASE_DIR}"
+elif [[ -z "${CASE_DIR:-}" ]]; then
+  log "4/4 dashboard"
+  CASE_DIR="$(resolve_case_dir_with_fallback "${SUMMARY}" "$(case_root_abs)")"
+  [[ -n "${CASE_DIR:-}" ]] && initialize_case_layout "${CASE_DIR}"
+  sync_case_summary "${SUMMARY}"
+  open_dashboard "${CASE_DIR}"
+fi
+
+# Post-verdict automation — runs in BOTH local and --sift mode now that CASE_DIR
+# is resolved. The n8n finding-to-action workflow + the grounding sidecar are
+# host-side and post-verdict; they read the (synced) verdict.json and write
+# sidecars. NEVER in the signed audit chain; non-fatal; output surfaced so you
+# can see them fire. SIFT runs the DFIR tools in the VM AND the automation here.
+if [[ -n "${CASE_DIR:-}" && -f scripts/n8n_post.py ]]; then
+  log "automation (n8n finding-to-action; post-verdict, not in the audit chain)"
+  N8N_LOG="${CASE_LOG_DIR:-/tmp}/verdict-n8n.log"
+  N8N_LOG_TMP="$(case_sidecar_tmp "${N8N_LOG}")"
+  if python3 scripts/n8n_post.py "${CASE_DIR}" >"${N8N_LOG_TMP}" 2>&1; then
+    publish_case_sidecar_tmp "${N8N_LOG_TMP}" "${N8N_LOG}"
+    automation_state="$(python3 - "${CASE_DIR}/automation.json" <<'PY' 2>/dev/null || true
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    print("unknown")
+else:
+    if data.get("n8n_reachable"):
+        print("reachable")
+    else:
+        print("skipped")
+PY
+)"
+    if [[ "${automation_state}" == "reachable" ]]; then
+      ok "n8n reachable; automation sidecar recorded — ${CASE_DIR}/automation.json"
+    else
+      warn "n8n automation skipped or unreachable — ${CASE_DIR}/automation.json"
+    fi
+  else
+    publish_case_sidecar_tmp "${N8N_LOG_TMP}" "${N8N_LOG}"
+    warn "n8n automation skipped (down or unreachable); details: ${N8N_LOG}"
+  fi
+fi
+if [[ -n "${CASE_DIR:-}" && -z "${FINDEVIL_SKIP_GROUNDING:-}" && -f scripts/ground_verdict.py ]]; then
+  if curl -fsS --max-time 3 http://127.0.0.1:5678/healthz >/dev/null 2>&1; then
+    log "grounding (anti-hallucination sidecar; post-verdict, not in the audit chain)"
+    GROUNDING_LOG="${CASE_LOG_DIR:-/tmp}/verdict-grounding.log"
+    GROUNDING_LOG_TMP="$(case_sidecar_tmp "${GROUNDING_LOG}")"
+    if python3 scripts/ground_verdict.py "${CASE_DIR}" >"${GROUNDING_LOG_TMP}" 2>&1 \
+       && python3 scripts/ground_actions.py "${CASE_DIR}" >>"${GROUNDING_LOG_TMP}" 2>&1; then
+      publish_case_sidecar_tmp "${GROUNDING_LOG_TMP}" "${GROUNDING_LOG}"
+      ok "grounding written — ${CASE_DIR}/grounding.json"
+    else
+      publish_case_sidecar_tmp "${GROUNDING_LOG_TMP}" "${GROUNDING_LOG}"
+      warn "grounding incomplete; details: ${GROUNDING_LOG}"
+    fi
+  else
+    warn "grounding skipped (n8n/browserless not reachable at http://127.0.0.1:5678)"
+  fi
+fi
+
+echo
+log "done"
+[[ -n "${CASE_DIR:-}" ]] && printf '   case   : %s\n' "${CASE_DIR}" >&2
+printf '   verdict: %s/verdict.json\n' "${CASE_DIR:-<case dir>}" >&2

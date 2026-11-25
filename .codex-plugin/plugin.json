@@ -1,0 +1,7 @@
+{
+  "name": "verdict-dfir",
+  "version": "1.0.0",
+  "description": "VERDICT — REA for DFIR MCP plugin for Codex.",
+  "mcp": ".codex-plugin/mcp.json",
+  "skills": [".agents/skills/verdict-dfir"]
+}

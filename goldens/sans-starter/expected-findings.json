@@ -1,0 +1,20 @@
+{
+  "_comment": [
+    "Stub for the SANS Find Evil! 2026 starter case data (distributed via Egnyte).",
+    "Status: pending_manual_walkthrough — findings will be populated after",
+    "a manual analyst walkthrough against the released dataset.",
+    "",
+    "To stage: set SANS_STARTER_URL=file://<local>.zip SANS_STARTER_SHA256=<sha256>",
+    "and run bash scripts/fetch-fixtures.sh. See fetch-fixtures.sh:78-87 for the",
+    "download + verify + unpack contract.",
+    "",
+    "Schema mirrors goldens/nist-hacking-case/expected-findings.json."
+  ],
+  "status": "pending_manual_walkthrough",
+  "case_id": "sans-starter",
+  "source_url": "SANS_STARTER_URL",
+  "license": "VERDICT-authored schema stub — no SANS dataset content (populate locally via scripts/fetch-fixtures.sh)",
+  "verdict": "UNKNOWN",
+  "min_recall_percent": null,
+  "findings": []
+}

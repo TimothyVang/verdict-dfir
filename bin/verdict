@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# verdict — launch the external VERDICT agent runtime with CaseForge's locked
+# opencode profile. Typing `verdict` drops you into the interactive agent TUI.
+# Every argument is passed straight through to the external VERDICT runtime
+# (`verdict run ...`, `verdict auth`, etc).
+#
+# Path-agnostic: resolve this launcher and config from the script path, then
+# delegate to $VERDICT_BIN or an external `verdict`.
+set -euo pipefail
+
+resolve_path() {
+  local source dir target
+  source="$1"
+  while [ -L "$source" ]; do
+    dir="$(cd -P "$(dirname "$source")" && pwd)"
+    target="$(readlink "$source")"
+    case "$target" in
+      /*) source="$target" ;;
+      *) source="$dir/$target" ;;
+    esac
+  done
+  dir="$(cd -P "$(dirname "$source")" && pwd)"
+  printf '%s/%s\n' "$dir" "$(basename "$source")"
+}
+
+runtime_bin() {
+  local candidate resolved
+  if [ -n "${VERDICT_BIN:-}" ]; then
+    resolved="$(resolve_path "$VERDICT_BIN")"
+    if [ "$resolved" = "$SELF" ]; then
+      echo "[verdict] VERDICT_BIN points back to this CaseForge launcher; refusing recursive launch." >&2
+      exit 1
+    fi
+    printf '%s\n' "$resolved"
+    return 0
+  fi
+
+  while IFS= read -r candidate; do
+    [ -n "$candidate" ] || continue
+    resolved="$(resolve_path "$candidate")"
+    if [ "$resolved" != "$SELF" ] && [ -x "$resolved" ]; then
+      printf '%s\n' "$resolved"
+      return 0
+    fi
+  done < <(type -P -a verdict 2>/dev/null || true)
+
+  return 1
+}
+
+SELF="$(resolve_path "${BASH_SOURCE[0]}")"
+BIN_DIR="$(cd "$(dirname "$SELF")" && pwd)"  # <workspace>/caseforge/bin
+ROOT="$(cd "$BIN_DIR/.." && pwd)"            # <workspace>/caseforge
+
+export OPENCODE_CONFIG="${OPENCODE_CONFIG:-$ROOT/configs/opencode/opencode.json}"
+export OPENCODE_CONFIG_DIR="${OPENCODE_CONFIG_DIR:-$ROOT/configs/opencode}"
+
+BIN="$(runtime_bin || true)"
+
+if [ -z "$BIN" ] || [ ! -x "$BIN" ]; then
+  echo "[verdict] external VERDICT runtime not found." >&2
+  echo "[verdict] set VERDICT_BIN=/path/to/verdict or install verdict on PATH." >&2
+  exit 1
+fi
+
+exec "$BIN" "$@"

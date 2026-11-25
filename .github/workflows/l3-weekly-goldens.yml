@@ -1,0 +1,95 @@
+name: L3 Weekly Goldens
+
+# Glue Spec #4 §3. Sunday 23:00 UTC full golden matrix — used as
+# the "authoritative score" feed for the leaderboard. Same tooling
+# as l3-nightly.yml but runs every fixture regardless of change
+# detection.
+
+on:
+  schedule:
+    - cron: '0 23 * * 0'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  weekly-golden:
+    name: Weekly L3 golden matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with: { lfs: true }
+
+      - name: Verify KVM
+        id: kvm-check
+        run: |
+          if [[ -c /dev/kvm ]] && [[ -r /dev/kvm ]]; then
+            echo "kvm_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "kvm_ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::no /dev/kvm on this runner; using local SIFT evidence fallback"
+          fi
+
+      - name: Install host deps
+        if: steps.kvm-check.outputs.kvm_ok == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 qemu-utils zstd sshpass netcat-openbsd jq
+
+      - name: Restore warm qcow2
+        if: steps.kvm-check.outputs.kvm_ok == 'true'
+        uses: actions/cache@v4
+        with:
+          path: packer/artifacts/sift-microvm-warm.qcow2.zst
+          key: sift-warm-${{ hashFiles('packer/sift-microvm.pkr.hcl', 'scripts/sift-provision.sh') }}
+
+      - name: Fetch fixtures
+        if: steps.kvm-check.outputs.kvm_ok == 'true'
+        run: |
+          if [[ -x scripts/fetch-fixtures.sh ]]; then
+            bash scripts/fetch-fixtures.sh
+          fi
+
+      - name: Run full golden matrix
+        if: steps.kvm-check.outputs.kvm_ok == 'true'
+        env:
+          CPUS: 4
+          MEMORY_MB: 8192
+        run: |
+          bash scripts/l3-run-goldens.sh
+
+      - name: Validate local SIFT evidence fallback
+        if: steps.kvm-check.outputs.kvm_ok != 'true'
+        run: |
+          echo "::notice::KVM unavailable on this runner - no SIFT-parity golden run occurred. Validating the committed local evidence record instead; a green result here does NOT mean the goldens passed."
+          python3 scripts/validate-l3-evidence.py \
+            docs/release-evidence/l3-local-sift.json \
+            --max-age-days 120 \
+            --emit logs/l3/nist-hacking-case-verdict.json
+          python3 scripts/json-to-benchmark-csv.py logs/l3 > benchmark-results.csv
+          python3 scripts/validate-submission-assets.py --benchmark benchmark-results.csv
+
+      - name: Upload verdicts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l3-weekly-verdicts
+          path: logs/l3/**
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Push weekly score to leaderboard
+        if: steps.kvm-check.outputs.kvm_ok == 'true' && env.LEADERBOARD_API_KEY != ''
+        env:
+          LEADERBOARD_API_KEY: ${{ secrets.LEADERBOARD_API_KEY }}
+        run: |
+          if [[ -x scripts/push-leaderboard-score.sh ]]; then
+            bash scripts/push-leaderboard-score.sh \
+              --commit-sha "${GITHUB_SHA}" \
+              --run-id "${GITHUB_RUN_ID}" \
+              --release false \
+              || true
+          fi

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/draft/schema.json",
+  "mcpServers": {
+    "findevil-mcp": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["scripts/run-mcp-rust.sh"],
+      "cwd": "."
+    },
+    "findevil-agent-mcp": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["scripts/run-mcp-python.sh"],
+      "cwd": "."
+    },
+    "n8n-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "n8n-mcp"],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "${N8N_API_URL:-http://localhost:5678}",
+        "N8N_API_KEY": "${N8N_API_KEY:-}"
+      }
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "puppeteer": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    },
+    "qmd": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["scripts/run-mcp-qmd.sh"],
+      "cwd": "."
+    }
+  }
+}

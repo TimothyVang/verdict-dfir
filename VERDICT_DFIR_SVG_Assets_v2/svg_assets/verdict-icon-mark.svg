@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="300"
+   height="340"
+   viewBox="0 0 300 340"
+   fill="none"
+   version="1.1"
+   id="svg7"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs7" />
+  <g
+     transform="translate(30 22) scale(2.0)"
+     id="g7">
+    <path
+       d="M17 18 L31 12 L63 91 L50 103 Z"
+       fill="#4D5DFF"
+       id="path1" />
+    <path
+       d="M103 18 L89 12 L57 91 L70 103 Z"
+       fill="#B8A8FF"
+       id="path2" />
+    <circle
+       cx="24"
+       cy="18"
+       r="14"
+       fill="#4D5DFF"
+       id="circle2" />
+    <circle
+       cx="24"
+       cy="18"
+       r="7"
+       fill="#F5F1E8"
+       id="circle3" />
+    <circle
+       cx="96"
+       cy="18"
+       r="14"
+       fill="#B8A8FF"
+       id="circle4" />
+    <circle
+       cx="96"
+       cy="18"
+       r="7"
+       fill="#F5F1E8"
+       id="circle5" />
+    <circle
+       cx="60"
+       cy="96"
+       r="15"
+       fill="#F5F1E8"
+       id="circle6" />
+    <circle
+       cx="60"
+       cy="96"
+       r="10"
+       fill="#101426"
+       id="circle7" />
+    <rect
+       x="56"
+       y="108"
+       width="8"
+       height="28"
+       rx="4"
+       fill="#101426"
+       id="rect7" />
+  </g>
+</svg>

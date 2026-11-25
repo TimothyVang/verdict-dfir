@@ -1,0 +1,223 @@
+# provider-capabilities.yaml
+#
+# Purpose: Registry of LLM providers for caseforge-core, the headless
+#          DFIR agentic engine. Each entry records where the provider runs
+#          (local vs cloud), whether it needs an API key/env var, whether it
+#          supports tool/function calling, whether it streams, and free-form
+#          notes. The privacy router consults `location` per provider to decide
+#          whether evidence-derived context may be sent to it.
+#
+# Status:  ACTIVE (Phase 1 registry). Capabilities marked `unknown` mean the
+#          engine probes at runtime and caches the result.
+#
+# Security: NEVER put real keys here. `env_var` names the environment variable
+#           the runtime reads; the value is resolved at load time, never stored.
+#
+# schema_version: 1
+
+defaults:
+  streaming: unknown
+  tool_calling: unknown
+
+providers:
+
+  # ----------------------------------------------------------------------------
+  # LOCAL providers (no data leaves the host; privacy_location: local)
+  # ----------------------------------------------------------------------------
+
+  local-vllm:
+    location: local
+    route_status: named-route   # a named route in model-routes.yaml targets this provider
+    needs_api_key: false          # vLLM serves an unauthenticated OpenAI-compatible API by default
+    env_var: null
+    tool_calling: true            # vLLM supports OpenAI-style tools with tool-parser-enabled models
+    streaming: true
+    notes: >-
+      OpenAI-compatible server (http://localhost:8000/v1). Tool calling depends on
+      launching with --enable-auto-tool-choice and a model-appropriate tool parser.
+
+  local-ollama:
+    location: local
+    route_status: named-route   # a named route in model-routes.yaml targets this provider
+    needs_api_key: false
+    env_var: null
+    tool_calling: unknown         # Varies by model; many small local models advertise but do not reliably drive tools
+    streaming: true
+    notes: >-
+      OpenAI-compatible endpoint at http://localhost:11434/v1 plus native /api.
+      Tool reliability is highly model-dependent (see empirical_notes below).
+
+  local-llamacpp:
+    location: local
+    route_status: named-route   # a named route in model-routes.yaml targets this provider
+    needs_api_key: false
+    env_var: null
+    tool_calling: unknown         # llama.cpp server supports grammar/tools but reliability depends on GGUF + template
+    streaming: true
+    notes: >-
+      llama.cpp `llama-server` exposes an OpenAI-compatible API. Tool calling
+      requires a chat template that emits tool-call tokens; quantized small models
+      are inconsistent.
+
+  local-lmstudio:
+    location: local
+    route_status: named-route   # a named route in model-routes.yaml targets this provider
+    needs_api_key: false
+    env_var: null
+    tool_calling: unknown
+    streaming: true
+    notes: >-
+      LM Studio local server is OpenAI-compatible (default http://localhost:1234/v1).
+      Tool calling exposed per loaded model; verify at runtime.
+
+  local-nim:
+    location: local
+    route_status: named-route   # a named route in model-routes.yaml targets this provider
+    needs_api_key: false          # Self-hosted NIM microservice; may require NGC auth to pull the container, not to call it
+    env_var: null
+    tool_calling: unknown
+    streaming: true
+    notes: >-
+      NVIDIA NIM self-hosted inference microservice, OpenAI-compatible. Pulling the
+      container image needs an NGC key (NGC_API_KEY) but local inference calls do not.
+
+  # ----------------------------------------------------------------------------
+  # CLOUD providers (data leaves the host; privacy_location: cloud)
+  # ----------------------------------------------------------------------------
+
+  litellm:
+    location: cloud               # Gateway/proxy: treat as cloud unless it is itself pointed only at local backends
+    route_status: capability-only   # declared capability only: no named route, no live receipt
+    needs_api_key: true
+    env_var: LITELLM_API_KEY      # Master/virtual key for the proxy; upstream keys live in the proxy config
+    tool_calling: true
+    streaming: true
+    notes: >-
+      Universal gateway/proxy. Normalizes many providers to one OpenAI-compatible
+      surface. Effective privacy depends on which upstreams it routes to; the
+      router should resolve to the concrete backend where possible.
+
+  openrouter:
+    location: cloud
+    route_status: named-route   # a named route in model-routes.yaml targets this provider
+    needs_api_key: true
+    env_var: OPENROUTER_API_KEY
+    tool_calling: true            # Supported for tool-capable models; passthrough varies per underlying model
+    streaming: true
+    notes: >-
+      Aggregator over many hosted models via one OpenAI-compatible API
+      (https://openrouter.ai/api/v1). Tool support is per-model.
+
+  zai:
+    location: cloud
+    route_status: named-route   # a named route in model-routes.yaml targets this provider
+    needs_api_key: true
+    env_var: ZAI_API_KEY
+    tool_calling: true
+    streaming: true
+    notes: >-
+      Direct Z.AI API (GLM family, e.g. glm-4.6). OpenAI-compatible endpoint.
+
+  openai:
+    location: cloud
+    route_status: named-route   # a named route in model-routes.yaml targets this provider
+    needs_api_key: true
+    env_var: OPENAI_API_KEY
+    tool_calling: true
+    streaming: true
+    notes: Native OpenAI API. Reliable function/tool calling on capable models.
+
+  xai:
+    location: cloud
+    route_status: named-route   # a named route in model-routes.yaml targets this provider
+    needs_api_key: true
+    env_var: XAI_API_KEY
+    tool_calling: true
+    streaming: true
+    notes: >-
+      xAI Grok API (https://api.x.ai/v1). Native provider id in the verdict engine
+      is `xai` (model refs like xai/grok-3). Use only when privacy mode allows
+      cloud egress (cloud-ok / redacted-cloud). Set XAI_API_KEY from the xAI console.
+
+  anthropic:
+    location: cloud
+    route_status: capability-only   # declared capability only: no named route, no live receipt
+    needs_api_key: true
+    env_var: ANTHROPIC_API_KEY
+    tool_calling: true
+    streaming: true
+    notes: Native Anthropic Messages API with tool use.
+
+  gemini:
+    location: cloud
+    route_status: capability-only   # declared capability only: no named route, no live receipt
+    needs_api_key: true
+    env_var: GEMINI_API_KEY
+    tool_calling: true
+    streaming: true
+    notes: Google Gemini API. Supports function calling and streaming.
+
+  bedrock:
+    location: cloud
+    route_status: capability-only   # declared capability only: no named route, no live receipt
+    needs_api_key: true           # Uses AWS credentials rather than a single API key
+    env_var: AWS_BEARER_TOKEN_BEDROCK   # Or standard AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_REGION
+    tool_calling: true
+    streaming: true
+    notes: >-
+      AWS Bedrock. Tool calling depends on the underlying model family
+      (Anthropic, Llama, Mistral, etc.). Auth via AWS credential chain.
+
+  azure-openai:
+    location: cloud
+    route_status: capability-only   # declared capability only: no named route, no live receipt
+    needs_api_key: true
+    env_var: AZURE_OPENAI_API_KEY   # Also needs AZURE_OPENAI_ENDPOINT and a deployment name
+    tool_calling: true
+    streaming: true
+    notes: >-
+      Azure-hosted OpenAI deployments. Requires endpoint + deployment name in
+      addition to the key; capabilities track the deployed model.
+
+  groq:
+    location: cloud
+    route_status: capability-only   # declared capability only: no named route, no live receipt
+    needs_api_key: true
+    env_var: GROQ_API_KEY
+    tool_calling: true
+    streaming: true
+    notes: Groq LPU inference, OpenAI-compatible. Tool calling on supported models.
+
+  together:
+    location: cloud
+    route_status: capability-only   # declared capability only: no named route, no live receipt
+    needs_api_key: true
+    env_var: TOGETHER_API_KEY
+    tool_calling: unknown         # Model-dependent across the Together catalog
+    streaming: true
+    notes: Together AI hosted open models, OpenAI-compatible. Tool support per model.
+
+  fireworks:
+    location: cloud
+    route_status: capability-only   # declared capability only: no named route, no live receipt
+    needs_api_key: true
+    env_var: FIREWORKS_API_KEY
+    tool_calling: unknown         # Model-dependent
+    streaming: true
+    notes: Fireworks AI hosted open models, OpenAI-compatible. Tool support per model.
+
+# ------------------------------------------------------------------------------
+# Empirical notes (bench observations that inform default routing)
+# ------------------------------------------------------------------------------
+empirical_notes:
+  - >-
+    Small local models qwen2.5-coder:7b and llama3.1:8b, tested on CPU-only
+    inference, did NOT reliably drive tools (frequent malformed / skipped
+    tool calls). Do not depend on them for agentic tool-calling paths.
+  - >-
+    Capable cloud models gpt-5.5 and gpt-5.4-mini DID reliably drive tools in
+    the same harness. Prefer them for tool-heavy DFIR reasoning when the privacy
+    router permits cloud egress.
+  - >-
+    Treat any `tool_calling: unknown` provider/model as "probe before trusting":
+    run the capability probe and cache per (provider, model) pair.

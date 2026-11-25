@@ -1,0 +1,152 @@
+name: L3 Nightly Goldens
+
+# Spec #3 §4.4 + glue Spec #4 §3. Full-SIFT-parity golden run.
+# Prefers KVM on the runner (GHA larger runners with KVM enabled,
+# or a self-hosted runner with /dev/kvm). If the KVM label has no
+# capacity, validates explicit local SIFT evidence rather than silently
+# treating a skipped KVM run as green.
+#
+# Budget: 5-20min wall clock. Runs nightly on master at 02:30 UTC and
+# on every push to master (in addition to the cron). Green L3 is
+# REQUIRED before release.yml will build a `v<N>` tag.
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+concurrency:
+  group: l3-nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  l3-golden-run:
+    name: L3 full-SIFT golden run
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Verify KVM available
+        id: kvm-check
+        run: |
+          if [[ -c /dev/kvm ]] && [[ -r /dev/kvm ]]; then
+            echo "kvm_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "kvm_ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::KVM not available on this runner; using local SIFT evidence fallback"
+          fi
+
+      - name: Install host deps
+        if: steps.kvm-check.outputs.kvm_ok == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-system-x86 qemu-utils zstd sshpass netcat-openbsd jq
+
+      - name: Restore warm qcow2 from cache
+        if: steps.kvm-check.outputs.kvm_ok == 'true'
+        id: cache-warm
+        uses: actions/cache@v4
+        with:
+          path: packer/artifacts/sift-microvm-warm.qcow2.zst
+          key: sift-warm-${{ hashFiles('packer/sift-microvm.pkr.hcl', 'scripts/sift-provision.sh') }}
+
+      - name: Build warm qcow2 via Packer (if cache miss)
+        if: |
+          steps.kvm-check.outputs.kvm_ok == 'true'
+          && steps.cache-warm.outputs.cache-hit != 'true'
+        run: |
+          if [[ ! -f sift-2026-04-22.ova ]]; then
+            echo "::error::sift-2026-04-22.ova missing; L3 cannot build the warm qcow2"
+            echo "::error::Provision the OVA as a self-hosted fixture or cache it separately."
+            exit 1
+          fi
+          curl -fsSL https://releases.hashicorp.com/packer/1.11.2/packer_1.11.2_linux_amd64.zip \
+            -o /tmp/packer.zip
+          unzip -q /tmp/packer.zip -d /usr/local/bin
+          packer --version
+          packer init packer/sift-microvm.pkr.hcl
+          packer build -force packer/sift-microvm.pkr.hcl
+
+      - name: Fetch fixtures
+        if: steps.kvm-check.outputs.kvm_ok == 'true'
+        run: |
+          if [[ -x scripts/fetch-fixtures.sh ]]; then
+            bash scripts/fetch-fixtures.sh
+          else
+            echo "No fetch-fixtures.sh yet — L3 will skip fixtures"
+          fi
+
+      - name: Run L3 goldens
+        if: steps.kvm-check.outputs.kvm_ok == 'true'
+        id: goldens
+        run: |
+          bash scripts/l3-run-goldens.sh
+        env:
+          CPUS: 4
+          MEMORY_MB: 8192
+
+      - name: Validate local SIFT evidence fallback
+        if: steps.kvm-check.outputs.kvm_ok != 'true'
+        run: |
+          echo "::notice::KVM unavailable on this runner - no SIFT-parity golden run occurred. Validating the committed local evidence record instead; a green result here does NOT mean the goldens passed."
+          python3 scripts/validate-l3-evidence.py \
+            docs/release-evidence/l3-local-sift.json \
+            --max-age-days 120 \
+            --emit logs/l3/nist-hacking-case-verdict.json
+          python3 scripts/json-to-benchmark-csv.py logs/l3 > benchmark-results.csv
+          python3 scripts/validate-submission-assets.py --benchmark benchmark-results.csv
+
+      - name: Upload L3 artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l3-verdicts
+          path: |
+            logs/l3/**
+            goldens/**/expected-findings.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Push score to findevil-bench.dev leaderboard
+        if: |
+          steps.kvm-check.outputs.kvm_ok == 'true'
+          && steps.goldens.outcome == 'success'
+          && env.LEADERBOARD_API_KEY != ''
+        env:
+          LEADERBOARD_API_KEY: ${{ secrets.LEADERBOARD_API_KEY }}
+        run: |
+          if [[ -x scripts/push-leaderboard-score.sh ]]; then
+            bash scripts/push-leaderboard-score.sh --run-id "${{ github.run_id }}" \
+              --commit-sha "${{ github.sha }}" || true
+          fi
+
+      - name: Notify Slack on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_CI: ${{ secrets.SLACK_WEBHOOK_CI }}
+        run: |
+          if [[ -z "${SLACK_WEBHOOK_CI:-}" ]]; then
+            echo "::notice::SLACK_WEBHOOK_CI is not configured; skipping Slack failure notification."
+            exit 0
+          fi
+          msg="[find-evil CI] l3-nightly | FAIL | ${GITHUB_SHA:0:7} | ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          L3 golden run failed on main. Release gates blocked until green."
+          curl -fsSL -X POST "${SLACK_WEBHOOK_CI}" \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -nR --arg t "$msg" '{text:$t}')" \
+            || true
+
+      - name: Skip note (KVM unavailable)
+        if: steps.kvm-check.outputs.kvm_ok != 'true'
+        run: |
+          echo "::warning::Remote KVM L3 was unavailable; validated committed local SIFT evidence instead."
+          echo "::notice::To run full remote L3: switch to a GHA larger runner with KVM, or a self-hosted runner with virtualization."

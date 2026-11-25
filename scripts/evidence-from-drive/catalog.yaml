@@ -1,0 +1,114 @@
+# VERDICT beta evidence cases on the shared Google Drive library.
+# Folder: https://drive.google.com/drive/folders/1j4nPm3vjAcRwVdKOauIVc8yurxoADhOv
+#
+# Paths are remote-relative. Downloads land under EVIDENCE_CACHE or the
+# platform cache default documented in docs/using/evidence-from-drive.md.
+
+remote: verdictdrive
+root_folder_id: "1j4nPm3vjAcRwVdKOauIVc8yurxoADhOv"
+
+cases:
+  win-lateral-movement:
+    tier: small
+    size_hint: ~200KiB
+    remote_paths:
+      - windows-event-logs/win-lateral-movement/
+    description: "Scorecard EVTX — T1047 / T1543.003"
+
+  attack-samples:
+    tier: small
+    size_hint: ~1.3MiB
+    remote_paths:
+      - windows-event-logs/attack-samples/
+    description: "Mixed EVTX sample set"
+
+  mini-fleet:
+    tier: small
+    size_hint: ~1MiB
+    remote_paths:
+      - windows-event-logs/mini-fleet/
+    description: "Multi-host EVTX mini fleet"
+
+  network-nitroba:
+    tier: small
+    size_hint: ~48MiB
+    remote_paths:
+      - network-captures/nitroba/
+    description: "nitroba.pcap"
+
+  security-datasets:
+    tier: small
+    size_hint: ~76MiB
+    remote_paths:
+      - security-datasets/
+    description: "Small security dataset bundle"
+
+  nist-schardt:
+    tier: large
+    size_hint: ~4GiB
+    remote_paths:
+      - disk-images/nist-hacking-case/
+    description: "NIST SCHARDT disk image set"
+
+  srl-2018-disk-images:
+    tier: large
+    size_hint: ~100GiB
+    remote_paths:
+      - disk-images/srl-2018/
+    description: "SRL 2018 fleet disk E01s — check free disk first"
+
+  srl-2018-memory-images:
+    tier: large
+    size_hint: ~97GiB
+    remote_paths:
+      - memory-images/srl-2018/
+    description: "SRL 2018 host memory images — check free disk first"
+
+  srl-2018-derived:
+    tier: large
+    size_hint: ~73GiB
+    remote_paths:
+      - derived-artifacts/srl-2018-xartifact/
+    description: "SRL 2018 derived xartifact set"
+
+  vanko:
+    tier: large
+    size_hint: ~41GiB
+    remote_paths:
+      - mixed-cases/vanko/
+    description: "VANKO.zip mixed case"
+
+  magnet-ctf:
+    tier: large
+    size_hint: ~38GiB
+    remote_paths:
+      - mixed-cases/magnet-ctf/
+    description: "Magnet CTF packs"
+
+  rocba-disk:
+    tier: large
+    size_hint: ~23GiB
+    remote_paths:
+      - disk-images/rocba/rocba-cdrive.e01
+    description: "ROCBA C-drive image"
+
+  rocba-memory:
+    tier: large
+    size_hint: varies
+    remote_paths:
+      - memory-images/rocba/Rocba-Memory.raw
+    description: "ROCBA memory image"
+
+  rocba-fusion:
+    tier: large
+    size_hint: ~18GiB
+    remote_paths:
+      - mixed-cases/rocba-fusion/
+    description: "ROCBA fusion pack"
+
+  szechuan-dc:
+    tier: large
+    size_hint: ~7GiB
+    remote_paths:
+      - mixed-cases/szechuan-dc/
+    description: "Szechuan DC evidence"

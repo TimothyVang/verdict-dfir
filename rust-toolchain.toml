@@ -1,0 +1,12 @@
+# Pin the Rust toolchain so every CI + local invocation uses the
+# same compiler. Matches Spec #2 §16 library pins + the L1 dev-base
+# Dockerfile.
+
+[toolchain]
+# Bumped from 1.83 to 1.88 at 2026-04-24 — transitive deps in the
+# Rust ecosystem now routinely require edition 2024 (stabilized in
+# 1.85). Spec #2 §16 "rust-version = 1.83" is superseded by this
+# file; treat this toolchain pin as authoritative.
+channel = "1.88.0"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

@@ -1,0 +1,65 @@
+# ocr-profiles.yaml
+#
+# Purpose: OCR profiles for caseforge-core. Each profile names an OCR
+#          engine, its languages, and a privacy_location so the privacy router
+#          can decide whether a given image/document may be sent to it. Cloud
+#          vision is gated to non-sensitive material only.
+#
+# Status:  PLANNED (Phase 11). STUB ONLY. No OCR engine is wired yet; these are
+#          intended profiles the future OCR stage will select from.
+#
+# Privacy: `privacy_location` mirrors the model-route contract --
+#            local  -> stays on host, safe for sensitive/seized evidence.
+#            cloud  -> egresses; router BLOCKS unless material is non-sensitive.
+#
+# schema_version: 1
+
+profiles:
+
+  tesseract-local:
+    engine: tesseract
+    location: local
+    privacy_location: local
+    languages: [eng]              # add e.g. deu, fra, spa, chi_sim as tessdata is installed
+    needs_api_key: false
+    env_var: null
+    default: true                 # local default; safe for sensitive evidence
+    notes: >-
+      Tesseract OCR running fully on-host. First choice for seized/sensitive
+      documents since no data leaves the machine.
+
+  paddleocr-local:
+    engine: paddleocr
+    location: local
+    privacy_location: local
+    languages: [en, ch]           # PaddleOCR language codes
+    needs_api_key: false
+    env_var: null
+    default: false
+    notes: >-
+      PaddleOCR on-host. Often stronger on dense/complex layouts and CJK than
+      Tesseract. Still fully local -- safe for sensitive evidence.
+
+  cloud-vision:
+    engine: cloud-vision
+    location: cloud
+    privacy_location: cloud
+    languages: [auto]             # provider auto-detects language
+    needs_api_key: true
+    env_var: CLOUD_VISION_API_KEY # placeholder; resolved from env, never hardcoded
+    default: false
+    sensitivity_gate: non_sensitive_only   # router MUST refuse this for sensitive material
+    notes: >-
+      Hosted cloud OCR/vision. Higher accuracy on hard inputs but EGRESSES image
+      data. Permitted ONLY for material explicitly marked non-sensitive; the
+      privacy router blocks it otherwise.
+
+# ------------------------------------------------------------------------------
+# Selection policy (advisory; privacy router enforces).
+# ------------------------------------------------------------------------------
+selection_policy:
+  sensitive_default: tesseract-local     # never a cloud profile for sensitive input
+  non_sensitive_default: tesseract-local # cloud-vision is opt-in even when allowed
+  notes: >-
+    Default to local OCR everywhere. cloud-vision is only reachable when the
+    active material is marked non_sensitive AND explicitly requested.

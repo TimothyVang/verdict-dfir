@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# DEPRECATED — merged into scripts/verdict (one command, one workflow).
+# The old standalone visible-demo engine (direct Volatility heuristics + n8n
+# wiring) is retired; scripts/verdict runs the real typed-MCP pipeline and
+# opens the same live dashboard at the case. n8n finding-to-action stays
+# optional operator tooling (docs/runbooks/n8n-automation-integration.md).
+echo "[find-evil-live] deprecated → use: scripts/verdict <evidence>" >&2
+exec "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/verdict" "$@"

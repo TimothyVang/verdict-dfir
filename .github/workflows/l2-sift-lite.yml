@@ -1,0 +1,173 @@
+name: L2 SIFT-lite (Advisory)
+
+# Spec #3 §4.3 — runs DFIR-tool smoke tests in a Sysbox-runtime
+# container. NON-BLOCKING per Spec #3 — DFIR tool flakiness must
+# not stall the PR pipeline. Think of this as a "CI canary"
+# that posts results but never red-lights a merge.
+#
+# Sysbox is not installed on GitHub-hosted runners today. This job
+# therefore does one of three things:
+#   1. If the runner has Sysbox (self-hosted runners with Sysbox
+#      installed), run the smoke inside Sysbox-runc.
+#   2. Otherwise, fall back to docker-in-docker with --privileged
+#      (documented compromise — advisory-only outcome is fine).
+#   3. If fixtures aren't present, skip the content tests but still
+#      verify the image builds + tools are on PATH.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: l2-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write # for posting the advisory comment
+
+jobs:
+  sift-lite-smoke:
+    name: L2 SIFT-lite DFIR smoke (advisory)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache L2 image
+        id: img-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/l2-siftlite.tar
+          key: l2-siftlite-${{ hashFiles('docker/l2-siftlite.Dockerfile', 'scripts/l2-dfir-smoke.sh') }}
+
+      - name: Build or load L2 image
+        id: build-image
+        run: |
+          set -euo pipefail
+          if [[ -f /tmp/l2-siftlite.tar ]]; then
+            echo "Loading cached L2 image..."
+            if ! docker load --input /tmp/l2-siftlite.tar; then
+              echo "image_ready=false" >> "$GITHUB_OUTPUT"
+              echo "Cached L2 image could not be loaded; advisory-only workflow will skip smoke." > l2-smoke.log
+              exit 0
+            fi
+          else
+            echo "Building L2 image..."
+            if ! docker build \
+              --file docker/l2-siftlite.Dockerfile \
+              --tag findevil/l2-siftlite:local \
+              --build-arg DEV_UID=1000 \
+              --build-arg DEV_GID=1000 \
+              .; then
+              echo "image_ready=false" >> "$GITHUB_OUTPUT"
+              echo "L2 image build failed; advisory-only workflow will skip smoke." > l2-smoke.log
+              exit 0
+            fi
+            docker save --output /tmp/l2-siftlite.tar findevil/l2-siftlite:local
+          fi
+          echo "image_ready=true" >> "$GITHUB_OUTPUT"
+          docker image ls findevil/l2-siftlite:local
+
+      - name: Check for Sysbox availability
+        id: check-sysbox
+        run: |
+          if docker info 2>/dev/null | grep -qi sysbox; then
+            echo "has_sysbox=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_sysbox=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch minimal fixtures (best-effort)
+        id: fixtures
+        continue-on-error: true
+        run: |
+          # Pull OTRF Security-Datasets smallest EVTX sample if not present.
+          # Real L3 uses scripts/fetch-fixtures.sh with full set.
+          mkdir -p fixtures/otrf-apt3-mordor
+          if [[ -z "$(ls -A fixtures/otrf-apt3-mordor 2>/dev/null)" ]]; then
+            curl -fsSL --max-time 30 \
+              https://raw.githubusercontent.com/OTRF/Security-Datasets/master/datasets/atomic/windows/defense_evasion/host/empire_shell_scrcon.zip \
+              -o /tmp/mordor-sample.zip 2>/dev/null || true
+            if [[ -f /tmp/mordor-sample.zip ]]; then
+              unzip -o -q /tmp/mordor-sample.zip -d fixtures/otrf-apt3-mordor 2>/dev/null || true
+            fi
+          fi
+          ls -la fixtures/otrf-apt3-mordor/ 2>/dev/null || true
+
+      - name: Run L2 smoke (advisory)
+        id: smoke
+        if: steps.build-image.outputs.image_ready == 'true'
+        continue-on-error: true
+        run: |
+          # docker-in-docker path. Sysbox path would be:
+          #   docker run --runtime=sysbox-runc ...
+          # Fallback to --privileged when Sysbox isn't available on this
+          # runner. ADVISORY ONLY.
+          if [[ "${{ steps.check-sysbox.outputs.has_sysbox }}" == "true" ]]; then
+            RUNTIME_FLAG="--runtime=sysbox-runc"
+          else
+            RUNTIME_FLAG="--privileged"
+          fi
+
+          docker run $RUNTIME_FLAG --rm \
+            -v "$(pwd)/fixtures:/fixtures:ro" \
+            -v "$(pwd)/goldens:/goldens:ro" \
+            findevil/l2-siftlite:local \
+            /usr/local/bin/run-dfir-smoke.sh \
+            > l2-smoke.log 2>&1 \
+            || echo "exit=$?" >> l2-smoke.log
+
+          echo "=== L2 smoke tail ==="
+          tail -60 l2-smoke.log
+
+      - name: Record skipped L2 smoke
+        if: steps.build-image.outputs.image_ready != 'true'
+        run: |
+          {
+            echo "L2 smoke skipped."
+            echo "Reason: L2 image was not available; advisory-only workflow does not block on external Sysbox base image availability."
+          } >> l2-smoke.log
+
+      - name: Upload smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: l2-smoke-log
+          path: l2-smoke.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Post advisory summary
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### L2 SIFT-lite advisory"
+            echo ""
+            echo "- Sysbox available: ${{ steps.check-sysbox.outputs.has_sysbox }}"
+            echo "- Fixture fetch: ${{ steps.fixtures.outcome }}"
+            echo "- Smoke run: ${{ steps.smoke.outcome }}"
+            echo ""
+            echo "> This check is advisory and does not block merge per Spec #3 §4.3."
+            echo "> Real DFIR validation happens in L3 nightly goldens."
+          } > /tmp/l2-comment.md
+
+          # Only comment once per PR — use a sticky header.
+          # Skip if we can't find the PR number (shouldn't happen in pr event).
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          if [[ -n "$PR_NUMBER" ]]; then
+            gh pr comment "$PR_NUMBER" --edit-last \
+              --body-file /tmp/l2-comment.md \
+              || gh pr comment "$PR_NUMBER" --body-file /tmp/l2-comment.md || true
+          fi
+
+      # Job always succeeds — this workflow is ADVISORY.
+      - name: Always succeed (advisory)
+        run: |
+          echo "L2 SIFT-lite completed; advisory-only per Spec #3 §4.3."

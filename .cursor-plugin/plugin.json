@@ -1,0 +1,12 @@
+{
+  "name": "verdict-dfir",
+  "version": "1.0.0",
+  "description": "VERDICT — REA for DFIR MCP plugin for Cursor.",
+  "mcpServers": {
+    "verdict": {
+      "command": "node",
+      "args": ["packages/verdict-cli/dist/src/cli.js", "serve"]
+    }
+  },
+  "skills": [".agents/skills/verdict-dfir"]
+}

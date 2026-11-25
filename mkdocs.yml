@@ -1,0 +1,104 @@
+site_name: VERDICT DFIR Documentation
+site_description: "VERDICT — DFIR for agents: typed, read-only, audit-chained forensic MCP tools any AI agent can drive, with signed, offline-verifiable verdicts"
+site_url: https://timothyvang.github.io/verdict-dfir/
+repo_url: https://github.com/TimothyVang/verdict-dfir
+repo_name: TimothyVang/verdict-dfir
+edit_uri: edit/master/docs/
+
+exclude_docs: |
+  /README.md
+  README.md
+  analyst/**
+  artifact-semantics.md
+  codex-compatibility.md
+  competitive-analysis.md
+  diagrams/**
+  extending-the-tool-surface.md
+  finding-to-action.md
+  glossary.md
+  investigation-phases.md
+  plans/**
+  replay-determinism.md
+  repo-guide.md
+  references/**
+  release-evidence/*.json
+  runbooks/**
+  showcase/**
+  using/whole-case-local-run.md
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Install: https://github.com/TimothyVang/verdict-dfir/blob/master/INSTALL.md
+  - Quickstart: https://github.com/TimothyVang/verdict-dfir/blob/master/QUICKSTART.md
+  - Running VERDICT: using/running-verdict.md
+  - Architecture: architecture.md
+  - Accuracy:
+      - Accuracy Report: accuracy-report.md
+      - Evidence Answer Keys: evidence-answer-keys.md
+  - Trust Model:
+      - Cryptographic Attestation: cryptographic-attestation.md
+      - Verdict Semantics: verdict-semantics.md
+      - False Positives: false-positives.md
+      - Red-Team Challenge: red-team-challenge.md
+  - Reference:
+      - Dataset: DATASET.md
+      - Live Test Matrix: live-test-matrix.md
+      - MCP Servers and Tools: reference/mcp-and-tools.md
+      - Dependencies: reference/dependencies.md
+      - Environment Variables: reference/environment-variables.md
+  - Operators:
+      - Fleet Analysis: using/fleet-analysis.md
+      - Evidence Intake: using/evidence-intake.md
+      - Evidence from Drive: using/evidence-from-drive.md
+      - Reports: using/reports.md
+      - Troubleshooting: troubleshooting.md
+  - Contributing:
+      - Contribution Model: contribution-model.md
+      - Help Wanted: help-wanted.md
+  - Release:
+      - Release Surface: release-surface.md
+      - Release Evidence: release-evidence/README.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search

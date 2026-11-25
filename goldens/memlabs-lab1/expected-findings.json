@@ -1,0 +1,43 @@
+{
+  "_comment": [
+    "Windows memory-forensics golden for MemLabs Lab 1 - Beginner's Luck.",
+    "Source: https://github.com/stuxnet999/MemLabs/tree/master/Lab%201",
+    "MemLabs states all labs are Windows memory dumps. This is CTF-style ground truth, not a real incident report; do not publish the actual flag values here."
+  ],
+  "status": "ctf_flag_ground_truth_without_flag_values",
+  "case_id": "memlabs-lab1",
+  "source_url": "https://github.com/stuxnet999/MemLabs/tree/master/Lab%201",
+  "license": "MIT License (MemLabs)",
+  "verdict": "SUSPICIOUS",
+  "min_recall_percent": 67,
+  "source_hashes": {
+    "archive_md5": "919a0ded944c427b7f4e5c26a6790e8d",
+    "memory_dump_md5": "b9fec1a443907d870cb32b048bda9380"
+  },
+  "findings": [
+    {
+      "finding_id": "ml1-001",
+      "description": "Memory image contains evidence of a black command window or command execution near the crash time",
+      "mitre_technique": "T1059.003",
+      "confidence": "INFERRED",
+      "artifact_class": "memory",
+      "artifact_hint": "Volatility consoles/cmdscan/cmdline output from MemLabs Lab 1"
+    },
+    {
+      "finding_id": "ml1-002",
+      "description": "Memory image preserves drawing or paint application activity from the user session",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "memory",
+      "artifact_hint": "Process list, handles, filescan, or clipboard data for mspaint/drawing artifacts"
+    },
+    {
+      "finding_id": "ml1-003",
+      "description": "Three ordered CTF flags or important recovered files can be extracted from memory",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "memory",
+      "artifact_hint": "filescan/dumpfiles/strings output; flag values intentionally omitted from the golden"
+    }
+  ]
+}

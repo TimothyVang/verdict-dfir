@@ -1,0 +1,48 @@
+{
+  "_comment": "Manifest for the SANS HACKATHON-2026 'SRL-2018 Compromised Enterprise Network' public Egnyte share. Used by scripts/stage-egnyte-corpus.mjs. The folder-zip endpoint 400s on this share, so files are pulled individually. Disk E01s live in the root folder; the 22 memory captures live in the /SRL-2018 subfolder.",
+  "share": "https://sansorg.egnyte.com/fl/HhH7crTYT4JK",
+  "rootPath": "#folder-link/HACKATHON-2026/Compromised%20APT%20Attack%20Scenarios/SRL-2018-Compromised%20Enterprise%20Network",
+  "groups": [
+    {
+      "subPath": "",
+      "dest": "disks",
+      "files": [
+        "base-dc-cdrive.E01",
+        "base-file-cdrive.E01",
+        "base-rd-01-cdrive.E01",
+        "base-rd-02-cdrive.E01",
+        "base-wkstn-01-c-drive.E01",
+        "base-wkstn-05-cdrive.E01",
+        "dmz-ftp-cdrive.E01"
+      ]
+    },
+    {
+      "subPath": "/SRL-2018",
+      "dest": "mem_archives",
+      "files": [
+        "base-admin-memory.7z",
+        "base-av-memory.7z",
+        "base-dc-memory.7z",
+        "base-elf-memory.7z",
+        "base-file-memory.7z",
+        "base-file-snapshot5.7z",
+        "base-hunt-memory.7z",
+        "base-mail-memory.7z",
+        "base-rd-02-memory.7z",
+        "base-rd-03-memory.7z",
+        "base-rd-04-memory.7z",
+        "base-rd-05-memory.7z",
+        "base-rd-06-memory.7z",
+        "base-rd01-memory.7z",
+        "base-sp-memory.7z",
+        "base-wkstn-01-mem.zip",
+        "base-wkstn-01-memory.7z",
+        "base-wkstn-02-memory.7z",
+        "base-wkstn-03-memory.7z",
+        "base-wkstn-04-memory.7z",
+        "base-wkstn-05-memory.7z",
+        "base-wkstn-06-memory.7z"
+      ]
+    }
+  ]
+}

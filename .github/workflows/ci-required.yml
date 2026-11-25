@@ -1,0 +1,87 @@
+name: CI Required
+
+# Single branch-protection status that waits for the required L0/L1 jobs.
+# This keeps branch protection stable even when workflow internals are renamed
+# or split later; only this job name should be required on master.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-required-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  checks: read
+  contents: read
+
+jobs:
+  ci-required:
+    name: ci-required
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Wait for required checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+
+          required_checks=(
+            "actionlint + yamllint"
+            "shellcheck"
+            "hadolint"
+            "ruff check + format --check"
+            "cargo check + clippy"
+            "tsc + eslint"
+            "docs cross-references intact"
+            "tool count matches docs"
+            "Amendment A2 invariants (custom orchestrator dropped)"
+            "L1 unit/build (Ubuntu 22.04 devbase)"
+          )
+
+          deadline=$((SECONDS + 1200))
+          while true; do
+            checks_json="$(gh api -X GET "repos/${REPO}/commits/${SHA}/check-runs" -f per_page=100)"
+            all_green=1
+
+            for check_name in "${required_checks[@]}"; do
+              status="$(jq -r --arg name "$check_name" '
+                [.check_runs[] | select(.name == $name)] | sort_by(.started_at) | last | .status // "missing"
+              ' <<<"$checks_json")"
+              conclusion="$(jq -r --arg name "$check_name" '
+                [.check_runs[] | select(.name == $name)] | sort_by(.started_at) | last | .conclusion // ""
+              ' <<<"$checks_json")"
+
+              printf '%s: %s %s\n' "$check_name" "$status" "$conclusion"
+
+              if [[ "$status" == "completed" && "$conclusion" == "success" ]]; then
+                continue
+              fi
+
+              if [[ "$status" == "completed" ]]; then
+                echo "::error::Required check '${check_name}' concluded '${conclusion}'."
+                exit 1
+              fi
+
+              all_green=0
+            done
+
+            if [[ "$all_green" -eq 1 ]]; then
+              echo "All required checks are green."
+              exit 0
+            fi
+
+            if [[ "$SECONDS" -ge "$deadline" ]]; then
+              echo "::error::Timed out waiting for required checks."
+              exit 1
+            fi
+
+            sleep 15
+          done

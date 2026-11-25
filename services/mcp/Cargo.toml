@@ -1,0 +1,128 @@
+[package]
+name = "findevil-mcp"
+version = "0.1.0"
+description = "Find Evil! typed Rust MCP server — narrow DFIR tool surface, no execute_shell."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# Per Spec #2 §1: a single binary + a library face so tests can
+# import tool modules without spinning up the full stdio server.
+[lib]
+name = "findevil_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "findevil-mcp"
+path = "src/main.rs"
+
+# Dependency pins per Spec #2 §16.
+# evtx, rs_merkle, duckdb versions are locked; do not upgrade
+# without a spec amendment.
+[dependencies]
+# rmcp (Spec #2 §4.1) was the planned MCP SDK but was deliberately
+# NOT activated — see CLAUDE.md "Spec/code divergences" §5.  The
+# server in `src/server.rs` is a hand-rolled stdio JSON-RPC 2.0
+# implementation pinned to MCP 2024-11-05 for wire-format stability
+# across rmcp's API churn and dispatch-shape parity with the
+# Python `findevil-agent-mcp`.  This commented-out line is left
+# as a deliberate marker; don't uncomment without a spec amendment.
+# rmcp = { version = "=0.16.0", features = ["server", "transport-io"] }
+
+# Hashing — stdlib-friendly sha2 crate. No pin across workspace
+# since this is a transitive of downstream tools too.
+sha2 = "0.10"
+
+# omerbenamram's EVTX parser — MIT/Apache-2.0, ~1600x faster than
+# python-evtx. Linked in-process per Spec #2 §16. Pinned exact per
+# the spec's library version table.
+evtx = "=0.11.2"
+
+# Pure-Rust Windows Prefetch parser — MIT, supports MAM-compressed
+# Win10+ format and SCCA Win7-/8.1. Used by the `prefetch_parse` tool.
+# `forensic-rs` is its filesystem abstraction; we use StdVirtualFS to
+# wrap the real disk.
+frnsc-prefetch = "=0.13.3"
+forensic-rs = "=0.13"
+
+# omerbenamram's Master File Table parser — MIT, 100% safe Rust.
+# Used by the `mft_timeline` tool. Pinned to 0.6.1 because 0.7+
+# requires rustc 1.90 and our toolchain is locked at 1.88 per
+# `rust-toolchain.toml` (Spec/code divergence: edition-2024 deps
+# already forced 1.83 → 1.88; bumping again is a separate decision).
+mft = "=0.6.1"
+
+# Windows Registry hive parsing for `registry_query` is handled in-tree by
+# `src/tools/regf.rs` (no external crate). frnsc-hive only implemented the
+# modern `lh` subkey-list cell and panicked `unimplemented!()` on the
+# `lf`/`li`/`ri` cells used by Windows XP-era hives; notatin (the Apache-2.0
+# alternative) doesn't build under the pinned rustc 1.88. The in-tree reader
+# handles all four subkey-list types + resident/non-resident/`db` values.
+
+# yara-x — BSD-3-Clause, pure-Rust YARA implementation (VirusTotal).
+# Used by `yara_scan` for malware/IOC scanning. Pinned to 1.12.0 +
+# its sub-crates because the top-level pin alone doesn't constrain
+# yara-x-{macros,parser,proto}; they get pulled at latest which now
+# requires rustc 1.89 (we're at 1.88).
+yara-x = "=1.12.0"
+yara-x-macros = "=1.12.0"
+yara-x-parser = "=1.12.0"
+yara-x-proto = "=1.12.0"
+
+# usnjrnl-forensic — MIT, NTFS USN Journal parser with full-path
+# reconstruction via journal rewind. Used by `usnjrnl_query` to
+# detect file create/delete/rename activity over an incident window.
+usnjrnl-forensic = "=0.6.0"
+
+# rusqlite (MIT) parses browser-history SQLite DBs (Chrome/Edge `History`,
+# Firefox `places.sqlite`) read-only in the `browser_history` tool. `bundled`
+# vendors SQLite from source so a judge's fresh build needs no system
+# libsqlite3-dev (fully reproducible). Already resolved at 0.32.1 in the lock.
+rusqlite = { version = "=0.32.1", features = ["bundled"] }
+
+# UUID v4 for deterministic case_id generation.
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Serde for the typed JSON schema the hand-rolled stdio server in
+# `src/server.rs` emits in tools/list responses (Spec/code
+# divergence §5 — rmcp not used).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# JSON Schema generation for the MCP `tools/list` envelope. We
+# advertise each tool's input schema via `schemars` so MCP clients
+# (Claude Code, Claude Desktop, ChatGPT) can validate arguments
+# before sending. 1.x is current; pinning the minor lets it patch.
+schemars = { version = "1", features = ["preserve_order"] }
+
+# thiserror for structured, documented error types.
+thiserror = "1"
+
+# Async runtime. Used by tool modules that benefit from async
+# subprocess management (vol_*, hayabusa_scan, vel_collect) and by
+# the stdio reader in `src/server.rs`.  Originally added in
+# anticipation of rmcp; the hand-rolled server uses it directly.
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs", "io-util"] }
+
+# Time/chrono for ISO-8601 timestamps in the eventual audit trail.
+chrono = { version = "0.4", features = ["serde"] }
+
+# Tracing for structured logs; lightweight.
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Hex encoding for SHA-256 fingerprints emitted on every tool result.
+# Promoted from dev-dependencies because the stdio server (`src/server.rs`)
+# attaches `output_sha256` hex to every successful response's `_meta`.
+hex = "0.4"
+
+[dev-dependencies]
+# tempfile for per-test scratch dirs.
+tempfile = "3"
+# rusqlite in tests builds the Chrome/Firefox history fixtures the
+# browser_history smoke parses (same pin as the runtime dep).
+rusqlite = { version = "=0.32.1", features = ["bundled"] }
+
+[lints]
+workspace = true

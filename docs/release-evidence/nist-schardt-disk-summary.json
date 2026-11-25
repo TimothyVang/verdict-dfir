@@ -1,0 +1,42 @@
+{
+ "version": 1,
+ "purpose": "Stage Two depth + traceability evidence: a real multi-artifact disk Case on the NIST CFReDS Hacking Case (SCHARDT.dd). Derived summary + trace only; no raw evidence committed.",
+ "evidence": {
+  "name": "SCHARDT.dd",
+  "source": "NIST CFReDS Hacking Case (public domain)",
+  "type": "raw disk image"
+ },
+ "verdict": "SUSPICIOUS",
+ "findings_total": 27,
+ "artifact_classes_parsed": [
+  "custody",
+  "disk/filesystem",
+  "mft",
+  "prefetch",
+  "registry",
+  "unknown_tool_output"
+ ],
+ "artifact_classes_partial": [
+  "timeline"
+ ],
+ "artifact_classes_not_supplied": [
+  "evtx",
+  "memory",
+  "network",
+  "velociraptor"
+ ],
+ "depth_note": "One disk image corroborated across 6 parsed artifact classes (custody, disk/filesystem, mft, prefetch, registry, unknown_tool_output); cross-artifact findings satisfy the >=2-class execution rule. Memory/network/evtx honestly marked not_supplied (single-evidence run).",
+ "timeline_note": {
+  "primary_timeline_tool": "mft_timeline",
+  "behavior": "The timeline artifact class is marked partial: the timeline was built primarily from mft_timeline (5000 MFT records); plaso_parse ran once and contributed a corroborating Recycle Bin staging finding (f-B-recyclebin-staging). No full plaso super-timeline was produced, so the timeline class is sealed PARTIAL rather than parsed. This is a real single-evidence disk Case; the organic tool-failure self-correction is demonstrated separately in natural-self-correction-summary.json (registry_query on truncated RegBack hives), not here."
+ },
+ "audit_chain": {
+  "records": 597,
+  "leaf_count": 244,
+  "merkle_root_hex": "1ceddadee9f8914f3e4e128d166246ed5f21f872aef8679a06e9f0b1176b2d5d",
+  "signature_kind": "ed25519"
+ },
+ "manifest_verify_overall": true,
+ "how_to_verify": "scripts/trace-finding <run-dir>  ->  'audit chain OK ... 244 leaves all resolve ... 27 findings traced'.  See nist-schardt-disk-trace.txt for the captured run.",
+ "honesty": "EXPERT_REVIEW_DRAFT: not customer-ready without sigstore identity signer + human expert approval; ATT&CK blind spots and analysis limitations kept visible."
+}

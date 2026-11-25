@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="competitive-landscape">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="VERDICT vs the field — moat axes (Find Evil! 2026; ~171 entries, ~22 serious, 6 ELITE)" style="text;html=1;fontSize=17;fontStyle=1;align=center;verticalAlign=middle;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="40" y="0" width="1280" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h1" value="Moat axis" style="text;html=1;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;fillColor=#6c8ebf;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="220" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="h2" value="VERDICT's position" style="text;html=1;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;fillColor=#82b366;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="270" y="40" width="380" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="h3" value="Field — who contests it (ELITE in bold)" style="text;html=1;fontSize=12;fontStyle=1;align=center;verticalAlign=middle;fillColor=#999999;fontColor=#ffffff;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="660" y="40" width="660" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a1" value="Typed + read-only surface&#xa;(no execute_shell)" style="text;html=1;fontSize=11;fontStyle=1;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#eef3fb;strokeColor=#6c8ebf;rounded=0;" vertex="1" parent="1"><mxGeometry x="40" y="80" width="220" height="80" as="geometry" /></mxCell>
+        <mxCell id="b1" value="45 typed schema-validated tools; &lt;b&gt;no execute_shell, ever&lt;/b&gt;" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#d5e8d4;strokeColor=#82b366;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="270" y="80" width="380" height="80" as="geometry" /></mxCell>
+        <mxCell id="c1" value="evidencegene-court · siftguard · glassbox · caseproof — only ~8–9 of 171 even claim 'typed' / 'read-only'. &lt;b&gt;VERDICT ahead of most.&lt;/b&gt;" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#f5f5f5;strokeColor=#999999;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="660" y="80" width="660" height="80" as="geometry" /></mxCell>
+
+        <mxCell id="a2" value="Multi-agent /&#xa;competing hypotheses" style="text;html=1;fontSize=11;fontStyle=1;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#eef3fb;strokeColor=#6c8ebf;rounded=0;" vertex="1" parent="1"><mxGeometry x="40" y="170" width="220" height="80" as="geometry" /></mxCell>
+        <mxCell id="b2" value="Two-pool ACH (persistence- vs exfil-biased); contradictions emitted as first-class records FIRST" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#d5e8d4;strokeColor=#82b366;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="270" y="170" width="380" height="80" as="geometry" /></mxCell>
+        <mxCell id="c2" value="evidencegene-court (Prosecutor/Defender/Arbiter) · council-sift (5-seat council) · counsel · argus · silentwitness — &lt;b&gt;contested, VERDICT ahead of most.&lt;/b&gt;" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#f5f5f5;strokeColor=#999999;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="660" y="170" width="660" height="80" as="geometry" /></mxCell>
+
+        <mxCell id="a3" value="Signed offline-verifiable&#xa;custody  ◄ tier edge" style="text;html=1;fontSize=11;fontStyle=1;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#eef3fb;strokeColor=#6c8ebf;rounded=0;" vertex="1" parent="1"><mxGeometry x="40" y="260" width="220" height="90" as="geometry" /></mxCell>
+        <mxCell id="b3" value="&lt;b&gt;Ed25519 + Merkle + OFFLINE manifest_verify&lt;/b&gt; (FRE 902(14)); verifier replays each cited tool" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#d5e8d4;strokeColor=#82b366;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="270" y="260" width="380" height="90" as="geometry" /></mxCell>
+        <mxCell id="c3" value="&lt;b&gt;EL&lt;/b&gt; (Merkle+seal-verify) · &lt;b&gt;DeepSIFT&lt;/b&gt; (offline token-rehash grounding) · &lt;b&gt;vigia-intent&lt;/b&gt; (4-hash H1–H4 + HMAC) · &lt;b&gt;aletheia&lt;/b&gt; (HMAC receipts) · find-evil-sleuth (BLAKE3+Merkle) · SIFTMESH (sealed manifest) · &lt;b&gt;pq-sift-defender&lt;/b&gt; (post-quantum ML-DSA-65 signed). VERDICT's edge is the TIER: asymmetric + Merkle + offline re-run." style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#fbeeee;strokeColor=#b85450;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="660" y="260" width="660" height="90" as="geometry" /></mxCell>
+
+        <mxCell id="a4" value="Committed self-correction&#xa;◄ now crowded" style="text;html=1;fontSize=11;fontStyle=1;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#eef3fb;strokeColor=#6c8ebf;rounded=0;" vertex="1" parent="1"><mxGeometry x="40" y="360" width="220" height="80" as="geometry" /></mxCell>
+        <mxCell id="b4" value="verdict_revision (committed conclusion-flip; rare-by-design tested safety net)" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#d5e8d4;strokeColor=#82b366;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="270" y="360" width="380" height="80" as="geometry" /></mxCell>
+        <mxCell id="c4" value="&lt;b&gt;EL&lt;/b&gt; · &lt;b&gt;vigia-intent&lt;/b&gt; · &lt;b&gt;tejcodes/verdict&lt;/b&gt; (name-collision; committed retraction) · Louicamu · nebulae/trudi — &lt;b&gt;ELITE rivals now match this; at-par, not ahead.&lt;/b&gt;" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#fbeeee;strokeColor=#b85450;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="660" y="360" width="660" height="80" as="geometry" /></mxCell>
+
+        <mxCell id="a5" value="Honest measured&#xa;real-corpus accuracy&#xa;◄ field's scarcest good" style="text;html=1;fontSize=11;fontStyle=1;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#eef3fb;strokeColor=#6c8ebf;rounded=0;" vertex="1" parent="1"><mxGeometry x="40" y="450" width="220" height="90" as="geometry" /></mxCell>
+        <mxCell id="b5" value="nitroba 100% recall AND NIST 50% (7/14; 5/14 on leaner runs — variance disclosed) — the &lt;b&gt;gap PUBLISHED, not hidden&lt;/b&gt;; P/F1/halluc + FP-trap scorer now CI-gated" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#d5e8d4;strokeColor=#82b366;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="270" y="450" width="380" height="90" as="geometry" /></mxCell>
+        <mxCell id="c5" value="Most of the field FAKES it — dry-run scoring, self-validation as correctness, generic-token recall inflation, contaminated prompts. sift-bench / vigia-cases (eval-as-product) · &lt;b&gt;DeepSIFT&lt;/b&gt; / siftguard (measured F1). &lt;b&gt;VERDICT's strongest, rarest edge.&lt;/b&gt;" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#f5f5f5;strokeColor=#999999;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="660" y="450" width="660" height="90" as="geometry" /></mxCell>
+
+        <mxCell id="a6" value="Fleet / multi-host scale" style="text;html=1;fontSize=11;fontStyle=1;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#eef3fb;strokeColor=#6c8ebf;rounded=0;" vertex="1" parent="1"><mxGeometry x="40" y="550" width="220" height="60" as="geometry" /></mxCell>
+        <mxCell id="b6" value="Drives the SANS SIFT VM over SSH; 22+-host fleet + cross-host temporal correlation" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#d5e8d4;strokeColor=#82b366;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="270" y="550" width="380" height="60" as="geometry" /></mxCell>
+        <mxCell id="c6" value="Rarely claimed in the field. &lt;b&gt;VERDICT likely ahead.&lt;/b&gt;" style="text;html=1;fontSize=10;align=left;verticalAlign=middle;spacingLeft=8;fillColor=#f5f5f5;strokeColor=#999999;rounded=0;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="660" y="550" width="660" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="take" value="&lt;b&gt;Honest bottom line (rev. 2026-06-18):&lt;/b&gt; VERDICT sits in the top cluster, not a class of its own — rivals match the multi-agent idea and committed self-correction. A code-evidence deep-scan of 23 rivals found &lt;b&gt;0 of those 23 reach custody parity&lt;/b&gt; (best: HMAC / sha256-manifest / hash-chain; APTWatcher has Ed25519 but no Merkle/offline). Custody contenders NOT re-scanned this pass — pq-sift-defender (ML-DSA post-quantum, asymmetric) and find-evil-sleuth (BLAKE3+Merkle) — keep the edge as the &lt;b&gt;COMBINATION + TIER&lt;/b&gt;, not a single primitive: Ed25519 + Merkle + offline re-run verifier + ≥2-artifact-class rule + measured real-corpus accuracy + fleet. The win is execution, proof, and polish — not the idea." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=middle;spacingLeft=10;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="630" width="1280" height="90" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

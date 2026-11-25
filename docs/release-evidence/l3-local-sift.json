@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "evidence_kind": "committed-local-l3-fallback",
+  "fixture": "nist-hacking-case",
+  "findings_expected": 14,
+  "product_commit": "857e1efbf15789fc61a8eb3ef46ecae639cf5c98",
+  "generated_at_utc": "2026-06-13T17:14:22Z",
+  "scope_note": "Committed local NIST fallback evidence for product commit 857e1ef. Added so GitHub L3 can validate explicit evidence when the KVM runner label has no capacity; this is not a remote KVM run and does not claim SIFT parity.",
+  "nist_image": {
+    "path": "evidence/SCHARDT.dd",
+    "sha256": "65e2002fed0b286f49541c7e97dcec0dda913d51a063ceeed86782bdacda2312",
+    "size_bytes": 4871301120
+  },
+  "run": {
+    "host_run_dir": "historical local run output; not shipped. Generate a fresh tmp/auto-runs/<case-id> with verification_commands[1].",
+    "case_id": "bb2953cd-bdd9-4251-a493-70c97663f892",
+    "run_id": "auto-1781370852",
+    "verdict": "SUSPICIOUS",
+    "finding_count": 27,
+    "judge_merged_findings": 27,
+    "verifier": {
+      "approved": 27,
+      "downgraded": 0,
+      "rejected": 0
+    },
+    "correlator": {
+      "kept": 27,
+      "downgraded": 0
+    },
+    "report_qa_status": "WARN",
+    "packet_state": "EXPERT_REVIEW_DRAFT",
+    "ready_for_expert_signoff": true,
+    "customer_releasable": false,
+    "failed_checks": [],
+    "warning_checks": [
+      "limitations_visible",
+      "attack_coverage_blind_spots"
+    ]
+  },
+  "recall": {
+    "expected_n": 14,
+    "recalled_n": 7,
+    "recall_percent": 50,
+    "min_recall_percent": 71,
+    "pass": false,
+    "matched_ids": [
+      "nhc-004",
+      "nhc-005",
+      "nhc-007",
+      "nhc-008",
+      "nhc-009",
+      "nhc-010",
+      "nhc-011"
+    ],
+    "unmatched_ids": [
+      "nhc-001",
+      "nhc-002",
+      "nhc-003",
+      "nhc-006",
+      "nhc-012",
+      "nhc-013",
+      "nhc-014"
+    ]
+  },
+  "readiness": {
+    "run_id": "nist-local-20260613",
+    "readiness_state": "READY_FOR_EXPERT_REVIEW",
+    "blockers": [],
+    "warnings": [
+      "NIST recall is 7/14 = 50%, below the 71% golden bar",
+      "report QA has warnings: EXPERT_REVIEW_DRAFT"
+    ],
+    "signer": "ed25519",
+    "customer_releasable": false
+  },
+  "artifacts": {
+    "verdict_sha256": "75f36c31cc4124eafda590f753c7d7bd79ae4ceb375d36853921d2e35cb91a8d",
+    "run_manifest_sha256": "0a568b7ae314a629939bcce7ff0caa8ceee47b3f0fede1e61af83f7c3a58c037",
+    "manifest_verify_sha256": "53d3fda4d85ca57c35f65f6fc4d42d78dc629559f0e8a9246eca663de010563a",
+    "recall_score_sha256": "ed70a7ee36aff5cc04da1d7a77ee67e19b3bfeeafdc487cf22575bac3b43d1e4",
+    "manifest_verify_overall": true,
+    "manifest_leaf_count": 244,
+    "merkle_root_hex": "1a2b2f39dd4d8a03e00aae54cd7ace5441eb510f9219dbed593d9e2ded98072a"
+  },
+  "verification_commands": [
+    "PATH=\"$HOME/.cargo/bin:$PATH\" bash scripts/run-all-smokes.sh",
+    "bash scripts/verdict evidence/SCHARDT.dd --skip-build --no-dashboard --run-summary tmp/schardt-final-summary.json --unattended",
+    "python3 scripts/score-recall.py <fresh-run-dir-from-summary> --golden goldens/nist-hacking-case"
+  ]
+}

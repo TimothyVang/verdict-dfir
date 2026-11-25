@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/TimothyVang/verdict-dfir/security/advisories/new
+    about: Report vulnerabilities privately instead of opening a public issue.
+  - name: Running VERDICT docs
+    url: https://github.com/TimothyVang/verdict-dfir/blob/master/docs/using/running-verdict.md
+    about: Check install, run-mode, and output-path details before filing usage questions.

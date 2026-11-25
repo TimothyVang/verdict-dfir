@@ -1,0 +1,63 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "*": "deny",
+    "findevil-mcp_*": "allow",
+    "findevil-agent-mcp_*": "allow",
+    "question": "deny",
+    "plan_enter": "deny",
+    "plan_exit": "deny"
+  },
+  "provider": {
+    "verdict-local": {
+      "name": "VERDICT Local (OpenAI-compatible: Ollama / vLLM / LM Studio)",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "{env:VERDICT_LLM_BASEURL}",
+        "apiKey": "{env:VERDICT_LLM_APIKEY}"
+      },
+      "models": {
+        "local": {
+          "name": "Local model ({env:VERDICT_LLM_MODEL})",
+          "id": "{env:VERDICT_LLM_MODEL}",
+          "tool_call": true,
+          "cost": { "input": 0, "output": 0 },
+          "limit": { "context": 131072, "output": 8192 }
+        }
+      }
+    },
+    "xai": {
+      "name": "xAI Grok (cloud)",
+      "npm": "@ai-sdk/xai",
+      "options": {
+        "apiKey": "{env:XAI_API_KEY}"
+      },
+      "models": {
+        "grok-3": {
+          "name": "Grok 3",
+          "id": "grok-3",
+          "tool_call": true
+        },
+        "grok-3-mini": {
+          "name": "Grok 3 Mini",
+          "id": "grok-3-mini",
+          "tool_call": true
+        }
+      }
+    }
+  },
+  "mcp": {
+    "findevil-mcp": {
+      "type": "local",
+      "command": ["bash", "{env:VERDICT_DFIR_HOME}/scripts/run-mcp-rust.sh"],
+      "enabled": true,
+      "timeout": 120000
+    },
+    "findevil-agent-mcp": {
+      "type": "local",
+      "command": ["bash", "{env:VERDICT_DFIR_HOME}/scripts/run-mcp-python.sh"],
+      "enabled": true,
+      "timeout": 60000
+    }
+  }
+}

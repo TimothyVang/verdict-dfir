@@ -1,0 +1,70 @@
+name: Competitor Watch
+
+# Glue Spec #4 §8. Monday 09:00 UTC scan of watched competitor repos
+# for commit / star / new-entrant deltas. Posts to #competitor-watch
+# Slack only when there's something to report.
+
+on:
+  # Weekly cron paused 2026-06-17 — the SANS deadline (2026-06-15) has passed, so
+  # this runs on demand only. Re-enable the schedule below if finalist tracking resumes.
+  # schedule:
+  #   - cron: '0 9 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # to push updated state file
+  issues: read
+
+jobs:
+  scan:
+    name: Scan watched competitor repos
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/competitor-state
+          fetch-depth: 0
+        continue-on-error: true
+
+      - name: Ensure state branch exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git fetch origin chore/competitor-state 2>/dev/null \
+            || {
+              git checkout --orphan chore/competitor-state
+              mkdir -p state
+              echo '{}' > state/competitor-watch.json
+              git add state/competitor-watch.json
+              git -c user.email=ci@example.invalid -c user.name=ci \
+                commit -m "chore(competitor-watch): init state"
+              git push -u origin chore/competitor-state
+            }
+
+      - name: Configure git for commits
+        run: |
+          git config user.email 'ci@example.invalid'
+          git config user.name 'find-evil-ci'
+
+      - name: Run watch script
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_COMPETITORS: ${{ secrets.SLACK_WEBHOOK_COMPETITORS }}
+          SLACK_WEBHOOK_CI: ${{ secrets.SLACK_WEBHOOK_CI }}
+        run: |
+          bash scripts/competitor-watch.sh
+
+      - name: Push updated state
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git add state/competitor-watch.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(competitor-watch): update state $(date -u +%F)"
+            git pull --rebase origin chore/competitor-state || true
+            git push origin chore/competitor-state
+          else
+            echo "no state changes"
+          fi

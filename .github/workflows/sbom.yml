@@ -1,0 +1,57 @@
+name: sbom
+
+# ADVISORY software bill of materials (CycloneDX) for the Rust + Python
+# dependency trees. Artifacts-only (no release write, read-only permissions) —
+# wire the output into release.yml later if you want SBOMs attached to releases.
+# Separate, non-required workflow: validate the commands on a branch before
+# relying on the output.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'services/agent_mcp/pyproject.toml'
+      - 'services/agent_mcp/uv.lock'
+      - '.github/workflows/sbom.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    name: generate CycloneDX SBOMs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.88
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.88.0"
+
+      - name: Rust SBOM (CycloneDX)
+        run: |
+          set -euo pipefail
+          cargo install cargo-cyclonedx --locked
+          cargo cyclonedx --format json
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Python SBOM (CycloneDX)
+        shell: bash
+        working-directory: services/agent_mcp
+        run: |
+          set -euo pipefail
+          uv sync --extra dev
+          uv run --with cyclonedx-bom cyclonedx-py environment .venv \
+            -o sbom-agent-mcp.cdx.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            **/*.cdx.json
+            **/bom.json

@@ -1,0 +1,4233 @@
+{
+  "agent": "find-evil-auto MVP",
+  "analysis_limitations": [],
+  "attack_coverage": {
+    "blind_spot_count": 7,
+    "covered_target_count": 5,
+    "finding_target_count": 0,
+    "observed_techniques": [
+      "T1070.001"
+    ],
+    "summary": "5/12 ATT&CK targets covered by typed-tool output; 0 target(s) produced finding-level evidence; 7 target(s) remain blind spots",
+    "targets": [
+      {
+        "analyst_value": "Cross-view process enumeration for DKOM/rootkit signals.",
+        "artifact_classes": [
+          "memory"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: memory",
+        "status": "blind_spot",
+        "tactic": "Defense Evasion",
+        "technique_id": "T1014",
+        "technique_name": "Rootkit",
+        "tools_expected": [
+          "vol_pslist",
+          "vol_psscan",
+          "vol_psxview"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Suspicious VADs, injected code, and payload triage.",
+        "artifact_classes": [
+          "memory"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: memory",
+        "status": "blind_spot",
+        "tactic": "Defense Evasion / Privilege Escalation",
+        "technique_id": "T1055",
+        "technique_name": "Process Injection",
+        "tools_expected": [
+          "vol_malfind",
+          "yara_scan"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "PowerShell process, script-block, and execution artifacts.",
+        "artifact_classes": [
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [
+          "evtx"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Execution",
+        "technique_id": "T1059.001",
+        "technique_name": "PowerShell",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan",
+          "prefetch_parse"
+        ],
+        "tools_observed": [
+          "evtx_query"
+        ]
+      },
+      {
+        "analyst_value": "Logon events and remote-session evidence.",
+        "artifact_classes": [
+          "evtx"
+        ],
+        "artifact_classes_observed": [
+          "evtx"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Lateral Movement",
+        "technique_id": "T1021.001",
+        "technique_name": "Remote Desktop Protocol",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan"
+        ],
+        "tools_observed": [
+          "evtx_query"
+        ]
+      },
+      {
+        "analyst_value": "Account logon, privilege use, and local-account artifacts.",
+        "artifact_classes": [
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [
+          "evtx"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Defense Evasion / Persistence / Privilege Escalation",
+        "technique_id": "T1078",
+        "technique_name": "Valid Accounts",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan",
+          "registry_query"
+        ],
+        "tools_observed": [
+          "evtx_query"
+        ]
+      },
+      {
+        "analyst_value": "LSASS access, dumping utilities, and credential-theft traces.",
+        "artifact_classes": [
+          "memory",
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [
+          "evtx"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Credential Access",
+        "technique_id": "T1003",
+        "technique_name": "OS Credential Dumping",
+        "tools_expected": [
+          "vol_malfind",
+          "evtx_query",
+          "hayabusa_scan",
+          "yara_scan"
+        ],
+        "tools_observed": [
+          "evtx_query"
+        ]
+      },
+      {
+        "analyst_value": "New files, download traces, and transfer telemetry.",
+        "artifact_classes": [
+          "disk/filesystem",
+          "network"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: disk/filesystem, network",
+        "status": "blind_spot",
+        "tactic": "Command and Control",
+        "technique_id": "T1105",
+        "technique_name": "Ingress Tool Transfer",
+        "tools_expected": [
+          "mft_timeline",
+          "usnjrnl_query",
+          "yara_scan",
+          "vel_collect",
+          "pcap_triage",
+          "zeek_summary"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "HTTP/S hosts, external web connections, and process-to-web telemetry for cautious C2 triage.",
+        "artifact_classes": [
+          "network"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: network",
+        "status": "blind_spot",
+        "tactic": "Command and Control",
+        "technique_id": "T1071.001",
+        "technique_name": "Web Protocols",
+        "tools_expected": [
+          "pcap_triage",
+          "zeek_summary",
+          "sysmon_network_query"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "DNS queries and resolver conversations for suspicious-domain triage.",
+        "artifact_classes": [
+          "network"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: network",
+        "status": "blind_spot",
+        "tactic": "Command and Control",
+        "technique_id": "T1071.004",
+        "technique_name": "DNS",
+        "tools_expected": [
+          "pcap_triage",
+          "zeek_summary"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Network telemetry needed to prove or reject exfiltration.",
+        "artifact_classes": [
+          "network"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: network",
+        "status": "blind_spot",
+        "tactic": "Exfiltration",
+        "technique_id": "T1041",
+        "technique_name": "Exfiltration Over C2 Channel",
+        "tools_expected": [
+          "pcap_triage",
+          "zeek_summary",
+          "sysmon_network_query",
+          "vel_collect"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Autorun persistence and execution corroboration.",
+        "artifact_classes": [
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [],
+        "finding_confidence": null,
+        "gap": "missing or untouched artifact classes: disk/filesystem",
+        "status": "blind_spot",
+        "tactic": "Persistence / Privilege Escalation",
+        "technique_id": "T1547.001",
+        "technique_name": "Registry Run Keys / Startup Folder",
+        "tools_expected": [
+          "registry_query",
+          "prefetch_parse",
+          "mft_timeline"
+        ],
+        "tools_observed": []
+      },
+      {
+        "analyst_value": "Scheduled-task creation, TaskCache, and task XML evidence.",
+        "artifact_classes": [
+          "evtx",
+          "disk/filesystem"
+        ],
+        "artifact_classes_observed": [
+          "evtx"
+        ],
+        "finding_confidence": null,
+        "gap": "limited coverage \u2014 not proof of absence",
+        "status": "covered_no_finding",
+        "tactic": "Execution / Persistence / Privilege Escalation",
+        "technique_id": "T1053.005",
+        "technique_name": "Scheduled Task",
+        "tools_expected": [
+          "evtx_query",
+          "hayabusa_scan",
+          "registry_query"
+        ],
+        "tools_observed": [
+          "evtx_query"
+        ]
+      }
+    ]
+  },
+  "attack_story": {
+    "assessment": "Clearing the Windows Security log removes the local record of activity before it \u2014 a defense-evasion / anti-forensics act. Event 1102 is itself written AFTER the clear, so the action is recorded even though what it erased is not; the interval before this record is the blind window.",
+    "attack_chain": [
+      {
+        "action": "a Security audit log clearing",
+        "actor": "EXAMPLE\\user01",
+        "analyst_note": "Clearing the Windows Security log removes the local record of activity before it \u2014 a defense-evasion / anti-forensics act. Event 1102 is itself written AFTER the clear, so the action is recorded even though what it erased is not; the interval before this record is the blind window.",
+        "artifact_classes": [
+          "evtx"
+        ],
+        "confidence": "CONFIRMED",
+        "cves": [],
+        "finding_id": "f-A-evtx-audit-log-cleared",
+        "host": "PC01.example.corp",
+        "hunt": "Security 1102 (security-log clearing) and 4719 (audit-policy change); EventRecordID gaps immediately before the 1102",
+        "mitre_technique": "T1070.001",
+        "named_technique": "Security event-log clearing / anti-forensics (T1070.001)",
+        "next_pivot": "Recover the erased window from WEF/SIEM-forwarded copies, EDR telemetry, or a VSS/backup of the EVTX predating it; check 4719 (audit-policy change) and the account's other logons around this time.",
+        "order": 1,
+        "phase": "Defense Evasion",
+        "phase_index": 4,
+        "source_event_ids": [
+          "timeline-0001"
+        ],
+        "summary": "EVTX contains Security EID 1102 audit-log clear event (record 1); this is confirmed event-log evidence of log clearing and requires analyst review.",
+        "timestamp_utc": "2019-03-19T23:35:07.524202Z",
+        "title": "EVTX contains Security EID 1102 audit-log clear event (record 1); this is confirmed event-log evidence of log ",
+        "tool_call_id": "tc-002",
+        "why_it_matters": "Clearing the Windows Security log removes the local record of activity before it \u2014 a defense-evasion / anti-forensics act. Event 1102 is itself written AFTER the clear, so the action is recorded even though what it erased is not; the interval before this record is the blind window."
+      }
+    ],
+    "business_impact": "",
+    "certainty": "High \u2014 the cited tool output is reproducible (the verifier re-ran it and the SHA-256 matched). The confidence is in the artifact, not in intent or actor.",
+    "confidence_posture": {
+      "CONFIRMED": 1,
+      "HYPOTHESIS": 0,
+      "INFERRED": 0
+    },
+    "customer_releasable": false,
+    "customer_release_candidate": false,
+    "customer_summary": "The supplied evidence shows a Security audit log clearing on PC01.example.corp under the account EXAMPLE\\user01 at 2019-03-19T23:35:07Z.",
+    "evidence_scope": {
+      "artifact_classes_touched": [
+        "evtx"
+      ],
+      "coverage_summary": "1/5 artifact classes touched; 1/5 directly available from supplied evidence",
+      "evidence_path": "/evidence/DE_1102_security_log_cleared.evtx",
+      "evidence_type": "evtx"
+    },
+    "expert_decision": "pending",
+    "expert_miss_summary": {
+      "by_type": {},
+      "items": [],
+      "ledger_path": "expert_misses.jsonl",
+      "summary": "Expert misses captured this case: 0 (uncaptured edits are a QA defect; see EXPERT.md Replacement metric).",
+      "total": 0
+    },
+    "headline": "Confirmed: a Security audit log clearing on PC01.example.corp under the account EXAMPLE\\user01 \u2014 defense evasion / anti-forensics.",
+    "how_they_got_in": "",
+    "ready_for_customer_pdf": false,
+    "ready_for_expert_signoff": true,
+    "recommended_next_decisions": [
+      "Use read-only SIFT disk workflow to extract Prefetch, Registry, MFT, USN Journal, and YARA targets before parsing them with typed tools.",
+      "Acquire DNS, proxy, firewall, NetFlow, or PCAP telemetry to test C2 and exfiltration hypotheses.",
+      "Close ATT&CK blind spots before making closure decisions."
+    ],
+    "root_cause": "",
+    "signoff_question": "Would I send this report to a company without rewriting it?",
+    "verdict": "SUSPICIOUS",
+    "verdict_meaning": "Use the verdict as a triage priority, then read each Finding confidence and citation before acting.",
+    "version": 1,
+    "what_we_can_say": [
+      "A Security audit log clearing on PC01.example.corp under the account EXAMPLE\\user01 (CONFIRMED, T1070.001, cited by tc-002)."
+    ],
+    "what_we_cannot_say": [
+      "Who operated the activity \u2014 this report does not assert attribution; naming an account reflects a record field, not the human behind it.",
+      "Whether the wider environment is affected \u2014 this run examined the supplied evidence only.",
+      "Undetermined: What the clearing removed from the log. Reason: records that existed before the clearing are not in this artifact; Event 1102 marks the boundary, it does not preserve what was removed. To resolve: recover from WEF/Windows Event Forwarding or SIEM copies up to the clearing time, EDR telemetry, or a VSS/backup of the EVTX predating it.",
+      "Undetermined: Whether the named account was used by its owner or a thief. Reason: a single Security log cannot separate legitimate-owner use from credential theft. To resolve: review 4624/4625 logon history (type, source host, time), 4768/4769 Kerberos, and IdP or EDR sign-in data across hosts.",
+      "Undetermined: Whether the clearing was malicious or routine administration. Reason: Event 1102 carries no intent field \u2014 the same record is written by a maintenance script and by an intruder. To resolve: check change-management/ticketing, the account's role, and corroborating 4672/4688 events on forwarded logs.",
+      "Undetermined: execution and persistence cannot be confirmed without disk artifacts. To resolve: parse a triage collection \u2014 $MFT, $UsnJrnl, Amcache, ShimCache, Prefetch, and Registry run keys/services/tasks.",
+      "Undetermined: command-and-control and exfiltration cannot be assessed without network data. To resolve: collect DNS, proxy, firewall, or NetFlow logs, or a PCAP.",
+      "Undetermined: injected code and hidden processes cannot be examined without a memory image. To resolve: capture RAM and run the volatility process and injection plugins."
+    ]
+  },
+  "attck_practitioner_coverage": {
+    "data_source_coverage": [
+      {
+        "data_source_id": "DS0003",
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "tools_observed": [
+          "evtx_query"
+        ]
+      },
+      {
+        "data_source_id": "DS0009",
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "tools_observed": [
+          "evtx_query"
+        ]
+      },
+      {
+        "data_source_id": "DS0017",
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "tools_observed": [
+          "evtx_query"
+        ]
+      },
+      {
+        "data_source_id": "DS0019",
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "tools_observed": [
+          "evtx_query"
+        ]
+      },
+      {
+        "data_source_id": "DS0028",
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "tools_observed": [
+          "evtx_query"
+        ]
+      }
+    ],
+    "lanes": {
+      "endpoint_host": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: disk/filesystem"
+        ],
+        "findings_linked": [],
+        "label": "Host & Endpoint Forensics",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      },
+      "live_response": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: velociraptor"
+        ],
+        "findings_linked": [],
+        "label": "Endpoint Telemetry & Live Response",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      },
+      "malware": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: disk/filesystem, memory"
+        ],
+        "findings_linked": [],
+        "label": "Malware Analysis & Triage",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      },
+      "memory": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: memory"
+        ],
+        "findings_linked": [],
+        "label": "Memory Forensics",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      },
+      "network": {
+        "artifact_classes_seen": [],
+        "attck_data_sources_seen": [],
+        "attck_techniques_observed": [],
+        "coverage_gaps": [
+          "missing or untouched artifact classes: network",
+          "no PCAP, Zeek, proxy, DNS, firewall, or NetFlow telemetry supplied"
+        ],
+        "findings_linked": [],
+        "label": "Network Forensics",
+        "next_actions": [
+          "Supply lane-relevant evidence and rerun typed tools."
+        ],
+        "status": "not_covered",
+        "tools_run": []
+      },
+      "windows_event": {
+        "artifact_classes_seen": [
+          "evtx"
+        ],
+        "attck_data_sources_seen": [
+          "DS0003",
+          "DS0009",
+          "DS0017",
+          "DS0019",
+          "DS0028"
+        ],
+        "attck_techniques_observed": [
+          "T1070.001"
+        ],
+        "coverage_gaps": [],
+        "findings_linked": [
+          "f-A-evtx-audit-log-cleared"
+        ],
+        "label": "Windows Event & Account Analysis",
+        "next_actions": [
+          "Corroborate lane-specific leads with another artifact class before upgrading confidence."
+        ],
+        "status": "automated",
+        "tools_run": [
+          "evtx_query"
+        ]
+      }
+    },
+    "overclaim_guardrails_applied": [
+      "covered_no_finding is limited coverage, not a clean/cleared claim",
+      "Domain coverage describes triage/orchestration across the typed tools that ran, not certified-analyst judgment",
+      "visual exhibits do not create findings or upgrade confidence",
+      "execution claims still require at least two artifact classes"
+    ],
+    "research_basis": [
+      "MITRE ATT&CK data sources and techniques",
+      "SANS FOR508/FOR572/FOR610 public course themes",
+      "Zeek, Velociraptor, Sigma/Hayabusa, YARA, capa public docs",
+      "DFIR Report, Red Canary, Elastic Security Labs practitioner reporting patterns",
+      "Reddit DFIR/computerforensics/blueteamsec prioritization signals"
+    ],
+    "source_citation_ids": [
+      "CITE-MITRE-ATTACK-DATASOURCES",
+      "CITE-MITRE-T1003-001",
+      "CITE-MITRE-T1014",
+      "CITE-NIST-800-61R2",
+      "CITE-VOLATILITY3",
+      "CITE-ZEEK-LOGS"
+    ],
+    "technique_coverage": [
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-T1014",
+          "CITE-VOLATILITY3"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1014",
+        "technique_name": "Rootkit"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-VOLATILITY3"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1055",
+        "technique_name": "Process Injection"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1059.001",
+        "technique_name": "PowerShell"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1021.001",
+        "technique_name": "Remote Desktop Protocol"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1078",
+        "technique_name": "Valid Accounts"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-T1003-001"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1003",
+        "technique_name": "OS Credential Dumping"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1105",
+        "technique_name": "Ingress Tool Transfer"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-ZEEK-LOGS"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1071.001",
+        "technique_name": "Web Protocols"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-ZEEK-LOGS"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1071.004",
+        "technique_name": "DNS"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES",
+          "CITE-ZEEK-LOGS"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1041",
+        "technique_name": "Exfiltration Over C2 Channel"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "blind_spot",
+        "technique_id": "T1547.001",
+        "technique_name": "Registry Run Keys / Startup Folder"
+      },
+      {
+        "linked_findings": [],
+        "source_citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "status": "covered_no_finding",
+        "technique_id": "T1053.005",
+        "technique_name": "Scheduled Task"
+      }
+    ],
+    "version": 1
+  },
+  "case_completeness": {
+    "available_classes": 1,
+    "checks": [
+      {
+        "artifact_class": "memory",
+        "available": false,
+        "confidence_impact": "not a memory image; no live-process evidence",
+        "tools": [],
+        "touched": false
+      },
+      {
+        "artifact_class": "evtx",
+        "available": true,
+        "confidence_impact": "Windows event evidence available",
+        "tools": [
+          "evtx_query"
+        ],
+        "touched": true
+      },
+      {
+        "artifact_class": "disk/filesystem",
+        "available": false,
+        "confidence_impact": "no disk image supplied; execution/persistence corroboration is limited",
+        "tools": [],
+        "touched": false
+      },
+      {
+        "artifact_class": "network",
+        "available": false,
+        "confidence_impact": "no PCAP, Zeek, firewall, DNS, or proxy logs supplied",
+        "tools": [],
+        "touched": false
+      },
+      {
+        "artifact_class": "velociraptor",
+        "available": false,
+        "confidence_impact": "no Velociraptor collection supplied",
+        "tools": [],
+        "touched": false
+      }
+    ],
+    "evidence_type": "evtx",
+    "inventory_summary": null,
+    "summary": "1/5 artifact classes touched; 1/5 directly available from supplied evidence",
+    "touched_classes": 1
+  },
+  "case_id": "d0384d9d-6df6-42f3-973f-931c29bcad9b",
+  "coverage_manifest": {
+    "analysis_limitations": [],
+    "artifact_classes": [
+      {
+        "artifact_class": "custody",
+        "attempted": true,
+        "available": true,
+        "confidence_impact": "",
+        "failed": false,
+        "not_supplied": false,
+        "parse_errors": 0,
+        "parsed": true,
+        "records_seen": 0,
+        "rows_returned": 0,
+        "status": "parsed",
+        "tool_call_ids": [
+          "tc-001"
+        ],
+        "tools_attempted": [
+          "case_open"
+        ],
+        "tools_failed": [],
+        "unsupported": false
+      },
+      {
+        "artifact_class": "disk/filesystem",
+        "attempted": false,
+        "available": false,
+        "confidence_impact": "no disk image supplied; execution/persistence corroboration is limited",
+        "failed": false,
+        "not_supplied": true,
+        "parse_errors": 0,
+        "parsed": false,
+        "records_seen": 0,
+        "rows_returned": 0,
+        "status": "not_supplied",
+        "tool_call_ids": [],
+        "tools_attempted": [],
+        "tools_failed": [],
+        "unsupported": false
+      },
+      {
+        "artifact_class": "evtx",
+        "attempted": true,
+        "available": true,
+        "confidence_impact": "Windows event evidence available",
+        "failed": false,
+        "not_supplied": false,
+        "parse_errors": 0,
+        "parsed": true,
+        "records_seen": 112,
+        "rows_returned": 112,
+        "status": "parsed",
+        "tool_call_ids": [
+          "tc-002"
+        ],
+        "tools_attempted": [
+          "evtx_query"
+        ],
+        "tools_failed": [],
+        "unsupported": false
+      },
+      {
+        "artifact_class": "memory",
+        "attempted": false,
+        "available": false,
+        "confidence_impact": "not a memory image; no live-process evidence",
+        "failed": false,
+        "not_supplied": true,
+        "parse_errors": 0,
+        "parsed": false,
+        "records_seen": 0,
+        "rows_returned": 0,
+        "status": "not_supplied",
+        "tool_call_ids": [],
+        "tools_attempted": [],
+        "tools_failed": [],
+        "unsupported": false
+      },
+      {
+        "artifact_class": "network",
+        "attempted": false,
+        "available": false,
+        "confidence_impact": "no PCAP, Zeek, firewall, DNS, or proxy logs supplied",
+        "failed": false,
+        "not_supplied": true,
+        "parse_errors": 0,
+        "parsed": false,
+        "records_seen": 0,
+        "rows_returned": 0,
+        "status": "not_supplied",
+        "tool_call_ids": [],
+        "tools_attempted": [],
+        "tools_failed": [],
+        "unsupported": false
+      },
+      {
+        "artifact_class": "velociraptor",
+        "attempted": false,
+        "available": false,
+        "confidence_impact": "no Velociraptor collection supplied",
+        "failed": false,
+        "not_supplied": true,
+        "parse_errors": 0,
+        "parsed": false,
+        "records_seen": 0,
+        "rows_returned": 0,
+        "status": "not_supplied",
+        "tool_call_ids": [],
+        "tools_attempted": [],
+        "tools_failed": [],
+        "unsupported": false
+      }
+    ],
+    "attack_coverage_summary": "5/12 ATT&CK targets covered by typed-tool output; 0 target(s) produced finding-level evidence; 7 target(s) remain blind spots",
+    "case_id": "d0384d9d-6df6-42f3-973f-931c29bcad9b",
+    "evidence_path": "/evidence/DE_1102_security_log_cleared.evtx",
+    "evidence_type": "evtx",
+    "summary": {
+      "analysis_limitation_count": 0,
+      "artifact_classes_recorded": 6,
+      "attack_blind_spot_count": 7,
+      "attempted": 2,
+      "failed": 0,
+      "not_supplied": 4,
+      "parsed": 2,
+      "status_counts": {
+        "not_supplied": 4,
+        "parsed": 2
+      },
+      "unsupported": 0,
+      "unsupported_sample_count": 0
+    },
+    "truth_boundary": "If no parser/tool extracts an artifact class, VERDICT cannot reason over it. This manifest records that boundary explicitly.",
+    "version": 1
+  },
+  "cryptographic_attestation": {
+    "manifest_finalized_after_verdict": true,
+    "manifest_path": "run.manifest.json",
+    "packet_attestation": {
+      "customer_releasable": false,
+      "customer_release_candidate": false,
+      "final_finding_ids": [
+        "f-A-evtx-audit-log-cleared"
+      ],
+      "packet_state": "EXPERT_REVIEW_DRAFT",
+      "release_gate_sha256": "52e815768536f6e14f86db4114757a70b7fac8849e07f98d8717acf659811d25",
+      "report_qa_sha256": "58c619e0577d9cf074b9331c246d4ed3e77e6f872980511c8757516cab648fe0",
+      "verdict_packet_sha256": "3e5f108cdf4a014de027aa671edc2a407107983ceb17c8c642cbcb5abdd048b9"
+    }
+  },
+  "disk_artifact_summary": {
+    "analysis_constraints": [
+      "Raw disk case_open is custody-only; only mounted or extracted artifacts support disk-content observations.",
+      "Prefetch run counts are execution leads and still require a second artifact class before execution claims are upgraded.",
+      "YARA matches on disk files are triage leads unless corroborated with file-system, process, registry, event-log, or network context.",
+      "Every promoted Finding must cite a tool_call_id and pass verifier replay before judge consumption."
+    ],
+    "artifact_counts": {
+      "amcache": 0,
+      "browser_db": 0,
+      "browser_history": 0,
+      "evtx": 1,
+      "ie_history": 0,
+      "jumplist": 0,
+      "legacy_evt": 0,
+      "lnk": 0,
+      "mft": 0,
+      "prefetch": 0,
+      "recyclebin": 0,
+      "reg_txlog": 0,
+      "registry": 0,
+      "scheduled_task": 0,
+      "srum": 0,
+      "thumbnail": 0,
+      "usnjrnl": 0,
+      "yara_target": 0
+    },
+    "next_actions": [
+      {
+        "action": "Pair extracted EVTX records with disk timeline artifacts before asserting process execution or persistence chains.",
+        "based_on": [
+          "evtx_query",
+          "hayabusa_scan"
+        ],
+        "priority": "P2",
+        "why": "Event logs add behavior context and can satisfy cross-artifact corroboration when linked to disk observations."
+      }
+    ],
+    "scope": "extracted_disk_artifacts_only",
+    "timeline_event_count": 112,
+    "tool_summaries": {
+      "evtx_query": [
+        {
+          "artifact_path": "/evidence/DE_1102_security_log_cleared.evtx",
+          "parse_errors": 0,
+          "records_seen": 112,
+          "row_count": 112,
+          "suspicious_event_count": 1,
+          "tool_call_id": "tc-002",
+          "top_event_ids": [
+            {
+              "count": 110,
+              "event_id": "4663"
+            },
+            {
+              "count": 1,
+              "event_id": "1102"
+            },
+            {
+              "count": 1,
+              "event_id": "5156"
+            }
+          ]
+        }
+      ]
+    },
+    "verdict_contribution": "timeline_context",
+    "version": 1
+  },
+  "entity_index": {
+    "accounts": [
+      {
+        "artifact_classes": [
+          "evtx"
+        ],
+        "event_count": 110,
+        "first_seen": "2019-03-19T23:35:14.634426Z",
+        "last_seen": "2019-03-19T23:35:15.365477Z",
+        "linked_finding_ids": [],
+        "tool_call_ids": [
+          "tc-002"
+        ],
+        "value": "NT AUTHORITY\\LOCAL SERVICE"
+      },
+      {
+        "artifact_classes": [
+          "evtx"
+        ],
+        "event_count": 1,
+        "first_seen": "2019-03-19T23:35:07.524202Z",
+        "last_seen": "2019-03-19T23:35:07.524202Z",
+        "linked_finding_ids": [
+          "f-A-evtx-audit-log-cleared"
+        ],
+        "tool_call_ids": [
+          "tc-002"
+        ],
+        "value": "EXAMPLE\\user01"
+      }
+    ],
+    "destination_ips": [],
+    "entity_count": 4,
+    "hosts": [
+      {
+        "artifact_classes": [
+          "evtx"
+        ],
+        "event_count": 112,
+        "first_seen": "2019-03-19T23:35:07.524202Z",
+        "last_seen": "2019-03-19T23:35:15.365477Z",
+        "linked_finding_ids": [
+          "f-A-evtx-audit-log-cleared"
+        ],
+        "tool_call_ids": [
+          "tc-002"
+        ],
+        "value": "PC01.example.corp"
+      }
+    ],
+    "processes": [
+      {
+        "artifact_classes": [
+          "evtx"
+        ],
+        "event_count": 110,
+        "first_seen": "2019-03-19T23:35:14.634426Z",
+        "last_seen": "2019-03-19T23:35:15.365477Z",
+        "linked_finding_ids": [],
+        "tool_call_ids": [
+          "tc-002"
+        ],
+        "value": "C:\\Windows\\System32\\svchost.exe"
+      }
+    ],
+    "services": [],
+    "source_ips": [],
+    "version": 1,
+    "workstations": []
+  },
+  "event_narratives": [
+    {
+      "confidence": "CONFIRMED",
+      "entities": {
+        "account": "user01",
+        "domain": "EXAMPLE",
+        "host": "PC01.example.corp"
+      },
+      "linked_finding_ids": [
+        "f-A-evtx-audit-log-cleared"
+      ],
+      "summary": "Security audit log clearing by EXAMPLE\\user01",
+      "text": "At 2019-03-19T23:35:07.524202Z UTC, Security audit log clearing by EXAMPLE\\user01 (tool call tc-002, CONFIRMED).",
+      "timestamp_utc": "2019-03-19T23:35:07.524202Z",
+      "tool_call_id": "tc-002"
+    }
+  ],
+  "evidence_inventory": null,
+  "evidence_path": "/evidence/DE_1102_security_log_cleared.evtx",
+  "evidence_type": "evtx",
+  "evtx_summary": {
+    "channels": [
+      "Security"
+    ],
+    "distinct_event_ids": 3,
+    "parse_errors": 0,
+    "reason": "high-signal event semantics produced finding-level evidence",
+    "records_seen": 112,
+    "row_count": 112,
+    "suspicious_event_count": 1,
+    "top_event_ids": [
+      {
+        "count": 110,
+        "event_id": "4663"
+      },
+      {
+        "count": 1,
+        "event_id": "1102"
+      },
+      {
+        "count": 1,
+        "event_id": "5156"
+      }
+    ],
+    "verdict_contribution": "finding"
+  },
+  "expert_doctrine": {
+    "claim_rules": [
+      {
+        "category": "citation",
+        "fail_behavior": "block_customer_pdf",
+        "id": "finding_tool_call_required",
+        "requirement": "Every Finding must cite a non-empty tool_call_id that exists in the case tool-call list.",
+        "severity": "blocker"
+      },
+      {
+        "category": "reproducibility",
+        "fail_behavior": "block_customer_pdf",
+        "id": "verify_finding_replay_embedded",
+        "requirement": "Customer-ready reports must embed verifier replay evidence for each Finding and every replay must match the audited tool output.",
+        "severity": "blocker"
+      },
+      {
+        "category": "reproducibility",
+        "fail_behavior": "block_customer_pdf",
+        "id": "verify_finding_replay_failures",
+        "requirement": "A verifier rejection or replay failure must force INDETERMINATE or blocked customer release, never NO_EVIL.",
+        "severity": "blocker"
+      },
+      {
+        "category": "execution",
+        "fail_behavior": "downgrade_or_block",
+        "id": "execution_requires_two_current_artifact_classes",
+        "requirement": "Execution claims require at least two current-case artifact classes. Prefetch is preferred; Amcache, ShimCache, memory-only process evidence, YARA, Hayabusa, and malfind are not standalone execution proof.",
+        "severity": "blocker"
+      },
+      {
+        "category": "exfiltration",
+        "fail_behavior": "downgrade_or_block",
+        "id": "exfiltration_requires_staging_and_movement",
+        "requirement": "Exfiltration claims require staging or collection evidence plus network, tool, or data-movement evidence.",
+        "severity": "blocker"
+      },
+      {
+        "category": "verdict",
+        "fail_behavior": "require_scope_caveat",
+        "id": "no_evil_is_scoped",
+        "requirement": "NO_EVIL means no reportable Finding in the artifact classes examined. It must not imply environment-wide assurance.",
+        "severity": "warning"
+      },
+      {
+        "category": "coverage",
+        "fail_behavior": "force_indeterminate_or_expert_review",
+        "id": "disk_auto_mode_custody_only",
+        "requirement": "Raw disk auto mode is custody-only unless mounted or extracted artifacts are supplied and parsed.",
+        "severity": "blocker"
+      },
+      {
+        "category": "reporting",
+        "fail_behavior": "require_report_caveat",
+        "id": "visuals_do_not_upgrade_confidence",
+        "requirement": "Charts, evidence cards, screenshots, and PDF exhibits support cited tool output but never create Findings or raise confidence.",
+        "severity": "warning"
+      },
+      {
+        "category": "language",
+        "fail_behavior": "block_customer_pdf",
+        "id": "no_attribution",
+        "requirement": "Never assert actor attribution from supplied host artifacts.",
+        "severity": "blocker"
+      },
+      {
+        "category": "language",
+        "fail_behavior": "block_customer_pdf",
+        "id": "no_forbidden_unqualified_language",
+        "requirement": "Customer-visible Finding and report text must not use unqualified language that overstates scope, attribution, execution, compromise, or malware status.",
+        "severity": "blocker"
+      }
+    ],
+    "forbidden_unqualified_terms": [
+      "clean",
+      "cleared",
+      "disproven",
+      "absent",
+      "no compromise",
+      "absence of compromise",
+      "absence of the technique",
+      "attributed to",
+      "malware operator",
+      "the attacker",
+      "is malware",
+      "breach confirmed",
+      "customer-ready",
+      "customer ready"
+    ],
+    "operating_model": "The agent prepares an evidence-bound signoff packet; the human expert remains final authority for customer release.",
+    "source_files": [
+      "agent-config/SOUL.md",
+      "agent-config/MEMORY.md",
+      "agent-config/PLAYBOOK.md",
+      "agent-config/EXPERT.md"
+    ],
+    "supported_domains": {
+      "autonomous_today": [
+        "windows_memory",
+        "windows_evtx",
+        "disk_custody_registration",
+        "timeline_normalization",
+        "evidence_backed_pdf_reporting",
+        "miss-feedback-loop"
+      ],
+      "escalation_only": [
+        "legal_notification",
+        "attribution",
+        "unsupported_cloud_or_saas",
+        "mobile_forensics",
+        "ot_ics_forensics",
+        "failed_report_qa"
+      ],
+      "partial_today": [
+        "disk_content_analysis_without_mount",
+        "exfiltration_without_network_telemetry",
+        "malware_capability_without_reverse_engineering",
+        "identity_compromise_from_single_log_source"
+      ]
+    },
+    "version": 1
+  },
+  "expert_miss_summary": {
+    "by_type": {},
+    "items": [],
+    "ledger_path": "expert_misses.jsonl",
+    "summary": "Expert misses captured this case: 0 (uncaptured edits are a QA defect; see EXPERT.md Replacement metric).",
+    "total": 0
+  },
+  "expert_signoff": {
+    "customer_releasable": false,
+    "customer_release_candidate": false,
+    "expert_decision": "pending",
+    "expert_signoff_required": true,
+    "ready_for_customer_pdf": false,
+    "signer": "ed25519",
+    "signoff_question": "Would I send this report to a company without rewriting it?",
+    "status": "PENDING_EXPERT_REVIEW"
+  },
+  "expert_signoff_packet": {
+    "customer_releasable": false,
+    "decision": "pending",
+    "expert_miss_summary": {
+      "by_type": {},
+      "items": [],
+      "ledger_path": "expert_misses.jsonl",
+      "summary": "Expert misses captured this case: 0 (uncaptured edits are a QA defect; see EXPERT.md Replacement metric).",
+      "total": 0
+    },
+    "feedback_items": [],
+    "referenced_hashes": {
+      "release_gate_sha256": "52e815768536f6e14f86db4114757a70b7fac8849e07f98d8717acf659811d25",
+      "report_qa_sha256": "58c619e0577d9cf074b9331c246d4ed3e77e6f872980511c8757516cab648fe0",
+      "run_manifest_sha256": null,
+      "verdict_packet_sha256": "3e5f108cdf4a014de027aa671edc2a407107983ceb17c8c642cbcb5abdd048b9"
+    },
+    "referenced_paths": {
+      "run_manifest": "run.manifest.json",
+      "verdict": "verdict.json"
+    },
+    "release_blockers": [
+      "ATT&CK coverage includes blind spots that require expert awareness.",
+      "customer release requires an effective manifest_finalize signer=sigstore (identity + transparency log); ed25519 proves integrity offline but not identity, and stub signatures are dev/offline only",
+      "explicit human expert approval is required before customer release",
+      "finalized manifest signature metadata must be present before customer release",
+      "manifest_verify must pass before customer release"
+    ],
+    "release_conditions": {
+      "expert_approved": false,
+      "machine_qa_passed": false,
+      "sigstore_signer": false
+    },
+    "required_before_customer_release": true,
+    "review_time_minutes": null,
+    "reviewed_at": null,
+    "reviewer_identity": null,
+    "signoff_question": "Would I send this report to a company without rewriting it?",
+    "status": "PENDING_EXPERT_REVIEW",
+    "version": 1
+  },
+  "finalized_at": null,
+  "findings": [
+    {
+      "analyst_note": "Clearing the Windows Security log removes the local record of activity before it \u2014 a defense-evasion / anti-forensics act. Event 1102 is itself written AFTER the clear, so the action is recorded even though what it erased is not; the interval before this record is the blind window.",
+      "artifact_offset": null,
+      "artifact_path": "/evidence/DE_1102_security_log_cleared.evtx",
+      "asserted_values": [
+        {
+          "expected": "{\"event_id\": \"1102\", \"channel\": \"Security\"}",
+          "match": "record",
+          "path": "rows[*]"
+        }
+      ],
+      "case_id": "d0384d9d-6df6-42f3-973f-931c29bcad9b",
+      "confidence": "CONFIRMED",
+      "derived_from": null,
+      "description": "EVTX contains Security EID 1102 audit-log clear event (record 1); this is confirmed event-log evidence of log clearing and requires analyst review.",
+      "event_id": "79a49130-64ca-4e1a-b628-5849b5c03481",
+      "event_type": "Finding",
+      "finding_id": "f-A-evtx-audit-log-cleared",
+      "host": "PC01.example.corp",
+      "hunt": "Security 1102 (security-log clearing) and 4719 (audit-policy change); EventRecordID gaps immediately before the 1102",
+      "mitre_technique": "T1070.001",
+      "named_technique": "Security event-log clearing / anti-forensics (T1070.001)",
+      "next_pivot": "Recover the erased window from WEF/SIEM-forwarded copies, EDR telemetry, or a VSS/backup of the EVTX predating it; check 4719 (audit-policy change) and the account's other logons around this time.",
+      "pool_origin": "A",
+      "prior_observations": [
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.3915712492286951,
+          "ts": "2026-06-09T04:45:41.176377Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.3915540459162738,
+          "ts": "2026-06-09T04:39:59.537668Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.39154656974634006,
+          "ts": "2026-06-09T04:37:31.064544Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.3915361987021333,
+          "ts": "2026-06-09T04:34:05.095921Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.39152903957597607,
+          "ts": "2026-06-09T04:31:42.912710Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.38931899320112134,
+          "ts": "2026-06-08T16:18:05.726834Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.38929575037199593,
+          "ts": "2026-06-08T16:10:21.476084Z"
+        },
+        {
+          "case_id": "dir-70ca157294e2094d",
+          "confidence": 0.38928979547254056,
+          "ts": "2026-06-08T16:08:22.528851Z"
+        },
+        {
+          "case_id": "09b5e9d3-08ad-429d-b1dc-b5a3b1c80fd1",
+          "confidence": 0.3889736676698845,
+          "ts": "2026-06-08T14:23:05.362377Z"
+        },
+        {
+          "case_id": "bf35a765-b8d4-481d-a6c8-2c5905a94a72",
+          "confidence": 0.3889672368575132,
+          "ts": "2026-06-08T14:20:56.802491Z"
+        }
+      ],
+      "replay_actual_sha256": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
+      "replay_artifact": {
+        "actual_sha256": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
+        "arguments_sha256": "ac6fc7ad2c226b7b3f0d27fe2f3078bc10e7c33f08506e6696a9cabc3a2e8ceb",
+        "drift_class": "exact_match",
+        "drift_reason": "replay output_sha256 matches audit log",
+        "entailment": {
+          "failures": [],
+          "matched": [
+            {
+              "actual": "{'event_id': 1102, 'ts': '2019-03-19T23:35:07.524202Z', 'channel': 'Security', 'record_id': 1, 'data': {'Event': {'#attributes': {'xmlns': 'http://schemas.microsoft.com/win/2004/08/events/event'}, 'System': {'Provider': {'#attributes': {'Name': 'Microsoft-Windows-Eventlog', 'Guid': '{fc65ddd8-d6ef-4962-83d5-6e5cfe9ce148}'}}, 'EventID': 1102, 'Version': 0, 'Level': 4, 'Task': 104, 'Opcode': 0, 'Keywords': '0x4020000000000000', 'TimeCreated': {'#attributes': {'SystemTime': '2019-03-19T23:35:07.524202Z'}}, 'EventRecordID': 452811, 'Correlation': None, 'Execution': {'#attributes': {'ProcessID': 812, 'ThreadID': 3916}}, 'Channel': 'Security', 'Computer': 'PC01.example.corp', 'Security': None}, 'UserData': {'LogFileCleared': {'#attributes': {'xmlns:auto-ns3': 'http://schemas.microsoft.com/win/2004/08/events', 'xmlns': 'http://manifests.microsoft.com/win/2004/08/windows/eventlog'}, 'SubjectUserSid': 'S-1-5-21-1587066498-1489273250-1035260531-1106', 'SubjectUserName': 'user01', 'SubjectDomainName': 'EXAMPLE', 'SubjectLogonId': '0x17dad'}}}}}",
+              "expected": "{\"event_id\": \"1102\", \"channel\": \"Security\"}",
+              "match": "record",
+              "path": "rows[*]"
+            }
+          ],
+          "passed": true
+        },
+        "error": null,
+        "expected_sha256": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
+        "matched": true,
+        "replay_tool_call_id": "b73d59e7-99bc-4bc8-b4a3-2b59e5625b52",
+        "schema_version": "findevil.replay.v1",
+        "tool_call_id": "tc-002",
+        "tool_name": "evtx_query",
+        "wall_clock_ms": 8
+      },
+      "replay_error": null,
+      "replay_expected_sha256": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
+      "replay_matched": true,
+      "replay_record_sha256": "a3afeba70246dcb6c603c10d356feae81a207f01947fbd064be848014ccc594e",
+      "replay_tool_name": "evtx_query",
+      "tool_call_id": "tc-002",
+      "ts": "2026-06-20T15:30:46Z",
+      "verifier_action": "approved"
+    }
+  ],
+  "findings_summary": {
+    "by_confidence": {
+      "CONFIRMED": 1,
+      "HYPOTHESIS": 0,
+      "INFERRED": 0
+    },
+    "contradictions_surfaced": 0,
+    "correlation_outcomes": [
+      {
+        "action": "kept",
+        "finding_id": "f-A-evtx-audit-log-cleared",
+        "reason": "non-execution claim"
+      }
+    ],
+    "soul_md_downgraded": 0,
+    "soul_md_kept": 1,
+    "total_merged": 1,
+    "verdict_revisions": 0,
+    "verifier_redispatches": {},
+    "verifier_rejected_leads": 0
+  },
+  "heartbeat": {
+    "consecutive_failures": 0,
+    "escalated": false,
+    "terminated_partial": false
+  },
+  "host_groups": [
+    {
+      "by_confidence": {
+        "CONFIRMED": 1,
+        "HYPOTHESIS": 0,
+        "INFERRED": 0
+      },
+      "event_count": 112,
+      "evidence_sources": [
+        "DE_1102_security_log_cleared.evtx"
+      ],
+      "finding_count": 1,
+      "finding_ids": [
+        "f-A-evtx-audit-log-cleared"
+      ],
+      "first_seen": "2019-03-19T23:35:07.524202Z",
+      "host": "PC01.example.corp",
+      "last_seen": "2019-03-19T23:35:15.365477Z",
+      "top_confidence": "CONFIRMED"
+    }
+  ],
+  "indicators": {
+    "accounts": [
+      "EXAMPLE\\user01",
+      "NT AUTHORITY\\LOCAL SERVICE"
+    ],
+    "domains": [],
+    "file_paths": [],
+    "hashes": [],
+    "hosts": [
+      "PC01.example.corp"
+    ],
+    "indicator_count": 4,
+    "ip_addresses": [],
+    "note": "Observed artifacts pulled from the timeline and findings; validate or corroborate before detection deployment or blocking.",
+    "processes": [
+      "C:\\Windows\\System32\\svchost.exe"
+    ],
+    "services": [],
+    "urls": [],
+    "version": 1
+  },
+  "malware_triage": null,
+  "next_actions": [
+    {
+      "action": "Use read-only SIFT disk workflow to extract Prefetch, Registry, MFT, USN Journal, and YARA targets before parsing them with typed tools.",
+      "based_on": [
+        "disk_gap"
+      ],
+      "expected_evidence": "ewfmount read-only mount, Sleuth Kit file extraction, Prefetch, Amcache/ShimCache, Run keys, services, scheduled tasks, MFT/USN entries",
+      "priority": "P2",
+      "why": "Execution and persistence claims need disk-backed corroboration; memory-only observations are not enough for final execution claims."
+    },
+    {
+      "action": "Acquire DNS, proxy, firewall, NetFlow, or PCAP telemetry to test C2 and exfiltration hypotheses.",
+      "based_on": [
+        "network_gap"
+      ],
+      "expected_evidence": "DNS queries, proxy URLs, firewall sessions, PCAP, Velociraptor network collection",
+      "priority": "P3",
+      "why": "Network telemetry was not supplied or parsed in this run, so exfiltration and command-and-control coverage remains a blind spot."
+    },
+    {
+      "action": "Close ATT&CK blind spots before making closure decisions.",
+      "based_on": [
+        "T1014",
+        "T1055",
+        "T1105",
+        "T1071.001",
+        "T1071.004"
+      ],
+      "expected_evidence": "Additional evidence classes mapped in attack_coverage.targets[].artifact_classes",
+      "priority": "P3",
+      "why": "The coverage matrix identifies target techniques with no supporting artifact class in this run."
+    },
+    {
+      "action": "Pivot from the first and last normalized timeline events into adjacent artifact classes.",
+      "based_on": [
+        "timeline"
+      ],
+      "expected_evidence": "timeline.csv plus adjacent EVTX, Prefetch, MFT, and network events",
+      "priority": "P4",
+      "why": "Temporal clustering often exposes execution chains that a single artifact class cannot prove alone."
+    },
+    {
+      "action": "Verify run.manifest.json with manifest_verify before sharing or archiving results.",
+      "based_on": [
+        "custody"
+      ],
+      "expected_evidence": "run.manifest.json, audit.jsonl, verdict.json, timeline.csv",
+      "priority": "P4",
+      "why": "The audit chain and Merkle root are the reproducibility boundary for judge and analyst review."
+    }
+  ],
+  "normalized_timeline": {
+    "events": [
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [
+          "T1070.001"
+        ],
+        "citation_ids": [
+          "CITE-MITRE-ATTACK-DATASOURCES"
+        ],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "user01",
+          "domain": "EXAMPLE",
+          "host": "PC01.example.corp"
+        },
+        "event_id": "timeline-0001",
+        "limitations": [],
+        "linked_finding_ids": [
+          "f-A-evtx-audit-log-cleared"
+        ],
+        "significance": "finding_support",
+        "source_record_ref": "evtx_query:record_id=1;event_id=1102",
+        "summary": "Security audit log clearing by EXAMPLE\\user01",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:07.524202Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "host": "PC01.example.corp"
+        },
+        "event_id": "timeline-0002",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=2;event_id=5156",
+        "summary": "Windows event 5156",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:08.786016Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0003",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=3;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:14.634426Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0004",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=4;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:14.634426Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0005",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=5;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:14.764613Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0006",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=6;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:14.764613Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0007",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=7;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:14.904814Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0008",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=8;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:14.904814Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0009",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=9;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.045016Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0010",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=10;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.045016Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0011",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=11;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.185218Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0012",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=12;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.185218Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0013",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=13;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.205246Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0014",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=14;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.215261Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0015",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=15;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.215261Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0016",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=16;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.215261Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0017",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=17;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0018",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=18;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0019",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=19;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0020",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=20;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0021",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=21;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0022",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=22;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0023",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=23;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0024",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=24;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0025",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=25;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0026",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=26;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0027",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=27;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0028",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=28;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0029",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=29;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0030",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=30;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0031",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=31;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0032",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=32;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0033",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=33;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0034",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=34;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0035",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=35;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0036",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=36;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0037",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=37;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0038",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=38;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.295376Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0039",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=39;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0040",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=40;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0041",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=41;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0042",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=42;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0043",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=43;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0044",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=44;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0045",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=45;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0046",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=46;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0047",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=47;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0048",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=48;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0049",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=49;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0050",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=50;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0051",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=51;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0052",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=52;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0053",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=53;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0054",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=54;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0055",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=55;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0056",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=56;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.315405Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0057",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=57;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0058",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=58;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0059",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=59;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0060",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=60;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0061",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=61;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0062",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=62;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0063",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=63;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0064",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=64;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0065",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=65;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0066",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=66;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0067",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=67;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0068",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=68;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0069",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=69;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0070",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=70;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0071",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=71;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0072",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=72;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0073",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=73;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0074",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=74;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0075",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=75;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0076",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=76;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0077",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=77;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0078",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=78;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0079",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=79;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0080",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=80;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0081",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=81;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0082",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=82;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0083",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=83;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0084",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=84;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0085",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=85;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0086",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=86;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.325419Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0087",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=87;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0088",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=88;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0089",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=89;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0090",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=90;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0091",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=91;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0092",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=92;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0093",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=93;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0094",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=94;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0095",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=95;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0096",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=96;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0097",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=97;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0098",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=98;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0099",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=99;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0100",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=100;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0101",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=101;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0102",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=102;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0103",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=103;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0104",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=104;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0105",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=105;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0106",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=106;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0107",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=107;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0108",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=108;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.335434Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0109",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=109;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.365477Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0110",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=110;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.365477Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0111",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=111;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.365477Z",
+        "tool_call_id": "tc-002"
+      },
+      {
+        "artifact_class": "evtx",
+        "attck_techniques": [],
+        "citation_ids": [],
+        "confidence": "CONFIRMED",
+        "entities": {
+          "account": "LOCAL SERVICE",
+          "domain": "NT AUTHORITY",
+          "host": "PC01.example.corp",
+          "pid": "0x5a8",
+          "process": "C:\\Windows\\System32\\svchost.exe"
+        },
+        "event_id": "timeline-0112",
+        "limitations": [],
+        "linked_finding_ids": [],
+        "significance": "context",
+        "source_record_ref": "evtx_query:record_id=112;event_id=4663;pid=0x5a8",
+        "summary": "Windows event 4663: account NT AUTHORITY\\LOCAL SERVICE, process C:\\Windows\\System32\\svchost.exe",
+        "timestamp_source": "Event.System.TimeCreated",
+        "timestamp_utc": "2019-03-19T23:35:15.365477Z",
+        "tool_call_id": "tc-002"
+      }
+    ],
+    "limitations": [],
+    "source_coverage": [
+      {
+        "artifact_class": "evtx",
+        "event_count": 112
+      }
+    ],
+    "version": 1
+  },
+  "rejected_finding_leads": [],
+  "release_gate": {
+    "customer_releasable": false,
+    "customer_release_candidate": false,
+    "expert_approved": false,
+    "expert_decision": "pending",
+    "expert_signoff_required": true,
+    "failed_checks": [],
+    "machine_qa_passed": false,
+    "manifest_signature_present": false,
+    "manifest_verified": false,
+    "packet_state": "EXPERT_REVIEW_DRAFT",
+    "qa_status": "WARN",
+    "ready_for_customer_pdf": false,
+    "release_blockers": [
+      "ATT&CK coverage includes blind spots that require expert awareness.",
+      "customer release requires an effective manifest_finalize signer=sigstore (identity + transparency log); ed25519 proves integrity offline but not identity, and stub signatures are dev/offline only",
+      "explicit human expert approval is required before customer release",
+      "finalized manifest signature metadata must be present before customer release",
+      "manifest_verify must pass before customer release"
+    ],
+    "report_render_allowed": true,
+    "signer": "ed25519",
+    "signer_customer_release_ok": false,
+    "signer_effective": "ed25519",
+    "warning_checks": [
+      "attack_coverage_blind_spots"
+    ]
+  },
+  "report_evidence_cards": [
+    {
+      "card_id": "evidence-card-001",
+      "caveats": [
+        "Visual exhibit supports the cited finding but does not replace parsed tool output."
+      ],
+      "citation_ids": [
+        "CITE-MITRE-ATTACK-DATASOURCES"
+      ],
+      "confidence": "CONFIRMED",
+      "linked_finding_ids": [
+        "f-A-evtx-audit-log-cleared"
+      ],
+      "snippet": "EVTX contains Security EID 1102 audit-log clear event (record 1); this is confirmed event-log evidence of log clearing and requires analyst review.",
+      "source_record_refs": [
+        "evtx_query:record_id=1;event_id=1102",
+        "evtx_query:record_id=2;event_id=5156",
+        "evtx_query:record_id=3;event_id=4663;pid=0x5a8"
+      ],
+      "title": "EVTX contains Security EID 1102 audit-log clear event (record 1); this is confirmed event-",
+      "tool_call_id": "tc-002",
+      "visual_asset": null,
+      "why_suspicious": "This observable is relevant because finding `f-A-evtx-audit-log-cleared` is backed by parsed tool output `tc-002` and should be interpreted with the cited artifact and source caveats."
+    }
+  ],
+  "report_qa": {
+    "checks": [
+      {
+        "check_id": "finding_tool_call_required",
+        "evidence": [
+          "tc-001",
+          "tc-002"
+        ],
+        "status": "PASS",
+        "summary": "All 1 Finding(s) cite current-case tool calls."
+      },
+      {
+        "check_id": "execution_requires_two_current_artifact_classes",
+        "evidence": [
+          "evtx"
+        ],
+        "status": "PASS",
+        "summary": "No unsupported execution wording detected, or current-case corroboration is broad enough for expert review."
+      },
+      {
+        "check_id": "exfiltration_requires_staging_and_movement",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No unsupported exfiltration claim detected."
+      },
+      {
+        "check_id": "disk_auto_mode_custody_only",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No custody-only disk overclaim detected."
+      },
+      {
+        "check_id": "no_evil_is_scoped",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "Verdict wording remains scoped to supplied evidence."
+      },
+      {
+        "check_id": "timeline_source_refs_present",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "Timeline includes 112 normalized event(s) with source references."
+      },
+      {
+        "check_id": "verify_finding_replay_failures",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No verifier replay failures were recorded as analysis limitations."
+      },
+      {
+        "check_id": "verify_finding_replay_embedded",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "Every Finding carries embedded verifier replay evidence, or there are no Findings to replay."
+      },
+      {
+        "check_id": "limitations_visible",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No run-specific analysis limitations were recorded."
+      },
+      {
+        "check_id": "no_forbidden_unqualified_language",
+        "evidence": [],
+        "status": "PASS",
+        "summary": "No forbidden unqualified language detected in Findings or customer-visible report text."
+      },
+      {
+        "check_id": "attack_coverage_blind_spots",
+        "evidence": [
+          "blind_spots=7"
+        ],
+        "status": "WARN",
+        "summary": "ATT&CK coverage includes blind spots that require expert awareness."
+      }
+    ],
+    "customer_releasable": false,
+    "customer_release_blockers": [
+      "explicit human expert approval is required before customer release",
+      "ATT&CK coverage includes blind spots that require expert awareness."
+    ],
+    "customer_release_candidate": false,
+    "expert_decision": "pending",
+    "expert_signoff_required": true,
+    "packet_state": "EXPERT_REVIEW_DRAFT",
+    "ready_for_customer_pdf": false,
+    "ready_for_expert_signoff": true,
+    "recommended_expert_review_time": "30-60 minutes",
+    "rules_source": [
+      "agent-config/SOUL.md",
+      "agent-config/MEMORY.md",
+      "agent-config/PLAYBOOK.md",
+      "agent-config/EXPERT.md"
+    ],
+    "status": "WARN",
+    "version": 1,
+    "why_not_ready": [
+      "ATT&CK coverage includes blind spots that require expert awareness."
+    ]
+  },
+  "run_id": "auto-1781969444",
+  "source_bibliography": [
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-MITRE-ATTACK-DATASOURCES",
+      "supports": [
+        "ATT&CK data-source coverage mapping"
+      ],
+      "title": "MITRE ATT&CK Data Sources",
+      "url": "https://attack.mitre.org/datasources/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-MITRE-T1003-001",
+      "supports": [
+        "LSASS credential-dumping interpretation"
+      ],
+      "title": "MITRE ATT&CK T1003.001 LSASS Memory",
+      "url": "https://attack.mitre.org/techniques/T1003/001/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-MITRE-T1014",
+      "supports": [
+        "DKOM/rootkit process-view divergence interpretation"
+      ],
+      "title": "MITRE ATT&CK T1014 Rootkit",
+      "url": "https://attack.mitre.org/techniques/T1014/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-NIST-800-61R2",
+      "supports": [
+        "separation of evidence, analysis, response actions, and gaps"
+      ],
+      "title": "NIST SP 800-61 Rev. 2 Computer Security Incident Handling Guide",
+      "url": "https://csrc.nist.gov/pubs/sp/800/61/r2/final"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-PLASO",
+      "supports": [
+        "multi-source forensic timeline normalization"
+      ],
+      "title": "Plaso/log2timeline documentation",
+      "url": "https://plaso.readthedocs.io/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-TIMESKETCH",
+      "supports": [
+        "analyst-oriented forensic timeline review"
+      ],
+      "title": "Timesketch documentation",
+      "url": "https://timesketch.org/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-VOLATILITY3",
+      "supports": [
+        "memory plugin output and process-view validation"
+      ],
+      "title": "Volatility 3 documentation",
+      "url": "https://volatility3.readthedocs.io/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-ZEEK-LOGS",
+      "supports": [
+        "network log and protocol-semantic coverage"
+      ],
+      "title": "Zeek log documentation",
+      "url": "https://docs.zeek.org/en/current/logs/index.html"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-VELOCIRAPTOR-ARTIFACTS",
+      "supports": [
+        "artifact-based endpoint collection"
+      ],
+      "title": "Velociraptor artifact documentation",
+      "url": "https://docs.velociraptor.app/docs/artifacts/"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-SIGMAHQ",
+      "supports": [
+        "structured log detection rules as triage leads"
+      ],
+      "title": "SigmaHQ rules repository",
+      "url": "https://github.com/SigmaHQ/sigma"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-HAYABUSA",
+      "supports": [
+        "Windows EVTX timeline and hunting output"
+      ],
+      "title": "Hayabusa repository",
+      "url": "https://github.com/Yamato-Security/hayabusa"
+    },
+    {
+      "accessed_utc": "2026-05-04T00:00:00Z",
+      "citation_id": "CITE-CAPA",
+      "supports": [
+        "malware capability triage limits"
+      ],
+      "title": "capa repository",
+      "url": "https://github.com/mandiant/capa"
+    }
+  ],
+  "started_at": "2026-06-20T15:30:44Z",
+  "timeline_summary": {
+    "artifact_classes": [
+      "evtx"
+    ],
+    "event_count": 112,
+    "exports": [
+      "timeline.json",
+      "timeline.csv"
+    ],
+    "first_ts": "2019-03-19T23:35:07.524202Z",
+    "last_ts": "2019-03-19T23:35:15.365477Z"
+  },
+  "tool_calls": [
+    {
+      "arguments": {
+        "image_path": "/evidence/DE_1102_security_log_cleared.evtx",
+        "label": "evidence"
+      },
+      "case_id": "d0384d9d-6df6-42f3-973f-931c29bcad9b",
+      "evidence_type": "evtx",
+      "output_hash": "a0615707b547a2ac254688fd725c3c590f62440fc9b7947c2843dd40498a39e8",
+      "size_bytes": 1118208,
+      "tool": "case_open",
+      "tool_call_id": "tc-001"
+    },
+    {
+      "arguments": {
+        "case_id": "d0384d9d-6df6-42f3-973f-931c29bcad9b",
+        "evtx_path": "/evidence/DE_1102_security_log_cleared.evtx",
+        "limit": 500
+      },
+      "output_hash": "3d3dd69400552c92c939f1635b9ba781c1ed6847109e293e368c57afc52dd800",
+      "parse_errors": 0,
+      "records_seen": 112,
+      "row_count": 112,
+      "tool": "evtx_query",
+      "tool_call_id": "tc-002"
+    }
+  ],
+  "verdict": "SUSPICIOUS",
+  "verdict_revisions": []
+}

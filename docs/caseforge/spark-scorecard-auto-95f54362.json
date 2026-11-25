@@ -1,0 +1,104 @@
+{
+  "case": "win-lateral-movement (single host WIN-77LTAPHIQ1R.example.corp)",
+  "run_id": "auto-1783532826",
+  "case_id": "auto-95f54362-bf5b-4ebe-bb11-e455a834dda1",
+  "internal_case_uuid": "d938f2c5-ee62-48de-8bba-f91008a72ba4",
+  "started_at": "2026-07-08T17:47:06Z",
+  "host": "DGX Spark (GB10, aarch64), local Ollama at http://localhost:11434/v1",
+  "route": "local-ollama",
+  "privacy": "local-only",
+  "model": "gpt-oss:120b (agent); deterministic EVTX fallback produced the sealed verdict",
+  "custody": {
+    "manifest_verify_overall": true,
+    "signature_kind": "ed25519",
+    "signature_verified": true,
+    "merkle_root_ok": true,
+    "audit_chain_ok": true,
+    "audit_log_record_count": 21,
+    "exit_code": 0,
+    "customer_releasable": false,
+    "packet_state": "EXPERT_REVIEW_DRAFT"
+  },
+  "verdict": {
+    "observed": "INDETERMINATE",
+    "expected": "INDETERMINATE",
+    "match": true,
+    "note": "INDETERMINATE is the policy default for single-source EVTX regardless of what was found; a matching verdict is NOT evidence that coverage was complete."
+  },
+  "evidence_scoping": {
+    "case_directory_files": [
+      "LM_Remote_Service02_7045.evtx",
+      "LM_WMI_4624_4688_TargetHost.evtx"
+    ],
+    "files_actually_read": [
+      "LM_Remote_Service02_7045.evtx"
+    ],
+    "files_never_read": [
+      "LM_WMI_4624_4688_TargetHost.evtx"
+    ],
+    "records_seen": 3,
+    "distinct_event_ids": ["7045"],
+    "tool_calls": ["case_open", "evtx_query"],
+    "hayabusa_or_sigma_ran": false
+  },
+  "unread_file_contents_verified_out_of_band": {
+    "file": "LM_WMI_4624_4688_TargetHost.evtx",
+    "parser": "python-evtx via uv on the Spark",
+    "event_id_histogram": {"4624": 6, "4688": 2},
+    "process_creation": "WmiPrvSE.exe -> calc.exe",
+    "meaning": "the entire lateral-movement half of the case (logons + remote WMI process execution) was present but never ingested"
+  },
+  "scorecard": [
+    {
+      "expected_technique": "T1078",
+      "name": "Valid Accounts (network logon)",
+      "expected_evidence": "6x Event 4624",
+      "in_file": "LM_WMI_4624_4688_TargetHost.evtx (NOT read)",
+      "result": "MISS",
+      "detail": "File never parsed. Manifest lists T1078 as covered_no_finding purely via generic evtx_query->technique attribution, NOT from any actual 4624 record. Spurious coverage credit."
+    },
+    {
+      "expected_technique": "T1047",
+      "name": "Windows Management Instrumentation (remote execution)",
+      "expected_evidence": "2x Event 4688 with parent WmiPrvSE.exe (WmiPrvSE.exe -> calc.exe)",
+      "in_file": "LM_WMI_4624_4688_TargetHost.evtx (NOT read)",
+      "result": "MISS",
+      "detail": "Double miss: the file was never parsed AND T1047 is not one of the coverage manifest's 12 ATT&CK targets, so the remote-WMI signature could not earn coverage even if read."
+    },
+    {
+      "expected_technique": "T1543.003",
+      "name": "Create/Modify System Process: Windows Service (persistence)",
+      "expected_evidence": "3x Event 7045 (spoolfool, spoolsv, ...)",
+      "in_file": "LM_Remote_Service02_7045.evtx (read)",
+      "result": "HIT",
+      "detail": "1 finding f-B-evtx-service-install, confidence HYPOTHESIS, mapped to T1543.003, timeline event emitted."
+    },
+    {
+      "expected_technique": "CVE-2022-21999",
+      "name": "SpoolFool - Print Spooler privilege escalation",
+      "expected_evidence": "7045 service 'spoolfool' with a shell (cmd.exe) image",
+      "in_file": "LM_Remote_Service02_7045.evtx (read)",
+      "result": "PARTIAL",
+      "detail": "Recognized in narrative: attack_story carries cves:[CVE-2022-21999], named_technique 'SpoolFool', and a concrete hunt query. But it is scored ONLY as T1543.003 persistence; the privilege-escalation dimension (e.g. T1068) and the CVE are not elevated into observed_techniques or scored coverage."
+    }
+  ],
+  "tally": {
+    "expected_techniques": 4,
+    "full_hit": 1,
+    "partial": 1,
+    "miss": 2,
+    "observed_techniques_scored": ["T1543.003"]
+  },
+  "root_causes": [
+    "RC1 (primary) - single-file evidence scoping: the case is a directory with 2 EVTX files but evtx_path / image_path / evidence_path all resolved to one file; the WMI file was never enumerated, zeroing out the lateral-movement half of the case.",
+    "RC2 - coverage manifest lacks T1047: the WmiPrvSE.exe-parent remote-WMI signature is not among the 12 scored ATT&CK targets, so it earns no coverage credit even when present.",
+    "RC3 - thin tool battery on the deterministic fallback: only evtx_query ran (2 tool_calls incl. case_open); hayabusa_scan / Sigma never fired, so no rule-based detection of WMI lateral movement or SpoolFool.",
+    "RC4 - SpoolFool technique-mapping: the named CVE signature is recognized in prose but mapped only to persistence (T1543.003), not to its privilege-escalation technique."
+  ],
+  "remediation_proposals_not_yet_implemented": [
+    "Fallback evidence scoping should enumerate every file in a case directory and run evtx_query per file (or a merged query), not select one.",
+    "Add T1047 and a WmiPrvSE.exe-parent heuristic to the coverage manifest targets.",
+    "Run hayabusa_scan / Sigma on the fallback path when the binary is available.",
+    "Map named CVE signatures (SpoolFool) to their priv-esc technique (T1068) in addition to the service-install persistence artifact."
+  ]
+}

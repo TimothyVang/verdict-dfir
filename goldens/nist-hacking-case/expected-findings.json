@@ -1,0 +1,182 @@
+{
+  "_comment": [
+    "Spec #3 §5 + Spec #2 §12 AC-02 golden for NIST CFReDS Hacking Case.",
+    "",
+    "Source: https://cfreds-archive.nist.gov/Hacking_Case.html (public domain).",
+    "This file enumerates the 14 canonical findings a correct Find Evil! run",
+    "against the complete SCHARDT.001-SCHARDT.008 split image should surface.",
+    "SCHARDT.001 alone is not a complete image and must never be accuracy-scored.",
+    "Recall target: >= 10 of 14",
+    "(71%) per AC-02. Mapping of finding_id to artifact/offset/tool_call_id is",
+    "populated by the agent at run time; we only declare WHAT must be found.",
+    "",
+    "These are derived from the NIST case documentation + SANS FOR508",
+    "walkthroughs. Truly novel findings emerge at run time via ACH agents.",
+    "The M2 chain-of-custody manifest signs the full list cryptographically."
+  ],
+  "case_id": "nist-hacking-case",
+  "source_url": "https://cfreds-archive.nist.gov/Hacking_Case.html",
+  "license": "Public domain (17 USC 105)",
+  "fixture_contract": {
+    "staging_root": ".",
+    "analysis_entrypoint": "SCHARDT.001",
+    "required_artifacts": [
+      {
+        "path": "SCHARDT.001",
+        "size_bytes": 666238976,
+        "md5": "28a9b613d6eefe8a0515ef0a675bdebd"
+      },
+      {
+        "path": "SCHARDT.002",
+        "size_bytes": 666238976,
+        "md5": "c7227e7eea82d218663257397679a7c4"
+      },
+      {
+        "path": "SCHARDT.003",
+        "size_bytes": 666238976,
+        "md5": "ebba35acd7b8aa85a5a7c13f3dd733d2"
+      },
+      {
+        "path": "SCHARDT.004",
+        "size_bytes": 666238976,
+        "md5": "669b6636dcb4783fd5509c4710856c59"
+      },
+      {
+        "path": "SCHARDT.005",
+        "size_bytes": 666238976,
+        "md5": "c46e5760e3821522ee81e675422025bb"
+      },
+      {
+        "path": "SCHARDT.006",
+        "size_bytes": 666238976,
+        "md5": "99511901da2dea772005b5d0d764e750"
+      },
+      {
+        "path": "SCHARDT.007",
+        "size_bytes": 666238976,
+        "md5": "99511901da2dea772005b5d0d764e750"
+      },
+      {
+        "path": "SCHARDT.008",
+        "size_bytes": 207628288,
+        "md5": "8194a79a5356df79883ae2dc7415929f"
+      }
+    ]
+  },
+  "verdict": "CONFIRMED_EVIL",
+  "min_recall_percent": 71,
+  "findings": [
+    {
+      "finding_id": "nhc-001",
+      "description": "Dual-boot XP install with linked-list of recent searches for hacking tools",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Registry hive USRCLASS / NTUSER.DAT search history"
+    },
+    {
+      "finding_id": "nhc-002",
+      "description": "USB device insertion history indicates external drive connected for staging",
+      "mitre_technique": "T1052.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "SYSTEM hive USBSTOR + setupapi.dev.log"
+    },
+    {
+      "finding_id": "nhc-003",
+      "description": "Recovered deleted email discussing the intrusion plan",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Outlook PST / free space carve"
+    },
+    {
+      "finding_id": "nhc-004",
+      "description": "Hacking tool artifacts in Program Files / downloaded applications",
+      "mitre_technique": "T1588.002",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Prefetch + MFT creation timestamps"
+    },
+    {
+      "finding_id": "nhc-005",
+      "description": "Prefetch evidence of hacking tool execution",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "C:\\Windows\\Prefetch\\*.pf"
+    },
+    {
+      "finding_id": "nhc-006",
+      "description": "Internet history indicating downloads of illicit content",
+      "mitre_technique": "T1071.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "index.dat / history.dat"
+    },
+    {
+      "finding_id": "nhc-007",
+      "description": "Shellbag entries show navigation to removable media holding staged files",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "disk",
+      "artifact_hint": "NTUSER.DAT shellbags"
+    },
+    {
+      "finding_id": "nhc-008",
+      "description": "LNK (shortcut) files referencing removable media volume serial numbers",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Recent\\*.lnk"
+    },
+    {
+      "finding_id": "nhc-009",
+      "description": "Recycle bin contains deleted staging artifacts",
+      "mitre_technique": "T1070.004",
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Recycler\\INFO2"
+    },
+    {
+      "finding_id": "nhc-010",
+      "description": "User account with suspicious naming / elevated privileges created",
+      "mitre_technique": "T1136.001",
+      "confidence": "INFERRED",
+      "artifact_class": "log",
+      "artifact_hint": "Security.evt EID 624/4720"
+    },
+    {
+      "finding_id": "nhc-011",
+      "description": "MRU list shows recently opened files consistent with intrusion planning",
+      "mitre_technique": null,
+      "confidence": "INFERRED",
+      "artifact_class": "disk",
+      "artifact_hint": "NTUSER.DAT MRU keys"
+    },
+    {
+      "finding_id": "nhc-012",
+      "description": "Event log entries indicating user logons consistent with claimed timeline",
+      "mitre_technique": "T1078.001",
+      "confidence": "CONFIRMED",
+      "artifact_class": "log",
+      "artifact_hint": "Security.evt EID 528/4624"
+    },
+    {
+      "finding_id": "nhc-013",
+      "description": "Thumbcache / thumbnail artifacts indicating viewed content",
+      "mitre_technique": null,
+      "confidence": "CONFIRMED",
+      "artifact_class": "disk",
+      "artifact_hint": "Thumbs.db / thumbcache*.db"
+    },
+    {
+      "finding_id": "nhc-014",
+      "description": "Named-pipe or service enumeration artifacts consistent with reconnaissance",
+      "mitre_technique": "T1046",
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "log",
+      "artifact_hint": "Sysmon EID 17/18 (if present); service control manager events"
+    }
+  ]
+}

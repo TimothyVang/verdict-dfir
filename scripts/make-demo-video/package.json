@@ -1,0 +1,25 @@
+{
+  "name": "find-evil-demo-video",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "render": "npx remotion render src/Root.tsx FindEvilDemo --output ../../docs/find-evil-demo.mp4 --codec h264",
+    "render:preview": "npx remotion render src/Root.tsx FindEvilDemo --output /tmp/find-evil-preview.mp4 --codec h264 --frames 0-90",
+    "studio": "npx remotion studio src/Root.tsx"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.237",
+    "@remotion/google-fonts": "4.0.237",
+    "@remotion/transitions": "4.0.237",
+    "remotion": "4.0.237"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

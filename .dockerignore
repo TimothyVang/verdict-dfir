@@ -1,0 +1,96 @@
+# .dockerignore — keep the build context small and EVIDENCE-FREE.
+#
+# Mirrors .gitignore's large-binary/secret rules so a stray evidence image, VM,
+# credential, or research clone can never be copied into a Docker layer (image
+# layers are world-readable once pushed).
+
+# --- VCS / CI noise (not needed inside the runner image) ---
+.git
+.github
+.gitignore
+
+# --- Evidence & large binaries — NEVER ship into an image layer ---
+*.ova
+sift-*.ova
+*.qcow2
+*.vmdk
+*.vdi
+*.E01
+*.e01
+*.dd
+*.raw
+*.mem
+*.aff
+*.aff4
+*.vhd
+*.vhdx
+*.7z
+*.evtx
+*.EVTX
+/Rocba-Memory.zip
+evidence/*
+!evidence/README.md
+!evidence/.gitkeep
+test-forensics/
+goldens/**/*.E01
+goldens/**/*.mem
+goldens/**/*.raw
+
+# --- Build outputs (rebuilt deterministically inside the image) ---
+target/
+**/*.rs.bk
+node_modules/
+.pnpm-store/
+.next/
+out/
+dist/
+build/
+.turbo/
+.cache/
+.remotion/
+*.tsbuildinfo
+
+# --- Python envs / caches (re-synced from uv.lock in the image) ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage/
+
+# --- Secrets / local state ---
+.env
+.env.local
+.env.*.local
+.claude-cache/
+*.log
+logs/
+state/
+checkpoints/
+*.sqlite
+*.sqlite-journal
+
+# --- Host scratch / runtime dirs (tmp/ holds evidence + run output) ---
+tmp/
+.omx/
+.worktrees/
+
+# --- External research clones (research-only, never shipped) ---
+openclaw/
+hermes-agent/
+Linear-Coding-Agent-Harness/
+.playwright-mcp/
+obsidian-mind/
+n8n-references/
+ref-folders/
+git-hub-references/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

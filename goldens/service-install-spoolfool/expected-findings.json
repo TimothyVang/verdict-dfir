@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "Answer key for a single EVTX service-install sample used by evidence/cases/mini-fleet/hosts/host-01/.",
+    "The evidence is EVTX-only, so the expected finding remains HYPOTHESIS and the honest top-line verdict is INDETERMINATE unless another artifact class corroborates it.",
+    "Run with: bash scripts/verdict evidence/cases/mini-fleet/hosts/host-01/",
+    "Local-only until upstream EVTX sample provenance is documented."
+  ],
+  "case_id": "service-install-spoolfool",
+  "source_url": "local-only EVTX attack-sample training case; raw fixture not redistributed",
+  "license": "VERDICT-authored answer key; raw EVTX provenance must be verified before publishing or redistributing the fixture",
+  "verdict": "INDETERMINATE",
+  "min_recall_percent": 100,
+  "findings": [
+    {
+      "finding_id": "sis-001",
+      "description": "EVTX EID 7045 records installation of service spoolfool with image cmd.exe",
+      "mitre_technique": "T1543.003",
+      "confidence": "HYPOTHESIS",
+      "artifact_class": "evtx",
+      "artifact_hint": "EID 7045 service-install evidence for spoolfool cmd.exe"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+# PLANNED (Phase 12): caseforge Rust ingest core — CLI for ingest, timeline, and
+# read-only MCP serving. Not yet implemented; this is a compiling placeholder.
+[package]
+name = "caseforge-ingest"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Planned Rust ingest core for caseforge-core (Phase 12)."
+
+[[bin]]
+name = "caseforge-ingest"
+path = "src/main.rs"

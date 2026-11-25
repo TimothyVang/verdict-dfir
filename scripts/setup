@@ -1,0 +1,326 @@
+#!/usr/bin/env bash
+# scripts/setup — first-run onboarding orchestrator for VERDICT.
+#
+# One obvious "make this work" entry point for a fresh clone. It wraps the
+# existing installers (it reimplements nothing):
+#
+#   1. Runs scripts/install.sh   — toolchain (Rust/uv/Node/pnpm) + builds the
+#      findevil-mcp binary + syncs the agent-mcp venv + curls the host DFIR tools.
+#   2. Runs scripts/doctor.sh --json — the authoritative "what's still missing".
+#   3. Computes gated-asset presence itself (doctor has no OVA check) against
+#      scripts/gated-tools.json, and writes a handoff at tmp/setup-state.json.
+#   4. Prints an honest green/red summary.
+#
+# A bare shell cannot drive the browser MCP, so gated assets (the SANS SIFT OVA)
+# are handed off to the Claude path: open `claude` in this repo and type `setup`
+# (see docs/onboarding.md). Safe to re-run; idempotent by construction.
+#
+# Flags: --json (machine-readable, no banner/dashboard offer), --no-dashboard,
+#        --help. Exit 0 when ready, 1 when a REQUIRED tool is missing.
+
+set -uo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${REPO}"
+
+# cargo often lives under ~/.cargo/bin but is absent from a fresh shell's PATH
+# (doctor.sh:30 / install.sh source this too).
+# shellcheck disable=SC1091
+[ -f "${HOME}/.cargo/env" ] && source "${HOME}/.cargo/env"
+
+c_red=$'\033[0;31m'
+c_grn=$'\033[0;32m'
+c_yel=$'\033[0;33m'
+c_blu=$'\033[0;34m'
+c_off=$'\033[0m'
+
+JSON_MODE=""
+NO_DASHBOARD=""
+RUN=""
+WITH_SIFT=""
+
+usage() {
+  cat <<'USAGE'
+Usage: bash scripts/setup [--json] [--no-dashboard] [--help]
+
+First-run onboarding: install everything, report what is still missing, and
+write a handoff at tmp/setup-state.json.
+
+  --json           Machine-readable; print the state JSON, suppress banner/offers.
+  --no-dashboard   Do not print the dashboard launch hint.
+  --run            When setup is green, immediately hand off to
+                   `scripts/verdict --watch` — investigate the newest file in
+                   evidence/ now, or wait for one to be dropped. (Install + run
+                   in one command.)
+  --with-sift      Also set up the SANS SIFT VM (recommended — matches the SANS
+                   judging environment): fetch the gated SIFT OVA headlessly via
+                   the installed Playwright, then build the VM. Best-effort and
+                   non-fatal — on any failure it points at the Claude/manual
+                   path, and local-host mode works without it.
+  --help, -h       Show this help and exit.
+
+Exit 0 when ready, 1 when a required tool is missing.
+USAGE
+}
+
+for arg in "$@"; do
+  case "${arg}" in
+    --json)         JSON_MODE=1 ;;
+    --no-dashboard) NO_DASHBOARD=1 ;;
+    --run)          RUN=1 ;;
+    --with-sift)    WITH_SIFT=1 ;;
+    -h|--help)      usage; exit 0 ;;
+    *) echo "setup: unknown argument '${arg}'" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+STATE_FILE="${REPO}/tmp/setup-state.json"
+GATED_REGISTRY="${REPO}/scripts/gated-tools.json"
+mkdir -p "${REPO}/tmp"
+
+if [ -z "${JSON_MODE}" ]; then
+  echo "=========================================="
+  echo "VERDICT — first-run setup"
+  echo "=========================================="
+  echo "${c_blu}[1/2]${c_off} Installing toolchain, building findevil-mcp, syncing envs, installing DFIR tools..."
+  echo
+fi
+
+# 1. Full install. Capture the rc but do NOT abort — we still want to snapshot
+#    and report honestly even if a sub-step failed.
+#    --bootstrap: setup is the "make this work" entry point, so a missing
+#    cargo/uv/node gets installed rather than fail-closed (the first-run
+#    product-prerequisite setup path). install.sh keeps its fail-closed
+#    default for judges/CI invoking it directly.
+install_rc=0
+if [ -n "${JSON_MODE}" ]; then
+  bash scripts/install.sh --bootstrap >/dev/null 2>&1 || install_rc=$?
+else
+  bash scripts/install.sh --bootstrap || install_rc=$?
+fi
+
+# install-dfir-tools.sh drops binaries in ~/.local/bin; make doctor's child see them.
+export PATH="${HOME}/.local/bin:${PATH}"
+
+# 2. Authoritative snapshot of what is still missing.
+after_json="$(bash scripts/doctor.sh --json 2>/dev/null || true)"
+
+# 3. Parse, compute gated presence, write the handoff, and summarize. python3 is
+#    a doctor REQUIRED check; if it is absent, fall back to a minimal report.
+if [ -z "${JSON_MODE}" ]; then echo; echo "${c_blu}[2/2]${c_off} Preflight + handoff..."; echo; fi
+
+rc=0
+if command -v python3 >/dev/null 2>&1; then
+  DOCTOR_JSON="${after_json}" python3 - \
+    "${STATE_FILE}" "${GATED_REGISTRY}" "${REPO}" "${install_rc}" \
+    "${JSON_MODE:-0}" "${NO_DASHBOARD:-0}" <<'PY'
+import datetime, glob, json, os, sys
+
+state_file, registry_path, repo, install_rc_s, json_mode_s, no_dash_s = sys.argv[1:7]
+install_rc = int(install_rc_s)
+json_mode = json_mode_s == "1"
+no_dash = no_dash_s == "1"
+
+GRN, YEL, RED, BLU, DIM, OFF = (
+    "\033[0;32m", "\033[0;33m", "\033[0;31m", "\033[0;34m", "\033[2m", "\033[0m",
+)
+
+raw = os.environ.get("DOCTOR_JSON", "").strip()
+try:
+    doc = json.loads(raw) if raw else {}
+except Exception:
+    doc = {}
+parsed = isinstance(doc, dict) and "ready" in doc
+
+checks = doc.get("checks", [])
+remedies = doc.get("remedies", [])
+ready = bool(doc.get("ready", False))
+
+
+def remedy_for(label):
+    pref = label + ":"
+    for r in remedies:
+        if r.startswith(pref):
+            return r[len(pref):].strip()
+    return ""
+
+
+missing_required = [
+    {"label": c.get("label", ""), "remedy": remedy_for(c.get("label", ""))}
+    for c in checks
+    if c.get("status") == "err"
+]
+
+# Non-blocking DFIR/reporting tools. Use doctor's own per-tool remedy (accurate
+# per tool: most reinstall via install-dfir-tools.sh, but e.g. tshark needs apt).
+missing_curl = [
+    {"label": c.get("label", ""), "remedy": remedy_for(c.get("label", ""))}
+    for c in checks
+    if c.get("status") == "warn"
+    and (c.get("group") == "DFIR tools" or c.get("label") == "pandoc")
+]
+
+# Gated assets: doctor has no OVA check, so we glob the registry ourselves.
+gated, reg_by_id = [], {}
+try:
+    with open(registry_path) as fh:
+        reg = json.load(fh)
+    for tool in reg.get("tools", []):
+        tid = tool.get("id")
+        reg_by_id[tid] = tool
+        pres = tool.get("presence", {})
+        minb = int(pres.get("min_bytes", 0))
+        present = False
+        for g in (pres.get("glob"), pres.get("fallback_glob")):
+            if not g:
+                continue
+            for p in glob.glob(os.path.join(repo, g)):
+                try:
+                    if os.path.getsize(p) >= minb:
+                        present = True
+                        break
+                except OSError:
+                    pass
+            if present:
+                break
+        gated.append({"id": tid, "present": present})
+except FileNotFoundError:
+    pass
+except Exception as exc:
+    sys.stderr.write("setup: could not read %s: %s\n" % (registry_path, exc))
+
+gated_missing = [g for g in gated if not g["present"]]
+
+ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+state = {
+    "schema": "verdict.setup-state/v1",
+    "timestamp": ts,
+    "ready": ready,
+    "install_rc": install_rc,
+    "missing_required": missing_required,
+    "missing_curl": missing_curl,
+    "gated": gated,
+}
+
+tmp = state_file + ".tmp"
+with open(tmp, "w") as fh:
+    json.dump(state, fh, indent=2)
+    fh.write("\n")
+os.replace(tmp, state_file)
+
+if json_mode:
+    print(json.dumps(state))
+    sys.exit(0 if ready else 1)
+
+print("=" * 42)
+if not parsed:
+    print("%sNOT READY%s — could not read preflight output (scripts/doctor.sh); environment not verified." % (RED, OFF))
+elif not ready:
+    print("%sNOT READY%s — %d required item(s) missing:" % (RED, OFF, len(missing_required)))
+    for m in missing_required:
+        line = "  - %s" % m["label"]
+        if m["remedy"]:
+            line += ": %s%s%s" % (DIM, m["remedy"], OFF)
+        print(line)
+elif missing_curl:
+    print("%sREADY (core)%s — investigations run; some DFIR tools are still missing:" % (YEL, OFF))
+    for m in missing_curl:
+        line = "  - %s" % m["label"]
+        if m["remedy"]:
+            line += ": %s%s%s" % (DIM, m["remedy"], OFF)
+        print(line)
+    print("  most DFIR binaries reinstall with: %sbash scripts/install-dfir-tools.sh%s" % (DIM, OFF))
+else:
+    print("%sREADY%s — all required tools present." % (GRN, OFF))
+
+if install_rc != 0:
+    print("%snote%s scripts/install.sh exited %d — see its output above." % (YEL, OFF, install_rc))
+
+if gated_missing:
+    print()
+    print("%sGated asset(s) not present%s (registration/EULA/login — a shell can't fetch these):" % (BLU, OFF))
+    for g in gated_missing:
+        tool = reg_by_id.get(g["id"], {})
+        print("  - %s" % tool.get("name", g["id"]))
+        print("      open Claude Code here and type %ssetup%s to fetch it via the browser," % (DIM, OFF))
+        print("      or download manually: %s" % tool.get("landing_url", ""))
+
+print()
+if not no_dash:
+    print("Live dashboard: %spnpm --filter @findevil/web dev%s  ->  http://localhost:3000" % (DIM, OFF))
+print("Investigate evidence: %sscripts/verdict <path>%s   (or: claude, then `investigate <path>`)" % (DIM, OFF))
+print("%swrote %s%s" % (DIM, os.path.relpath(state_file, repo), OFF))
+print("=" * 42)
+
+sys.exit(0 if ready else 1)
+PY
+  rc=$?
+else
+  # python3 absent — it is a REQUIRED tool, so the environment is not ready.
+  printf '{"schema":"verdict.setup-state/v1","ready":false,"install_rc":%d,"missing_required":[{"label":"python3","remedy":"install Python 3.11+"}],"missing_curl":[],"gated":[]}\n' \
+    "${install_rc}" > "${STATE_FILE}"
+  if [ -z "${JSON_MODE}" ]; then
+    echo "${c_red}NOT READY${c_off} — python3 is required to complete setup. Install Python 3.11+ and re-run."
+  else
+    cat "${STATE_FILE}"
+  fi
+  rc=1
+fi
+
+# --with-sift: set up the SANS SIFT VM end-to-end. Fetch the gated OVA headlessly
+# via the Playwright that install.sh already installed (when it isn't staged
+# yet), then build the VM. Best-effort + NON-FATAL: on any failure it points at
+# the Claude/manual path; local-host mode works without the VM, so this never
+# changes the setup exit code.
+do_with_sift() {
+  # Reuse an OVA we already have. place-gated-download.sh stages a valid OVA (>=
+  # size floor, not HTML) from the repo root, tmp/gated-downloads, or ~/Downloads
+  # — so a prior or interrupted download is reused instead of re-fetching ~8.8 GB.
+  if bash "${REPO}/scripts/place-gated-download.sh" sift-ova >/dev/null 2>&1; then
+    local ova; ova="$(ls -S "${REPO}"/sift-*.ova "${REPO}"/*.ova 2>/dev/null | head -1 || true)"
+    echo "${c_grn}[sift]${c_off} OVA already present — skipping download: $(basename "${ova:-sift.ova}")"
+  else
+    echo "${c_blu}[sift]${c_off} no OVA staged — fetching the SANS SIFT OVA headlessly (Playwright; ~8.8 GB)..."
+    if command -v node >/dev/null 2>&1 \
+        && NODE_PATH="$(npm root -g 2>/dev/null)" node "${REPO}/scripts/fetch-sift-ova.cjs"; then
+      bash "${REPO}/scripts/place-gated-download.sh" sift-ova || true
+    else
+      echo "${c_yel}[sift]${c_off} headless OVA fetch did not complete (site change / blocked / offline)."
+      echo "      Fall back — open ${c_blu}claude${c_off} here and type ${c_blu}setup${c_off} (the agent drives the browser),"
+      echo "      or download manually from https://www.sans.org/tools/sift-workstation/, save it as"
+      echo "      sift-<version>.ova at the repo root, then re-run: ${c_blu}bash scripts/setup --with-sift${c_off}"
+      echo "      Local-host mode works without the SIFT VM."
+      return 0
+    fi
+  fi
+  echo "${c_blu}[sift]${c_off} building the SIFT VM (scripts/sift-vm-bootstrap.sh; 20-40 min on first run)..."
+  if FINDEVIL_SETUP_SIFT=1 bash "${REPO}/scripts/sift-vm-bootstrap.sh"; then
+    echo "${c_grn}[sift]${c_off} SIFT VM ready. Run in SIFT mode:  bash scripts/verdict --sift <path>"
+  else
+    echo "${c_yel}[sift]${c_off} SIFT VM bootstrap did not complete (non-fatal — local mode still works)."
+  fi
+}
+
+if [ -n "${WITH_SIFT}" ]; then
+  if [ "${rc}" -eq 0 ]; then
+    echo
+    do_with_sift
+  else
+    echo
+    echo "${c_yel}[sift]${c_off} skipping SIFT setup — fix the missing required tool(s) above first, then re-run with --with-sift."
+  fi
+fi
+
+# --run: when the environment is ready, flow straight into an investigation.
+# scripts/verdict --watch investigates the newest file already in evidence/, or
+# blocks until one is dropped — install-then-run in a single command.
+if [ -n "${RUN}" ] && [ "${rc}" -eq 0 ]; then
+  if [ -z "${JSON_MODE}" ]; then
+    echo
+    echo "${c_blu}[run]${c_off} setup is green — investigating evidence now (scripts/verdict --watch)."
+    echo "      Drop a file into evidence/, or it uses the newest one already there."
+  fi
+  exec bash "${REPO}/scripts/verdict" --watch
+fi
+
+exit "${rc}"

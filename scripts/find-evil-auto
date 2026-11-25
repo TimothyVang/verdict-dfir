@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# find-evil-auto — internal headless engine wrapper.
+#
+# Prefer scripts/verdict (the one command: preflight → investigate →
+# dashboard → signed verdict). This thin wrapper remains for CI/goldens that
+# invoke the engine directly with VM-side paths.
+#
+# Pre-flight: SIFT VM running + scripts/sift-vm-bootstrap.sh has been run.
+#
+# Usage:
+#   bash scripts/find-evil-auto <evidence-path-inside-VM> [--unattended] [--no-report] [--run-summary <path>]
+#
+# Examples:
+#   bash scripts/find-evil-auto /mnt/hgfs/evidence/extracted/base-dc/base-dc-memory.img
+#   bash scripts/find-evil-auto /mnt/hgfs/evidence/single-evtx/Security.evtx --unattended
+#   bash scripts/find-evil-auto /mnt/hgfs/evidence/cases/base-dc/ --unattended
+#   bash scripts/find-evil-auto /mnt/hgfs/evidence/velociraptor/base-dc.zip --unattended
+#
+# What it does end-to-end (no human input required after launch):
+#   1. case_open (real SHA-256 of evidence)
+#   2. Detect evidence type → run playbook tool sequence
+#      (memory: vol_pslist + vol_psscan + vol_malfind for DKOM
+#       cross-validation; evtx: evtx_query; disk: read-only mount/extract
+#       where supported; directory: inventory + per-artifact dispatch;
+#       Velociraptor zip: safe extract + per-artifact dispatch)
+#   3. Synthesize Pool A/B Findings deterministically from tool outputs
+#   4. detect_contradictions → judge_findings → correlate_findings
+#   5. manifest_finalize (Merkle + signed manifest)
+#   6. Write verdict.json
+#   7. Generate PDF report (matplotlib + pandoc + Chrome headless)
+#
+# Output (inside VM):
+#   /home/sansforensics/find-evil/tmp/auto-<uuid>/
+#     audit.jsonl, run.manifest.json, verdict.json
+# Output (on host):
+#   tmp/auto-runs/auto-<uuid>/
+#     audit.jsonl, run.manifest.json, verdict.json,
+#     REPORT.md, REPORT.html, REPORT.pdf, figures/*.png
+# Optional --run-summary writes a host-side machine-readable JSON summary.
+
+set -euo pipefail
+
+# Git Bash on Windows otherwise rewrites the evidence path
+# /home/sansforensics/... → C:/Program Files/Git/home/sansforensics/...
+# when calling a Windows-native python.exe. The evidence path is meant
+# to live INSIDE the SIFT VM; we never want it touched.
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL='*'
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT="${REPO_ROOT}/scripts/find_evil_auto.py"
+# python.exe is a Windows binary; the script path needs to be Windows-native
+# OR we lose by setting MSYS_NO_PATHCONV. cygpath -w converts cleanly.
+if command -v cygpath >/dev/null 2>&1; then
+  SCRIPT="$(cygpath -w "$SCRIPT")"
+fi
+# Linux ships `python3`; Windows/Git Bash ships `python` (the python.exe launcher
+# the cygpath conversion above targets). Prefer python3, fall back to python.
+PYBIN="$(command -v python3 || command -v python || true)"
+[ -n "$PYBIN" ] || { echo "find-evil-auto: no python3/python on PATH" >&2; exit 127; }
+exec "$PYBIN" "$SCRIPT" "$@"
