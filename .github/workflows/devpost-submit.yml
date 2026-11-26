@@ -21,7 +21,7 @@ jobs:
     outputs:
       ok: ${{ steps.wait.outputs.ok }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Poll for successful release.yml
         id: wait
         env:
@@ -51,7 +51,7 @@ jobs:
     needs: wait-release
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Verify DEMO_VIDEO_URL set
         env:
