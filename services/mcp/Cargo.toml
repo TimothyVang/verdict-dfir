@@ -51,7 +51,7 @@ forensic-rs = "=0.13"
 # requires rustc 1.90 and our toolchain is locked at 1.88 per
 # `rust-toolchain.toml` (Spec/code divergence: edition-2024 deps
 # already forced 1.83 → 1.88; bumping again is a separate decision).
-mft = "=0.6.1"
+mft = "=0.7.0"
 
 # Windows Registry hive parsing for `registry_query` is handled in-tree by
 # `src/tools/regf.rs` (no external crate). frnsc-hive only implemented the
